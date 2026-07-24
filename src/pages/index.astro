@@ -3,45 +3,49 @@ import semestersData from "../../data/semesters.json";
 import Layout from "../layouts/Layout.astro";
 
 const description =
-  "Planlegg semesteret ditt: se timeplankollisjoner og eksamensdatoer før du melder deg opp på emner ved NTNU.";
+  "Velg studieprogram og kull, se ukeplanen med en gang: forelesninger, kollisjoner og eksamensdatoer.";
 
 const currentSemester = semestersData.current;
+const isAutumn = currentSemester ? /h$/i.test(currentSemester.id) : true;
+const seasonWord = isAutumn ? "høsten" : "våren";
 ---
 
 <Layout title="Semesterplan — planlegg semesteret ved NTNU" description={description}>
   <p class="np-kicker home-kicker">Semesterplan</p>
-  <h1 class="home-title">Planlegg semesteret før du melder deg opp.</h1>
-  <p class="home-lede">
-    Sett sammen emner fra katalogen eller studieprogrammet ditt og se timeplankollisjoner,
-    eksamensdatoer og studiepoeng samlet — før du melder deg opp.
-  </p>
+  <h1 class="home-title">Se timeplanen din for {seasonWord}.</h1>
 
-  <a class="np-btn np-press home-cta" href="/planlegger/">Åpne planleggeren</a>
+  <div class="np-field home-field" id="home-field">
+    <input
+      type="text"
+      id="home-input"
+      placeholder="Studieprogram, f.eks. datateknologi eller MTDT …"
+      aria-label="Søk etter studieprogram"
+      role="combobox"
+      aria-expanded="false"
+      aria-autocomplete="list"
+      aria-controls="home-listbox"
+      autocomplete="off"
+    />
+  </div>
+  <ul class="home-listbox" id="home-listbox" role="listbox" aria-label="Studieprogramforslag" hidden>
+  </ul>
 
-  <div class="home-tiles">
-    <a class="np-tile np-lift np-press home-tile" href="/planlegger/">
-      <span class="np-kicker">Planlegger</span>
-      <span class="home-tile-body">Bygg semesterplanen din</span>
-    </a>
-    <a class="np-tile np-lift np-press home-tile" href="/emner/">
-      <span class="np-kicker">Emner</span>
-      <span class="home-tile-body">Søk i emnekatalogen</span>
-    </a>
-    <a class="np-tile np-lift np-press home-tile" href="/studier/">
-      <span class="np-kicker">Studier</span>
-      <span class="home-tile-body">Studieprogram og studieplaner</span>
-    </a>
+  <div class="home-kull" id="home-kull" hidden>
+    <p class="np-kicker home-kull-kicker" id="home-kull-name"></p>
+    <div class="home-kull-chips" id="home-kull-chips" role="group" aria-label="Velg kull"></div>
   </div>
 
-  <p class="home-plan-status np-note" id="home-plan-status" hidden>
-    <a href="/planlegger/" id="home-plan-link"></a>
+  <p class="np-note home-status" id="home-status" aria-live="polite"></p>
+
+  <p class="home-resume np-note" id="home-resume" hidden>
+    <a href="/planlegger/" id="home-resume-link"></a>
   </p>
 
-  {
-    currentSemester && (
-      <p class="home-semester np-note">Inneværende semester: {currentSemester.name}</p>
-    )
-  }
+  <p class="home-links np-note">
+    <a href="/emner/">Søk i emnekatalogen</a>
+    <span class="home-links-sep">·</span>
+    <a href="/planlegger/">Har du emnekoder? Legg dem til i planleggeren</a>
+  </p>
 </Layout>
 
 <style>
@@ -50,60 +54,324 @@ const currentSemester = semestersData.current;
   }
   .home-title {
     font-size: var(--text-3xl);
-    margin-bottom: var(--space-4);
+    margin-bottom: var(--space-5);
     max-width: var(--measure);
   }
-  .home-lede {
-    font-size: var(--text-md);
-    color: var(--muted);
-    margin-bottom: var(--space-6);
+  .home-field {
+    max-width: var(--measure);
+    position: relative;
   }
-  .home-cta {
-    margin-bottom: var(--space-7);
+  .home-listbox {
+    list-style: none;
+    max-width: var(--measure);
+    background: var(--card-nested);
+    border-radius: var(--radius-sm);
+    box-shadow: var(--shadow);
+    max-height: 18rem;
+    overflow-y: auto;
+    padding: var(--space-1);
+    margin-top: var(--space-1);
   }
-  .home-tiles {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
-    gap: var(--space-4);
-    margin-bottom: var(--space-6);
-  }
-  .home-tile {
+  :global(.home-option) {
     display: flex;
-    flex-direction: column;
-    gap: var(--space-2);
+    align-items: baseline;
+    gap: var(--gap-3);
+    padding: var(--space-2);
+    border-radius: var(--radius-xs);
+    cursor: pointer;
   }
-  .home-tile-body {
-    font-size: var(--text-md);
+  :global(.home-option.is-active),
+  :global(.home-option:hover) {
+    background: var(--card-hover);
   }
-  .home-plan-status {
+  :global(.home-option-code) {
+    color: var(--muted);
+    font-size: var(--text-xs);
+    flex-shrink: 0;
+    width: 6em;
+  }
+  :global(.home-option-name) {
+    font-size: var(--text-sm);
+  }
+  :global(.home-listbox-empty) {
+    display: block;
+    padding: var(--space-2);
+  }
+  .home-kull {
+    margin-top: var(--space-4);
+    max-width: var(--measure);
+  }
+  .home-kull-kicker {
     margin-bottom: var(--space-2);
   }
-  .home-plan-status a {
+  .home-kull-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--gap-2);
+  }
+  .home-status {
+    margin-top: var(--space-3);
+  }
+  .home-resume {
+    margin-top: var(--space-6);
+    font-size: var(--text-md);
+  }
+  .home-resume a {
     color: var(--accent-ink);
+  }
+  .home-links {
+    margin-top: var(--space-5);
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+  }
+  .home-links-sep {
+    color: var(--faint);
   }
 </style>
 
 <script>
-  import { createPlanStore } from "../lib/planner/store.ts";
+  import programsData from "../../data/programs.json";
   import semestersData from "../../data/semesters.json";
+  import { fold } from "../components/planner/dom.ts";
+  import {
+    classifyPeriod,
+    findProgramPlan,
+    isSuspiciousPrefill,
+    periodNumberFor,
+  } from "../components/planner/programPlan.ts";
+  import { semesterYear } from "../lib/planner/schedule.ts";
+  import {
+    type AddCourseInput,
+    createPlanStore,
+    formatPlanHash,
+    type PlanProgram,
+  } from "../lib/planner/store.ts";
+
+  type ProgramOption = [code: string, name: string];
+
+  const programOptions: ProgramOption[] = programsData.programs
+    .map((p): ProgramOption => [p.code, p.name])
+    .sort((a, b) => a[1].localeCompare(b[1], "nb"));
 
   const defaultSemesterId = semestersData.current?.id ?? "";
   const store = createPlanStore(defaultSemesterId);
 
-  const statusEl = document.getElementById("home-plan-status") as HTMLParagraphElement | null;
-  const linkEl = document.getElementById("home-plan-link") as HTMLAnchorElement | null;
+  const input = document.getElementById("home-input") as HTMLInputElement | null;
+  const field = document.getElementById("home-field") as HTMLElement | null;
+  const listbox = document.getElementById("home-listbox") as HTMLUListElement | null;
+  const kullSection = document.getElementById("home-kull") as HTMLElement | null;
+  const kullName = document.getElementById("home-kull-name") as HTMLElement | null;
+  const kullChips = document.getElementById("home-kull-chips") as HTMLElement | null;
+  const statusEl = document.getElementById("home-status") as HTMLElement | null;
+  const resumeEl = document.getElementById("home-resume") as HTMLElement | null;
+  const resumeLink = document.getElementById("home-resume-link") as HTMLAnchorElement | null;
 
-  function render(): void {
-    if (!statusEl || !linkEl) return;
-    const plan = store.loadPlan();
-    if (plan.courses.length === 0) {
-      statusEl.hidden = true;
-      return;
-    }
-    statusEl.hidden = false;
-    linkEl.textContent = `Planen din: ${plan.courses.length} emner`;
+  function el<K extends keyof HTMLElementTagNameMap>(
+    tag: K,
+    className?: string,
+    text?: string,
+  ): HTMLElementTagNameMap[K] {
+    const node = document.createElement(tag);
+    if (className) node.className = className;
+    if (text !== undefined) node.textContent = text;
+    return node;
   }
 
-  render();
-  store.onPlanChange(render);
+  // --- Resume line: quiet by default, prominent when a plan already exists ---
+
+  function renderResume(): void {
+    if (!resumeEl || !resumeLink) return;
+    const plan = store.loadPlan();
+    const active = plan.courses.filter((c) => !c.dropped);
+    if (active.length === 0) {
+      resumeEl.hidden = true;
+      return;
+    }
+    resumeEl.hidden = false;
+    const programLabel = plan.program ? `${plan.program.code} · ` : "";
+    const count = active.length;
+    const noun = count === 1 ? "emne" : "emner";
+    resumeLink.textContent = `Planen din: ${programLabel}${count} ${noun} → gå til planleggeren`;
+  }
+
+  renderResume();
+  store.onPlanChange(renderResume);
+
+  if (input && field && listbox && kullSection && kullName && kullChips && statusEl) {
+    let matches: ProgramOption[] = [];
+    let activeIndex = -1;
+
+    function closeListbox(): void {
+      if (!listbox || !input) return;
+      listbox.replaceChildren();
+      listbox.hidden = true;
+      activeIndex = -1;
+      matches = [];
+      input.setAttribute("aria-expanded", "false");
+    }
+
+    function setActive(index: number): void {
+      if (!listbox) return;
+      activeIndex = index;
+      for (const [i, opt] of [...listbox.children].entries()) {
+        opt.classList.toggle("is-active", i === index);
+      }
+    }
+
+    function resetKull(): void {
+      if (!kullSection || !kullChips || !statusEl) return;
+      kullSection.hidden = true;
+      kullChips.replaceChildren();
+      statusEl.textContent = "";
+    }
+
+    /** Builds the programme baseline for one cohort and navigates to /planlegger/. */
+    async function useCohort(code: string, name: string, cohort: number): Promise<void> {
+      if (!statusEl) return;
+      statusEl.textContent = "henter studieplan …";
+      const result = await findProgramPlan(code, cohort);
+      if ("kind" in result) {
+        statusEl.textContent = "klarte ikke å hente studieplan";
+        return;
+      }
+
+      const program: PlanProgram = { code, name, cohort };
+      const targetSemesterId = defaultSemesterId;
+      const periodNumber = periodNumberFor(targetSemesterId, cohort);
+      const classified = periodNumber !== null ? classifyPeriod(result.plan, periodNumber) : null;
+
+      let obligatory = classified?.obligatory ?? [];
+      if (isSuspiciousPrefill(obligatory)) obligatory = [];
+      const toAdd: AddCourseInput[] = obligatory.map((c) => ({
+        code: c.code,
+        name: c.name,
+        version: c.version,
+        source: "program",
+      }));
+
+      store.setSemester(targetSemesterId);
+      const next = store.setProgramPlan(program, toAdd);
+
+      statusEl.textContent = "";
+      location.href = `/planlegger/${formatPlanHash(next)}`;
+    }
+
+    /**
+     * The cohort NTNU auto-enrolls into the computed period for the default
+     * semester, i.e. the newest published year whose period actually exists
+     * in the fetched plan (DR-7) — falls back to the newest published year
+     * when no period matches (still the least-surprising default; period math
+     * is a suggestion, not authoritative).
+     */
+    function defaultCohort(years: number[], plan: { periods: { periodNumber: number | null }[] }): number {
+      const sorted = [...years].sort((a, b) => b - a);
+      for (const year of sorted) {
+        const periodNumber = periodNumberFor(defaultSemesterId, year);
+        if (periodNumber !== null && plan.periods.some((p) => p.periodNumber === periodNumber)) {
+          return year;
+        }
+      }
+      return sorted[0] ?? new Date().getFullYear();
+    }
+
+    async function pickProgram(option: ProgramOption): Promise<void> {
+      if (!input || !kullSection || !kullName || !kullChips || !statusEl) return;
+      const [code, name] = option;
+      input.value = name;
+      closeListbox();
+      resetKull();
+      statusEl.textContent = "henter studieplan …";
+
+      const guessYear = semesterYear(defaultSemesterId) ?? new Date().getFullYear();
+      const result = await findProgramPlan(code, guessYear);
+      if ("kind" in result) {
+        statusEl.textContent =
+          result.kind === "not-found"
+            ? "ingen studieplan funnet for dette programmet"
+            : "klarte ikke å hente studieplan";
+        return;
+      }
+
+      const years = [...result.plan.publishedYears].sort((a, b) => b - a);
+      if (years.length === 0) {
+        statusEl.textContent = "ingen kull publisert for dette programmet ennå";
+        return;
+      }
+
+      statusEl.textContent = "";
+      kullName.textContent = name;
+      kullSection.hidden = false;
+      kullChips.replaceChildren();
+      const preferred = defaultCohort(years, result.plan);
+      for (const year of years) {
+        const chip = el("button", "np-toggle", `kull ${year}`);
+        chip.type = "button";
+        chip.setAttribute("aria-label", `Kull ${year}`);
+        chip.setAttribute("aria-pressed", String(year === preferred));
+        chip.addEventListener("click", () => {
+          void useCohort(code, name, year);
+        });
+        kullChips.append(chip);
+      }
+    }
+
+    function renderOptions(): void {
+      if (!input || !listbox) return;
+      const query = fold(input.value.trim());
+      if (query === "") {
+        closeListbox();
+        resetKull();
+        return;
+      }
+      matches = programOptions
+        .filter(([code, name]) => fold(code).includes(query) || fold(name).includes(query))
+        .slice(0, 12);
+
+      listbox.replaceChildren();
+      if (matches.length === 0) {
+        listbox.append(el("li", "home-listbox-empty np-note", "Ingen treff."));
+        listbox.hidden = false;
+        activeIndex = -1;
+        input.setAttribute("aria-expanded", "true");
+        return;
+      }
+      matches.forEach((option) => {
+        const [code, name] = option;
+        const item = el("li", "home-option");
+        item.setAttribute("role", "option");
+        item.append(el("span", "np-data home-option-code", code));
+        item.append(el("span", "home-option-name", name));
+        item.addEventListener("mousedown", (event) => {
+          event.preventDefault();
+          void pickProgram(option);
+        });
+        listbox?.append(item);
+      });
+      listbox.hidden = false;
+      input.setAttribute("aria-expanded", "true");
+      setActive(0);
+    }
+
+    input.addEventListener("input", renderOptions);
+    input.addEventListener("keydown", (event) => {
+      if (!listbox || listbox.hidden || matches.length === 0) return;
+      if (event.key === "ArrowDown") {
+        event.preventDefault();
+        setActive((activeIndex + 1) % matches.length);
+      } else if (event.key === "ArrowUp") {
+        event.preventDefault();
+        setActive((activeIndex - 1 + matches.length) % matches.length);
+      } else if (event.key === "Enter") {
+        event.preventDefault();
+        const picked = matches[activeIndex] ?? matches[0];
+        if (picked) void pickProgram(picked);
+      } else if (event.key === "Escape") {
+        closeListbox();
+      }
+    });
+    field.addEventListener("focusout", (event) => {
+      if (!field.contains(event.relatedTarget as Node | null)) closeListbox();
+    });
+  }
 </script>

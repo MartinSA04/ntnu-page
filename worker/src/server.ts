@@ -57,6 +57,7 @@ export default {
     const cache = new TieredCache(memoryCache, env.CACHE);
     const deps = { client, cache };
     const year = url.searchParams.get("year");
+    const version = url.searchParams.get("version");
 
     const courseMatch = pathname.match(
       /^\/api\/course\/([^/]+)(?:\/(grades|timetable|schedule))?$/,
@@ -70,9 +71,9 @@ export default {
         case "grades":
           return handleCourseGrades(deps, code);
         case "timetable":
-          return handleCourseTimetable(deps, code, year);
+          return handleCourseTimetable(deps, code, year, version);
         case "schedule":
-          return handleCourseSchedule(deps, code, year);
+          return handleCourseSchedule(deps, code, year, version);
         default:
           return notFound();
       }

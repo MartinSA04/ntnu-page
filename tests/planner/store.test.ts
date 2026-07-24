@@ -1,9 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
+  activeCourses,
   createPlanStore,
+  DEFAULT_VERSION,
   type EventTargetLike,
   formatPlanHash,
   PLAN_STORAGE_KEY,
+  type PlanCourse,
   parsePlanHash,
   type StorageLike,
 } from "../../src/lib/planner/store.js";
@@ -59,12 +62,23 @@ describe("createPlanStore", () => {
     expect(store.loadPlan()).toEqual({ v: 1, semesterId: "26h", courses: [] });
   });
 
-  it("addCourse appends and persists", () => {
+  it("addCourse appends and persists, defaulting version and source", () => {
     const store = createPlanStore("26h", { storage, events });
     store.addCourse({ code: "TDT4100", name: "Objektorientert programmering" });
     expect(store.loadPlan().courses).toEqual([
-      { code: "TDT4100", name: "Objektorientert programmering" },
+      { code: "TDT4100", name: "Objektorientert programmering", version: "1", source: "manual" },
     ]);
+  });
+
+  it("addCourse honors an explicit version and source", () => {
+    const store = createPlanStore("26h", { storage, events });
+    store.addCourse({ code: "TDT4100", name: "A", version: "2", source: "program" });
+    expect(store.loadPlan().courses[0]).toEqual({
+      code: "TDT4100",
+      name: "A",
+      version: "2",
+      source: "program",
+    });
   });
 
   it("addCourse dedupes by code", () => {
@@ -79,7 +93,7 @@ describe("createPlanStore", () => {
     store.addCourse({ code: "TDT4100", name: "A" });
     store.addCourse({ code: "TMA4100", name: "B" });
     store.removeCourse("TDT4100");
-    expect(store.loadPlan().courses).toEqual([{ code: "TMA4100", name: "B" }]);
+    expect(store.loadPlan().courses.map((c) => c.code)).toEqual(["TMA4100"]);
   });
 
   it("removeCourse is a no-op for an absent code", () => {
@@ -118,7 +132,7 @@ describe("createPlanStore", () => {
 
     const storeB = createPlanStore("26h", { storage, events: fakeEvents() });
     const plan = storeB.loadPlan();
-    expect(plan.courses).toEqual([{ code: "TDT4100", name: "A" }]);
+    expect(plan.courses.map((c) => c.code)).toEqual(["TDT4100"]);
     expect(plan.program).toEqual({ code: "MTDT", name: "Datateknologi", cohort: 2024 });
   });
 
@@ -134,13 +148,24 @@ describe("createPlanStore", () => {
     expect(store.loadPlan()).toEqual({ v: 1, semesterId: "26h", courses: [] });
   });
 
+  it("migrates a bare v1-shaped stored course ({code,name}, no version/source) to source:manual", () => {
+    storage.setItem(
+      PLAN_STORAGE_KEY,
+      JSON.stringify({ v: 1, semesterId: "26h", courses: [{ code: "TDT4100", name: "A" }] }),
+    );
+    const store = createPlanStore("26h", { storage, events });
+    expect(store.loadPlan().courses).toEqual([
+      { code: "TDT4100", name: "A", version: "1", source: "manual" },
+    ]);
+  });
+
   it("onPlanChange fires on same-tab saves via the custom event", () => {
     const store = createPlanStore("26h", { storage, events });
     const cb = vi.fn();
     const unsubscribe = store.onPlanChange(cb);
     store.addCourse({ code: "TDT4100", name: "A" });
     expect(cb).toHaveBeenCalledTimes(1);
-    expect(cb.mock.calls[0]?.[0]?.courses).toEqual([{ code: "TDT4100", name: "A" }]);
+    expect(cb.mock.calls[0]?.[0]?.courses[0]?.code).toBe("TDT4100");
     unsubscribe();
     store.addCourse({ code: "TMA4100", name: "B" });
     expect(cb).toHaveBeenCalledTimes(1);
@@ -164,21 +189,203 @@ describe("createPlanStore", () => {
   });
 });
 
-describe("parsePlanHash / formatPlanHash", () => {
-  it("parses a semester + courses hash", () => {
-    expect(parsePlanHash("#26h;TDT4100,TMA4100")).toEqual({
+describe("dropCourse / restoreCourse", () => {
+  let storage: StorageLike;
+  let events: EventTargetLike;
+
+  beforeEach(() => {
+    storage = fakeStorage();
+    events = fakeEvents();
+  });
+
+  it("drops a programme course: stays listed, gains dropped:true", () => {
+    const store = createPlanStore("26h", { storage, events });
+    store.addCourse({ code: "TDT4100", name: "A", source: "program" });
+    store.dropCourse("TDT4100");
+    const plan = store.loadPlan();
+    expect(plan.courses).toHaveLength(1);
+    expect(plan.courses[0]).toMatchObject({ code: "TDT4100", dropped: true });
+  });
+
+  it("restoreCourse clears the dropped flag", () => {
+    const store = createPlanStore("26h", { storage, events });
+    store.addCourse({ code: "TDT4100", name: "A", source: "program" });
+    store.dropCourse("TDT4100");
+    store.restoreCourse("TDT4100");
+    const plan = store.loadPlan();
+    expect(plan.courses[0]?.dropped).toBeUndefined();
+  });
+
+  it("dropCourse is a no-op for a manual course (drop only applies to programme courses)", () => {
+    const store = createPlanStore("26h", { storage, events });
+    store.addCourse({ code: "PSY1000", name: "A", source: "manual" });
+    const before = store.loadPlan();
+    store.dropCourse("PSY1000");
+    expect(store.loadPlan()).toEqual(before);
+  });
+
+  it("dropCourse is a no-op for an absent code", () => {
+    const store = createPlanStore("26h", { storage, events });
+    store.addCourse({ code: "TDT4100", name: "A", source: "program" });
+    const before = store.loadPlan();
+    store.dropCourse("NOPE0000");
+    expect(store.loadPlan()).toEqual(before);
+  });
+
+  it("restoreCourse is a no-op for a course that isn't dropped", () => {
+    const store = createPlanStore("26h", { storage, events });
+    store.addCourse({ code: "TDT4100", name: "A", source: "program" });
+    const before = store.loadPlan();
+    store.restoreCourse("TDT4100");
+    expect(store.loadPlan()).toEqual(before);
+  });
+
+  it("dropCourse does not persist/dispatch when it's a no-op", () => {
+    const store = createPlanStore("26h", { storage, events });
+    store.addCourse({ code: "PSY1000", name: "A", source: "manual" });
+    const cb = vi.fn();
+    store.onPlanChange(cb);
+    store.dropCourse("PSY1000");
+    expect(cb).not.toHaveBeenCalled();
+  });
+});
+
+describe("activeCourses", () => {
+  it("excludes dropped courses", () => {
+    const courses: PlanCourse[] = [
+      { code: "A", name: "A", version: "1", source: "program" },
+      { code: "B", name: "B", version: "1", source: "program", dropped: true },
+      { code: "C", name: "C", version: "1", source: "manual" },
+    ];
+    expect(activeCourses({ courses }).map((c) => c.code)).toEqual(["A", "C"]);
+  });
+
+  it("returns [] for an all-dropped plan", () => {
+    const courses: PlanCourse[] = [
+      { code: "A", name: "A", version: "1", source: "program", dropped: true },
+    ];
+    expect(activeCourses({ courses })).toEqual([]);
+  });
+
+  it("returns [] for an empty plan", () => {
+    expect(activeCourses({ courses: [] })).toEqual([]);
+  });
+});
+
+describe("setProgramPlan", () => {
+  let storage: StorageLike;
+  let events: EventTargetLike;
+
+  beforeEach(() => {
+    storage = fakeStorage();
+    events = fakeEvents();
+  });
+
+  it("replaces the programme course set and records the program", () => {
+    const store = createPlanStore("26h", { storage, events });
+    store.setProgramPlan({ code: "MTDT", name: "Datateknologi", cohort: 2024 }, [
+      { code: "TDT4100", name: "A" },
+      { code: "TMA4100", name: "B" },
+    ]);
+    const plan = store.loadPlan();
+    expect(plan.program).toEqual({ code: "MTDT", name: "Datateknologi", cohort: 2024 });
+    expect(plan.courses).toEqual([
+      { code: "TDT4100", name: "A", version: "1", source: "program" },
+      { code: "TMA4100", name: "B", version: "1", source: "program" },
+    ]);
+  });
+
+  it("preserves drops on codes that persist across a re-fetch", () => {
+    const store = createPlanStore("26h", { storage, events });
+    store.setProgramPlan({ code: "MTDT", name: "Datateknologi", cohort: 2024 }, [
+      { code: "TDT4100", name: "A" },
+      { code: "TMA4100", name: "B" },
+    ]);
+    store.dropCourse("TDT4100");
+    // Re-fetching the same plan (e.g. programme/kull re-selected) must not
+    // silently un-drop TDT4100.
+    store.setProgramPlan({ code: "MTDT", name: "Datateknologi", cohort: 2024 }, [
+      { code: "TDT4100", name: "A" },
+      { code: "TMA4100", name: "B" },
+    ]);
+    const plan = store.loadPlan();
+    expect(plan.courses.find((c) => c.code === "TDT4100")?.dropped).toBe(true);
+    expect(plan.courses.find((c) => c.code === "TMA4100")?.dropped).toBeUndefined();
+  });
+
+  it("drops a code that no longer appears in the new programme set (silently, since it's gone)", () => {
+    const store = createPlanStore("26h", { storage, events });
+    store.setProgramPlan({ code: "MTDT", name: "Datateknologi", cohort: 2024 }, [
+      { code: "TDT4100", name: "A" },
+    ]);
+    store.dropCourse("TDT4100");
+    store.setProgramPlan({ code: "MTDT", name: "Datateknologi", cohort: 2024 }, [
+      { code: "TMA4100", name: "B" },
+    ]);
+    const plan = store.loadPlan();
+    expect(plan.courses.map((c) => c.code)).toEqual(["TMA4100"]);
+  });
+
+  it("preserves every manual add untouched", () => {
+    const store = createPlanStore("26h", { storage, events });
+    store.addCourse({ code: "PSY1000", name: "Manual", source: "manual" });
+    store.setProgramPlan({ code: "MTDT", name: "Datateknologi", cohort: 2024 }, [
+      { code: "TDT4100", name: "A" },
+    ]);
+    const plan = store.loadPlan();
+    expect(plan.courses.map((c) => c.code)).toEqual(["TDT4100", "PSY1000"]);
+    expect(plan.courses.find((c) => c.code === "PSY1000")?.source).toBe("manual");
+  });
+
+  it("a second setProgramPlan call fully replaces the first programme set", () => {
+    const store = createPlanStore("26h", { storage, events });
+    store.setProgramPlan({ code: "MTDT", name: "Datateknologi", cohort: 2024 }, [
+      { code: "TDT4100", name: "A" },
+      { code: "TMA4100", name: "B" },
+    ]);
+    store.setProgramPlan({ code: "MTDT", name: "Datateknologi", cohort: 2023 }, [
+      { code: "TDT4110", name: "C" },
+    ]);
+    const plan = store.loadPlan();
+    expect(plan.courses.map((c) => c.code)).toEqual(["TDT4110"]);
+    expect(plan.program?.cohort).toBe(2023);
+  });
+});
+
+describe("parsePlanHash / formatPlanHash — v2 grammar", () => {
+  it("parses a v2 hash with semester, program, and mixed items", () => {
+    const parsed = parsePlanHash("#v2;26h;MTDT.2024;TDT4100,TMA4100.2,-IT2805,+PSY1000");
+    expect(parsed).toEqual({
       semesterId: "26h",
-      codes: ["TDT4100", "TMA4100"],
+      program: { code: "MTDT", cohort: 2024 },
+      courses: [
+        { code: "TDT4100", version: "1", source: "program" },
+        { code: "TMA4100", version: "2", source: "program" },
+        { code: "IT2805", version: "1", source: "program", dropped: true },
+        { code: "PSY1000", version: "1", source: "manual" },
+      ],
     });
   });
 
-  it("parses without the leading #", () => {
-    expect(parsePlanHash("26h;TDT4100")).toEqual({ semesterId: "26h", codes: ["TDT4100"] });
+  it('parses a v2 hash with no program ("-" segment)', () => {
+    const parsed = parsePlanHash("#v2;26h;-;TDT4100");
+    expect(parsed?.program).toBeNull();
+    expect(parsed?.courses).toEqual([{ code: "TDT4100", version: "1", source: "program" }]);
   });
 
-  it("parses a semester with no courses", () => {
-    expect(parsePlanHash("#26h;")).toEqual({ semesterId: "26h", codes: [] });
-    expect(parsePlanHash("#26h")).toEqual({ semesterId: "26h", codes: [] });
+  it("parses a v2 hash with no items", () => {
+    const parsed = parsePlanHash("#v2;26h;-;");
+    expect(parsed).toEqual({ semesterId: "26h", program: null, courses: [] });
+  });
+
+  it("parses without the leading #", () => {
+    const parsed = parsePlanHash("v2;26h;-;TDT4100");
+    expect(parsed?.semesterId).toBe("26h");
+  });
+
+  it("drops empty/malformed course tokens", () => {
+    const parsed = parsePlanHash("#v2;26h;-;TDT4100,,+ ,TMA4100");
+    expect(parsed?.courses.map((c) => c.code)).toEqual(["TDT4100", "TMA4100"]);
   });
 
   it("returns null for an empty hash", () => {
@@ -186,53 +393,85 @@ describe("parsePlanHash / formatPlanHash", () => {
     expect(parsePlanHash("#")).toBeNull();
   });
 
-  it("drops empty course tokens", () => {
-    expect(parsePlanHash("#26h;TDT4100,,TMA4100")).toEqual({
+  it("formats a full plan (program + drops + manual + non-default versions)", () => {
+    const hash = formatPlanHash({
       semesterId: "26h",
-      codes: ["TDT4100", "TMA4100"],
-    });
-  });
-
-  it("formats a plan into its hash form", () => {
-    expect(
-      formatPlanHash({
-        semesterId: "26h",
-        courses: [
-          { code: "TDT4100", name: "A" },
-          { code: "TMA4100", name: "B" },
-        ],
-      }),
-    ).toBe("#26h;TDT4100,TMA4100");
-  });
-
-  it("formats a plan with no courses", () => {
-    expect(formatPlanHash({ semesterId: "26h", courses: [] })).toBe("#26h;");
-  });
-
-  it("round-trips format → parse", () => {
-    const original = {
-      semesterId: "27v",
+      program: { code: "MTDT", name: "Datateknologi", cohort: 2024 },
       courses: [
-        { code: "TDT4110", name: "X" },
-        { code: "TMA4115", name: "Y" },
+        { code: "TDT4100", name: "A", version: "1", source: "program" },
+        { code: "TMA4100", name: "B", version: "2", source: "program" },
+        { code: "IT2805", name: "C", version: "1", source: "program", dropped: true },
+        { code: "PSY1000", name: "D", version: "1", source: "manual" },
+      ],
+    });
+    expect(hash).toBe("#v2;26h;MTDT.2024;TDT4100,TMA4100.2,-IT2805,+PSY1000");
+  });
+
+  it('formats a plan with no program as a "-" segment', () => {
+    const hash = formatPlanHash({ semesterId: "26h", courses: [] });
+    expect(hash).toBe("#v2;26h;-;");
+  });
+
+  it("round-trips format → parse for every field (program, drops, extras, non-default versions)", () => {
+    const original: Parameters<typeof formatPlanHash>[0] = {
+      semesterId: "27v",
+      program: { code: "MTIOT", name: "Datateknologi", cohort: 2023 },
+      courses: [
+        { code: "TDT4110", name: "X", version: "1", source: "program" },
+        { code: "TMA4115", name: "Y", version: "3", source: "program", dropped: true },
+        { code: "IT3708", name: "Z", version: "1", source: "manual" },
       ],
     };
     const hash = formatPlanHash(original);
     const parsed = parsePlanHash(hash);
     expect(parsed).toEqual({
-      semesterId: original.semesterId,
-      codes: original.courses.map((c) => c.code),
+      semesterId: "27v",
+      program: { code: "MTIOT", cohort: 2023 },
+      courses: [
+        { code: "TDT4110", version: "1", source: "program" },
+        { code: "TMA4115", version: "3", source: "program", dropped: true },
+        { code: "IT3708", version: "1", source: "manual" },
+      ],
     });
   });
 
-  it("round-trips parse → format for codes (name-less)", () => {
+  it("round-trips an empty plan", () => {
+    const hash = formatPlanHash({ semesterId: "26h", courses: [] });
+    expect(parsePlanHash(hash)).toEqual({ semesterId: "26h", program: null, courses: [] });
+  });
+});
+
+describe("parsePlanHash — legacy v1-compat read (D15)", () => {
+  it("parses a legacy hash (no v token, bare codes) as all-manual, version 1, no program", () => {
     const parsed = parsePlanHash("#26h;TDT4100,TMA4100");
-    expect(parsed).not.toBeNull();
-    if (!parsed) return;
-    const rebuilt = formatPlanHash({
-      semesterId: parsed.semesterId,
-      courses: parsed.codes.map((code) => ({ code, name: "" })),
+    expect(parsed).toEqual({
+      semesterId: "26h",
+      program: null,
+      courses: [
+        { code: "TDT4100", version: DEFAULT_VERSION, source: "manual" },
+        { code: "TMA4100", version: DEFAULT_VERSION, source: "manual" },
+      ],
     });
-    expect(rebuilt).toBe("#26h;TDT4100,TMA4100");
+  });
+
+  it("parses a legacy hash without the leading #", () => {
+    expect(parsePlanHash("26h;TDT4100")?.courses).toEqual([
+      { code: "TDT4100", version: "1", source: "manual" },
+    ]);
+  });
+
+  it("parses a legacy semester with no courses", () => {
+    expect(parsePlanHash("#26h;")).toEqual({ semesterId: "26h", program: null, courses: [] });
+    expect(parsePlanHash("#26h")).toEqual({ semesterId: "26h", program: null, courses: [] });
+  });
+
+  it("drops empty course tokens in a legacy hash", () => {
+    const parsed = parsePlanHash("#26h;TDT4100,,TMA4100");
+    expect(parsed?.courses.map((c) => c.code)).toEqual(["TDT4100", "TMA4100"]);
+  });
+
+  it("never writes a legacy hash again: formatPlanHash always emits v2", () => {
+    const hash = formatPlanHash({ semesterId: "26h", courses: [] });
+    expect(hash.startsWith("#v2;")).toBe(true);
   });
 });

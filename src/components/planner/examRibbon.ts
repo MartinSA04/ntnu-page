@@ -1,10 +1,15 @@
 /**
- * EKSAMENER — the exam ribbon (PLANNER.md §2). `.np-frame.np-ruled` strip
+ * EKSAMENER — the exam ribbon (PRODUCT.md DR-3). `.np-frame.np-ruled` strip
  * with a horizontal date axis over the semester's exam window, one square
  * hue dot per exam; same-day stacks get a red ring + `.np-note-clash` line;
- * below, the sorted mono list with day-gap annotations.
+ * below, the sorted mono list with day-gap annotations, dateless exams as
+ * "dato ikke satt" rows. Sourced from catalog `ExamDate` via the planner
+ * index (`examsFromIndex`), not scraped `CourseExam` text — kont exams are
+ * already excluded upstream by the crawler (see data.ts).
  */
+
 import { analyzeExams, type ExamInput, type ExamRow } from "../../lib/planner/conflicts.js";
+import { examsFromIndex, type PlannerIndex } from "../../lib/planner/data.js";
 import { dot, el } from "./dom.js";
 import type { PlanCourseState } from "./types.js";
 
@@ -23,32 +28,19 @@ const MONTH_NAMES = [
   "des",
 ];
 
-/**
- * Whether a `details.exams[].season` prose string (e.g. "Vår 2026") matches
- * the chosen semester's season, keyed off the `Semester.id` suffix (h/v).
- */
-function seasonMatches(seasonText: string | null, semesterId: string): boolean {
-  const letter = semesterId.trim().slice(-1).toLowerCase();
-  if (letter !== "h" && letter !== "v") return true; // unknown suffix: don't filter
-  if (!seasonText) return false;
-  const lower = seasonText.toLowerCase();
-  const markers = letter === "h" ? ["høst", "autumn"] : ["vår", "spring"];
-  return markers.some((m) => lower.includes(m));
-}
-
-/** Collects one exam input per dated, in-semester exam occasion across the plan's courses. */
-function collectExamInputs(courses: PlanCourseState[], semesterId: string): ExamInput[] {
+/** Collects one exam input per catalog-sourced exam occasion (dated or not) across the plan's courses. */
+function collectExamInputs(
+  courses: PlanCourseState[],
+  semesterId: string,
+  index: PlannerIndex | null,
+): ExamInput[] {
+  if (!index) return [];
+  const byCode = new Map(index.courses.map((c) => [c[0], c]));
   const inputs: ExamInput[] = [];
   for (const state of courses) {
-    const details = state.bundle?.details;
-    if (details?.exams && details.exams.length > 0) {
-      for (const exam of details.exams) {
-        if (!exam.date) continue;
-        if (!seasonMatches(exam.season, semesterId)) continue;
-        inputs.push({ code: state.course.code, date: exam.date });
-      }
-    }
-    // Static tier fallback: no details loaded yet, nothing to show for this course.
+    const row = byCode.get(state.course.code);
+    if (!row) continue;
+    inputs.push(...examsFromIndex(row, semesterId));
   }
   return inputs;
 }
@@ -82,19 +74,32 @@ function formatAxisDate(dateStr: string): string {
   return `${d.getDate()}. ${MONTH_NAMES[d.getMonth()]}`;
 }
 
+/** One "dato ikke satt" row (DR-3) — kept, not dropped, so the course isn't silently missing. */
+function datelessRow(code: string, hueVar: string): HTMLLIElement {
+  const item = el("li", "planner-exam-row");
+  item.append(el("span", "planner-exam-date np-data", "dato ikke satt"));
+  const codeWrap = el("span", "planner-exam-code");
+  codeWrap.append(dot(hueVar));
+  codeWrap.append(el("span", "np-data", code));
+  item.append(codeWrap);
+  return item;
+}
+
 /** Renders the exam ribbon + sorted list into `frame` / `listHost`. */
 export function renderExamRibbon(
   frame: HTMLElement,
   listHost: HTMLElement,
   courses: PlanCourseState[],
   semesterId: string,
+  index: PlannerIndex | null,
 ): ExamRenderResult {
   if (courses.length === 0) {
     return renderEmpty(frame, listHost, "Legg til emner for å se eksamensdatoer.");
   }
 
   const hueByCode = new Map(courses.map((c) => [c.course.code, c.hueVar]));
-  const inputs = collectExamInputs(courses, semesterId);
+  const inputs = collectExamInputs(courses, semesterId, index);
+  const dateless = inputs.filter((e) => e.date === null);
 
   if (inputs.length === 0) {
     return renderEmpty(frame, listHost, "Ingen eksamensdatoer funnet ennå for emnene i planen.");
@@ -104,6 +109,22 @@ export function renderExamRibbon(
   const first = rows[0];
   const last = rows[rows.length - 1];
   if (!first || !last) {
+    // Dated rows are empty, but dateless exams exist: still list them, no ribbon axis to plot.
+    if (dateless.length > 0) {
+      frame.replaceChildren(
+        el(
+          "p",
+          "planner-exam-empty np-note",
+          "Ingen eksamensdatoer satt ennå for emnene i planen.",
+        ),
+      );
+      const list = el("ul", "planner-exam-list");
+      for (const exam of dateless) {
+        list.append(datelessRow(exam.code, hueByCode.get(exam.code) ?? "--hue-blue"));
+      }
+      listHost.replaceChildren(list);
+      return { collisionCount: 0, windowLabel: null };
+    }
     return renderEmpty(frame, listHost, "Ingen eksamensdatoer funnet ennå for emnene i planen.");
   }
 
@@ -174,6 +195,9 @@ export function renderExamRibbon(
       item.append(el("span", gapClass, gapText));
     }
     list.append(item);
+  }
+  for (const exam of dateless) {
+    list.append(datelessRow(exam.code, hueByCode.get(exam.code) ?? "--hue-blue"));
   }
   listHost.replaceChildren(list);
 

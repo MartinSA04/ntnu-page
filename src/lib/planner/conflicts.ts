@@ -1,6 +1,13 @@
 /**
  * The conflict engine (PLANNER.md §3): pairwise timetable clash detection
  * and exam-date collision/gap analysis over a selected set of courses.
+ *
+ * DR-1 (PRODUCT.md): hard conflicts are lecture-only. `findConflicts` itself
+ * stays classification-agnostic — the simpler of the two APIs described in
+ * the brief (a `classify` option vs. a pre-filtered input) — and callers
+ * filter with `lecturesOnly`/`classifyActivity` (activity.ts) before calling
+ * it: `findConflicts(lecturesOnly(entries))`. Øving/lab entries are still
+ * rendered (muted, non-clashing) by simply not being fed into this function.
  */
 import { parseWeeks, type ScheduleEntry, toMinutes } from "./schedule.js";
 

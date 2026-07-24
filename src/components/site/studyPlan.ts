@@ -3,14 +3,19 @@
  * at the current cohort year, stepping back on 404 (max 3 tries), then
  * renders cohort-year chips from the response's `publishedYears` and
  * refetches on chip click. Plan body: periods → course groups → course rows
- * (mono code linking to `/emne/CODE/` + add control), waypoints/directions
- * as nested `.np-summary` disclosures. Each course row and period header
- * gets an add control that writes to the plan store and records the
- * program/kull context (PLANNER.md §5); the period matching the plan's
- * chosen semester for the cohort is auto-highlighted ("ditt semester").
+ * (mono code linking to `/emne/CODE/` + manual add control), waypoints/
+ * directions as nested `.np-summary` disclosures. Each course row's add
+ * control is a manual add (`source: "manual"`); the period matching the
+ * plan's chosen semester for the cohort is auto-highlighted ("ditt
+ * semester") and carries a "Bruk som planen min" button that builds the
+ * programme baseline for that period the same way the landing page's
+ * kull-picker does (PRODUCT.md §0) — obligatory-classified courses replace
+ * the plan's `source: "program"` set via `setProgramPlan`, preserving
+ * existing manual adds/drops, then navigates to `/planlegger/`.
  */
 import { semesterYear } from "../../lib/planner/schedule.ts";
-import { createPlanStore, type PlanStore } from "../../lib/planner/store.ts";
+import { createPlanStore, formatPlanHash, type PlanStore } from "../../lib/planner/store.ts";
+import { classifyPeriod, isSuspiciousPrefill } from "../planner/programPlan.ts";
 
 interface StudyChoice {
   code: string | null;
@@ -115,12 +120,8 @@ function currentPeriodNumber(semesterId: string, cohort: number): number | null 
   return (semYear - cohort) * 2 + (isAutumn ? 1 : 2);
 }
 
-function addButton(
-  store: PlanStore,
-  code: string,
-  name: string,
-  program: { code: string; name: string; cohort: number },
-): HTMLButtonElement {
+/** A manual add/remove toggle for one course row (source: "manual" — PRODUCT.md §0.3). */
+function addButton(store: PlanStore, code: string, name: string): HTMLButtonElement {
   const btn = el("button", "np-icon-btn np-press plan-add-btn");
   btn.type = "button";
 
@@ -138,8 +139,7 @@ function addButton(
     if (store.hasCourse(code)) {
       store.removeCourse(code);
     } else {
-      store.addCourse({ code, name });
-      store.setProgram(program);
+      store.addCourse({ code, name, source: "manual" });
     }
     sync();
   });
@@ -149,11 +149,7 @@ function addButton(
   return btn;
 }
 
-function renderCourseGroup(
-  group: PlanCourseGroup,
-  store: PlanStore,
-  program: { code: string; name: string; cohort: number },
-): HTMLElement {
+function renderCourseGroup(group: PlanCourseGroup, store: PlanStore): HTMLElement {
   const wrap = el("div", "plan-group");
   if (group.name) wrap.append(el("p", "plan-group-name", group.name));
   for (const course of group.courses) {
@@ -165,7 +161,7 @@ function renderCourseGroup(
       link.href = `/emne/${course.code}/`;
       row.append(link);
       row.append(el("span", "plan-course-name", course.name ?? ""));
-      row.append(addButton(store, course.code, course.name ?? course.code, program));
+      row.append(addButton(store, course.code, course.name ?? course.code));
     }
     if (course.credits !== null) {
       row.append(el("span", "plan-course-credits", `${course.credits} sp`));
@@ -175,23 +171,15 @@ function renderCourseGroup(
   return wrap;
 }
 
-function renderDirection(
-  direction: PlanDirection,
-  store: PlanStore,
-  program: { code: string; name: string; cohort: number },
-): HTMLElement {
+function renderDirection(direction: PlanDirection, store: PlanStore): HTMLElement {
   const wrap = el("div", "plan-direction");
   if (direction.name) wrap.append(el("p", "plan-direction-name", direction.name));
-  for (const group of direction.courseGroups) wrap.append(renderCourseGroup(group, store, program));
-  for (const waypoint of direction.waypoints) wrap.append(renderWaypoint(waypoint, store, program));
+  for (const group of direction.courseGroups) wrap.append(renderCourseGroup(group, store));
+  for (const waypoint of direction.waypoints) wrap.append(renderWaypoint(waypoint, store));
   return wrap;
 }
 
-function renderWaypoint(
-  waypoint: StudyWaypoint,
-  store: PlanStore,
-  program: { code: string; name: string; cohort: number },
-): HTMLElement {
+function renderWaypoint(waypoint: StudyWaypoint, store: PlanStore): HTMLElement {
   const details = el("details", "plan-waypoint");
   const summary = document.createElement("summary");
   summary.className = "np-summary";
@@ -199,25 +187,38 @@ function renderWaypoint(
   details.append(summary);
 
   const body = el("div", "plan-waypoint-body");
-  for (const direction of waypoint.directions)
-    body.append(renderDirection(direction, store, program));
+  for (const direction of waypoint.directions) body.append(renderDirection(direction, store));
   details.append(body);
 
   return details;
 }
 
-/** Every non-plan-element course code inside a direction (for "Legg til alle"). */
-function coursesInDirection(direction: PlanDirection): PlannedCourse[] {
-  const courses: PlannedCourse[] = [];
-  for (const group of direction.courseGroups) {
-    for (const course of group.courses) {
-      if (!course.planElement) courses.push(course);
-    }
-  }
-  for (const waypoint of direction.waypoints) {
-    for (const inner of waypoint.directions) courses.push(...coursesInDirection(inner));
-  }
-  return courses;
+/**
+ * Builds the programme baseline for `periodNumber` the same way the landing
+ * page's kull-picker does (PRODUCT.md §0): obligatory-classified courses
+ * (DR-5 heuristic in programPlan.ts, validated against real MTDT + a
+ * bachelor programme) replace the plan's `source: "program"` set via
+ * `setProgramPlan` — preserving existing manual adds/drops per store
+ * semantics — then navigates to `/planlegger/` with the resulting plan
+ * seeded into the hash.
+ */
+async function useAsMyPlan(
+  store: PlanStore,
+  plan: StudyPlan,
+  periodNumber: number,
+  program: { code: string; name: string; cohort: number },
+): Promise<void> {
+  const classified = classifyPeriod(plan, periodNumber);
+  let obligatory = classified?.obligatory ?? [];
+  if (isSuspiciousPrefill(obligatory)) obligatory = [];
+  const toAdd = obligatory.map((c) => ({
+    code: c.code,
+    name: c.name,
+    version: c.version,
+    source: "program" as const,
+  }));
+  const next = store.setProgramPlan(program, toAdd);
+  location.href = `/planlegger/${formatPlanHash(next)}`;
 }
 
 function renderPlan(
@@ -247,23 +248,18 @@ function renderPlan(
     );
     if (isCurrent) header.append(el("span", "np-note plan-period-current", "ditt semester"));
 
-    const courses = coursesInDirection(period.direction);
-    if (courses.length > 0) {
-      const addAll = el("button", "np-btn np-press plan-add-all", "Legg til alle");
-      addAll.type = "button";
-      addAll.addEventListener("click", () => {
-        for (const course of courses) {
-          if (!store.hasCourse(course.code)) {
-            store.addCourse({ code: course.code, name: course.name ?? course.code });
-          }
-        }
-        store.setProgram(program);
+    if (period.periodNumber !== null) {
+      const periodNumber = period.periodNumber;
+      const useBtn = el("button", "np-btn np-press plan-use-as-mine", "Bruk som planen min");
+      useBtn.type = "button";
+      useBtn.addEventListener("click", () => {
+        void useAsMyPlan(store, plan, periodNumber, program);
       });
-      header.append(addAll);
+      header.append(useBtn);
     }
 
     section.append(header);
-    section.append(renderDirection(period.direction, store, program));
+    section.append(renderDirection(period.direction, store));
     body.append(section);
   }
 }

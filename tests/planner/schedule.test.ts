@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  entriesForProgram,
   entriesInSemester,
   parseWeeks,
   semesterYear,
@@ -102,5 +103,34 @@ describe("entriesInSemester", () => {
     const inSem = entry("A", ["34-40"]);
     const notInSem = entry("B", ["1-13"]);
     expect(entriesInSemester([inSem, notInSem], [34, 35])).toEqual([inSem]);
+  });
+});
+
+describe("entriesForProgram", () => {
+  const e = (keys: string[] | undefined) => ({
+    courseCode: "TMA4400",
+    dayNumber: 1,
+    startTime: "08:15",
+    endTime: "10:00",
+    weeks: ["34-47"],
+    studyProgramKeys: keys,
+  });
+
+  it("keeps only own-programme + programme-less sections when the programme is named", () => {
+    const entries = [e(["MTDT", "MTKOM"]), e(["MTBYGG"]), e([]), e(undefined)];
+    const out = entriesForProgram(entries, "MTDT");
+    expect(out).toHaveLength(3);
+    expect(out.some((x) => x.studyProgramKeys?.includes("MTBYGG"))).toBe(false);
+  });
+
+  it("keeps everything when no entry names the programme (course outside programme)", () => {
+    const entries = [e(["MTBYGG"]), e(["MTING"])];
+    expect(entriesForProgram(entries, "MTDT")).toHaveLength(2);
+  });
+
+  it("keeps everything without a programme context", () => {
+    const entries = [e(["MTBYGG"]), e([])];
+    expect(entriesForProgram(entries, undefined)).toHaveLength(2);
+    expect(entriesForProgram(entries, null)).toHaveLength(2);
   });
 });

@@ -216,6 +216,56 @@ describe("GET /api/course/:code/timetable", () => {
     expect(body).toHaveLength(1);
     expect(res.headers.get("Cache-Control")).toBe("public, max-age=300, s-maxage=3600");
   });
+
+  it("defaults to version 1 upstream when ?version= is absent (DR-4)", async () => {
+    const { fetch, calls } = routeFetch([
+      {
+        match: "p_p_resource_id=timetable",
+        respond: () => jsonResponse({ summarized: [TIMETABLE_ENTRY] }),
+      },
+    ]);
+    const deps = makeDeps(fetch);
+    await handleCourseTimetable(deps, "TDT4100", "2026");
+    expect(calls.some((c) => c.url.includes("version=1"))).toBe(true);
+  });
+
+  it("passes a non-default ?version= through to the upstream call (DR-4)", async () => {
+    const { fetch, calls } = routeFetch([
+      {
+        match: "p_p_resource_id=timetable",
+        respond: () => jsonResponse({ summarized: [TIMETABLE_ENTRY] }),
+      },
+    ]);
+    const deps = makeDeps(fetch);
+    await handleCourseTimetable(deps, "TDT4100", "2026", "3");
+    expect(calls.some((c) => c.url.includes("version=3"))).toBe(true);
+  });
+
+  it("re-versioned and default-versioned timetables are cached under distinct keys", async () => {
+    const { fetch, calls } = routeFetch([
+      {
+        match: "p_p_resource_id=timetable",
+        respond: () => jsonResponse({ summarized: [TIMETABLE_ENTRY] }),
+      },
+    ]);
+    const deps = makeDeps(fetch);
+    await handleCourseTimetable(deps, "TDT4100", "2026");
+    await handleCourseTimetable(deps, "TDT4100", "2026", "2");
+    // Two distinct upstream calls -- not served from the same cache entry.
+    expect(calls).toHaveLength(2);
+  });
+
+  it("treats an empty ?version= the same as absent (falls back to upstream default)", async () => {
+    const { fetch, calls } = routeFetch([
+      {
+        match: "p_p_resource_id=timetable",
+        respond: () => jsonResponse({ summarized: [TIMETABLE_ENTRY] }),
+      },
+    ]);
+    const deps = makeDeps(fetch);
+    await handleCourseTimetable(deps, "TDT4100", "2026", "");
+    expect(calls.some((c) => c.url.includes("version=1"))).toBe(true);
+  });
 });
 
 describe("GET /api/course/:code/schedule", () => {
@@ -233,6 +283,31 @@ describe("GET /api/course/:code/schedule", () => {
     const secondBody = await second.json();
     expect(secondBody).toEqual(firstBody);
     expect(calls.length).toBe(1); // second call served from cache
+  });
+
+  it("passes a non-default ?version= through to the upstream call (DR-4)", async () => {
+    const { fetch, calls } = routeFetch([
+      {
+        match: "p_p_resource_id=schedules",
+        respond: () => jsonResponse({ schedules: [SCHEDULE_ACTIVITY] }),
+      },
+    ]);
+    const deps = makeDeps(fetch);
+    await handleCourseSchedule(deps, "TDT4100", "2026", "2");
+    expect(calls.some((c) => c.url.includes("version=2"))).toBe(true);
+  });
+
+  it("re-versioned and default-versioned schedules are cached under distinct keys", async () => {
+    const { fetch, calls } = routeFetch([
+      {
+        match: "p_p_resource_id=schedules",
+        respond: () => jsonResponse({ schedules: [SCHEDULE_ACTIVITY] }),
+      },
+    ]);
+    const deps = makeDeps(fetch);
+    await handleCourseSchedule(deps, "TDT4100", "2026");
+    await handleCourseSchedule(deps, "TDT4100", "2026", "2");
+    expect(calls).toHaveLength(2);
   });
 });
 

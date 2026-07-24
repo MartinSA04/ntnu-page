@@ -70,3 +70,29 @@ export function entriesInSemester<T extends ScheduleEntry>(
   const teaching = new Set(teachingWeeks);
   return entries.filter((entry) => parseWeeks(entry.weeks).some((w) => teaching.has(w)));
 }
+
+/**
+ * Filter multi-section timetable entries to the sections relevant for a
+ * study programme (PRODUCT.md §0: "your week"). Big service courses
+ * (e.g. TMA4400) publish parallel lecture sections per programme cluster,
+ * carried in `studyProgramKeys`. When `programCode` is set and at least one
+ * entry explicitly names it, entries naming only OTHER programmes are
+ * dropped (entries with no programme keys are for everyone and stay).
+ * When no entry names the programme (course outside the programme, or
+ * upstream stopped sending keys), all entries are kept — the filter must
+ * never fabricate an empty week.
+ */
+export function entriesForProgram<T extends { studyProgramKeys?: string[] | null }>(
+  entries: T[],
+  programCode: string | null | undefined,
+): T[] {
+  if (!programCode) return entries;
+  const mentionsProgram = entries.some((e) => e.studyProgramKeys?.includes(programCode));
+  if (!mentionsProgram) return entries;
+  return entries.filter(
+    (e) =>
+      !e.studyProgramKeys ||
+      e.studyProgramKeys.length === 0 ||
+      e.studyProgramKeys.includes(programCode),
+  );
+}

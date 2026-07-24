@@ -162,3 +162,10 @@
     --dur-flash: 0ms;
   }
 }
+
+/* Touch devices: every control scales through the one height token. */
+@media (pointer: coarse) {
+  :root {
+    --control-h: 44px;
+  }
+}

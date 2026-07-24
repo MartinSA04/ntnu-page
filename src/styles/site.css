@@ -47,6 +47,26 @@
   margin-left: auto;
 }
 
+/* Narrow phones: the wordmark + three nav links + toggle must fit 360px
+   without horizontal page scroll — tighten gaps, drop the mono suffix. */
+@media (max-width: 480px) {
+  .site-topbar {
+    gap: var(--gap-2);
+  }
+
+  .site-brand-suffix {
+    display: none;
+  }
+
+  .site-nav {
+    gap: 0;
+  }
+
+  .site-nav .np-navlink {
+    padding: 0 var(--space-1);
+  }
+}
+
 /* --- Content column ---
    Default: the reading measure. `.wide` (data pages: catalog tables, study
    plans, the planner) widens to the `--maxw` column instead. */

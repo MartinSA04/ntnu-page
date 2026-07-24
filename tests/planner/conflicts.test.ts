@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { lecturesOnly } from "../../src/lib/planner/activity.js";
 import { analyzeExams, findConflicts } from "../../src/lib/planner/conflicts.js";
 import type { ScheduleEntry } from "../../src/lib/planner/schedule.js";
 
@@ -175,6 +176,52 @@ describe("analyzeExams", () => {
       { code: "C", date: "2026-12-10" },
     ]);
     expect(rows.map((r) => r.dayGap)).toEqual([2, 7, null]);
+  });
+});
+
+describe("findConflicts — lecture-only (DR-1)", () => {
+  // An entry shaped like ScheduleEntry + a title, the way a caller filters
+  // real TimetableEntry data before handing it to findConflicts.
+  function titled(overrides: Partial<ScheduleEntry> & Pick<ScheduleEntry, "courseCode">) {
+    return { ...entry(overrides) };
+  }
+
+  it("does not flag an øving/lecture overlap when the caller pre-filters to lectures", () => {
+    const lecture = {
+      ...titled({ courseCode: "A", startTime: "10:00", endTime: "12:00" }),
+      title: "Forelesning",
+    };
+    const oving = {
+      ...titled({ courseCode: "B", startTime: "11:00", endTime: "13:00" }),
+      title: "Øving",
+    };
+    expect(findConflicts(lecturesOnly([lecture, oving]))).toEqual([]);
+  });
+
+  it("still flags a lecture/lecture overlap after pre-filtering to lectures", () => {
+    const a = {
+      ...titled({ courseCode: "A", startTime: "10:00", endTime: "12:00" }),
+      title: "Forelesning",
+    };
+    const b = {
+      ...titled({ courseCode: "B", startTime: "11:00", endTime: "13:00" }),
+      title: "Forelesning",
+    };
+    expect(findConflicts(lecturesOnly([a, b]))).toHaveLength(1);
+  });
+
+  it("øving/øving overlap across different courses is never flagged, filtered or not", () => {
+    const a = {
+      ...titled({ courseCode: "A", startTime: "10:00", endTime: "12:00" }),
+      title: "Øving",
+    };
+    const b = {
+      ...titled({ courseCode: "B", startTime: "11:00", endTime: "13:00" }),
+      title: "Lab",
+    };
+    expect(findConflicts(lecturesOnly([a, b]))).toEqual([]);
+    // Unfiltered, this WOULD be flagged -- demonstrating filtering is load-bearing.
+    expect(findConflicts([a, b])).toHaveLength(1);
   });
 });
 

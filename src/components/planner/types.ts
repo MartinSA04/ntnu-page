@@ -1,8 +1,7 @@
 /**
  * Shared types passed between the planner's orchestrator and its focused
- * render modules (grid, exam ribbon, basket). Kept separate from
- * `src/lib/planner/*` (the tested engine) — these are DOM-facing view
- * shapes only.
+ * render modules (grid, exam ribbon). Kept separate from `src/lib/planner/*`
+ * (the tested engine) — these are DOM-facing view shapes only.
  */
 
 import type { CourseBundle } from "../../lib/planner/data.js";

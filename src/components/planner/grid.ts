@@ -1,10 +1,14 @@
 /**
- * UKEPLAN — the weekly spread (PLANNER.md §2). `.np-frame.np-ruled` surface,
- * CSS grid Mon–Fri (+Sat only if data demands), 15-min rows clamped to the
- * data's actual time range. Overlapping blocks (2-way; 3+ stacks by width)
- * split side-by-side; colliding blocks get the red hatch + wavy underline;
+ * UKEPLAN — the weekly spread (PRODUCT.md §0/DR-1). `.np-frame.np-ruled`
+ * surface, CSS grid Mon–Fri (+Sat only if data demands), 15-min rows clamped
+ * to the data's actual time range. Lectures render by default; the caller
+ * passes `showOthers` (driven by the page's "Vis øvinger og labber" toggle)
+ * to additionally render øving/lab/seminar blocks — muted (reduced ink, hue
+ * dot only, never red) and never considered for collisions. Only
+ * lecture×lecture overlaps get the red hatch + wavy underline;
  * `.np-note-clash` margin notes below link to and flash the blocks.
  */
+import { classifyActivity } from "../../lib/planner/activity.js";
 import { findConflicts } from "../../lib/planner/conflicts.js";
 import { parseWeeks, type ScheduleEntry } from "../../lib/planner/schedule.js";
 import { dayName, dot, el, weekLabel } from "./dom.js";
@@ -20,6 +24,7 @@ interface GridEntry extends ScheduleEntry {
   rooms: string;
   weeksNumbers: number[];
   weeksLabel: string;
+  isLecture: boolean;
 }
 
 function roomLabel(rooms: { building: string | null; room: string | null }[]): string {
@@ -65,6 +70,7 @@ function collectEntries(courses: PlanCourseState[]): GridEntry[] {
         rooms: roomLabel(raw.rooms),
         weeksNumbers,
         weeksLabel: weekLabel(weeksNumbers),
+        isLecture: classifyActivity(raw) === "lecture",
       });
     }
   }
@@ -88,40 +94,58 @@ export interface GridRenderResult {
 
 /**
  * Renders the weekly spread + its margin conflict notes into `frame` /
- * `notesHost`. Returns the conflict count so the caller can fold it into
- * the page's overview line.
+ * `notesHost`. `showOthers` (the page's "Vis øvinger og labber" toggle)
+ * decides whether non-lecture entries are drawn at all — when off, only
+ * lectures render, matching DR-1's lecture-based-by-default rule. Hour
+ * clamping follows the SHOWN entries so the default view stays compact.
+ * Returns the conflict count so the caller can fold it into the page's
+ * overview line.
  */
 export function renderGrid(
   frame: HTMLElement,
   notesHost: HTMLElement,
   courses: PlanCourseState[],
+  showOthers: boolean,
 ): GridRenderResult {
-  const entries = collectEntries(courses);
+  const allEntries = collectEntries(courses);
+  const entries = showOthers ? allEntries : allEntries.filter((e) => e.isLecture);
   notesHost.replaceChildren();
 
   if (courses.length === 0) {
     renderEmpty(frame, "Legg til emner for å se ukeplanen.");
     return { conflictCount: 0 };
   }
-  if (entries.length === 0) {
+  if (allEntries.length === 0) {
     renderEmpty(frame, "Ingen timeplandata for emnene i planen ennå.");
     return { conflictCount: 0 };
   }
+  if (entries.length === 0) {
+    renderEmpty(frame, "Ingen forelesninger funnet — prøv «Vis øvinger og labber».");
+    return { conflictCount: 0 };
+  }
 
-  const conflicts = findConflicts(entries);
+  // Hard conflicts are lecture×lecture only (DR-1); øving/lab entries never clash.
+  const conflicts = findConflicts(entries.filter((e) => e.isLecture));
 
-  // Clamp displayed hours to the data, falling back to the 08–20 default window.
-  let minMinutes = DEFAULT_START_HOUR * 60;
-  let maxMinutes = DEFAULT_END_HOUR * 60;
+  // Clamp displayed hours to the entries actually shown — the grid is as
+  // tall as the visible week needs, not a fixed 08–20 canvas (a lecture-only
+  // week ending 16:00 shouldn't drag four empty hours). Toggling øvinger may
+  // grow the grid; that reflow is expected.
+  let minMinutes = Number.POSITIVE_INFINITY;
+  let maxMinutes = Number.NEGATIVE_INFINITY;
   for (const e of entries) {
     minMinutes = Math.min(minMinutes, timeToMinutes(e.startTime));
     maxMinutes = Math.max(maxMinutes, timeToMinutes(e.endTime));
+  }
+  if (!Number.isFinite(minMinutes) || !Number.isFinite(maxMinutes)) {
+    minMinutes = DEFAULT_START_HOUR * 60;
+    maxMinutes = DEFAULT_END_HOUR * 60;
   }
   minMinutes = Math.floor(minMinutes / 60) * 60;
   maxMinutes = Math.ceil(maxMinutes / 60) * 60;
   const totalRows = Math.ceil((maxMinutes - minMinutes) / ROW_MINUTES);
 
-  const hasSaturday = entries.some((e) => e.dayNumber === 6);
+  const hasSaturday = allEntries.some((e) => e.dayNumber === 6);
   const dayCount = hasSaturday ? 6 : 5;
 
   const grid = el("div", "planner-grid");
@@ -144,13 +168,21 @@ export function renderGrid(
   }
   grid.append(rail);
 
-  // Day columns with headers.
+  // Day columns with headers. Kept in a map so blocks below can be appended
+  // *inside* their own day's column — `.planner-block` is absolutely
+  // positioned relative to its nearest positioned ancestor, and
+  // `.planner-grid-day` is that ancestor (position: relative). Appending
+  // blocks straight onto `.planner-grid` instead (as a former version of
+  // this code did) makes every day's blocks position against the *whole*
+  // grid's width, collapsing all weekdays into the same horizontal strip.
+  const dayColumns = new Map<number, HTMLElement>();
   for (let day = 1; day <= dayCount; day++) {
     const col = el("div", "planner-grid-day");
     col.style.setProperty("--planner-day", String(day));
     const header = el("div", "planner-grid-day-header np-kicker", dayName(day).slice(0, 3));
     col.append(header);
     grid.append(col);
+    dayColumns.set(day, col);
   }
 
   // Lay out blocks per day, splitting overlaps side-by-side.
@@ -170,6 +202,7 @@ export function renderGrid(
       const block = el("button", "planner-block");
       block.type = "button";
       if (isColliding) block.classList.add("is-clash");
+      if (!entry.isLecture) block.classList.add("is-muted");
       block.id = blockId(entry);
       block.style.setProperty("--dot", `var(${entry.hueVar})`);
       block.style.setProperty("--planner-day", String(day));
@@ -189,7 +222,8 @@ export function renderGrid(
 
       block.addEventListener("click", () => flashBlock(entry));
 
-      grid.append(block);
+      const dayColumnEl = dayColumns.get(day);
+      (dayColumnEl ?? grid).append(block);
     }
   }
 

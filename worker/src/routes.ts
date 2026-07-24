@@ -130,22 +130,36 @@ export async function handleCourseGrades(deps: RouteDeps, code: string): Promise
   }
 }
 
+/**
+ * Validates an optional `?version=` query param. Empty/absent → `undefined`
+ * (let `ntnu-api` apply its own default); non-empty is passed through
+ * verbatim — course versions are short numeric-ish strings upstream, not a
+ * format this route needs to police beyond "not empty".
+ */
+function parseVersion(raw: string | null): string | undefined {
+  if (raw === null) return undefined;
+  const trimmed = raw.trim();
+  return trimmed === "" ? undefined : trimmed;
+}
+
 export async function handleCourseTimetable(
   deps: RouteDeps,
   code: string,
   yearParam: string | null,
+  versionParam: string | null = null,
 ): Promise<Response> {
   const parsedCode = parseCode(code);
   if (parsedCode === null) return errorJson("Invalid course code", 400);
   const year = parseYear(yearParam);
   if (year === null) return errorJson("Invalid year", 400);
+  const version = parseVersion(versionParam);
 
-  const key = JSON.stringify(["timetable", parsedCode, year]);
+  const key = JSON.stringify(["timetable", parsedCode, year, version ?? null]);
   const hit = await deps.cache.get(key, TIMETABLE_CACHE_TTL_MS);
   if (hit !== null) return json(hit, 200, TIMETABLE_CACHE_TTL_MS);
 
   try {
-    const entries = await deps.client.courses.timetable(parsedCode, year);
+    const entries = await deps.client.courses.timetable(parsedCode, year, { version });
     await deps.cache.set(key, entries, TIMETABLE_CACHE_TTL_MS);
     return json(entries, 200, TIMETABLE_CACHE_TTL_MS);
   } catch (err) {
@@ -157,13 +171,15 @@ export async function handleCourseSchedule(
   deps: RouteDeps,
   code: string,
   yearParam: string | null,
+  versionParam: string | null = null,
 ): Promise<Response> {
   const parsedCode = parseCode(code);
   if (parsedCode === null) return errorJson("Invalid course code", 400);
   const year = parseYear(yearParam);
   if (year === null) return errorJson("Invalid year", 400);
+  const version = parseVersion(versionParam);
 
-  const key = JSON.stringify(["schedule", parsedCode, year]);
+  const key = JSON.stringify(["schedule", parsedCode, year, version ?? null]);
   const hit = await deps.cache.get(key, SCHEDULE_CACHE_TTL_MS);
   // `ScheduleActivity.start`/`end` are `Date`s upstream; after a KV round-trip
   // they come back as ISO strings. `JSON.stringify` renders a `Date` and its
@@ -173,7 +189,7 @@ export async function handleCourseSchedule(
   if (hit !== null) return json(hit, 200, SCHEDULE_CACHE_TTL_MS);
 
   try {
-    const activities = await deps.client.courses.schedules(parsedCode, year);
+    const activities = await deps.client.courses.schedules(parsedCode, year, { version });
     await deps.cache.set(key, activities, SCHEDULE_CACHE_TTL_MS);
     return json(activities, 200, SCHEDULE_CACHE_TTL_MS);
   } catch (err) {
