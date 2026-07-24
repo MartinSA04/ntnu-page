@@ -1,5 +1,29 @@
 # PRODUCT.md — Semesterplan: what this site should be
 
+## §0 — The mandate (user, 2026-07-24; overrides everything below where they conflict)
+
+1. **Programme → kull → your week, instantly.** Selecting study programme +
+   kull must be extremely easy, and the immediate result is the weekly
+   schedule. NTNU auto-enrolls programme students in their courses each
+   semester, so the programme pre-fill IS the student's reality — it is the
+   default plan, not a hedged "suggestion". (DR-7's fallback math and honest
+   labeling still apply; D4's suggestion-only framing is superseded.)
+2. **The weekly schedule is the primary surface.** The drop/add window runs
+   well into the first month of the semester; the schedule is what people
+   come back to. Everything else supports it.
+3. **Editing is trivial**: drop a programme course → it grays out in the
+   course list (still visible as part of the programme, one tap to restore,
+   excluded from schedule/credits). Add extra courses on top. Manual adds
+   are removable outright.
+4. **Lecture-based by default** with one simple toggle to show
+   øvinger/labber (aligns with DR-1's lecture-only conflict engine).
+5. **Graceful pre-publish fallback** when timetables aren't out (DR-2):
+   never blank — course list + exam dates + "publiseres ~august" note.
+6. **DO NOT OVERCOMPLICATE.** As simple as possible while maintaining
+   value. The decide-loop apparatus (shortlist tier, swap-delta, inline
+   decision facts) is deferred until the §0 core is excellent. When in
+   doubt, cut.
+
 Definitive product definition (assembled from the 23-agent planning panel; working papers in docs/plan/). Reworked against four critiques — c1 (value), c2 (feasibility vs. our exact `ntnu-api` data), c3 (flow), c4 (differentiation). Design system "Ruteark" (DESIGN.md) is assumed law and not restated. Where this file and PLANNER.md disagree on scope, this file wins for the pages it touches; PLANNER.md remains binding for the Ruteark render detail it specifies.
 
 The single change with the widest blast radius: **the draft priced its own composite as automatically better than four correct single-column tools. It is not.** A join built from a nightly scrape with stale/TBD/missing/cardinality-less cells is *worse* than four correct tools unless it admits its gaps. So v2 reframes the moat from "we own the row" to **"we own the row, and the row admits where it's thin"** — provenance and staleness are a MUST surface, not an edge state (c1-5, c2 cross-cutting). Everything else follows from three moves the four critiques agree on: **make the shareable plan the growth object, not plumbing** (c1, c4); **cut the elective apparatus down to what a twice-a-year user actually touches** (c1, c2); and **make the IA obey the positioning** (c4) — decide-loop loud, search quiet.

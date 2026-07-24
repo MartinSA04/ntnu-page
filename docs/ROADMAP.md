@@ -1,8 +1,23 @@
 # ROADMAP.md — from current build to PRODUCT.md
 
-Gap analysis of the implemented site against docs/PRODUCT.md, sequenced by
-its §11 build order ("produces confidently-wrong answers if wrong" first).
+Re-sequenced 2026-07-24 for PRODUCT.md §0 (the mandate): the programme →
+kull → weekly-schedule core ships FIRST, folding in the Phase-1 correctness
+floor it depends on (lecture classification, catalog exams, version/hash
+v2). The decide-loop (old Phase 4) is deferred behind an excellent §0 core.
 Flow-level detail lives in docs/plan/flows/f1–f5.
+
+## Phase §0 (NOW) — the mandate core
+
+- PlanState v2 with course `source: "program" | "manual"` + `dropped` flag
+  (programme courses gray out on drop, restore on tap; manual adds delete);
+  version field; hash v2 encoding programme/kull/drops/extras with
+  v1-compat parse.
+- Lecture/øving classifier + lecture-only red conflicts; schedule shows
+  lectures by default with one "vis øvinger og labber" toggle.
+- Landing: programme typeahead + kull chips → straight to the schedule.
+- Planner: schedule-first layout; course list with gray-out editing; add
+  field; catalog-sourced exam section; null-aware active-only credits;
+  pre-publish fallback; provenance line.
 
 ## What stands (assets, keep)
 
