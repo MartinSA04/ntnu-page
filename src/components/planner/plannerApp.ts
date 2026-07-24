@@ -139,32 +139,6 @@ function candidateSemesters(file: SemestersFile): SemesterSummary[] {
   return teaching.slice(start, start + 3);
 }
 
-function examWindowLabel(semester: SemesterSummary | undefined): string {
-  if (!semester?.examLastDate) return "";
-  const from = semester.examLastDate;
-  const to = semester.examFinalDate ?? semester.examLastDate;
-  const fmt = (d: string): string => {
-    const date = new Date(`${d}T00:00:00`);
-    return `${date.getDate()}. ${
-      [
-        "jan.",
-        "feb.",
-        "mars",
-        "apr.",
-        "mai",
-        "juni",
-        "juli",
-        "aug.",
-        "sep.",
-        "okt.",
-        "nov.",
-        "des.",
-      ][date.getMonth()]
-    }`;
-  };
-  return `${fmt(from)} – ${fmt(to)}`;
-}
-
 /**
  * Mounts the planner page. `semestersFile` is `data/semesters.json`,
  * imported at build time by the caller (a build-time crawler artifact, not
@@ -220,7 +194,6 @@ export async function mountPlannerApp(semestersFile: SemestersFile): Promise<voi
     const semester = currentSemester();
     elements.publishNote.textContent =
       semester && !semester.timetablePublished ? "timeplan ikke publisert ennå" : "";
-    elements.examWindow.textContent = examWindowLabel(semester);
   }
 
   const courseStates = new Map<string, PlanCourseState>();
@@ -338,7 +311,13 @@ export async function mountPlannerApp(semestersFile: SemestersFile): Promise<voi
       : states;
 
     renderGrid(elements.gridFrame, elements.gridNotes, filteredStates);
-    renderExamRibbon(elements.examFrame, elements.examList, states, plan.semesterId);
+    const examResult = renderExamRibbon(
+      elements.examFrame,
+      elements.examList,
+      states,
+      plan.semesterId,
+    );
+    elements.examWindow.textContent = examResult.windowLabel ?? "";
   }
 
   function renderAll(): void {

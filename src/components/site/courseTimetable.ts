@@ -57,8 +57,6 @@ async function fetchTimetable(code: string, year: number): Promise<TimetableEntr
 }
 
 function renderTimetable(body: HTMLElement, entries: TimetableEntry[]): void {
-  body.replaceChildren();
-
   if (entries.length === 0) {
     body.append(el("p", "timetable-empty np-note", "ingen timeplanoppføringer for dette året"));
     return;
@@ -114,6 +112,8 @@ export async function mountCourseTimetable(code: string, catalogYear: number): P
   async function loadYear(year: number): Promise<void> {
     statusEl.hidden = true;
     bodyEl.hidden = false;
+    // Only the year-chip bar (yearSelect) persists across loads; everything
+    // else in bodyEl is per-fetch content and must be cleared each time.
     bodyEl.replaceChildren(yearSelect);
     const loading = el("p", "timetable-loading np-note", "henter timeplan …");
     bodyEl.append(loading);

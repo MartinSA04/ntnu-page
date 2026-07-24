@@ -67,11 +67,19 @@ function dayGapText(row: ExamRow): string | null {
 
 export interface ExamRenderResult {
   collisionCount: number;
+  /** "25. nov – 18. des" span of the rendered exams, or `null` when none are shown. */
+  windowLabel: string | null;
 }
 
-function renderEmpty(frame: HTMLElement, listHost: HTMLElement, message: string): void {
+function renderEmpty(frame: HTMLElement, listHost: HTMLElement, message: string): ExamRenderResult {
   frame.replaceChildren(el("p", "planner-exam-empty np-note", message));
   listHost.replaceChildren();
+  return { collisionCount: 0, windowLabel: null };
+}
+
+function formatAxisDate(dateStr: string): string {
+  const d = new Date(`${dateStr}T00:00:00`);
+  return `${d.getDate()}. ${MONTH_NAMES[d.getMonth()]}`;
 }
 
 /** Renders the exam ribbon + sorted list into `frame` / `listHost`. */
@@ -82,24 +90,21 @@ export function renderExamRibbon(
   semesterId: string,
 ): ExamRenderResult {
   if (courses.length === 0) {
-    renderEmpty(frame, listHost, "Legg til emner for å se eksamensdatoer.");
-    return { collisionCount: 0 };
+    return renderEmpty(frame, listHost, "Legg til emner for å se eksamensdatoer.");
   }
 
   const hueByCode = new Map(courses.map((c) => [c.course.code, c.hueVar]));
   const inputs = collectExamInputs(courses, semesterId);
 
   if (inputs.length === 0) {
-    renderEmpty(frame, listHost, "Ingen eksamensdatoer funnet ennå for emnene i planen.");
-    return { collisionCount: 0 };
+    return renderEmpty(frame, listHost, "Ingen eksamensdatoer funnet ennå for emnene i planen.");
   }
 
   const rows = analyzeExams(inputs);
   const first = rows[0];
   const last = rows[rows.length - 1];
   if (!first || !last) {
-    renderEmpty(frame, listHost, "Ingen eksamensdatoer funnet ennå for emnene i planen.");
-    return { collisionCount: 0 };
+    return renderEmpty(frame, listHost, "Ingen eksamensdatoer funnet ennå for emnene i planen.");
   }
 
   const firstMs = Date.parse(first.date);
@@ -172,6 +177,14 @@ export function renderExamRibbon(
   }
   listHost.replaceChildren(list);
 
+  const windowLabel =
+    first.date === last.date
+      ? formatAxisDate(first.date)
+      : `${formatAxisDate(first.date)} – ${formatAxisDate(last.date)}`;
+
   // One "collision" per same-date group (a group may hold 2+ same-day exams).
-  return { collisionCount: [...byDate.values()].filter((g) => g.length > 1).length };
+  return {
+    collisionCount: [...byDate.values()].filter((g) => g.length > 1).length,
+    windowLabel,
+  };
 }

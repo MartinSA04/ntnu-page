@@ -52,6 +52,7 @@ const description = `${program.name} — studieplan, opptak og studiested ved NT
     data-default-semester={defaultSemesterId}
   >
     <p class="np-kicker">Studieplan</p>
+    <p class="np-kicker studie-kull-kicker" id="plan-years-kicker" hidden>Kull</p>
     <div class="studie-plan-years" id="plan-years"></div>
     <p class="studie-loading np-note" data-role="status">henter studieplan …</p>
     <div data-role="body" hidden></div>
@@ -87,6 +88,9 @@ const description = `${program.name} — studieplan, opptak og studiested ved NT
   }
   .studie-section > .np-kicker {
     margin-bottom: var(--space-3);
+  }
+  .studie-kull-kicker {
+    margin-bottom: var(--space-2);
   }
   .studie-plan-years {
     display: flex;

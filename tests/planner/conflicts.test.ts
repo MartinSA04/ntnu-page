@@ -177,3 +177,38 @@ describe("analyzeExams", () => {
     expect(rows.map((r) => r.dayGap)).toEqual([2, 7, null]);
   });
 });
+
+describe("findConflicts dedupe", () => {
+  const entry = (code: string, group: string, day = 1, start = "10:15", end = "12:00") => ({
+    courseCode: code,
+    dayNumber: day,
+    startTime: start,
+    endTime: end,
+    weeks: ["35-41"],
+    name: group,
+  });
+
+  it("collapses identical collisions from parallel groups into one conflict", () => {
+    // 4 øving groups of A against 2 groups of B in the same slot = 8 raw pairs.
+    const entries = [
+      ...["g1", "g2", "g3", "g4"].map((g) => entry("AAA1000", g)),
+      ...["h1", "h2"].map((g) => entry("BBB2000", g)),
+    ];
+    const conflicts = findConflicts(entries);
+    expect(conflicts).toHaveLength(1);
+    expect([conflicts[0]?.a.courseCode, conflicts[0]?.b.courseCode].sort()).toEqual([
+      "AAA1000",
+      "BBB2000",
+    ]);
+  });
+
+  it("keeps distinct slots as distinct conflicts", () => {
+    const entries = [
+      entry("AAA1000", "g1", 1, "10:15", "12:00"),
+      entry("AAA1000", "g2", 2, "10:15", "12:00"),
+      entry("BBB2000", "h1", 1, "10:15", "12:00"),
+      entry("BBB2000", "h2", 2, "10:15", "12:00"),
+    ];
+    expect(findConflicts(entries)).toHaveLength(2);
+  });
+});

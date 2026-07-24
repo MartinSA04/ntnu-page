@@ -133,18 +133,18 @@ const description =
     gap: var(--gap-2);
   }
 
-  .planner-basket-empty {
+  :global(.planner-basket-empty) {
     margin: 0;
   }
 
-  .planner-tag-remove {
+  :global(.planner-tag-remove) {
     color: var(--muted);
     line-height: 1;
     font-size: var(--text-sm);
     padding: 0 0.15em;
   }
 
-  .planner-tag-remove:hover {
+  :global(.planner-tag-remove:hover) {
     color: var(--clash);
   }
 
@@ -164,7 +164,7 @@ const description =
     padding: var(--space-1);
   }
 
-  .planner-typeahead-option {
+  :global(.planner-typeahead-option) {
     display: flex;
     align-items: baseline;
     gap: var(--gap-3);
@@ -173,20 +173,25 @@ const description =
     cursor: pointer;
   }
 
-  .planner-typeahead-option.is-active,
-  .planner-typeahead-option:hover {
+  :global(.planner-typeahead-option.is-active),
+  :global(.planner-typeahead-option:hover) {
     background: var(--card-hover);
   }
 
-  .planner-typeahead-code {
+  :global(.planner-typeahead-code) {
     color: var(--muted);
     font-size: var(--text-xs);
     flex-shrink: 0;
     width: 6.5em;
   }
 
-  .planner-typeahead-name {
+  :global(.planner-typeahead-name) {
     font-size: var(--text-sm);
+  }
+
+  :global(.planner-typeahead-empty) {
+    display: block;
+    padding: var(--space-2);
   }
 
   .planner-empty-invite {
@@ -216,12 +221,12 @@ const description =
     overflow-x: auto;
   }
 
-  .planner-grid-empty,
-  .planner-exam-empty {
+  :global(.planner-grid-empty),
+  :global(.planner-exam-empty) {
     margin: var(--space-4);
   }
 
-  .planner-grid {
+  :global(.planner-grid) {
     position: relative;
     display: grid;
     grid-template-columns: 3.5em repeat(var(--planner-days), 1fr);
@@ -232,13 +237,13 @@ const description =
     min-width: 40rem;
   }
 
-  .planner-grid-rail {
+  :global(.planner-grid-rail) {
     grid-column: 1;
     grid-row: 1 / span var(--planner-rows);
     position: relative;
   }
 
-  .planner-grid-hour {
+  :global(.planner-grid-hour) {
     position: absolute;
     top: 0;
     right: var(--gap-2);
@@ -248,20 +253,20 @@ const description =
     font-size: var(--text-xs);
   }
 
-  .planner-grid-day {
+  :global(.planner-grid-day) {
     grid-row: 1 / span var(--planner-rows);
     grid-column: calc(var(--planner-day) + 1);
     position: relative;
   }
 
-  .planner-grid-day-header {
+  :global(.planner-grid-day-header) {
     position: sticky;
     top: 0;
     text-align: center;
     padding-bottom: var(--space-1);
   }
 
-  .planner-block {
+  :global(.planner-block) {
     position: absolute;
     inset-inline: calc(var(--planner-col, 0) * (100% / var(--planner-col-count, 1)))
       calc((var(--planner-col-count, 1) - var(--planner-col, 0) - 1) * (100% / var(--planner-col-count, 1)));
@@ -279,11 +284,11 @@ const description =
     transition: background var(--dur-fast) var(--ease);
   }
 
-  .planner-block:hover {
+  :global(.planner-block:hover) {
     background: color-mix(in srgb, var(--dot) 26%, var(--card));
   }
 
-  .planner-block.is-clash {
+  :global(.planner-block.is-clash) {
     background-image: repeating-linear-gradient(
       45deg,
       color-mix(in srgb, var(--clash) 22%, transparent),
@@ -294,24 +299,24 @@ const description =
     background-color: color-mix(in srgb, var(--dot) 16%, var(--card));
   }
 
-  .planner-block-head {
+  :global(.planner-block-head) {
     display: flex;
     align-items: center;
     gap: var(--gap-2);
     min-width: 0;
   }
 
-  .planner-block-code {
+  :global(.planner-block-code) {
     font-size: var(--text-xs);
     font-weight: var(--weight-medium);
   }
 
-  .planner-block.is-clash .planner-block-code {
+  :global(.planner-block.is-clash .planner-block-code) {
     text-decoration: underline wavy var(--clash);
     text-underline-offset: 2px;
   }
 
-  .planner-block-name {
+  :global(.planner-block-name) {
     font-size: var(--text-xs);
     line-height: var(--leading-snug);
     overflow: hidden;
@@ -321,8 +326,8 @@ const description =
     -webkit-box-orient: vertical;
   }
 
-  .planner-block-rooms,
-  .planner-block-weeks {
+  :global(.planner-block-rooms),
+  :global(.planner-block-weeks) {
     font-size: var(--text-xs);
     color: var(--muted);
   }
@@ -331,21 +336,21 @@ const description =
     margin-bottom: var(--space-6);
   }
 
-  .planner-notes-list {
+  :global(.planner-notes-list) {
     list-style: none;
     display: flex;
     flex-direction: column;
     gap: var(--space-1);
   }
 
-  .planner-note-link {
+  :global(.planner-note-link) {
     text-align: left;
     text-decoration: underline;
     text-decoration-color: color-mix(in srgb, var(--clash) 40%, transparent);
     text-underline-offset: 2px;
   }
 
-  .planner-note-link:hover {
+  :global(.planner-note-link:hover) {
     text-decoration-color: currentColor;
   }
 
@@ -358,14 +363,14 @@ const description =
     min-height: 6rem;
   }
 
-  .planner-exam-axis {
+  :global(.planner-exam-axis) {
     position: relative;
     height: 1.2rem;
     border-bottom: 1px solid var(--border);
     margin-bottom: var(--space-4);
   }
 
-  .planner-exam-month {
+  :global(.planner-exam-month) {
     position: absolute;
     left: var(--planner-pos);
     font-size: var(--text-xs);
@@ -373,12 +378,12 @@ const description =
     transform: translateX(-50%);
   }
 
-  .planner-exam-dots {
+  :global(.planner-exam-dots) {
     position: relative;
     height: 1.5rem;
   }
 
-  .planner-exam-stack {
+  :global(.planner-exam-stack) {
     position: absolute;
     left: var(--planner-pos);
     top: 0;
@@ -389,7 +394,7 @@ const description =
     border-radius: var(--radius-xs);
   }
 
-  .planner-exam-stack.is-clash {
+  :global(.planner-exam-stack.is-clash) {
     outline: 2px solid var(--clash);
     outline-offset: 1px;
   }
@@ -398,7 +403,7 @@ const description =
     margin-bottom: var(--space-6);
   }
 
-  .planner-exam-row {
+  :global(.planner-exam-row) {
     display: flex;
     align-items: center;
     gap: var(--gap-3);
@@ -407,14 +412,14 @@ const description =
     flex-wrap: wrap;
   }
 
-  .planner-exam-date {
+  :global(.planner-exam-date) {
     color: var(--muted);
     font-size: var(--text-sm);
     width: 6.5em;
     flex-shrink: 0;
   }
 
-  .planner-exam-code {
+  :global(.planner-exam-code) {
     display: inline-flex;
     align-items: center;
     gap: var(--gap-2);
@@ -429,7 +434,7 @@ const description =
     margin-bottom: var(--space-6);
   }
 
-  .planner-course-row {
+  :global(.planner-course-row) {
     display: flex;
     align-items: center;
     gap: var(--gap-4);
@@ -438,7 +443,7 @@ const description =
     border-bottom: 1px solid var(--border);
   }
 
-  .planner-course-row-head {
+  :global(.planner-course-row-head) {
     display: inline-flex;
     align-items: center;
     gap: var(--gap-2);
@@ -446,17 +451,17 @@ const description =
     flex-shrink: 0;
   }
 
-  .planner-course-row-name {
+  :global(.planner-course-row-name) {
     flex: 1;
     min-width: 10rem;
   }
 
-  .planner-course-row-assessment {
+  :global(.planner-course-row-assessment) {
     color: var(--muted);
     font-size: var(--text-sm);
   }
 
-  .planner-course-remove {
+  :global(.planner-course-remove) {
     margin-left: auto;
   }
 </style>

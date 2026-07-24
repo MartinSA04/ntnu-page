@@ -278,6 +278,7 @@ export async function mountStudyPlan(
   const status = section?.querySelector<HTMLElement>('[data-role="status"]');
   const body = section?.querySelector<HTMLElement>('[data-role="body"]');
   const yearsEl = document.getElementById("plan-years");
+  const yearsKicker = document.getElementById("plan-years-kicker");
   if (!section || !status || !body || !yearsEl || !code || !guessYear) return;
   // Rebind as non-optional locals: TS doesn't narrow captured outer bindings
   // inside nested function declarations below.
@@ -289,10 +290,14 @@ export async function mountStudyPlan(
 
   function renderYearChips(publishedYears: number[], activeYear: number): void {
     yearsContainer.replaceChildren();
+    yearsContainer.setAttribute("role", "group");
+    yearsContainer.setAttribute("aria-label", "Velg kull");
+    if (yearsKicker) yearsKicker.hidden = false;
     const years = [...publishedYears].sort((a, b) => b - a);
     for (const year of years) {
       const chip = el("button", "np-toggle plan-year-chip", String(year));
       chip.type = "button";
+      chip.setAttribute("aria-label", `Kull ${year}`);
       chip.setAttribute("aria-pressed", String(year === activeYear));
       chip.addEventListener("click", () => {
         for (const other of yearsContainer.querySelectorAll(".plan-year-chip")) {

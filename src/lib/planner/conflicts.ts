@@ -27,6 +27,10 @@ export interface Conflict {
  */
 export function findConflicts(entries: ScheduleEntry[]): Conflict[] {
   const conflicts: Conflict[] = [];
+  // Parallel groups (øvinger/labs) of a course repeat the same slot many
+  // times; identical (course-pair, day, span, weeks) collisions are one
+  // conflict, not one per group pairing.
+  const seen = new Set<string>();
   for (let i = 0; i < entries.length; i++) {
     for (let j = i + 1; j < entries.length; j++) {
       const a = entries[i];
@@ -50,6 +54,10 @@ export function findConflicts(entries: ScheduleEntry[]): Conflict[] {
       const weeks = bWeeks.filter((w) => aWeeks.has(w));
       if (weeks.length === 0) continue;
 
+      const [codeX, codeY] = [a.courseCode, b.courseCode].sort();
+      const key = `${codeX}|${codeY}|${a.dayNumber}|${start}|${end}|${weeks.join(",")}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
       conflicts.push({ a, b, dayNumber: a.dayNumber, start, end, weeks });
     }
   }

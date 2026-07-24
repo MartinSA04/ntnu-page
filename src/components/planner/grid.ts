@@ -219,8 +219,15 @@ function blockId(entry: GridEntry): string {
   return `planner-block-${entry.courseCode}-${entry.dayNumber}-${entry.startTime.replace(":", "")}`;
 }
 
+function minutesToTime(minutes: number): string {
+  const h = Math.floor(minutes / 60);
+  const m = minutes % 60;
+  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+}
+
 function conflictNoteText(conflict: ReturnType<typeof findConflicts>[number]): string {
-  const time = `${conflict.a.startTime}–${conflict.a.endTime}`;
+  // The overlap window (conflict.start/end), not either entry's full block time.
+  const time = `${minutesToTime(conflict.start)}–${minutesToTime(conflict.end)}`;
   const weeksText = weekLabel(conflict.weeks);
   return `${conflict.a.courseCode} kolliderer med ${conflict.b.courseCode} · ${dayName(conflict.dayNumber)} ${time} · ${weeksText}`;
 }

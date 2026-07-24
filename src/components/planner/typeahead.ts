@@ -64,8 +64,11 @@ export function mountTypeahead(options: TypeaheadOptions): void {
 
     listbox.replaceChildren();
     if (matches.length === 0) {
-      listbox.hidden = true;
+      listbox.append(el("li", "planner-typeahead-empty np-note", "Ingen treff."));
+      listbox.hidden = false;
       activeIndex = -1;
+      input.removeAttribute("aria-activedescendant");
+      input.setAttribute("aria-expanded", "true");
       return;
     }
 
