@@ -1,48 +1,41 @@
 /**
- * Per-course favicon.
- *
- * The mark is the `>_` command-prompt glyph from martinsundal.no, but tinted to
- * the course's brand accent so each open tab is identifiable at a glance. The
- * ground is a fixed near-black so the mark pairs with any accent hue and reads
- * on both light and dark browser chrome; every foreground element (border,
- * chevron, underscore) uses the single accent. CourseLayout inlines the result
- * as a `data:` URI, so it's generated at render time with no per-course file.
+ * The Ruteark mark: a 2x2 ruled square (hairline grid) with one cell filled
+ * in the accent green — "the squared paper every Norwegian student sketches
+ * a timetable on" (docs/DESIGN.md §1). Rendered on a fixed dark ground so
+ * the tab icon reads the same regardless of the page's current theme.
+ * Inlined as a `data:` URI so there is no per-build asset to manage.
  */
 
-/** Near-black ground, neutral so it sits under any accent hue. */
-export const GROUND = "#0b0e14";
+/** Flexoki black ground (matches tokens.css's dark-mode `--bg`). */
+export const GROUND = "#100f0f";
 
-/** The `>_` mark as an SVG string, foreground tinted with `accent`. */
+/** Neutral hairline color for the ruling strokes (theme-independent). */
+export const LINE = "#575653";
+
+/**
+ * Flexoki green (matches tokens.css's light-mode `--accent`). Build-time SVG
+ * markup can't read CSS custom properties, so this is the one sanctioned
+ * literal — callers should use it rather than re-hardcoding the hex value.
+ */
+export const ACCENT = "#66800b";
+
+/** The 2x2 ruled square mark as an SVG string, one cell filled with `accent`. */
 export function faviconSvg(accent: string): string {
   return (
-    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="study-companion">` +
-    `<rect x="4" y="6" width="56" height="52" rx="9" fill="${GROUND}" stroke="${accent}" stroke-width="5"/>` +
-    `<path d="M18 21l11 11-11 11" fill="none" stroke="${accent}" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>` +
-    `<rect x="34" y="41" width="17" height="6" rx="2" fill="${accent}"/>` +
+    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Semesterplan">` +
+    `<rect x="4" y="4" width="56" height="56" rx="9" fill="${GROUND}"/>` +
+    `<rect x="16" y="16" width="14" height="14" fill="${accent}"/>` +
+    `<path d="M16 30h28M30 16v28" stroke="${LINE}" stroke-width="2"/>` +
+    `<rect x="15.5" y="15.5" width="33" height="33" fill="none" stroke="${LINE}" stroke-width="2"/>` +
     `</svg>`
   );
 }
 
 /**
- * The `>_` favicon as an inline `data:image/svg+xml` URI, ready for
- * `<link rel="icon">`. `accent` may be any CSS color; it's encoded verbatim
- * (the `#` in hex colors is escaped so it isn't read as a URL fragment).
+ * The mark as an inline `data:image/svg+xml` URI, ready for
+ * `<link rel="icon">`. `accent` may be any CSS color; the `#` in hex colors
+ * is escaped so it isn't read as a URL fragment.
  */
 export function faviconDataUri(accent: string): string {
-  return "data:image/svg+xml," + encodeURIComponent(faviconSvg(accent));
-}
-
-/**
- * The `>_` mark as a single-layer monochrome silhouette for Safari's pinned-tab
- * `mask-icon` (the chevron + underscore only, no ground). Safari masks by the
- * shapes' alpha and tints with the `<link … color>` attribute, so the fill here
- * is irrelevant — only the geometry matters. Emitted as a real file at build.
- */
-export function maskIconSvg(): string {
-  return (
-    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">` +
-    `<path d="M18 21l11 11-11 11" fill="none" stroke="#000" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>` +
-    `<rect x="34" y="41" width="17" height="6" rx="2" fill="#000"/>` +
-    `</svg>`
-  );
+  return `data:image/svg+xml,${encodeURIComponent(faviconSvg(accent))}`;
 }

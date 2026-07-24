@@ -1,8 +1,7 @@
 ---
 import { ClientRouter } from "astro:transitions";
 import ThemeToggle from "../components/ThemeToggle.astro";
-import { contrastText } from "../lib/color.ts";
-import { faviconDataUri } from "../lib/favicon.ts";
+import { ACCENT, faviconDataUri } from "../lib/favicon.ts";
 import "../styles/fonts.css";
 import "../styles/tokens.css";
 import "../styles/base.css";
@@ -10,11 +9,10 @@ import "../styles/primitives.css";
 import "../styles/site.css";
 
 /**
- * Site shell: topbar (brand + nav pills + theme toggle), a centered content
- * column (reading measure by default, a ~72rem data column when `wide`), and
- * a quiet mono footer. Mirrors the StudyCompanion hub's minimal-shell recipe
- * (fonts→tokens→base→primitives→site.css, no-flash theme init, inline accent
- * vars) — see docs/SPEC.md "Design-system usage".
+ * Site shell: sticky topbar (wordmark + nav + theme toggle), a centered
+ * content column (reading measure by default, the `--maxw` data column when
+ * `wide`), and a quiet mono footer. Ruteark's accent lives in tokens.css —
+ * no inline accent vars here (see docs/SPEC.md "Design-system usage").
  */
 interface Props {
   title: string;
@@ -23,23 +21,25 @@ interface Props {
 }
 const { title, description, wide = false } = Astro.props;
 
-const THEME_KEY = "sc:theme:ntnu";
-const ACCENT_LIGHT = "#205ea6";
-const ACCENT_DARK = "#4385be";
-const accentVars =
-  `--accent-light: ${ACCENT_LIGHT}; --accent-dark: ${ACCENT_DARK}; ` +
-  `--accent-contrast-light: ${contrastText(ACCENT_LIGHT)}; ` +
-  `--accent-contrast-dark: ${contrastText(ACCENT_DARK)};`;
+const THEME_KEY = "np:theme";
+
+const NAV = [
+  { href: "/planlegger/", label: "Planlegger" },
+  { href: "/emner/", label: "Emner" },
+  { href: "/studier/", label: "Studier" },
+] as const;
+
+const path = Astro.url.pathname;
 ---
 
 <!doctype html>
-<html lang="nb" style={accentVars}>
+<html lang="nb">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>{title}</title>
     <meta name="description" content={description} />
-    <link rel="icon" href={faviconDataUri(ACCENT_LIGHT)} />
+    <link rel="icon" href={faviconDataUri(ACCENT)} />
     <script is:inline define:vars={{ THEME_KEY }}>
       // No-flash theme init — reads the stored choice, falls back to the OS
       // preference, and sets data-theme on <html> before first paint.
@@ -70,7 +70,7 @@ const accentVars =
             }
             applyTheme();
             document.dispatchEvent(
-              new CustomEvent("sc:themechange", {
+              new CustomEvent("np:themechange", {
                 detail:
                   document.documentElement.getAttribute("data-theme") === "dark"
                     ? "dark"
@@ -86,10 +86,21 @@ const accentVars =
   <body>
     <div class="site">
       <header class="site-topbar">
-        <a class="site-brand" href="/">NTNU-katalog</a>
+        <a class="site-brand" href="/">
+          Semesterplan<span class="site-brand-suffix">NTNU</span>
+        </a>
         <nav class="site-nav" aria-label="Hovednavigasjon">
-          <a class="sc-pill site-nav-pill" href="/emner/">Emner</a>
-          <a class="sc-pill site-nav-pill" href="/studier/">Studier</a>
+          {
+            NAV.map((item) => (
+              <a
+                class="np-navlink"
+                href={item.href}
+                aria-current={path.startsWith(item.href) ? "page" : undefined}
+              >
+                {item.label}
+              </a>
+            ))
+          }
         </nav>
         <ThemeToggle storageKey={THEME_KEY} />
       </header>

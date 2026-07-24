@@ -84,21 +84,64 @@ describe("toCatalog", () => {
 });
 
 describe("toSearchIndex", () => {
-  it("projects catalog courses to compact tuples", () => {
+  it("projects catalog courses to compact tuples, including exams", () => {
     const catalog = {
       year: 2026,
       courses: [
-        { code: "TDT4100", name: "Objektorientert programmering", location: "Trondheim" },
-        { code: "TDT4120", name: "Algoritmer og datastrukturer", location: "Trondheim" },
+        {
+          code: "TDT4100",
+          name: "Objektorientert programmering",
+          location: "Trondheim",
+          exams: [{ season: "AUTUMN", date: "2026-12-05", continuation: false }],
+        },
+        {
+          code: "TDT4120",
+          name: "Algoritmer og datastrukturer",
+          location: "Trondheim",
+          exams: [],
+        },
       ],
     };
     expect(toSearchIndex(catalog)).toEqual({
       year: 2026,
       courses: [
-        ["TDT4100", "Objektorientert programmering", "Trondheim"],
-        ["TDT4120", "Algoritmer og datastrukturer", "Trondheim"],
+        ["TDT4100", "Objektorientert programmering", "Trondheim", [["AUTUMN", "2026-12-05"]]],
+        ["TDT4120", "Algoritmer og datastrukturer", "Trondheim", []],
       ],
     });
+  });
+
+  it("filters out continuation (kont) exams", () => {
+    const catalog = {
+      year: 2026,
+      courses: [
+        {
+          code: "TDT4100",
+          name: "Objektorientert programmering",
+          location: "Trondheim",
+          exams: [
+            { season: "AUTUMN", date: "2026-12-05", continuation: false },
+            { season: "SPRING", date: "2027-04-10", continuation: true },
+          ],
+        },
+      ],
+    };
+    expect(toSearchIndex(catalog).courses[0][3]).toEqual([["AUTUMN", "2026-12-05"]]);
+  });
+
+  it("emits an empty exams array when all exams are continuation", () => {
+    const catalog = {
+      year: 2026,
+      courses: [
+        {
+          code: "TDT4100",
+          name: "Objektorientert programmering",
+          location: "Trondheim",
+          exams: [{ season: "SPRING", date: "2027-04-10", continuation: true }],
+        },
+      ],
+    };
+    expect(toSearchIndex(catalog).courses[0][3]).toEqual([]);
   });
 
   it("handles an empty catalog", () => {

@@ -1,13 +1,16 @@
-# ntnu-page
+# ntnu-page — Semesterplan
 
-Uoffisiell nettside for NTNU-emnedata: emnekatalog med søk, emnedetaljer,
-karakterstatistikk (HK-dir/DBH), timeplaner, studieprogram og studieplaner.
+Uoffisiell semesterplanlegger for NTNU: velg emner (eller hent dem fra et
+studieprogram og kull), og se timeplankollisjoner, eksamensdatoer og
+studiepoeng før du melder deg opp. Emnekatalog, karakterstatistikk
+(HK-dir/DBH) og studieplaner følger med.
 
 Astro static site + Cloudflare Worker in one deployable unit: the Worker
 serves the built site via Workers Assets and exposes a cached `/api/*` layer
-over the [`ntnu-api`](https://github.com/MartinSA04/ntnu-api) client. Design
-system ported from [StudyCompanion](https://github.com/MartinSA04/StudyCompanion)
-(see `docs/DESIGN.md`). Architecture and contracts: `docs/SPEC.md`.
+over the [`ntnu-api`](https://github.com/MartinSA04/ntnu-api) client.
+Product spec: `docs/PLANNER.md`. Design system: **Ruteark**, this repo's own
+(`docs/DESIGN.md`) — Flexoki paper, Schibsted Grotesk + Spline Sans Mono,
+squared-ruling signature. Architecture and contracts: `docs/SPEC.md`.
 
 ## Data flow
 

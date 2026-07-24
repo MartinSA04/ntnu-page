@@ -1,6 +1,6 @@
-/* Site shell — topbar, content column, footer. Hand-rolled for this site
-   (not a port of StudyCompanion's shell.css): only the chrome around pages
-   built from the other pages/crawler/worker agents' slices lives here. */
+/* Site shell — topbar, content column, footer. Ruteark's own chrome: only
+   the frame around pages built from the pages/crawler/worker/planner
+   agents' slices lives here. */
 
 .site {
   min-height: 100dvh;
@@ -8,7 +8,7 @@
   flex-direction: column;
 }
 
-/* --- Topbar: sticky, brand left, nav pills + theme toggle right --- */
+/* --- Topbar: sticky, wordmark left, nav + theme toggle right --- */
 .site-topbar {
   position: sticky;
   top: 0;
@@ -23,11 +23,21 @@
 }
 
 .site-brand {
-  font-family: var(--font-display);
-  font-size: var(--text-lg);
-  font-weight: var(--weight-semibold);
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--gap-2);
+  font-family: var(--font-sans);
+  font-size: var(--text-md);
+  font-weight: var(--weight-bold);
   color: var(--fg);
   text-decoration: none;
+}
+
+.site-brand-suffix {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-medium);
+  color: var(--muted);
 }
 
 .site-nav {
@@ -37,13 +47,9 @@
   margin-left: auto;
 }
 
-.site-nav-pill {
-  padding: 0.4em 0.8em;
-}
-
 /* --- Content column ---
-   Default: StudyCompanion's reading measure. `.wide` (data pages: catalog
-   tables, study plans) widens to a ~72rem column instead. */
+   Default: the reading measure. `.wide` (data pages: catalog tables, study
+   plans, the planner) widens to the `--maxw` column instead. */
 .site-content {
   flex: 1;
   width: 100%;
@@ -53,7 +59,7 @@
 }
 
 .site-content.wide {
-  max-width: 72rem;
+  max-width: var(--maxw);
 }
 
 /* --- Footer: quiet mono line --- */

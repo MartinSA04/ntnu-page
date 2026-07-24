@@ -3,9 +3,14 @@
  * at the current cohort year, stepping back on 404 (max 3 tries), then
  * renders cohort-year chips from the response's `publishedYears` and
  * refetches on chip click. Plan body: periods → course groups → course rows
- * (mono code linking to `/emne/CODE/`), waypoints/directions as nested
- * `.sc-summary` disclosures.
+ * (mono code linking to `/emne/CODE/` + add control), waypoints/directions
+ * as nested `.np-summary` disclosures. Each course row and period header
+ * gets an add control that writes to the plan store and records the
+ * program/kull context (PLANNER.md §5); the period matching the plan's
+ * chosen semester for the cohort is auto-highlighted ("ditt semester").
  */
+import { semesterYear } from "../../lib/planner/schedule.ts";
+import { createPlanStore, type PlanStore } from "../../lib/planner/store.ts";
 
 interface StudyChoice {
   code: string | null;
@@ -98,7 +103,57 @@ async function findPlan(
   return "not-found";
 }
 
-function renderCourseGroup(group: PlanCourseGroup): HTMLElement {
+/**
+ * The plan period number matching the store's chosen semester for a cohort
+ * admitted in `cohort` (PLANNER.md §5): period 1 is the cohort's first
+ * autumn, counting up two per calendar year (autumn = odd, spring = even).
+ */
+function currentPeriodNumber(semesterId: string, cohort: number): number | null {
+  const semYear = semesterYear(semesterId);
+  if (semYear === null) return null;
+  const isAutumn = /h$/i.test(semesterId.trim());
+  return (semYear - cohort) * 2 + (isAutumn ? 1 : 2);
+}
+
+function addButton(
+  store: PlanStore,
+  code: string,
+  name: string,
+  program: { code: string; name: string; cohort: number },
+): HTMLButtonElement {
+  const btn = el("button", "np-icon-btn np-press plan-add-btn");
+  btn.type = "button";
+
+  function sync(): void {
+    const inPlan = store.hasCourse(code);
+    btn.setAttribute("aria-pressed", String(inPlan));
+    btn.setAttribute(
+      "aria-label",
+      inPlan ? `Fjern ${code} fra planen` : `Legg til ${code} i planen`,
+    );
+    btn.textContent = inPlan ? "✓" : "+";
+  }
+
+  btn.addEventListener("click", () => {
+    if (store.hasCourse(code)) {
+      store.removeCourse(code);
+    } else {
+      store.addCourse({ code, name });
+      store.setProgram(program);
+    }
+    sync();
+  });
+
+  store.onPlanChange(sync);
+  sync();
+  return btn;
+}
+
+function renderCourseGroup(
+  group: PlanCourseGroup,
+  store: PlanStore,
+  program: { code: string; name: string; cohort: number },
+): HTMLElement {
   const wrap = el("div", "plan-group");
   if (group.name) wrap.append(el("p", "plan-group-name", group.name));
   for (const course of group.courses) {
@@ -106,65 +161,119 @@ function renderCourseGroup(group: PlanCourseGroup): HTMLElement {
     if (course.planElement) {
       row.append(el("span", "plan-course-name", course.name ?? course.code));
     } else {
-      const link = el("a", "plan-course-code mono", course.code);
+      const link = el("a", "plan-course-code", course.code);
       link.href = `/emne/${course.code}/`;
       row.append(link);
       row.append(el("span", "plan-course-name", course.name ?? ""));
+      row.append(addButton(store, course.code, course.name ?? course.code, program));
     }
     if (course.credits !== null) {
-      row.append(el("span", "plan-course-credits mono", `${course.credits} sp`));
+      row.append(el("span", "plan-course-credits", `${course.credits} sp`));
     }
     wrap.append(row);
   }
   return wrap;
 }
 
-function renderDirection(direction: PlanDirection): HTMLElement {
+function renderDirection(
+  direction: PlanDirection,
+  store: PlanStore,
+  program: { code: string; name: string; cohort: number },
+): HTMLElement {
   const wrap = el("div", "plan-direction");
   if (direction.name) wrap.append(el("p", "plan-direction-name", direction.name));
-  for (const group of direction.courseGroups) wrap.append(renderCourseGroup(group));
-  for (const waypoint of direction.waypoints) wrap.append(renderWaypoint(waypoint));
+  for (const group of direction.courseGroups) wrap.append(renderCourseGroup(group, store, program));
+  for (const waypoint of direction.waypoints) wrap.append(renderWaypoint(waypoint, store, program));
   return wrap;
 }
 
-function renderWaypoint(waypoint: StudyWaypoint): HTMLElement {
+function renderWaypoint(
+  waypoint: StudyWaypoint,
+  store: PlanStore,
+  program: { code: string; name: string; cohort: number },
+): HTMLElement {
   const details = el("details", "plan-waypoint");
   const summary = document.createElement("summary");
-  summary.className = "sc-summary";
-  const chev = el("span", "sc-chev", "▸");
-  summary.append(chev, document.createTextNode(waypoint.name ?? "Valg"));
+  summary.className = "np-summary";
+  summary.append(document.createTextNode(waypoint.name ?? "Valg"));
   details.append(summary);
 
   const body = el("div", "plan-waypoint-body");
-  for (const direction of waypoint.directions) body.append(renderDirection(direction));
+  for (const direction of waypoint.directions)
+    body.append(renderDirection(direction, store, program));
   details.append(body);
 
   return details;
 }
 
-function renderPlan(body: HTMLElement, plan: StudyPlan): void {
+/** Every non-plan-element course code inside a direction (for "Legg til alle"). */
+function coursesInDirection(direction: PlanDirection): PlannedCourse[] {
+  const courses: PlannedCourse[] = [];
+  for (const group of direction.courseGroups) {
+    for (const course of group.courses) {
+      if (!course.planElement) courses.push(course);
+    }
+  }
+  for (const waypoint of direction.waypoints) {
+    for (const inner of waypoint.directions) courses.push(...coursesInDirection(inner));
+  }
+  return courses;
+}
+
+function renderPlan(
+  body: HTMLElement,
+  plan: StudyPlan,
+  store: PlanStore,
+  program: { code: string; name: string; cohort: number },
+  highlightPeriod: number | null,
+): void {
   body.replaceChildren();
 
   if (plan.periods.length === 0) {
-    body.append(el("p", "plan-empty mono", "ingen perioder publisert for dette kullet ennå"));
+    body.append(el("p", "plan-empty np-note", "ingen perioder publisert for dette kullet ennå"));
     return;
   }
 
   for (const period of plan.periods) {
     const section = el("div", "plan-period");
-    section.append(
+    const header = el("div", "plan-period-header");
+    const isCurrent = highlightPeriod !== null && period.periodNumber === highlightPeriod;
+    header.append(
       el(
         "p",
-        "sc-kicker plan-period-header",
+        `np-kicker${isCurrent ? " plan-period-current" : ""}`,
         period.periodNumber !== null ? `Semester ${period.periodNumber}` : "Semester",
       ),
     );
-    section.append(renderDirection(period.direction));
+    if (isCurrent) header.append(el("span", "np-note plan-period-current", "ditt semester"));
+
+    const courses = coursesInDirection(period.direction);
+    if (courses.length > 0) {
+      const addAll = el("button", "np-btn np-press plan-add-all", "Legg til alle");
+      addAll.type = "button";
+      addAll.addEventListener("click", () => {
+        for (const course of courses) {
+          if (!store.hasCourse(course.code)) {
+            store.addCourse({ code: course.code, name: course.name ?? course.code });
+          }
+        }
+        store.setProgram(program);
+      });
+      header.append(addAll);
+    }
+
+    section.append(header);
+    section.append(renderDirection(period.direction, store, program));
     body.append(section);
   }
 }
 
-export async function mountStudyPlan(code: string, guessYear: number): Promise<void> {
+export async function mountStudyPlan(
+  code: string,
+  name: string,
+  guessYear: number,
+  defaultSemesterId: string,
+): Promise<void> {
   const section = document.getElementById("plan-section");
   const status = section?.querySelector<HTMLElement>('[data-role="status"]');
   const body = section?.querySelector<HTMLElement>('[data-role="body"]');
@@ -176,11 +285,13 @@ export async function mountStudyPlan(code: string, guessYear: number): Promise<v
   const bodyEl = body;
   const yearsContainer = yearsEl;
 
+  const store = createPlanStore(defaultSemesterId);
+
   function renderYearChips(publishedYears: number[], activeYear: number): void {
     yearsContainer.replaceChildren();
     const years = [...publishedYears].sort((a, b) => b - a);
     for (const year of years) {
-      const chip = el("button", "sc-chip plan-year-chip mono", String(year));
+      const chip = el("button", "np-toggle plan-year-chip", String(year));
       chip.type = "button";
       chip.setAttribute("aria-pressed", String(year === activeYear));
       chip.addEventListener("click", () => {
@@ -209,7 +320,9 @@ export async function mountStudyPlan(code: string, guessYear: number): Promise<v
     }
     statusEl.hidden = true;
     bodyEl.hidden = false;
-    renderPlan(bodyEl, result);
+    const program = { code, name, cohort: year };
+    const highlightPeriod = currentPeriodNumber(store.loadPlan().semesterId, year);
+    renderPlan(bodyEl, result, store, program, highlightPeriod);
     if (result.publishedYears.length > 0) renderYearChips(result.publishedYears, year);
   }
 
@@ -225,7 +338,9 @@ export async function mountStudyPlan(code: string, guessYear: number): Promise<v
 
   statusEl.hidden = true;
   bodyEl.hidden = false;
-  renderPlan(bodyEl, found.plan);
+  const program = { code, name, cohort: found.year };
+  const highlightPeriod = currentPeriodNumber(store.loadPlan().semesterId, found.year);
+  renderPlan(bodyEl, found.plan, store, program, highlightPeriod);
   if (found.plan.publishedYears.length > 0) {
     renderYearChips(found.plan.publishedYears, found.year);
   }

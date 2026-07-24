@@ -1,8 +1,15 @@
 /**
  * Grades island for `/emne/[code]/`: fetches `/api/course/:code/grades` and
- * renders a per-year horizontal stacked bar chart (A–E categorical ramp, F in
- * --red, pass "bestått" in --green) with a mono legend and per-year totals.
- * GDPR-masked null counts (DBH suppresses small cells) render as "<5".
+ * renders a per-year horizontal stacked bar chart with a mono legend and
+ * per-year totals. GDPR-masked null counts (DBH suppresses small cells)
+ * render as "<5".
+ *
+ * Color treatment: a grade distribution is not course identity, so it does
+ * not get the categorical hues, and Red-Is-Collision reserves --clash for
+ * timetable/exam clashes only — a strykprosent is not a collision. Pass
+ * grades (A–E) step through --accent at decreasing opacity (A brightest);
+ * fail grades ("F", "ikke bestått") render in --muted. Single ink, ordered
+ * by opacity, not by hue.
  */
 
 interface GradeRow {
@@ -16,18 +23,22 @@ interface GradeRow {
   men: number | null;
 }
 
-// A–E use the categorical ramp (indigo→violet), F is --red, pass is --green,
-// fail ("ikke bestått") is also --red per SPEC's "F/ikke bestått in --red".
-const GRADE_COLORS: Record<string, string> = {
-  A: "var(--green)",
-  B: "var(--cyan)",
-  C: "var(--yellow)",
-  D: "var(--orange)",
-  E: "var(--violet)",
-  F: "var(--red)",
-  BESTÅTT: "var(--green)",
-  "IKKE BESTÅTT": "var(--red)",
+const PASS_OPACITY: Record<string, number> = {
+  A: 1,
+  B: 0.84,
+  C: 0.68,
+  D: 0.52,
+  E: 0.36,
+  BESTÅTT: 1,
 };
+
+const FAIL_GRADES = new Set(["F", "IKKE BESTÅTT"]);
+
+function gradeColor(grade: string): string {
+  if (FAIL_GRADES.has(grade)) return "var(--muted)";
+  const opacity = PASS_OPACITY[grade] ?? 1;
+  return `color-mix(in srgb, var(--accent) ${opacity * 100}%, transparent)`;
+}
 
 const GRADE_ORDER = ["A", "B", "C", "D", "E", "F", "BESTÅTT", "IKKE BESTÅTT"];
 
@@ -89,7 +100,7 @@ export async function mountCourseGrades(code: string): Promise<void> {
       }
 
       const yearRow = el("div", "grades-year-row");
-      yearRow.append(el("span", "grades-year-label mono", String(year)));
+      yearRow.append(el("span", "grades-year-label np-data", String(year)));
 
       const bar = el("div", "grades-bar");
       const present = GRADE_ORDER.filter((g) => totals.has(g));
@@ -98,7 +109,7 @@ export async function mountCourseGrades(code: string): Promise<void> {
         if (count <= 0 && knownTotal === 0) continue;
         const pct = knownTotal > 0 ? (count / knownTotal) * 100 : 0;
         const segment = el("div", "grades-segment");
-        segment.style.background = GRADE_COLORS[grade] ?? "var(--muted)";
+        segment.style.background = gradeColor(grade);
         segment.style.width = `${pct}%`;
         segment.title = `${grade}: ${count}`;
         if (pct > 0) bar.append(segment);
@@ -106,7 +117,7 @@ export async function mountCourseGrades(code: string): Promise<void> {
       yearRow.append(bar);
 
       const totalLabel = hasMasked ? `${knownTotal}+ (maskert <5)` : String(knownTotal);
-      yearRow.append(el("span", "grades-year-total mono", totalLabel));
+      yearRow.append(el("span", "grades-year-total np-data", totalLabel));
       chart.append(yearRow);
     }
     body.append(chart);
@@ -115,9 +126,9 @@ export async function mountCourseGrades(code: string): Promise<void> {
     const usedGrades = new Set(rows.map((r) => normalizeGrade(r.grade)));
     for (const grade of GRADE_ORDER) {
       if (!usedGrades.has(grade)) continue;
-      const item = el("span", "grades-legend-item mono");
+      const item = el("span", "grades-legend-item np-data");
       const swatch = el("span", "grades-legend-swatch");
-      swatch.style.background = GRADE_COLORS[grade] ?? "var(--muted)";
+      swatch.style.background = gradeColor(grade);
       item.append(swatch, document.createTextNode(grade));
       legend.append(item);
     }

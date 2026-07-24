@@ -60,7 +60,7 @@ function renderTimetable(body: HTMLElement, entries: TimetableEntry[]): void {
   body.replaceChildren();
 
   if (entries.length === 0) {
-    body.append(el("p", "timetable-empty mono", "ingen timeplanoppføringer for dette året"));
+    body.append(el("p", "timetable-empty np-note", "ingen timeplanoppføringer for dette året"));
     return;
   }
 
@@ -78,15 +78,15 @@ function renderTimetable(body: HTMLElement, entries: TimetableEntry[]): void {
     dayEntries.sort((a, b) => a.startTime.localeCompare(b.startTime));
 
     const dayCol = el("div", "timetable-day");
-    dayCol.append(el("p", "sc-kicker timetable-day-header mono", DAY_NAMES[day - 1]));
+    dayCol.append(el("p", "np-kicker timetable-day-header", DAY_NAMES[day - 1]));
     for (const entry of dayEntries) {
       const row = el("div", "timetable-entry");
-      row.append(el("span", "timetable-entry-time mono", `${entry.startTime}–${entry.endTime}`));
+      row.append(el("span", "timetable-entry-time np-data", `${entry.startTime}–${entry.endTime}`));
       row.append(el("span", "timetable-entry-name", entry.title ?? entry.name ?? entry.courseCode));
       const rooms = roomLabel(entry.rooms);
-      if (rooms) row.append(el("span", "timetable-entry-room mono", rooms));
+      if (rooms) row.append(el("span", "timetable-entry-room np-data", rooms));
       const weeks = weekRangeLabel(entry.weeks);
-      if (weeks) row.append(el("span", "timetable-entry-weeks mono", weeks));
+      if (weeks) row.append(el("span", "timetable-entry-weeks np-data", weeks));
       dayCol.append(row);
     }
     grid.append(dayCol);
@@ -115,25 +115,25 @@ export async function mountCourseTimetable(code: string, catalogYear: number): P
     statusEl.hidden = true;
     bodyEl.hidden = false;
     bodyEl.replaceChildren(yearSelect);
-    const loading = el("p", "timetable-loading mono", "henter timeplan …");
+    const loading = el("p", "timetable-loading np-note", "henter timeplan …");
     bodyEl.append(loading);
 
     try {
       const entries = await fetchTimetable(code, year);
       loading.remove();
       if (entries === null) {
-        bodyEl.append(el("p", "timetable-empty mono", "klarte ikke å hente timeplan"));
+        bodyEl.append(el("p", "timetable-empty np-note", "klarte ikke å hente timeplan"));
         return;
       }
       renderTimetable(bodyEl, entries);
     } catch {
       loading.remove();
-      bodyEl.append(el("p", "timetable-empty mono", "klarte ikke å hente timeplan"));
+      bodyEl.append(el("p", "timetable-empty np-note", "klarte ikke å hente timeplan"));
     }
   }
 
   for (const year of years) {
-    const chip = el("button", "sc-chip timetable-year-chip mono", String(year));
+    const chip = el("button", "np-toggle timetable-year-chip", String(year));
     chip.type = "button";
     chip.setAttribute("aria-pressed", String(year === activeYear));
     chip.addEventListener("click", () => {

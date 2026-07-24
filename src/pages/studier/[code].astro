@@ -27,14 +27,15 @@ const { program } = Astro.props;
 // Best-effort guess for the study-plan island's first fetch — it steps back
 // on 404 and re-renders its chips from the response's publishedYears anyway.
 const currentYear = semestersData.current?.year ?? new Date().getFullYear();
+const defaultSemesterId = semestersData.current?.id ?? "";
 
 const description = `${program.name} — studieplan, opptak og studiested ved NTNU.`;
 ---
 
-<Layout title={`${program.name} — NTNU-katalog`} description={description} wide>
-  <p class="sc-kicker studie-kicker">{program.code}</p>
+<Layout title={`${program.name} — Semesterplan`} description={description} wide>
+  <p class="np-kicker studie-kicker">{program.code}</p>
   <h1 class="studie-title">{program.name}</h1>
-  <p class="studie-meta mono">
+  <p class="studie-meta np-note">
     {program.studyLevel}
     {program.campuses.length > 0 && <span>· {program.campuses.join(", ")}</span>}
   </p>
@@ -42,41 +43,40 @@ const description = `${program.name} — studieplan, opptak og studiested ved NT
   {program.departmentName && <p class="studie-department">{program.departmentName}</p>}
   {program.description && <p class="studie-description">{program.description}</p>}
 
-  <section class="studie-section" id="plan-section" data-program-code={program.code} data-guess-year={currentYear}>
-    <p class="sc-kicker">Studieplan</p>
+  <section
+    class="studie-section"
+    id="plan-section"
+    data-program-code={program.code}
+    data-program-name={program.name}
+    data-guess-year={currentYear}
+    data-default-semester={defaultSemesterId}
+  >
+    <p class="np-kicker">Studieplan</p>
     <div class="studie-plan-years" id="plan-years"></div>
-    <p class="studie-loading mono" data-role="status">henter studieplan …</p>
+    <p class="studie-loading np-note" data-role="status">henter studieplan …</p>
     <div data-role="body" hidden></div>
   </section>
 </Layout>
 
 <style>
   .studie-kicker {
-    color: var(--muted);
-    font-size: var(--text-sm);
     margin-bottom: var(--space-2);
   }
   .studie-title {
-    font-family: var(--font-display);
     font-size: var(--text-2xl);
-    line-height: var(--leading-tight);
     margin-bottom: var(--space-2);
   }
   .studie-meta {
-    font-size: var(--text-sm);
-    color: var(--muted);
     margin-bottom: var(--space-4);
     display: flex;
     gap: var(--space-2);
   }
   .studie-department {
-    font-family: var(--font-body);
     font-size: var(--text-sm);
     color: var(--muted);
     margin-bottom: var(--space-3);
   }
   .studie-description {
-    font-family: var(--font-body);
     font-size: var(--text-base);
     line-height: var(--leading-normal);
     margin-bottom: var(--space-6);
@@ -85,9 +85,7 @@ const description = `${program.name} — studieplan, opptak og studiested ved NT
   .studie-section {
     margin-bottom: var(--space-7);
   }
-  .studie-section > .sc-kicker {
-    color: var(--muted);
-    font-size: var(--text-sm);
+  .studie-section > .np-kicker {
     margin-bottom: var(--space-3);
   }
   .studie-plan-years {
@@ -98,7 +96,6 @@ const description = `${program.name} — studieplan, opptak og studiested ved NT
   }
   .studie-loading {
     font-size: var(--text-sm);
-    color: var(--muted);
   }
 
   /* Island content is built client-side; scoped styles need :global() to
@@ -107,21 +104,31 @@ const description = `${program.name} — studieplan, opptak og studiested ved NT
     margin-bottom: var(--space-6);
   }
   :global(.plan-period-header) {
-    color: var(--muted);
-    font-size: var(--text-sm);
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
     margin-bottom: var(--space-3);
+  }
+  :global(.plan-period-current) {
+    color: var(--accent-ink);
   }
   :global(.plan-group) {
     margin-bottom: var(--space-4);
   }
-  :global(.plan-group-name) {
-    font-family: var(--font-display);
-    font-size: var(--text-md);
+  :global(.plan-group-header) {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--space-3);
     margin-bottom: var(--space-2);
+  }
+  :global(.plan-group-name) {
+    font-size: var(--text-md);
+    font-weight: var(--weight-medium);
   }
   :global(.plan-course-row) {
     display: flex;
-    align-items: baseline;
+    align-items: center;
     gap: var(--space-3);
     padding: var(--space-2) 0;
     border-bottom: 1px solid var(--border);
@@ -138,7 +145,6 @@ const description = `${program.name} — studieplan, opptak og studiested ved NT
     text-decoration: underline;
   }
   :global(.plan-course-name) {
-    font-family: var(--font-body);
     font-size: var(--text-sm);
     flex: 1;
   }
@@ -161,8 +167,8 @@ const description = `${program.name} — studieplan, opptak og studiested ved NT
     padding-bottom: var(--space-3);
   }
   :global(.plan-direction-name) {
-    font-family: var(--font-display);
     font-size: var(--text-base);
+    font-weight: var(--weight-medium);
     margin-bottom: var(--space-2);
   }
   :global(.plan-empty) {
@@ -176,7 +182,9 @@ const description = `${program.name} — studieplan, opptak og studiested ved NT
 
   const root = document.getElementById("plan-section");
   const code = root?.dataset.programCode ?? "";
+  const name = root?.dataset.programName ?? "";
   const guessYear = Number(root?.dataset.guessYear ?? "0");
+  const defaultSemesterId = root?.dataset.defaultSemester ?? "";
 
-  mountStudyPlan(code, guessYear);
+  mountStudyPlan(code, name, guessYear, defaultSemesterId);
 </script>

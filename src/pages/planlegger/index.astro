@@ -1,0 +1,468 @@
+---
+import Layout from "../../layouts/Layout.astro";
+
+const description =
+  "Bygg semesterplanen din: se timeplankollisjoner og eksamensdatoer for emnene du vurderer.";
+---
+
+<Layout title="Planlegger — NTNU-katalog" description={description} wide>
+  <p class="np-kicker planner-kicker">Planlegger</p>
+  <div class="planner-header">
+    <h1 class="planner-title">Semesterplanen din</h1>
+    <span class="np-data planner-credit-line" id="planner-credit-line">0 av 30 sp</span>
+  </div>
+  <div class="planner-toggle-row">
+    <div
+      class="planner-semester-toggle"
+      id="planner-semester-toggle"
+      role="group"
+      aria-label="Velg semester"
+    >
+    </div>
+    <p class="np-note" id="planner-publish-note"></p>
+  </div>
+
+  <section class="np-panel planner-basket" aria-label="Emner i planen">
+    <div class="planner-basket-tags" id="planner-tags"></div>
+    <form class="np-field planner-add-field" id="planner-add-field" autocomplete="off">
+      <input
+        type="text"
+        id="planner-add-input"
+        placeholder="+ legg til emne …"
+        aria-label="Legg til emne i planen"
+        role="combobox"
+        aria-expanded="false"
+        aria-autocomplete="list"
+        aria-controls="planner-add-listbox"
+      />
+    </form>
+    <ul
+      class="planner-add-listbox"
+      id="planner-add-listbox"
+      role="listbox"
+      aria-label="Emneforslag"
+      hidden
+    >
+    </ul>
+    <div id="planner-program-note"></div>
+  </section>
+
+  <p class="np-note planner-empty-invite" id="planner-empty-state" hidden>
+    Ingen emner i planen ennå. Legg til over, <a href="/emner/">søk i emnekatalogen</a> eller
+    <a href="/studier/">start fra et studieprogram</a>.
+  </p>
+
+  <div id="planner-main">
+    <div class="planner-section-head">
+      <p class="np-kicker">Ukeplan</p>
+      <p class="np-data planner-section-sub" id="planner-grid-status"></p>
+    </div>
+    <div class="np-frame np-ruled planner-grid-frame" id="planner-grid-frame"></div>
+    <div class="planner-grid-notes" id="planner-grid-notes"></div>
+
+    <div class="planner-section-head">
+      <p class="np-kicker">Eksamener</p>
+      <p class="np-data planner-section-sub" id="planner-exam-window"></p>
+      <p class="np-data planner-section-sub" id="planner-exam-status"></p>
+    </div>
+    <div class="np-frame np-ruled planner-exam-frame" id="planner-exam-frame"></div>
+    <div class="planner-exam-list" id="planner-exam-list-host"></div>
+
+    <div class="planner-section-head">
+      <p class="np-kicker">Emner</p>
+    </div>
+    <div class="planner-course-rows" id="planner-course-rows"></div>
+  </div>
+</Layout>
+
+<style>
+  .planner-kicker {
+    margin-bottom: var(--space-2);
+  }
+
+  .planner-header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--gap-4);
+    flex-wrap: wrap;
+    margin-bottom: var(--space-4);
+  }
+
+  .planner-title {
+    font-size: var(--text-3xl);
+    line-height: var(--leading-tight);
+  }
+
+  .planner-credit-line {
+    font-size: var(--text-lg);
+    color: var(--muted);
+    transition: color var(--dur-fast) var(--ease);
+  }
+
+  .planner-credit-line.is-full {
+    color: var(--accent-ink);
+  }
+
+  .planner-toggle-row {
+    display: flex;
+    align-items: center;
+    gap: var(--gap-3);
+    flex-wrap: wrap;
+    margin-bottom: var(--space-6);
+  }
+
+  .planner-semester-toggle {
+    display: flex;
+    gap: var(--gap-2);
+    flex-wrap: wrap;
+  }
+
+  /* --- Basket ---------------------------------------------------------- */
+
+  .planner-basket {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+    margin-bottom: var(--space-6);
+  }
+
+  .planner-basket-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--gap-2);
+  }
+
+  .planner-basket-empty {
+    margin: 0;
+  }
+
+  .planner-tag-remove {
+    color: var(--muted);
+    line-height: 1;
+    font-size: var(--text-sm);
+    padding: 0 0.15em;
+  }
+
+  .planner-tag-remove:hover {
+    color: var(--clash);
+  }
+
+  .planner-add-field {
+    max-width: 24rem;
+    position: relative;
+  }
+
+  .planner-add-listbox {
+    list-style: none;
+    max-width: 24rem;
+    background: var(--card);
+    border-radius: var(--radius-sm);
+    box-shadow: var(--shadow);
+    max-height: 16rem;
+    overflow-y: auto;
+    padding: var(--space-1);
+  }
+
+  .planner-typeahead-option {
+    display: flex;
+    align-items: baseline;
+    gap: var(--gap-3);
+    padding: var(--space-2) var(--space-2);
+    border-radius: var(--radius-xs);
+    cursor: pointer;
+  }
+
+  .planner-typeahead-option.is-active,
+  .planner-typeahead-option:hover {
+    background: var(--card-hover);
+  }
+
+  .planner-typeahead-code {
+    color: var(--muted);
+    font-size: var(--text-xs);
+    flex-shrink: 0;
+    width: 6.5em;
+  }
+
+  .planner-typeahead-name {
+    font-size: var(--text-sm);
+  }
+
+  .planner-empty-invite {
+    margin-bottom: var(--space-6);
+  }
+
+  /* --- Section headers --------------------------------------------------- */
+
+  .planner-section-head {
+    display: flex;
+    align-items: baseline;
+    gap: var(--gap-3);
+    flex-wrap: wrap;
+    margin-bottom: var(--space-3);
+  }
+
+  .planner-section-sub {
+    color: var(--muted);
+    font-size: var(--text-xs);
+  }
+
+  /* --- Weekly grid --------------------------------------------------------- */
+
+  .planner-grid-frame {
+    padding: var(--space-4);
+    margin-bottom: var(--space-2);
+    overflow-x: auto;
+  }
+
+  .planner-grid-empty,
+  .planner-exam-empty {
+    margin: var(--space-4);
+  }
+
+  .planner-grid {
+    position: relative;
+    display: grid;
+    grid-template-columns: 3.5em repeat(var(--planner-days), 1fr);
+    /* One CSS grid row per 15-min slot, sized to the ruling's --cell so the
+       grid-row-based rail and the absolutely-positioned blocks (top/height
+       in --cell units) land on the same pixel grid. */
+    grid-auto-rows: var(--cell);
+    min-width: 40rem;
+  }
+
+  .planner-grid-rail {
+    grid-column: 1;
+    grid-row: 1 / span var(--planner-rows);
+    position: relative;
+  }
+
+  .planner-grid-hour {
+    position: absolute;
+    top: 0;
+    right: var(--gap-2);
+    transform: translateY(-0.5em);
+    grid-row-start: var(--planner-row-start);
+    color: var(--faint);
+    font-size: var(--text-xs);
+  }
+
+  .planner-grid-day {
+    grid-row: 1 / span var(--planner-rows);
+    grid-column: calc(var(--planner-day) + 1);
+    position: relative;
+  }
+
+  .planner-grid-day-header {
+    position: sticky;
+    top: 0;
+    text-align: center;
+    padding-bottom: var(--space-1);
+  }
+
+  .planner-block {
+    position: absolute;
+    inset-inline: calc(var(--planner-col, 0) * (100% / var(--planner-col-count, 1)))
+      calc((var(--planner-col-count, 1) - var(--planner-col, 0) - 1) * (100% / var(--planner-col-count, 1)));
+    top: calc((var(--planner-row-start) - 1) * var(--cell));
+    height: calc((var(--planner-row-end) - var(--planner-row-start)) * var(--cell));
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: var(--space-1) var(--space-2);
+    margin: 0 1px;
+    background: color-mix(in srgb, var(--dot) 16%, var(--card));
+    border-radius: var(--radius-xs);
+    overflow: hidden;
+    text-align: left;
+    transition: background var(--dur-fast) var(--ease);
+  }
+
+  .planner-block:hover {
+    background: color-mix(in srgb, var(--dot) 26%, var(--card));
+  }
+
+  .planner-block.is-clash {
+    background-image: repeating-linear-gradient(
+      45deg,
+      color-mix(in srgb, var(--clash) 22%, transparent),
+      color-mix(in srgb, var(--clash) 22%, transparent) 4px,
+      transparent 4px,
+      transparent 8px
+    );
+    background-color: color-mix(in srgb, var(--dot) 16%, var(--card));
+  }
+
+  .planner-block-head {
+    display: flex;
+    align-items: center;
+    gap: var(--gap-2);
+    min-width: 0;
+  }
+
+  .planner-block-code {
+    font-size: var(--text-xs);
+    font-weight: var(--weight-medium);
+  }
+
+  .planner-block.is-clash .planner-block-code {
+    text-decoration: underline wavy var(--clash);
+    text-underline-offset: 2px;
+  }
+
+  .planner-block-name {
+    font-size: var(--text-xs);
+    line-height: var(--leading-snug);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+  }
+
+  .planner-block-rooms,
+  .planner-block-weeks {
+    font-size: var(--text-xs);
+    color: var(--muted);
+  }
+
+  .planner-grid-notes {
+    margin-bottom: var(--space-6);
+  }
+
+  .planner-notes-list {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+  }
+
+  .planner-note-link {
+    text-align: left;
+    text-decoration: underline;
+    text-decoration-color: color-mix(in srgb, var(--clash) 40%, transparent);
+    text-underline-offset: 2px;
+  }
+
+  .planner-note-link:hover {
+    text-decoration-color: currentColor;
+  }
+
+  /* --- Exam ribbon ----------------------------------------------------- */
+
+  .planner-exam-frame {
+    padding: var(--space-6) var(--space-4) var(--space-4);
+    margin-bottom: var(--space-2);
+    position: relative;
+    min-height: 6rem;
+  }
+
+  .planner-exam-axis {
+    position: relative;
+    height: 1.2rem;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: var(--space-4);
+  }
+
+  .planner-exam-month {
+    position: absolute;
+    left: var(--planner-pos);
+    font-size: var(--text-xs);
+    color: var(--muted);
+    transform: translateX(-50%);
+  }
+
+  .planner-exam-dots {
+    position: relative;
+    height: 1.5rem;
+  }
+
+  .planner-exam-stack {
+    position: absolute;
+    left: var(--planner-pos);
+    top: 0;
+    display: flex;
+    gap: 2px;
+    transform: translateX(-50%);
+    padding: 3px;
+    border-radius: var(--radius-xs);
+  }
+
+  .planner-exam-stack.is-clash {
+    outline: 2px solid var(--clash);
+    outline-offset: 1px;
+  }
+
+  .planner-exam-list {
+    margin-bottom: var(--space-6);
+  }
+
+  .planner-exam-row {
+    display: flex;
+    align-items: center;
+    gap: var(--gap-3);
+    padding: var(--space-2) 0;
+    border-bottom: 1px solid var(--border);
+    flex-wrap: wrap;
+  }
+
+  .planner-exam-date {
+    color: var(--muted);
+    font-size: var(--text-sm);
+    width: 6.5em;
+    flex-shrink: 0;
+  }
+
+  .planner-exam-code {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--gap-2);
+    font-size: var(--text-sm);
+  }
+
+  /* --- Course rows ------------------------------------------------------- */
+
+  .planner-course-rows {
+    display: flex;
+    flex-direction: column;
+    margin-bottom: var(--space-6);
+  }
+
+  .planner-course-row {
+    display: flex;
+    align-items: center;
+    gap: var(--gap-4);
+    flex-wrap: wrap;
+    padding: var(--space-3) var(--space-2);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .planner-course-row-head {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--gap-2);
+    width: 7em;
+    flex-shrink: 0;
+  }
+
+  .planner-course-row-name {
+    flex: 1;
+    min-width: 10rem;
+  }
+
+  .planner-course-row-assessment {
+    color: var(--muted);
+    font-size: var(--text-sm);
+  }
+
+  .planner-course-remove {
+    margin-left: auto;
+  }
+</style>
+
+<script>
+  import { mountPlannerApp } from "../../components/planner/plannerApp.js";
+  import semestersData from "../../../data/semesters.json";
+  mountPlannerApp(semestersData);
+</script>

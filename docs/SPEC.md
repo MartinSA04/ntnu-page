@@ -34,8 +34,8 @@ Astro static site (dist/)  ──served by──▶  Cloudflare Worker (Workers 
 
 | Path | Contents | Owner agent |
 |---|---|---|
-| `src/styles/` | fonts/tokens/base/primitives.css + woff2 (ported verbatim — DO NOT EDIT) | — |
-| `src/components/ThemeToggle.astro`, `Icon.astro`, `src/lib/{color,favicon,pageLifecycle}.ts` | ported (edit only if imports break) | shell |
+| `src/styles/` | the Ruteark system: tokens/base/primitives.css (owned here) + generated fonts.css/fonts/ | design |
+| `src/components/ThemeToggle.astro`, `Icon.astro`, `src/lib/{favicon,pageLifecycle}.ts` | shell components | shell |
 | `src/layouts/Layout.astro`, `src/styles/site.css`, `src/pages/index.astro`, `src/pages/404.astro` | page shell, landing, 404 | shell |
 | `src/pages/emner/index.astro`, `src/pages/emne/[code].astro`, `src/pages/studier/index.astro`, `src/pages/studier/[code].astro`, `src/components/site/*` | data pages + islands | pages |
 | `crawler/crawl.mjs` (+ helpers), `data/*.json`, `public/data/search-index.json`, `.github/workflows/` (ci/release/crawl), `tests/crawler.test.mjs` | crawler | crawler |
@@ -44,32 +44,33 @@ Astro static site (dist/)  ──served by──▶  Cloudflare Worker (Workers 
 
 ## Design-system usage (all UI work)
 
+The design system is **Ruteark** — this repo's own (docs/DESIGN.md; tokens/
+base/primitives in `src/styles/`, fonts vendored via `scripts/fetch-fonts.mjs`).
+StudyCompanion is inspiration only; nothing is ported from it anymore.
+
 - Load order in `<head>`: `fonts.css` → `tokens.css` → `base.css` →
-  `primitives.css` → `site.css`. Import via Astro frontmatter
-  (`import "../styles/fonts.css";` etc.) in Layout.astro only.
-- Accent: `#205ea6` light / `#4385be` dark, applied as inline style on
-  `<html>`: `--accent-light/--accent-dark/--accent-contrast-light/
-  --accent-contrast-dark` computed with `contrastText()` from `src/lib/color.ts`.
+  `primitives.css` → `site.css`. Import via Astro frontmatter in Layout.astro
+  only. The accent is defined in tokens.css (Flexoki green) — no inline
+  accent vars on `<html>`.
 - No-flash theme init: inline `is:inline` head script reading
-  `localStorage["sc:theme:ntnu"]` falling back to `prefers-color-scheme`,
-  setting `data-theme="dark"` on `<html>` before paint. ThemeToggle gets
-  `storageKey="sc:theme:ntnu"`. Include `<ClientRouter />` from
-  `astro:transitions` (ThemeToggle's `onPage` needs `astro:page-load`).
-- Use ONLY existing custom properties (`--bg`, `--bg-elevated`, `--fg`,
-  `--muted`, `--faint`, `--card`, `--card-nested`, `--card-hover`, `--border`,
-  `--border-strong`, `--wash`, `--accent`, `--accent-ink`, `--accent-contrast`,
-  `--space-*`, `--gap-*`, `--radius-*`, `--shadow-*`, `--font-*`, `--text-*`,
-  `--dur*`, `--ease`) and `.sc-*` primitives (`.sc-btn`, `.sc-chip`, `.sc-pill`,
-  `.sc-icon-btn`, `.sc-panel`, `.sc-tile`, `.sc-kicker`, `.sc-summary`,
-  `.sc-lift`, `.sc-press`, `.sc-field`, `.sc-kbd`). Never hardcode colors,
-  never pure #000/#fff, no borders on interactive controls, mono
-  (`--font-mono`) for every label/kicker/chip/count, serif for content.
-- Shell (`site.css`): sticky topbar (site name in Fraunces, nav pills `Emner`,
-  `Studier`, ThemeToggle right), max-width content column (~72rem for data
-  pages via a `.wide` container; prose uses default measure), quiet mono
-  footer ("Data: NTNU / HK-dir (DBH) · Uoffisiell side"). Keep it small —
-  this is a hand-rolled shell like StudyCompanion's hub, NOT a port of
-  shell.css.
+  `localStorage["np:theme"]` falling back to `prefers-color-scheme`, setting
+  `data-theme="dark"` on `<html>` before paint. ThemeToggle gets
+  `storageKey="np:theme"`. Include `<ClientRouter />` from `astro:transitions`
+  (ThemeToggle's `onPage` needs `astro:page-load`).
+- Use ONLY tokens.css custom properties and `.np-*` primitives (inventory in
+  DESIGN.md §5). Never hardcode colors, never pure #000/#fff, no borders on
+  interactive controls, and honor the named rules: Data-Is-Mono,
+  Red-Is-Collision, Green-Means-Fits, Ruling-Marks-The-Plan,
+  Ink-Before-Chrome.
+- Brand: wordmark **"Semesterplan"** (grotesk 700) with a small mono "NTNU"
+  suffix in `--muted`; favicon = the Ruteark mark (a 2×2 ruled square with
+  one cell filled `--accent` green) as an inline SVG data URI from
+  `src/lib/favicon.ts`.
+- Shell (`site.css`): sticky topbar (wordmark left; `.np-navlink`s
+  Planlegger/Emner/Studier with `aria-current`; ThemeToggle right), content
+  column (`--maxw` for data pages via Layout's `wide` prop, `--measure`
+  otherwise), quiet mono footer ("Uoffisiell side · data fra NTNU og HK-dir
+  (DBH)").
 
 ## Crawled data contracts (crawler writes, pages read)
 

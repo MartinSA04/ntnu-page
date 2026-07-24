@@ -3,22 +3,22 @@
  * Light/dark theme toggle.
  *
  * The no-flash init script that sets `data-theme` before first paint lives in
- * CourseLayout's <head>. This component is only the button + the click handler
- * that flips and persists the choice. Persists to `sc:theme:<course.code>`.
+ * Layout's <head>. This component is only the button + the click handler
+ * that flips and persists the choice. Defaults to the `np:theme` key.
  */
 interface Props {
-  /** localStorage key, namespaced per course: `sc:theme:<code>`. */
-  storageKey: string;
+  /** localStorage key for the persisted choice. */
+  storageKey?: string;
   label?: string;
 }
-const { storageKey, label = "Bytt tema" } = Astro.props;
+const { storageKey = "np:theme", label = "Bytt tema" } = Astro.props;
 
 import Icon from "./Icon.astro";
 ---
 
 <button
   type="button"
-  class="theme-toggle sc-icon-btn sc-press"
+  class="theme-toggle np-icon-btn np-press"
   data-storage-key={storageKey}
   aria-label={label}
   aria-pressed="false"
@@ -29,11 +29,10 @@ import Icon from "./Icon.astro";
 </button>
 
 <style>
-  /* Box + neutral hover come from the shared .sc-icon-btn primitive; the toggle
-     only sets its square topbar-control size. */
+  /* Box + neutral hover come from the shared .np-icon-btn primitive; the toggle
+     only stacks the two glyphs in one grid cell. */
   .theme-toggle {
-    width: var(--control-h);
-    height: var(--control-h);
+    display: grid;
   }
   /* The glyphs render from the <Icon> child, so their classes are outside this
      component's style scope — reach them with :global() under the scoped button.
@@ -63,16 +62,16 @@ import Icon from "./Icon.astro";
     const root = document.documentElement;
 
     // Reflect the current theme on load, after every view-transition restore,
-    // and on a live OS-theme flip — CourseLayout's no-flash script owns the
+    // and on a live OS-theme flip — Layout's no-flash script owns the
     // data-theme apply for all three (this only mirrors it onto the button's
-    // a11y state, off the same `sc:themechange` event it already dispatches
+    // a11y state, off the same `np:themechange` event it already dispatches
     // for that OS path, so the theme itself is never applied twice here).
     const syncPressed = () => {
       const dark = root.getAttribute("data-theme") === "dark";
       toggles.forEach((btn) => btn.setAttribute("aria-pressed", String(dark)));
     };
     syncPressed();
-    document.addEventListener("sc:themechange", syncPressed, { signal });
+    document.addEventListener("np:themechange", syncPressed, { signal });
 
     // Pending .theme-snap removal (a double-rAF handle). Shared across every
     // toggle so a rapid double-toggle re-arms one timer instead of stacking.
@@ -95,8 +94,8 @@ import Icon from "./Icon.astro";
           // compositor-output capture under a synthetic main-thread block).
           //
           // The swap itself carries no transition, but the resting controls
-          // (.sc-lift/.sc-icon-btn/.sc-pill/.sc-chip/.sc-btn/.sc-summary/
-          // .code-copy) DO hold standing colour/background eases for their
+          // (.np-lift/.np-icon-btn/.np-navlink/.np-toggle/.np-btn/.np-summary)
+          // DO hold standing colour/background eases for their
           // hover feel, so on the flip they would ease alone ~120ms behind the
           // already-snapped page (tiles visibly lag). Suppress them for exactly
           // one frame: add .theme-snap to <html> (a base.css rule zeroes every
@@ -121,11 +120,11 @@ import Icon from "./Icon.astro";
           } catch {
             /* private mode / storage disabled — fall through, no persistence */
           }
-          // Let canvas simulations (and any other listeners — including this
-          // component's own syncPressed above) repaint with the new theme's
-          // CSS custom properties, which already hold their final values.
+          // Let any other listeners (including this component's own
+          // syncPressed above) repaint with the new theme's CSS custom
+          // properties, which already hold their final values.
           document.dispatchEvent(
-            new CustomEvent("sc:themechange", { detail: next }),
+            new CustomEvent("np:themechange", { detail: next }),
           );
         },
         { signal },

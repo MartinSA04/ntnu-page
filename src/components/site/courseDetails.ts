@@ -64,12 +64,17 @@ function el<K extends keyof HTMLElementTagNameMap>(
   return node;
 }
 
-function factRow(label: string, value: string | number | null): HTMLElement | null {
+/**
+ * `isData` marks values a student would copy into a calendar — counts,
+ * dates, durations — which render mono per the Data-Is-Mono rule. Prose
+ * categories (level, language, campus, assessment form...) stay grotesk.
+ */
+function factRow(label: string, value: string | number | null, isData = false): HTMLElement | null {
   if (value === null || value === "") return null;
   const row = el("div", "details-fact");
   row.append(
-    el("span", "details-fact-label mono", label),
-    el("span", "details-fact-value", String(value)),
+    el("span", "details-fact-label np-kicker", label),
+    el("span", `details-fact-value${isData ? " np-data" : ""}`, String(value)),
   );
   return row;
 }
@@ -78,7 +83,7 @@ function prose(heading: string, text: string | null): HTMLElement | null {
   if (!text) return null;
   const section = el("div", "details-prose");
   section.append(
-    el("p", "sc-kicker details-prose-heading", heading),
+    el("p", "np-kicker details-prose-heading", heading),
     el("p", "details-prose-body", text),
   );
   return section;
@@ -87,17 +92,17 @@ function prose(heading: string, text: string | null): HTMLElement | null {
 function renderExams(exams: CourseExam[]): HTMLElement | null {
   if (exams.length === 0) return null;
   const wrap = el("div", "details-exams");
-  wrap.append(el("p", "sc-kicker details-prose-heading", "Eksamensdetaljer"));
+  wrap.append(el("p", "np-kicker details-prose-heading", "Eksamensdetaljer"));
   const table = el("table", "details-exam-table");
   const tbody = el("tbody");
   for (const exam of exams) {
     const row = el("tr");
     const parts = [exam.occasion, exam.season, exam.form].filter(Boolean).join(" · ");
-    row.append(el("td", "mono", parts));
-    row.append(el("td", undefined, exam.dateText ?? exam.date ?? "—"));
-    row.append(el("td", "mono", exam.timeText ?? exam.time ?? ""));
-    row.append(el("td", "mono", exam.duration ?? ""));
-    row.append(el("td", "mono", exam.aidCode ?? ""));
+    row.append(el("td", "np-data", parts));
+    row.append(el("td", "np-data", exam.dateText ?? exam.date ?? "—"));
+    row.append(el("td", "np-data", exam.timeText ?? exam.time ?? ""));
+    row.append(el("td", "np-data", exam.duration ?? ""));
+    row.append(el("td", "np-data", exam.aidCode ?? ""));
     tbody.append(row);
   }
   table.append(tbody);
@@ -108,12 +113,12 @@ function renderExams(exams: CourseExam[]): HTMLElement | null {
 function renderCreditReductions(reductions: CreditReduction[]): HTMLElement | null {
   if (reductions.length === 0) return null;
   const wrap = el("div", "details-reductions");
-  wrap.append(el("p", "sc-kicker details-prose-heading", "Studiepoengreduksjon"));
+  wrap.append(el("p", "np-kicker details-prose-heading", "Studiepoengreduksjon"));
   const list = el("ul", "details-reductions-list");
   for (const r of reductions) {
     const item = el("li");
     item.append(
-      el("span", "mono", r.courseCode),
+      el("span", "np-data", r.courseCode),
       el("span", undefined, ` — ${r.reduction ?? "?"}${r.fromTerm ? ` (${r.fromTerm})` : ""}`),
     );
     list.append(item);
@@ -139,10 +144,10 @@ export async function mountCourseDetails(code: string): Promise<void> {
 
     const facts = el("div", "details-facts");
     for (const row of [
-      factRow("Studiepoeng", details.credits),
+      factRow("Studiepoeng", details.credits, true),
       factRow("Nivå", details.level),
-      factRow("Undervises", details.teachingStart),
-      factRow("Varighet", details.teachingDuration),
+      factRow("Undervises", details.teachingStart, true),
+      factRow("Varighet", details.teachingDuration, true),
       factRow("Undervisningsspråk", details.teachingLanguage),
       factRow("Sted", details.location),
       factRow("Vurderingsform", details.assessmentScheme),
@@ -166,7 +171,7 @@ export async function mountCourseDetails(code: string): Promise<void> {
 
     if (details.mandatoryActivities.length > 0) {
       const wrap = el("div", "details-prose");
-      wrap.append(el("p", "sc-kicker details-prose-heading", "Obligatoriske aktiviteter"));
+      wrap.append(el("p", "np-kicker details-prose-heading", "Obligatoriske aktiviteter"));
       const list = el("ul", "details-activities-list");
       for (const activity of details.mandatoryActivities)
         list.append(el("li", undefined, activity));

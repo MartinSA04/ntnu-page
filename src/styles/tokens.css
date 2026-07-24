@@ -1,132 +1,84 @@
-/*
- * Design tokens for the study-companion shell.
+/**
+ * Ruteark design tokens — the system for ntnu-page and nothing else.
  *
- * A single editorial design — warm ink on a soft paper ground, a serif reading
- * face (Spectral), a display face for headings (Fraunces) and a mono face for
- * labels/figures (IBM Plex Mono). Themed per course only via --accent (set
- * inline from course.accent) plus the light/dark sets below.
- *
- * The token NAMES are a contract: every component's scoped CSS and the course
- * simulations read these custom properties, so retuning values here reskins the
- * whole site without touching component markup.
+ * North star: the squared paper (ruteark) students sketch timetables on,
+ * set with an engineer's hand. Warm Flexoki paper and ink; Schibsted
+ * Grotesk speaks, Spline Sans Mono carries data; green means "it fits",
+ * red is reserved for collisions; the squared ruling appears only on
+ * planning surfaces. See docs/DESIGN.md for the rules.
  */
 
 :root {
   color-scheme: light;
 
-  /* --- Brand / accent ---
-     CourseLayout sets --accent-light / --accent-dark (the course's per-theme
-     accents) and the matching on-accent text colours inline on <html>. --accent
-     resolves to the light pair here and to the dark pair in the dark block, so
-     every `var(--accent)` usage — fill, border or text — is correct per theme. */
-  --accent: var(--accent-light, #205ea6);
-  --accent-contrast: var(--accent-contrast-light, #ffffff); /* text on top of --accent */
-  --accent-weak: color-mix(in srgb, var(--accent) 12%, transparent);
-  --accent-soft: color-mix(in srgb, var(--accent) 10%, var(--bg-elevated));
-  --accent-ring: color-mix(in srgb, var(--accent) 45%, transparent);
-  /* Accent nudged toward the theme's own ink so it stays AA as TEXT on tinted or
-     elevated grounds, where raw --accent fails in dark (3.89:1 on --accent-soft,
-     4.37:1 on --bg-elevated) — the build guardrail only validates accent against
-     the page --bg, so it never catches these. Resolves per theme automatically
-     (both --accent and --fg are theme-switched). Use for accent-coloured TEXT on a
-     panel/tint; keep raw --accent for fills, borders, rings and icons. */
-  --accent-ink: color-mix(in srgb, var(--accent) 75%, var(--fg));
+  /* Surfaces — Flexoki paper, stepping down like sheets on a desk. */
+  --bg: #fffcf0;
+  --card: #f2f0e5;
+  --card-nested: #e6e4d9;
+  --card-hover: #e6e4d9;
 
-  /* --- Surfaces & text (light) — Flexoki warm-paper ramp (stephango.com/flexoki).
-     The page is the bright paper; panels/cards step DOWN to base-50, exactly like
-     the Flexoki reference (its bg = paper, card bg = base-50). --- */
-  --bg: #fffcf0; /* page ground (Flexoki paper) */
-  --bg-elevated: #f2f0e5; /* panels / cards (Flexoki base-50) */
-  --fg: #100f0f; /* ink (Flexoki black) */
-  --muted: #575653; /* ink-dim (Flexoki base-700, 7.1:1 on --bg) */
-  /* ink-faint: nav numbers, captions (Flexoki base-600, 5.0:1 on --bg). Calibrated
-     against BARE --bg ONLY — it drops under AA on elevated/nested grounds (4.47:1
-     on --bg-elevated, 4.01:1 on --card-nested). Contract: use --faint on the page
-     ground; on any panel/card/nested surface use --muted instead. */
+  /* Ink ramp. */
+  --fg: #100f0f;
+  --muted: #575653;
   --faint: #6f6e69;
-  --card: #f2f0e5; /* insets/headers sit flat with the panels (Flexoki base-50); a divider or hairline gives structure, not a darker fill */
-  --card-nested: #e6e4d9; /* base-100 — recessed fill for revealed/nested panels; steps off both --bg and --card, so it reads inset on the page OR inside a card, no border needed */
-  --card-hover: #e6e4d9; /* Flexoki base-100 (hover-darken) */
-  --border: #dad8ce; /* line (Flexoki base-150) */
-  --border-strong: #cecdc3; /* line2 (Flexoki base-200) */
-  --selection: color-mix(in srgb, var(--accent) 22%, transparent);
-  /* Faint ink wash — the marginalia hover fill (disclosure summaries, icon
-     buttons, copy buttons, bare pills). Derived from --fg, so it resolves per
-     theme; no dark-block override needed. */
+
+  /* Structural hairlines only — never on interactive controls. */
+  --border: #dad8ce;
+  --border-strong: #cecdc3;
+
+  /* Accent: Flexoki green — "it fits". Text goes through --accent-ink. */
+  --accent: #66800b;
+  --accent-ink: color-mix(in srgb, var(--accent) 65%, var(--fg));
+  --accent-contrast: #fffcf0;
+  --accent-weak: color-mix(in srgb, var(--accent) 12%, transparent);
+  --accent-ring: color-mix(in srgb, var(--accent) 45%, transparent);
+
+  /* Collision ink: Flexoki red, reserved exclusively for conflicts. */
+  --clash: #af3029;
+  --clash-bg: #ffe1d5;
+
+  /* Course identity hues (Flexoki categorical 600s; green/red excluded). */
+  --hue-blue: #205ea6;
+  --hue-cyan: #24837b;
+  --hue-purple: #5e409d;
+  --hue-magenta: #a02f6f;
+  --hue-orange: #bc5215;
+  --hue-yellow: #ad8301;
+
+  /* Interaction washes. */
   --wash: color-mix(in srgb, var(--fg) 6%, transparent);
-  --on-strong: #fffcf0; /* text on a filled categorical chip */
+  --selection: color-mix(in srgb, var(--accent) 24%, transparent);
 
-  /* --- Categorical hues (figures + semantic block accents) — Flexoki 600s --- */
-  --indigo: #205ea6; /* Flexoki blue-600 */
-  --cyan: #24837b; /* Flexoki cyan-600 */
-  --green: #66800b; /* Flexoki green-600 */
-  --yellow: #ad8301; /* Flexoki yellow-600 */
-  --orange: #bc5215; /* Flexoki orange-600 */
-  --red: #af3029; /* Flexoki red-600 */
-  --violet: #5e409d; /* Flexoki purple-600 */
+  /* The squared ruling (planning surfaces only — see .np-ruled). */
+  --cell: 24px;
+  --ruling-line: color-mix(in srgb, var(--border) 55%, transparent);
 
-  /* Aside/callout tones use Flexoki's OWN aside swatches: a clean, present -low
-     pastel as the fill with a darker -high shade for the kicker text (both AA on
-     the fill). A dark accent mixed onto paper reads muddy — that's why these are
-     literal swatches, not color-mix tints. note = blue (info), independent of the
-     per-course accent, so the fill can be a clean pastel. */
-  --note: #1a4f8c; /* Flexoki blue-high */
-  --tip: #536907; /* Flexoki green-high */
-  --warning: #9d4310; /* Flexoki orange-high */
-  --goals: #1c6c66; /* Flexoki cyan-high */
-  --wrong: #942822; /* Flexoki red-700 — incorrect-answer text; the red -high that pairs with --wrong-bg, mirroring --tip/--tip-bg for correct */
-  --core: var(--red);
-  --useful: var(--accent);
-  --extra: var(--muted);
-  --note-bg: #e1eceb; /* Flexoki blue-low */
-  --tip-bg: #edeecf; /* Flexoki green-low */
-  --warning-bg: #ffe7ce; /* Flexoki orange-low */
-  --goals-bg: #ddf1e4; /* Flexoki cyan-low */
-  --takeaways-bg: #f0eaec; /* Flexoki purple-low */
-  --exam-bg: #ffe7ce; /* Flexoki orange-low */
-  --answer-bg: #edeecf; /* Flexoki green-low */
-  --wrong-bg: #ffe1d5; /* Flexoki red-low */
-  --canvas-bg: var(--bg-elevated);
+  /* Type. Sentences in the grotesk; data (times, dates, codes, counts)
+     in the mono — the Data-Is-Mono rule. */
+  --font-sans: "Schibsted Grotesk", system-ui, "Segoe UI", Arial, sans-serif;
+  --font-mono: "Spline Sans Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
 
-  /* --- Typography ---
-     "Fraunces Fallback" / "Spectral Fallback" are metric-override @font-face
-     names (fonts.css generates them to match each web font's box); harmless if
-     that generation is ever missing, since the browser just skips an absent
-     family and falls through to Georgia. */
-  --font-display: "Fraunces", "Fraunces Fallback", "Georgia", "Times New Roman", serif;
-  --font-body: "Spectral", "Spectral Fallback", "Georgia", "Times New Roman", serif;
-  --font-mono:
-    "IBM Plex Mono", "IBM Plex Mono Fallback", ui-monospace, "SFMono-Regular", Menlo, monospace;
-
-  /* Type scale (rem, base 1rem = 17px on <html>). Deliberately non-uniform:
-     tight at body sizes, dramatic at display sizes. Content uses rem so it
-     scales with the reading size; the shell chrome in shell.css is fixed px. */
   --text-xs: 0.72rem;
   --text-sm: 0.84rem;
   --text-base: 1rem;
-  --text-md: 1.1rem;
-  --text-lg: 1.26rem;
-  --text-xl: 1.5rem;
-  --text-2xl: 1.95rem;
-  --text-3xl: 2.7rem;
+  --text-md: 1.13rem;
+  --text-lg: 1.35rem;
+  --text-xl: 1.6rem;
+  --text-2xl: 2rem;
+  --text-3xl: 2.6rem;
 
-  /* Fraunces' hhea box is 1.233em; the worst measured glyph pair (a descender
-     under Å) needs >=1.173 of clearance. 1.18 clears it while staying
-     editorial-tight. */
-  --leading-tight: 1.18;
-  --leading-snug: 1.4;
-  --leading-normal: 1.65;
+  --leading-tight: 1.1;
+  --leading-snug: 1.3;
+  --leading-normal: 1.55;
 
   --weight-normal: 400;
   --weight-medium: 500;
-  --weight-semibold: 600;
+  --weight-bold: 700;
 
-  /* Letter-spacing for mono uppercase kickers/badges; --tracking-wide for the
-     more spaced section dividers (part headers, page TOC). */
-  --tracking: 0.02em;
-  --tracking-wide: 0.08em;
+  --tracking: 0.04em;
+  --tracking-wide: 0.1em;
 
-  /* --- Spacing scale (8px base, a few half-steps) --- */
+  /* Rhythm (rem) and chrome gaps (px). */
   --space-1: 0.25rem;
   --space-2: 0.5rem;
   --space-3: 0.75rem;
@@ -135,122 +87,72 @@
   --space-6: 2rem;
   --space-7: 3rem;
   --space-8: 4rem;
-
-  /* --- Radii, shadows, layout --- */
-  --radius-xs: 4px; /* chips, inline marks, thin controls */
-  --radius-sm: 6px;
-  --radius: 8px;
-  --radius-lg: 12px;
-  --radius-pill: 999px;
-
-  --shadow-sm: 0 1px 2px color-mix(in srgb, #1c1b1a 7%, transparent);
-  --shadow:
-    0 4px 12px color-mix(in srgb, #1c1b1a 8%, transparent),
-    0 1px 3px color-mix(in srgb, #1c1b1a 6%, transparent);
-  --shadow-lg: 0 24px 60px color-mix(in srgb, #1c1b1a 22%, transparent);
-  --scrim: color-mix(in srgb, #1c1b1a 60%, transparent); /* modal / drawer backdrop */
-
-  --maxw: 820px; /* structural content frame — framed plates + wide math fill it */
-  --measure: 35rem; /* reading measure for open prose — 70ch of Spectral (0.5em
-                       per "0", so 35rem = 70ch at the 1rem body). The margin
-                       strip that plates break out into is --maxw − --measure. */
-  --sidebar-w: 288px;
-  --toc-w: 200px; /* right "on this page" rail (module pages, wide screens) */
-  --layout-max: 1440px; /* topbar + layout outer width (fits nav + prose + toc) */
-
-  /* --- Layout spacing (fixed px, 4/8 grid) ---
-     Governs chrome density: topbar, sidebar, hero, cards, page gutters. Kept
-     distinct from the rem --space-* scale (content reading rhythm) — chrome
-     stays a fixed size regardless of the reading font size. Element sizes
-     (logo, progress bar, number columns) stay literal; this is for gaps,
-     padding and margins. */
   --gap-1: 4px;
   --gap-2: 8px;
   --gap-3: 12px;
   --gap-4: 16px;
-  --gap-5: 20px;
   --gap-6: 24px;
-  --gap-7: 32px;
-  --gap-8: 40px;
-  --gap-9: 48px;
-  --gap-10: 64px;
-  --gap-11: 80px;
+  --gap-8: 32px;
+  --gap-12: 48px;
 
-  --gutter: var(--gap-6); /* page horizontal padding */
-  --topbar-h: 74px; /* actual sticky topbar height; derives the sidebar offset + heading scroll-margin, so it must match what .topbar renders */
-  --control-h: 38px; /* header buttons / page-link min height */
+  /* Layout. */
+  --maxw: 72rem;
+  --measure: 38rem;
+  --topbar-h: 64px;
+  --gutter: clamp(16px, 4vw, 32px);
+  --control-h: 36px;
 
-  /* --- Motion --- */
-  --ease: cubic-bezier(0.32, 0.72, 0, 1);
-  --dur-fast: 120ms;
-  --dur: 200ms;
-  --dur-flash: 1.8s; /* one-shot deep-link target flash (sc-target-flash) */
+  /* Geometry: instrument corners, not book corners. */
+  --radius-xs: 2px;
+  --radius-sm: 3px;
+  --radius: 6px;
+  --radius-lg: 10px;
+
+  /* Elevation: tonal layering first; shadows are whispers. */
+  --shadow-sm: 0 1px 2px rgba(16, 15, 15, 0.06);
+  --shadow: 0 3px 10px rgba(16, 15, 15, 0.08), 0 1px 3px rgba(16, 15, 15, 0.05);
+  --shadow-lg: 0 20px 48px rgba(16, 15, 15, 0.2);
+
+  /* Motion: one easing, two working durations, one arrival flash. */
+  --ease: cubic-bezier(0.3, 0.7, 0, 1);
+  --dur-fast: 110ms;
+  --dur: 190ms;
+  --dur-flash: 1.6s;
 }
 
 :root[data-theme="dark"] {
   color-scheme: dark;
 
-  /* Dark-mode brand accent + its on-accent text colour (course-set, see
-     CourseLayout). Falls back to the light accent if the course omits accentDark. */
-  --accent: var(--accent-dark, var(--accent-light, #205ea6));
-  /* Dark accents are LIGHT colours (e.g. demo accentDark #4385be), so white small
-     text on the accent fill fails AA (3.93:1); the theme's near-black ink on that
-     same fill passes (~5.8:1). Default to ink here — unlike light, which keeps
-     white. Courses may still override per-theme via --accent-contrast-dark (no
-     per-course logic in the framework; this is just a better DARK default). */
-  --accent-contrast: var(--accent-contrast-dark, var(--accent-contrast-light, #100f0f));
-  --on-strong: #100f0f;
+  --bg: #100f0f;
+  --card: #1c1b1a;
+  --card-nested: #282726;
+  --card-hover: #282726;
 
-  /* Flexoki dark ramp (stephango.com/flexoki). */
-  --bg: #100f0f; /* Flexoki black */
-  --bg-elevated: #1c1b1a; /* Flexoki base-950 */
-  --fg: #cecdc3; /* Flexoki base-200 (warm ink) */
-  --muted: #9f9d96; /* Flexoki base-400 (7.0:1 on --bg) */
-  /* Flexoki base-500 (5.2:1 on --bg). Same bg-only contract as the light --faint:
-     it falls under AA on elevated/nested grounds — use --muted there. */
+  --fg: #cecdc3;
+  --muted: #9f9d96;
   --faint: #878580;
-  --card: #1c1b1a; /* insets/headers flat with the panels (Flexoki base-950) */
-  --card-nested: #282726; /* base-900 — recessed fill for revealed/nested panels; steps off --bg/--card (lighter here = dark-mode elevation) so it reads inset without a border */
-  --card-hover: #282726; /* Flexoki base-900 (hover) */
-  --border: #403e3c; /* Flexoki base-800 */
-  --border-strong: #575653; /* Flexoki base-700 */
 
-  --indigo: #4385be; /* Flexoki blue-400 */
-  --cyan: #3aa99f; /* Flexoki cyan-400 */
-  --green: #879a39; /* Flexoki green-400 */
-  --yellow: #d0a215; /* Flexoki yellow-400 */
-  --orange: #da702c; /* Flexoki orange-400 */
-  --red: #d14d41; /* Flexoki red-400 */
-  --violet: #8b7ec8; /* Flexoki purple-400 */
+  --border: #403e3c;
+  --border-strong: #575653;
 
-  /* Dark aside swatches (Flexoki -low fill / -high text). note = blue (info),
-     so it overrides the light literal rather than tracking --accent. */
-  --note: #abcfe2; /* Flexoki blue-high (dark) */
-  --tip: #cdd597; /* Flexoki green-high (dark) */
-  --warning: #fcc192; /* Flexoki orange-high (dark) */
-  --goals: #3aa99f; /* Flexoki cyan-400 */
-  --wrong: #f4a79d; /* Flexoki red-high (dark) — pairs with --wrong-bg */
+  --accent: #879a39;
+  --accent-contrast: #100f0f;
 
-  --note-bg: #12253b; /* Flexoki blue-low (dark) */
-  --tip-bg: #252d09; /* Flexoki green-low (dark) */
-  --warning-bg: #40200d; /* Flexoki orange-low (dark) */
-  --goals-bg: #101f1d; /* Flexoki cyan-low (dark) */
-  --takeaways-bg: #261c39; /* Flexoki purple-low (dark) */
-  --exam-bg: #40200d; /* Flexoki orange-low (dark) */
-  --answer-bg: #252d09; /* Flexoki green-low (dark) */
-  --wrong-bg: #3e1715; /* Flexoki red-low (dark) */
-  --canvas-bg: var(--bg-elevated);
+  --clash: #d14d41;
+  --clash-bg: #3e1715;
 
-  /* Warm near-black (#100f0f, Flexoki black — the dark theme's own --bg),
-     mixed in srgb like the light theme's shadows above; a bare rgba(0,0,0,…)
-     tints toward pure black, which the palette never uses. Same alpha weights
-     as before, so perceived strength is unchanged. */
-  --shadow-sm: 0 1px 2px color-mix(in srgb, #100f0f 50%, transparent);
-  --shadow:
-    0 4px 14px color-mix(in srgb, #100f0f 50%, transparent),
-    0 1px 3px color-mix(in srgb, #100f0f 40%, transparent);
-  --shadow-lg: 0 24px 60px color-mix(in srgb, #100f0f 62%, transparent);
-  --scrim: color-mix(in srgb, #100f0f 72%, transparent);
+  --hue-blue: #4385be;
+  --hue-cyan: #3aa99f;
+  --hue-purple: #8b7ec8;
+  --hue-magenta: #ce5d97;
+  --hue-orange: #da702c;
+  --hue-yellow: #d0a215;
+
+  --ruling-line: color-mix(in srgb, var(--border) 60%, transparent);
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.35);
+  --shadow: 0 3px 10px rgba(0, 0, 0, 0.4), 0 1px 3px rgba(0, 0, 0, 0.3);
+  --shadow-lg: 0 20px 48px rgba(0, 0, 0, 0.55);
 }
 
 @media (prefers-reduced-motion: reduce) {

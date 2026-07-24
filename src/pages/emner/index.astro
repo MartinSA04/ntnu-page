@@ -4,11 +4,11 @@ import Layout from "../../layouts/Layout.astro";
 const description = "Søk i NTNUs emnekatalog etter emnekode, emnenavn eller studiested.";
 ---
 
-<Layout title="Emner — NTNU-katalog" description={description} wide>
-  <p class="sc-kicker emner-kicker">Emner</p>
+<Layout title="Emner — Semesterplan" description={description} wide>
+  <p class="np-kicker emner-kicker">Emner</p>
   <h1 class="emner-title">Emnekatalog</h1>
 
-  <form class="sc-field emner-search" id="emner-search-field">
+  <div class="np-field emner-search">
     <input
       type="search"
       id="emner-search"
@@ -16,40 +16,26 @@ const description = "Søk i NTNUs emnekatalog etter emnekode, emnenavn eller stu
       placeholder="Søk etter emnekode eller emnenavn …"
       aria-label="Søk i emnekatalogen"
     />
-  </form>
+  </div>
 
   <div class="emner-chips" id="emner-chips" role="group" aria-label="Filtrer på studiested"></div>
 
-  <p class="emner-status mono" id="emner-status" aria-live="polite">henter emner …</p>
+  <p class="emner-status np-note" id="emner-status" aria-live="polite">henter emner …</p>
 
   <ul class="emner-results" id="emner-results"></ul>
 </Layout>
 
 <style>
   .emner-kicker {
-    color: var(--muted);
-    font-size: var(--text-sm);
     margin-bottom: var(--space-2);
   }
   .emner-title {
-    font-family: var(--font-display);
     font-size: var(--text-2xl);
-    line-height: var(--leading-tight);
     margin-bottom: var(--space-5);
   }
   .emner-search {
     margin-bottom: var(--space-4);
-  }
-  .emner-search input {
-    flex: 1;
-    border: 0;
-    background: transparent;
-    color: inherit;
-    font-family: var(--font-body);
-    font-size: var(--text-base);
-  }
-  .emner-search input:focus {
-    outline: none;
+    max-width: var(--measure);
   }
   .emner-chips {
     display: flex;
@@ -57,12 +43,7 @@ const description = "Søk i NTNUs emnekatalog etter emnekode, emnenavn eller stu
     gap: var(--space-2);
     margin-bottom: var(--space-5);
   }
-  .mono {
-    font-family: var(--font-mono);
-  }
   .emner-status {
-    font-size: var(--text-sm);
-    color: var(--muted);
     margin-bottom: var(--space-4);
   }
   .emner-results {
@@ -70,34 +51,47 @@ const description = "Søk i NTNUs emnekatalog etter emnekode, emnenavn eller stu
     display: flex;
     flex-direction: column;
   }
-  .emner-row {
+  :global(.emner-row) {
+    display: flex;
+    align-items: center;
+    gap: var(--space-4);
+    padding: var(--space-2) var(--space-2);
+    border-bottom: 1px solid var(--border);
+  }
+  :global(.emner-row-link) {
     display: flex;
     align-items: baseline;
     gap: var(--space-4);
-    padding: var(--space-3) var(--space-2);
-    border-bottom: 1px solid var(--border);
+    flex: 1;
+    min-width: 0;
     text-decoration: none;
     color: var(--fg);
-    transition:
-      background-color var(--dur-fast) var(--ease),
-      color var(--dur-fast) var(--ease);
+    padding: var(--space-1) 0;
+    transition: color var(--dur-fast) var(--ease);
   }
-  .emner-row:hover {
-    background: var(--wash);
+  :global(.emner-row-link:hover) {
     color: var(--accent-ink);
   }
-  .emner-row-code {
+  :global(.emner-row-code) {
     font-family: var(--font-mono);
     font-size: var(--text-sm);
     color: var(--muted);
     flex-shrink: 0;
     width: 7em;
   }
-  .emner-row-name {
-    font-family: var(--font-body);
+  :global(.emner-row-name) {
     font-size: var(--text-base);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
-  .emner-row-location {
+  :global(.emner-row-exam) {
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    color: var(--faint);
+    flex-shrink: 0;
+  }
+  :global(.emner-row-location) {
     font-family: var(--font-mono);
     font-size: var(--text-xs);
     color: var(--faint);
@@ -107,18 +101,33 @@ const description = "Søk i NTNUs emnekatalog etter emnekode, emnenavn eller stu
 </style>
 
 <script>
+  import { createPlanStore } from "../../lib/planner/store.ts";
+  import semestersData from "../../../data/semesters.json";
+
   interface SearchIndex {
     year: number;
-    courses: [code: string, name: string, location: string][];
+    courses: [
+      code: string,
+      name: string,
+      location: string,
+      exams: [season: string | null, date: string | null][],
+    ][];
   }
 
   const RESULT_CAP = 200;
+  const SEASON_LABELS: Record<string, string> = {
+    SPRING: "vår",
+    AUTUMN: "høst",
+    WINTER: "vinter",
+    SUMMER: "sommer",
+  };
 
   const statusEl = document.getElementById("emner-status") as HTMLParagraphElement;
   const resultsEl = document.getElementById("emner-results") as HTMLUListElement;
   const chipsEl = document.getElementById("emner-chips") as HTMLDivElement;
   const searchInput = document.getElementById("emner-search") as HTMLInputElement;
-  const searchField = document.getElementById("emner-search-field") as HTMLFormElement;
+
+  const store = createPlanStore(semestersData.current?.id ?? "");
 
   // Case/diacritic-insensitive substring matching (Æ/Ø/Å fold to A/O/A).
   function fold(value: string): string {
@@ -126,6 +135,20 @@ const description = "Søk i NTNUs emnekatalog etter emnekode, emnenavn eller stu
       .normalize("NFD")
       .replace(/[\u0300-\u036f]/g, "")
       .toLowerCase();
+  }
+
+  function examNote(exams: [string | null, string | null][]): string {
+    if (exams.length === 0) return "";
+    const seasons = [
+      ...new Set(exams.map(([season]) => (season ? (SEASON_LABELS[season] ?? season) : null))),
+    ].filter((s): s is string => s !== null);
+    return seasons.length > 0 ? `eksamen ${seasons.join(", ")}` : "";
+  }
+
+  function setAddState(button: HTMLButtonElement, inPlan: boolean, code: string): void {
+    button.setAttribute("aria-pressed", String(inPlan));
+    button.setAttribute("aria-label", inPlan ? `Fjern ${code} fra planen` : `Legg til ${code} i planen`);
+    button.textContent = inPlan ? "✓" : "+";
   }
 
   let index: SearchIndex | null = null;
@@ -142,24 +165,50 @@ const description = "Søk i NTNUs emnekatalog etter emnekode, emnenavn eller stu
 
     resultsEl.replaceChildren();
     const shown = filtered.slice(0, RESULT_CAP);
-    for (const [code, name, location] of shown) {
-      const row = document.createElement("a");
+    for (const [code, name, location, exams] of shown) {
+      const row = document.createElement("li");
       row.className = "emner-row";
-      row.href = `/emne/${code}/`;
+
+      const link = document.createElement("a");
+      link.className = "emner-row-link";
+      link.href = `/emne/${code}/`;
 
       const codeEl = document.createElement("span");
-      codeEl.className = "emner-row-code mono";
+      codeEl.className = "emner-row-code";
       codeEl.textContent = code;
 
       const nameEl = document.createElement("span");
       nameEl.className = "emner-row-name";
       nameEl.textContent = name;
 
+      link.append(codeEl, nameEl);
+
+      const note = examNote(exams);
+      if (note) {
+        const noteEl = document.createElement("span");
+        noteEl.className = "emner-row-exam";
+        noteEl.textContent = note;
+        link.append(noteEl);
+      }
+
       const locEl = document.createElement("span");
-      locEl.className = "emner-row-location mono";
+      locEl.className = "emner-row-location";
       locEl.textContent = location;
 
-      row.append(codeEl, nameEl, locEl);
+      const addBtn = document.createElement("button");
+      addBtn.type = "button";
+      addBtn.className = "np-icon-btn np-press";
+      setAddState(addBtn, store.hasCourse(code), code);
+      addBtn.addEventListener("click", () => {
+        if (store.hasCourse(code)) {
+          store.removeCourse(code);
+        } else {
+          store.addCourse({ code, name });
+        }
+        setAddState(addBtn, store.hasCourse(code), code);
+      });
+
+      row.append(link, locEl, addBtn);
       resultsEl.append(row);
     }
 
@@ -174,13 +223,13 @@ const description = "Søk i NTNUs emnekatalog etter emnekode, emnenavn eller stu
     for (const location of locations) {
       const chip = document.createElement("button");
       chip.type = "button";
-      chip.className = "sc-chip";
+      chip.className = "np-toggle";
       chip.textContent = location;
       chip.setAttribute("aria-pressed", "false");
       chip.addEventListener("click", () => {
         const next = activeLocation === location ? null : location;
         activeLocation = next;
-        for (const other of chipsEl.querySelectorAll(".sc-chip")) {
+        for (const other of chipsEl.querySelectorAll(".np-toggle")) {
           other.setAttribute("aria-pressed", String(other === chip && next !== null));
         }
         render();
@@ -211,7 +260,7 @@ const description = "Søk i NTNUs emnekatalog etter emnekode, emnenavn eller stu
   }
 
   searchInput.addEventListener("input", render);
-  searchField.addEventListener("submit", (event) => event.preventDefault());
+  store.onPlanChange(render);
 
   init();
 </script>

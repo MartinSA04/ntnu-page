@@ -60,13 +60,21 @@ export function toCatalog(hits, year, crawledAt) {
 /**
  * Build the compact `public/data/search-index.json` shape from a catalog.
  *
+ * Exams are filtered to non-continuation (kont exams are not planning data)
+ * and mapped to `[season, date]` pairs.
+ *
  * @param {{ year: number, courses: CatalogCourse[] }} catalog
- * @returns {{ year: number, courses: [string, string, string | null][] }}
+ * @returns {{ year: number, courses: [string, string, string | null, [string | null, string | null][]][] }}
  */
 export function toSearchIndex(catalog) {
   return {
     year: catalog.year,
-    courses: catalog.courses.map((course) => [course.code, course.name, course.location]),
+    courses: catalog.courses.map((course) => [
+      course.code,
+      course.name,
+      course.location,
+      course.exams.filter((exam) => !exam.continuation).map((exam) => [exam.season, exam.date]),
+    ]),
   };
 }
 

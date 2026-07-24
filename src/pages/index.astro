@@ -3,76 +3,63 @@ import semestersData from "../../data/semesters.json";
 import Layout from "../layouts/Layout.astro";
 
 const description =
-  "Søk i NTNUs emnekatalog og studieprogram, med emnedetaljer, karakterstatistikk og timeplaner.";
+  "Planlegg semesteret ditt: se timeplankollisjoner og eksamensdatoer før du melder deg opp på emner ved NTNU.";
 
 const currentSemester = semestersData.current;
 ---
 
-<Layout title="NTNU-katalog" description={description}>
-  <p class="sc-kicker home-kicker">NTNU-katalog</p>
-  <h1 class="home-title">Emner og studier ved NTNU</h1>
+<Layout title="Semesterplan — planlegg semesteret ved NTNU" description={description}>
+  <p class="np-kicker home-kicker">Semesterplan</p>
+  <h1 class="home-title">Planlegg semesteret før du melder deg opp.</h1>
   <p class="home-lede">
-    Søk i emnekatalogen og studieprogrammene, med detaljer, karakterstatistikk
-    og timeplaner hentet fra NTNU og HK-dir (DBH).
+    Sett sammen emner fra katalogen eller studieprogrammet ditt og se timeplankollisjoner,
+    eksamensdatoer og studiepoeng samlet — før du melder deg opp.
   </p>
 
-  <form class="sc-field home-search" action="/emner/" method="get">
-    <input
-      type="search"
-      name="q"
-      placeholder="Søk etter emnekode eller emnenavn …"
-      aria-label="Søk i emnekatalogen"
-    />
-  </form>
+  <a class="np-btn np-press home-cta" href="/planlegger/">Åpne planleggeren</a>
 
   <div class="home-tiles">
-    <a class="sc-tile sc-lift sc-press home-tile" href="/emner/">
-      <span class="sc-kicker">Emner</span>
+    <a class="np-tile np-lift np-press home-tile" href="/planlegger/">
+      <span class="np-kicker">Planlegger</span>
+      <span class="home-tile-body">Bygg semesterplanen din</span>
+    </a>
+    <a class="np-tile np-lift np-press home-tile" href="/emner/">
+      <span class="np-kicker">Emner</span>
       <span class="home-tile-body">Søk i emnekatalogen</span>
     </a>
-    <a class="sc-tile sc-lift sc-press home-tile" href="/studier/">
-      <span class="sc-kicker">Studier</span>
+    <a class="np-tile np-lift np-press home-tile" href="/studier/">
+      <span class="np-kicker">Studier</span>
       <span class="home-tile-body">Studieprogram og studieplaner</span>
     </a>
   </div>
 
+  <p class="home-plan-status np-note" id="home-plan-status" hidden>
+    <a href="/planlegger/" id="home-plan-link"></a>
+  </p>
+
   {
     currentSemester && (
-      <p class="home-semester">Inneværende semester: {currentSemester.name}</p>
+      <p class="home-semester np-note">Inneværende semester: {currentSemester.name}</p>
     )
   }
 </Layout>
 
 <style>
   .home-kicker {
-    color: var(--muted);
-    font-size: var(--text-sm);
-    margin-bottom: var(--space-2);
+    margin-bottom: var(--space-3);
   }
   .home-title {
-    font-family: var(--font-display);
     font-size: var(--text-3xl);
-    line-height: var(--leading-tight);
     margin-bottom: var(--space-4);
+    max-width: var(--measure);
   }
   .home-lede {
     font-size: var(--text-md);
     color: var(--muted);
     margin-bottom: var(--space-6);
   }
-  .home-search {
-    margin-bottom: var(--space-6);
-  }
-  .home-search input {
-    flex: 1;
-    border: 0;
-    background: transparent;
-    color: inherit;
-    font-family: var(--font-body);
-    font-size: var(--text-base);
-  }
-  .home-search input:focus {
-    outline: none;
+  .home-cta {
+    margin-bottom: var(--space-7);
   }
   .home-tiles {
     display: grid;
@@ -84,17 +71,39 @@ const currentSemester = semestersData.current;
     display: flex;
     flex-direction: column;
     gap: var(--space-2);
-    padding: var(--space-4);
-    text-decoration: none;
-    color: var(--fg);
   }
   .home-tile-body {
-    font-family: var(--font-body);
     font-size: var(--text-md);
   }
-  .home-semester {
-    font-family: var(--font-mono);
-    font-size: var(--text-xs);
-    color: var(--muted);
+  .home-plan-status {
+    margin-bottom: var(--space-2);
+  }
+  .home-plan-status a {
+    color: var(--accent-ink);
   }
 </style>
+
+<script>
+  import { createPlanStore } from "../lib/planner/store.ts";
+  import semestersData from "../../data/semesters.json";
+
+  const defaultSemesterId = semestersData.current?.id ?? "";
+  const store = createPlanStore(defaultSemesterId);
+
+  const statusEl = document.getElementById("home-plan-status") as HTMLParagraphElement | null;
+  const linkEl = document.getElementById("home-plan-link") as HTMLAnchorElement | null;
+
+  function render(): void {
+    if (!statusEl || !linkEl) return;
+    const plan = store.loadPlan();
+    if (plan.courses.length === 0) {
+      statusEl.hidden = true;
+      return;
+    }
+    statusEl.hidden = false;
+    linkEl.textContent = `Planen din: ${plan.courses.length} emner`;
+  }
+
+  render();
+  store.onPlanChange(render);
+</script>

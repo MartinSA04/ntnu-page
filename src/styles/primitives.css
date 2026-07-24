@@ -1,414 +1,329 @@
-/*
- * Shared component primitives — the visual vocabulary from the design-polish
- * audit, extracted from per-component scoped <style> into ONE documented layer.
- * A sibling of the tokens.css contract: a component applies a class below and
- * keeps only its own local overrides. Astro hashes a component's scoped
- * selectors to 0-2-0, so a scoped override always beats these 0-1-0 globals —
- * local tweaks keep working without !important. Loaded after base.css so it can
- * rely on the token + element base, and before shell.css.
+/**
+ * Ruteark primitives — the .np-* vocabulary. One interaction grammar:
+ * flat at rest; hover answers on the surface (paper darkens a step, bare
+ * controls take an ink wash) with text lighting to --accent-ink; press
+ * dips 1px; focus is the global 2px accent outline. Interactive controls
+ * never carry borders (hairlines are structure).
  */
 
-/* --- Tactile press ---
-   Every clickable dips 1px on press. Deliberately excludes the flashcard flip
-   card, disclosure <summary>s and glyph-nudge elements — they own a transform.
-   The transition lives on the resting selector so both the dip-in and the
-   release ease. `transition` is a shorthand: two same-specificity rules that
-   both set it don't merge, the later one in the file wins outright. Every
-   other primitive here that combines with .sc-press on real markup
-   (.sc-icon-btn, .sc-pill, .sc-chip, .sc-lift) therefore repeats this SAME
-   transform sub-transition in its own list, so whichever rule ends up
-   winning, the value is identical and there is only ever one effective
-   transform transition per element. (.code-copy in base.css does the same
-   with !important, since it needs to beat this file's later cascade
-   position.) */
-.sc-press {
-  transition: transform var(--dur-fast) var(--ease);
-}
-.sc-press:active {
-  transform: translateY(1px);
-}
+/* --- Labels & data ------------------------------------------------- */
 
-/* --- Square icon control + copy button (one shared marginalia box) ---
-   The theme toggle, menu/close buttons and the copy buttons are navigational/
-   utility controls: bare glyph at rest, ink wash + accent-ink on hover (the
-   marginalia recipe — state sits on paper, navigation sits in the margin).
-   Size is the caller's (--control-h topbar chrome, 32px copy). */
-.sc-icon-btn,
-.sc-copy {
-  display: inline-grid;
-  place-items: center;
-  /* border: 0 (not merely unset): base.css's button reset leaves the UA's
-     2px outset border in place, so every borderless control must say so. */
-  border: 0;
-  border-radius: var(--radius-sm);
-  background: transparent;
+.np-kicker {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-medium);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-wide);
   color: var(--muted);
 }
-.sc-icon-btn {
-  /* Carries the SAME transform sub-transition as .sc-press (below): this rule
-     and .sc-press are equal specificity, so whichever is later in the file
-     wins the whole `transition` shorthand outright — matching the value here
-     keeps the press dip eased either way. */
-  transition:
-    color var(--dur-fast) var(--ease),
-    background-color var(--dur-fast) var(--ease),
-    transform var(--dur-fast) var(--ease);
-}
-.sc-icon-btn:hover,
-.sc-copy:hover {
-  color: var(--accent-ink);
-  background: var(--wash);
-}
 
-/* --- Copy control (code blocks + formula sheet) ---
-   The shared icon box (above) at 32px, plus a copy→check swap once copied. NO
-   transition on .sc-copy itself: the <pre> copy button animates opacity on
-   reveal and keeps its own transition; positioning/visibility is the caller's.
-   The icon swap cross-fades instead of snapping: both <Icon> children share
-   the same grid cell (grid-area 1/1 — this container is inline-grid) and trade
-   opacity. Icons come from <Icon> children; this file is global, so no
-   :global() reaches .i-copy/.i-check. */
-.sc-copy {
-  width: 32px;
-  height: 32px;
-}
-/* WCAG 2.5.8: the 32px box is below the 38px --control-h target. Rather than
-   inflate the visually calm button, extend the HIT AREA with a transparent
-   ::after that overhangs 3px on every side (32 + 2*3 = 38px). It anchors to the
-   nearest positioned ancestor, so EVERY caller must be positioned ITSELF:
-   .code-copy is position:absolute (base.css), .fs-copy position:relative (its
-   own file). An unpositioned caller inside a positioned container silently
-   stretches the button's hover/click target over that whole container — this
-   bit .fs-copy once (the pseudo anchored to the position:relative .fs-row and
-   made the entire formula row hover-copy). NOTE: primitives.css loads after
-   base.css, so we must NOT set `position` on .sc-copy here (it would override
-   .code-copy's position:absolute at equal specificity); positioning stays the
-   caller's job. */
-.sc-copy::after {
-  content: "";
-  position: absolute;
-  inset: -3px;
-}
-.sc-copy svg {
-  display: block;
-  grid-area: 1 / 1;
-  opacity: 1;
-  transition: opacity var(--dur-fast) var(--ease);
-}
-.sc-copy .i-check {
-  opacity: 0;
-}
-.sc-copy[data-copied="true"] {
-  color: var(--tip);
-}
-.sc-copy[data-copied="true"] .i-copy {
-  opacity: 0;
-}
-.sc-copy[data-copied="true"] .i-check {
-  opacity: 1;
-}
-
-/* --- Labelled marginalia pill (search trigger, hero "continue", 404 links) ---
-   The LABELLED form of the marginalia recipe: bare mono text at rest, ink wash
-   + accent-ink on hover. Callers add their own size/padding. Stateful labelled
-   controls (done button, flashcard rating) use .sc-btn instead. */
-.sc-pill {
-  display: inline-flex;
-  align-items: center;
-  border: 0; /* see .sc-icon-btn — the UA button border must be zeroed */
-  border-radius: var(--radius-sm);
-  background: transparent;
-  color: var(--muted);
+.np-data {
   font-family: var(--font-mono);
-  font-size: var(--text-sm);
-  /* Same transform sub-transition as .sc-press (equal-specificity, later rule
-     wins the whole shorthand) — see the comment on .sc-icon-btn. */
-  transition:
-    color var(--dur-fast) var(--ease),
-    background-color var(--dur-fast) var(--ease),
-    transform var(--dur-fast) var(--ease);
-}
-.sc-pill:hover {
-  background: var(--wash);
-  color: var(--accent-ink);
+  font-variant-numeric: tabular-nums;
 }
 
-/* --- Disclosure summary idiom (Solution / Hint / Derivation) ---
-   Apply .sc-summary to the <summary> and wrap the chevron glyph in .sc-chev.
-   The container (radius / padding / margin) stays the component's. */
-.sc-summary {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  font-family: var(--font-mono);
-  font-size: var(--text-sm);
-  color: var(--accent-ink);
-  cursor: pointer;
-  list-style: none;
-  user-select: none;
-  transition: background-color var(--dur-fast) var(--ease);
-}
-.sc-summary::-webkit-details-marker {
-  display: none;
-}
-/* The panel sits on --card-nested (== --card-hover), so a neutral fill hover is
-   invisible; a faint ink overlay (--wash) darkens it on any surface. */
-.sc-summary:hover {
-  background: var(--wash);
-}
-details[open] > .sc-summary {
-  border-bottom: 1px solid var(--border);
-}
-.sc-chev {
-  display: inline-flex;
-  transition: transform var(--dur-fast) var(--ease);
-}
-details[open] > summary .sc-chev {
-  transform: rotate(90deg);
-}
-
-/* --- Pill chip (filter toggles, formula tags) ---
-   A COMPLETE paper chip: borderless fill one paper step off its ground
-   (--control-fill lets a hosting panel step it to --card-nested), compact mono
-   type, fill-darken + accent-ink hover, solid accent selected fill. Selected is
-   either an `.active` class or `aria-pressed="true"`. */
-.sc-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4em;
-  padding: 0.35em 0.8em;
-  border: 0;
-  border-radius: var(--radius-pill);
-  background: var(--control-fill, var(--bg-elevated));
+.np-note {
   font-family: var(--font-mono);
   font-size: var(--text-xs);
   color: var(--muted);
-  /* Positioning context for the hit-area pseudo (below). The chip is static
-     everywhere it's used, so this has no layout effect. */
-  position: relative;
-  /* Same transform sub-transition as .sc-press (equal-specificity, later rule
-     wins the whole shorthand) — see the comment on .sc-icon-btn. */
+}
+
+/* Collision ink — the only place red appears (Red-Is-Collision rule). */
+.np-note-clash {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--clash);
+}
+
+.np-kbd {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-bottom-width: 2px;
+  border-radius: var(--radius-xs);
+  padding: 0.1em 0.45em;
+}
+
+/* --- Buttons ------------------------------------------------------- */
+
+.np-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--gap-2);
+  min-height: var(--control-h);
+  padding: 0 var(--space-3);
+  background: var(--card);
+  color: var(--fg);
+  font-weight: var(--weight-medium);
+  font-size: var(--text-sm);
+  border-radius: var(--radius-sm);
+  text-decoration: none;
   transition:
-    color var(--dur-fast) var(--ease),
-    background-color var(--dur-fast) var(--ease),
-    transform var(--dur-fast) var(--ease);
+    background var(--dur-fast) var(--ease),
+    color var(--dur-fast) var(--ease);
 }
-/* WCAG 2.5.8: the chip renders ~29px tall, under the 38px --control-h target.
-   Keep the calm visual size and extend the HIT AREA with a transparent ::after
-   overhanging 5px block-wise (~29 + 2*5 = 39px) and 2px inline-wise, so taps land
-   without visually inflating the pill. */
-.sc-chip::after {
-  content: "";
-  position: absolute;
-  inset: -5px -2px;
-}
-.sc-chip:hover {
-  color: var(--accent-ink);
+
+.np-btn:hover {
   background: var(--card-hover);
+  color: var(--accent-ink);
 }
-.sc-chip.active,
-.sc-chip[aria-pressed="true"] {
+
+.np-btn[aria-pressed="true"],
+.np-btn.is-active {
   background: var(--accent);
   color: var(--accent-contrast);
 }
 
-/* --- Paper labelled button (done button, flashcard rating) ---
-   Stateful labelled controls keep a surface: borderless paper fill (nested-
-   aware via --control-fill), mono medium type, fill-darken + accent-ink hover.
-   Size, padding and resting text colour stay the caller's. */
-.sc-btn {
+.np-icon-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border: 0; /* see .sc-icon-btn — the UA button border must be zeroed */
+  width: var(--control-h);
+  height: var(--control-h);
+  color: var(--muted);
   border-radius: var(--radius-sm);
-  background: var(--control-fill, var(--bg-elevated));
-  font-family: var(--font-mono);
-  font-size: var(--text-sm);
-  font-weight: var(--weight-medium);
-  /* Same transform sub-transition as .sc-press — see .sc-icon-btn. */
   transition:
-    color var(--dur-fast) var(--ease),
-    background-color var(--dur-fast) var(--ease),
-    transform var(--dur-fast) var(--ease);
+    background var(--dur-fast) var(--ease),
+    color var(--dur-fast) var(--ease);
 }
-.sc-btn:hover {
+
+.np-icon-btn:hover {
+  background: var(--wash);
+  color: var(--accent-ink);
+}
+
+/* Bare navigational text control (topbar links, quiet actions). */
+.np-navlink {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--control-h);
+  padding: 0 var(--space-2);
+  color: var(--muted);
+  font-weight: var(--weight-medium);
+  font-size: var(--text-sm);
+  border-radius: var(--radius-sm);
+  text-decoration: none;
+  transition:
+    background var(--dur-fast) var(--ease),
+    color var(--dur-fast) var(--ease);
+}
+
+.np-navlink:hover {
+  background: var(--wash);
+  color: var(--accent-ink);
+}
+
+.np-navlink[aria-current="page"] {
+  color: var(--fg);
+}
+
+/* --- Tags & toggles ------------------------------------------------ */
+
+/* Course tag: squared (ruteark cell, not a pill), mono code, hue dot. */
+.np-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--gap-2);
+  padding: 0.3em 0.6em;
+  background: var(--card);
+  color: var(--fg);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-medium);
+  border-radius: var(--radius-xs);
+  text-decoration: none;
+  transition:
+    background var(--dur-fast) var(--ease),
+    color var(--dur-fast) var(--ease);
+}
+
+a.np-tag:hover,
+button.np-tag:hover {
   background: var(--card-hover);
   color: var(--accent-ink);
 }
 
-/* --- Paper search field (formula sheet, glossary) ---
-   A field is stateful (you type into it): paper fill, no frame. Focus is the
-   site's 2px accent ring on the wrapper — :focus-within, because a field is
-   "active" for pointer and keyboard alike (the accent border it replaces
-   answered both, too). */
-.sc-field {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  background: var(--control-fill, var(--bg-elevated));
-  border-radius: var(--radius);
-  padding: 9px 14px;
-  color: var(--muted);
+/* The square dot — a filled ruteark cell carrying a course hue.
+   Set the hue per element: style="--dot: var(--hue-cyan)". */
+.np-dot {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 1px;
+  background: var(--dot, var(--accent));
 }
-.sc-field:focus-within {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
+
+/* Selectable toggle (semester switcher, filters). aria-pressed drives it. */
+.np-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--gap-2);
+  min-height: var(--control-h);
+  padding: 0 var(--space-3);
+  background: var(--card);
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-medium);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking);
+  border-radius: var(--radius-sm);
+  transition:
+    background var(--dur-fast) var(--ease),
+    color var(--dur-fast) var(--ease);
+}
+
+.np-toggle:hover {
+  background: var(--card-hover);
   color: var(--accent-ink);
 }
 
-/* --- Range slider (seek + value sliders) ---
-   The native OS range is app-chrome on this paper surface, so every framework
-   range wears this instead: a thin inset paper-nested groove, an accent PROGRESS
-   fill, and a slim accent playhead ringed in paper. WebKit has no native progress
-   pseudo-element, so the fill width rides a --pct (0–100%) custom property that the
-   mounting island keeps in sync (setRangePct in simRuntime.ts drives both the
-   stepper's seek/size sliders and the simulation parameter sliders); Firefox fills
-   ::-moz-range-progress natively and ignores --pct. Callers own width/flex
-   (layout) and may override --track-h. */
-.sc-range {
-  --track-h: 6px;
-  appearance: none;
-  -webkit-appearance: none;
-  /* The box stands 24px tall so the pointer target clears the WCAG 2.5.8 24px
-     floor — parameter sliders offer no button alternative, so the thumb is the
-     sole control. Negative block margin shrinks the MARGIN box back to the painted
-     15px, so no consumer row grows and the groove/thumb stay vertically centred
-     exactly where a 15px box put them (track height stays --track-h throughout). */
-  height: 24px;
-  margin-block: -4.5px;
-  background: transparent;
-  cursor: pointer;
-}
-.sc-range::-webkit-slider-runnable-track {
-  height: var(--track-h);
-  border-radius: var(--radius-pill);
-  background:
-    linear-gradient(var(--accent), var(--accent)) 0 / var(--pct, 0%) 100% no-repeat,
-    var(--card-nested);
-}
-.sc-range::-webkit-slider-thumb {
-  appearance: none;
-  -webkit-appearance: none;
-  width: 5px;
-  height: 15px;
-  margin-top: calc((var(--track-h) - 15px) / 2);
-  border-radius: var(--radius-pill);
+.np-toggle[aria-pressed="true"] {
   background: var(--accent);
-  box-shadow: 0 0 0 2px var(--bg-elevated);
-}
-.sc-range::-moz-range-track {
-  height: var(--track-h);
-  border-radius: var(--radius-pill);
-  background: var(--card-nested);
-}
-.sc-range::-moz-range-progress {
-  height: var(--track-h);
-  border-radius: var(--radius-pill);
-  background: var(--accent);
-}
-.sc-range::-moz-range-thumb {
-  width: 5px;
-  height: 15px;
-  border: 0;
-  border-radius: var(--radius-pill);
-  background: var(--accent);
-  box-shadow: 0 0 0 2px var(--bg-elevated);
-}
-.sc-range:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 4px;
-  border-radius: var(--radius-pill);
+  color: var(--accent-contrast);
 }
 
-/* --- Keycap (⌘K hint, Esc button) ---
-   Frame + type only; padding stays the caller's (a tight inline hint vs a
-   clickable button), and a clickable keycap adds its own hover. */
-.sc-kbd {
+/* --- Fields -------------------------------------------------------- */
+
+.np-field {
+  display: flex;
+  align-items: center;
+  gap: var(--gap-2);
+  min-height: var(--control-h);
+  padding: 0 var(--space-3);
+  background: var(--card);
+  border-radius: var(--radius-sm);
+  transition: background var(--dur-fast) var(--ease);
+}
+
+.np-field:focus-within {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.np-field input {
+  flex: 1;
+  min-width: 0;
+  background: none;
+  border: 0;
+  padding: 0;
+  font-size: var(--text-sm);
+}
+
+.np-field input:focus {
+  outline: none;
+}
+
+.np-field input::placeholder {
+  color: var(--faint);
+}
+
+/* --- Surfaces ------------------------------------------------------ */
+
+.np-panel {
+  background: var(--card);
+  border-radius: var(--radius);
+  padding: var(--space-4);
+}
+
+.np-tile {
+  display: block;
+  background: var(--card);
+  border-radius: var(--radius);
+  padding: var(--space-4);
+  color: var(--fg);
+  text-decoration: none;
+  box-shadow: var(--shadow-sm);
+}
+
+/* Planning surface: the paper spread with squared ruling and a frame.
+   Ruling appears here and nowhere else (Ruling-Marks-The-Plan rule). */
+.np-frame {
+  background: var(--bg);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+
+.np-ruled {
+  background-image:
+    linear-gradient(var(--ruling-line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--ruling-line) 1px, transparent 1px);
+  background-size: var(--cell) var(--cell);
+}
+
+/* --- Disclosure ---------------------------------------------------- */
+
+.np-summary {
+  display: flex;
+  align-items: center;
+  gap: var(--gap-2);
+  min-height: var(--control-h);
   font-family: var(--font-mono);
   font-size: var(--text-xs);
-  color: var(--muted);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-xs);
-  background: var(--card);
-}
-
-/* --- Mono uppercase kicker / label ---
-   The type recipe only; size + tone colour stay the caller's. */
-.sc-kicker {
-  font-family: var(--font-mono);
+  font-weight: var(--weight-medium);
   text-transform: uppercase;
   letter-spacing: var(--tracking);
-  font-weight: var(--weight-semibold);
+  color: var(--accent-ink);
+  cursor: pointer;
+  list-style: none;
+  border-radius: var(--radius-sm);
+  transition: background var(--dur-fast) var(--ease);
 }
 
-/* --- Countdown pill ("om N dager") ---
-   The accent pill every "days left" phrase wears: mono, accent-contrast text on
-   an accent fill, pill radius. Promoted from ExamSummary's .exam-when-count so
-   the overview exam card + Frister lede and the Eksamen page all share one look.
-   Callers own any surrounding layout (a flex gap, or an inline space). */
-.sc-countdown {
-  font-family: var(--font-mono);
-  font-size: var(--text-sm);
-  color: var(--accent-contrast);
-  background: var(--accent);
-  border-radius: var(--radius-pill);
-  padding: 0.1em 0.7em;
-}
-/* A past exam's countdown reads as a muted note, not an urgent accent pill. */
-.sc-countdown[data-past="true"] {
-  color: var(--muted);
-  background: transparent;
-  /* --border: a non-interactive badge is panel structure, not a control (the
-     Structural-Border Rule reserves --border-strong for interactive frames). */
-  border: 1px solid var(--border);
+.np-summary::-webkit-details-marker {
+  display: none;
 }
 
-/* --- Floating content card ---
-   Fill + soft shadow at rest. base.css owns the nested-alternation (a card
-   nested in another recesses to --card-nested with no shadow, via !important
-   rules that match the component container classes), so KEEP those classes and
-   only add .sc-panel alongside. Radius/padding stay the caller's where they
-   legitimately differ (e.g. Solution/Hint keep --radius-sm). */
-.sc-panel {
-  background: var(--bg-elevated);
-  box-shadow: var(--shadow-sm);
-  border-radius: var(--radius);
+.np-summary::before {
+  content: "";
+  flex: none;
+  width: 0.5em;
+  height: 0.5em;
+  border-right: 1.5px solid currentColor;
+  border-top: 1.5px solid currentColor;
+  transform: rotate(45deg);
+  transition: transform var(--dur-fast) var(--ease);
 }
 
-/* --- Hover-lift micro-interaction ---
-   The ONE definition of the lift: a surface rises 1px on hover, and its
-   transition carries every property a lift animates (shadow, fill, colour,
-   transform) so callers declare only their own hover END states — the
-   shadow-grow on the right element (the surface itself, or a child face). The
-   1px rise is guarded with :not(:active) so the .sc-press dip still wins on
-   click. Used by the overview tiles, the pager, the sidebar rows, the
-   official-sheet link and the flashcard.
-   box-shadow is a paint-only property (not transform/opacity), so this
-   transition is a DELIBERATE, bounded exception to the system's
-   transform/opacity-only motion claim: the shadow-grow IS the lift's depth cue
-   and can't be faked with a transform. Scoped to hover only, on a handful of
-   surfaces, and zeroed under prefers-reduced-motion via --dur-fast. */
-.sc-lift {
+details[open] > .np-summary::before {
+  transform: rotate(135deg);
+}
+
+.np-summary:hover {
+  background: var(--wash);
+}
+
+/* --- Micro-interactions -------------------------------------------- */
+
+.np-lift {
   transition:
-    box-shadow var(--dur-fast) var(--ease),
-    background-color var(--dur-fast) var(--ease),
-    color var(--dur-fast) var(--ease),
-    transform var(--dur-fast) var(--ease);
-}
-.sc-lift:hover:not(:active) {
-  transform: translateY(-1px);
+    transform var(--dur-fast) var(--ease),
+    box-shadow var(--dur-fast) var(--ease);
 }
 
-/* --- Interactive tile surface (overview tiles, prev/next pager) ---
-   The resting borderless card + its hover shadow/fill; the lift itself (rise +
-   transition) is .sc-lift — compose both. */
-.sc-tile {
-  border-radius: var(--radius);
-  background: var(--bg-elevated);
-  box-shadow: var(--shadow-sm);
-}
-.sc-tile:hover {
+.np-lift:hover {
+  transform: translateY(-1px);
   box-shadow: var(--shadow);
-  background: var(--card);
+}
+
+.np-press:active {
+  transform: translateY(1px);
+}
+
+/* Deep-link arrival: one quiet accent flash. */
+@keyframes np-flash {
+  0% {
+    outline-color: var(--accent-ring);
+  }
+  100% {
+    outline-color: transparent;
+  }
+}
+
+.np-target-flash {
+  outline: 2px solid transparent;
+  outline-offset: 2px;
+  animation: np-flash var(--dur-flash) var(--ease);
 }
