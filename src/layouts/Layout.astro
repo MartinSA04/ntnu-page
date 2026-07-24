@@ -1,0 +1,104 @@
+---
+import { ClientRouter } from "astro:transitions";
+import ThemeToggle from "../components/ThemeToggle.astro";
+import { contrastText } from "../lib/color.ts";
+import { faviconDataUri } from "../lib/favicon.ts";
+import "../styles/fonts.css";
+import "../styles/tokens.css";
+import "../styles/base.css";
+import "../styles/primitives.css";
+import "../styles/site.css";
+
+/**
+ * Site shell: topbar (brand + nav pills + theme toggle), a centered content
+ * column (reading measure by default, a ~72rem data column when `wide`), and
+ * a quiet mono footer. Mirrors the StudyCompanion hub's minimal-shell recipe
+ * (fonts→tokens→base→primitives→site.css, no-flash theme init, inline accent
+ * vars) — see docs/SPEC.md "Design-system usage".
+ */
+interface Props {
+  title: string;
+  description: string;
+  wide?: boolean;
+}
+const { title, description, wide = false } = Astro.props;
+
+const THEME_KEY = "sc:theme:ntnu";
+const ACCENT_LIGHT = "#205ea6";
+const ACCENT_DARK = "#4385be";
+const accentVars =
+  `--accent-light: ${ACCENT_LIGHT}; --accent-dark: ${ACCENT_DARK}; ` +
+  `--accent-contrast-light: ${contrastText(ACCENT_LIGHT)}; ` +
+  `--accent-contrast-dark: ${contrastText(ACCENT_DARK)};`;
+---
+
+<!doctype html>
+<html lang="nb" style={accentVars}>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{title}</title>
+    <meta name="description" content={description} />
+    <link rel="icon" href={faviconDataUri(ACCENT_LIGHT)} />
+    <script is:inline define:vars={{ THEME_KEY }}>
+      // No-flash theme init — reads the stored choice, falls back to the OS
+      // preference, and sets data-theme on <html> before first paint.
+      (function () {
+        function isDark() {
+          try {
+            const saved = localStorage.getItem(THEME_KEY);
+            return saved
+              ? saved === "dark"
+              : matchMedia("(prefers-color-scheme: dark)").matches;
+          } catch (e) {
+            return false;
+          }
+        }
+        function applyTheme() {
+          if (isDark())
+            document.documentElement.setAttribute("data-theme", "dark");
+          else document.documentElement.removeAttribute("data-theme");
+        }
+        applyTheme();
+        matchMedia("(prefers-color-scheme: dark)").addEventListener(
+          "change",
+          function () {
+            try {
+              if (localStorage.getItem(THEME_KEY)) return;
+            } catch (e) {
+              /* storage disabled — OS still wins */
+            }
+            applyTheme();
+            document.dispatchEvent(
+              new CustomEvent("sc:themechange", {
+                detail:
+                  document.documentElement.getAttribute("data-theme") === "dark"
+                    ? "dark"
+                    : "light",
+              }),
+            );
+          },
+        );
+      })();
+    </script>
+    <ClientRouter />
+  </head>
+  <body>
+    <div class="site">
+      <header class="site-topbar">
+        <a class="site-brand" href="/">NTNU-katalog</a>
+        <nav class="site-nav" aria-label="Hovednavigasjon">
+          <a class="sc-pill site-nav-pill" href="/emner/">Emner</a>
+          <a class="sc-pill site-nav-pill" href="/studier/">Studier</a>
+        </nav>
+        <ThemeToggle storageKey={THEME_KEY} />
+      </header>
+      <main class:list={["site-content", { wide }]}>
+        <slot />
+      </main>
+      <footer class="site-footer">
+        Uoffisiell side · data fra NTNU og HK-dir (DBH)
+      </footer>
+    </div>
+  </body>
+</html>

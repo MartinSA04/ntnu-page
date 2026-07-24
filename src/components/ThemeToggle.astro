@@ -1,0 +1,135 @@
+---
+/**
+ * Light/dark theme toggle.
+ *
+ * The no-flash init script that sets `data-theme` before first paint lives in
+ * CourseLayout's <head>. This component is only the button + the click handler
+ * that flips and persists the choice. Persists to `sc:theme:<course.code>`.
+ */
+interface Props {
+  /** localStorage key, namespaced per course: `sc:theme:<code>`. */
+  storageKey: string;
+  label?: string;
+}
+const { storageKey, label = "Bytt tema" } = Astro.props;
+
+import Icon from "./Icon.astro";
+---
+
+<button
+  type="button"
+  class="theme-toggle sc-icon-btn sc-press"
+  data-storage-key={storageKey}
+  aria-label={label}
+  aria-pressed="false"
+  title={label}
+>
+  <Icon name="sun" size={19} class="icon icon-sun" />
+  <Icon name="moon" size={19} class="icon icon-moon" />
+</button>
+
+<style>
+  /* Box + neutral hover come from the shared .sc-icon-btn primitive; the toggle
+     only sets its square topbar-control size. */
+  .theme-toggle {
+    width: var(--control-h);
+    height: var(--control-h);
+  }
+  /* The glyphs render from the <Icon> child, so their classes are outside this
+     component's style scope — reach them with :global() under the scoped button.
+     Both stack in one grid cell; show the icon for the theme you'd switch TO. */
+  .theme-toggle :global(.icon) {
+    grid-area: 1 / 1;
+  }
+  .theme-toggle :global(.icon-moon) {
+    display: none;
+  }
+  :global(html:not([data-theme="dark"])) .theme-toggle :global(.icon-sun) {
+    display: none;
+  }
+  :global(html:not([data-theme="dark"])) .theme-toggle :global(.icon-moon) {
+    display: block;
+  }
+</style>
+
+<script>
+  import { onPage } from "../lib/pageLifecycle.ts";
+  // Vanilla island: flip data-theme on <html> and persist the choice. The topbar
+  // is re-rendered on each view-transition swap, so re-bind per page-load.
+  onPage((signal) => {
+    const toggles = [
+      ...document.querySelectorAll<HTMLButtonElement>(".theme-toggle"),
+    ];
+    const root = document.documentElement;
+
+    // Reflect the current theme on load, after every view-transition restore,
+    // and on a live OS-theme flip — CourseLayout's no-flash script owns the
+    // data-theme apply for all three (this only mirrors it onto the button's
+    // a11y state, off the same `sc:themechange` event it already dispatches
+    // for that OS path, so the theme itself is never applied twice here).
+    const syncPressed = () => {
+      const dark = root.getAttribute("data-theme") === "dark";
+      toggles.forEach((btn) => btn.setAttribute("aria-pressed", String(dark)));
+    };
+    syncPressed();
+    document.addEventListener("sc:themechange", syncPressed, { signal });
+
+    // Pending .theme-snap removal (a double-rAF handle). Shared across every
+    // toggle so a rapid double-toggle re-arms one timer instead of stacking.
+    let snapRaf = 0;
+
+    toggles.forEach((btn) => {
+      const key = btn.dataset.storageKey;
+      btn.addEventListener(
+        "click",
+        () => {
+          // The flip is deliberately INSTANT — no view transition, no eased
+          // colours — matching the OS-flip path in CourseLayout's no-flash
+          // script. Both animated forms were tried and reverted:
+          // a universal per-element `transition: color` compounds one full
+          // ease per inheritance hop in WebKit (deep text late-snapped at ~2x
+          // the duration on iOS), and a same-document view transition cannot
+          // present smoothly there either — WebKit gates the snapshot fade's
+          // presentation on the main thread, which the flip's own full-tree
+          // recalc is saturating at that exact moment (verified with
+          // compositor-output capture under a synthetic main-thread block).
+          //
+          // The swap itself carries no transition, but the resting controls
+          // (.sc-lift/.sc-icon-btn/.sc-pill/.sc-chip/.sc-btn/.sc-summary/
+          // .code-copy) DO hold standing colour/background eases for their
+          // hover feel, so on the flip they would ease alone ~120ms behind the
+          // already-snapped page (tiles visibly lag). Suppress them for exactly
+          // one frame: add .theme-snap to <html> (a base.css rule zeroes every
+          // transition while present, hub included) around the setAttribute,
+          // then drop it after the flip has painted (double rAF — the class
+          // lives ~1 frame, so hover eases stay intact at rest). Cancel and
+          // re-arm the pending removal on a rapid double-toggle rather than
+          // stacking timers.
+          if (snapRaf) cancelAnimationFrame(snapRaf);
+          root.classList.add("theme-snap");
+          const next =
+            root.getAttribute("data-theme") === "dark" ? "light" : "dark";
+          root.setAttribute("data-theme", next);
+          snapRaf = requestAnimationFrame(() => {
+            snapRaf = requestAnimationFrame(() => {
+              root.classList.remove("theme-snap");
+              snapRaf = 0;
+            });
+          });
+          try {
+            if (key) localStorage.setItem(key, next);
+          } catch {
+            /* private mode / storage disabled — fall through, no persistence */
+          }
+          // Let canvas simulations (and any other listeners — including this
+          // component's own syncPressed above) repaint with the new theme's
+          // CSS custom properties, which already hold their final values.
+          document.dispatchEvent(
+            new CustomEvent("sc:themechange", { detail: next }),
+          );
+        },
+        { signal },
+      );
+    });
+  });
+</script>

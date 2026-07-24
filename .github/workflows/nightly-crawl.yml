@@ -1,0 +1,34 @@
+name: Nightly crawl & deploy
+
+on:
+  workflow_dispatch: {}
+  schedule:
+    # 03:47 UTC daily — off the hour to avoid upstream/scheduler thundering herds.
+    - cron: "47 3 * * *"
+
+jobs:
+  crawl-build-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - run: npm ci
+
+      # Crawled data is a build artifact (gitignored, never committed): each
+      # run crawls fresh and bakes the result into the deployed site.
+      - run: npm run crawl
+
+      - run: npm run build
+
+      # TODO: deploy to Cloudflare Workers once the repo is connected and a
+      # CLOUDFLARE_API_TOKEN secret exists. Uncomment and fill in the account
+      # id / project name when ready.
+      # - name: Deploy to Cloudflare Workers
+      #   uses: cloudflare/wrangler-action@v3
+      #   with:
+      #     apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      #     command: deploy

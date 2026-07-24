@@ -1,0 +1,309 @@
+---
+import catalogData from "../../../data/catalog.json";
+import Layout from "../../layouts/Layout.astro";
+
+export function getStaticPaths() {
+  return catalogData.courses.map((course) => ({
+    params: { code: course.code },
+    props: { course },
+  }));
+}
+
+interface Props {
+  course: (typeof catalogData.courses)[number];
+}
+
+const { course } = Astro.props;
+const catalogYear = catalogData.year;
+
+const SEASON_LABELS: Record<string, string> = {
+  SPRING: "vår",
+  AUTUMN: "høst",
+  WINTER: "vinter",
+  SUMMER: "sommer",
+};
+
+function formatDate(date: string | null): string | null {
+  if (!date) return null;
+  const d = new Date(date);
+  if (Number.isNaN(d.getTime())) return date;
+  return d.toLocaleDateString("nb-NO", { day: "numeric", month: "long", year: "numeric" });
+}
+
+const description = `${course.code} ${course.name} — emnedetaljer, karakterstatistikk og timeplan fra NTNU.`;
+---
+
+<Layout title={`${course.code} — ${course.name}`} description={description} wide>
+  <p class="sc-kicker emne-kicker">{course.code}</p>
+  <h1 class="emne-title">{course.name}</h1>
+  <p class="emne-meta mono">
+    {course.location}
+    {course.examOnly && <span class="emne-examonly">kun eksamen</span>}
+  </p>
+
+  {
+    course.exams.length > 0 && (
+      <div class="emne-exams">
+        <p class="sc-kicker emne-exams-kicker">Eksamen</p>
+        <ul class="emne-exams-list">
+          {course.exams.map((exam) => (
+            <li>
+              {exam.season && SEASON_LABELS[exam.season] ? SEASON_LABELS[exam.season] : exam.season}
+              {" — "}
+              {formatDate(exam.date) ?? "dato ikke fastsatt"}
+              {exam.continuation && <span class="emne-exam-cont">(kontinuasjon)</span>}
+            </li>
+          ))}
+        </ul>
+      </div>
+    )
+  }
+
+  <div id="emne-islands" data-course-code={course.code} data-catalog-year={catalogYear}>
+    <section class="emne-section" id="details-section">
+      <p class="sc-kicker">Om emnet</p>
+      <p class="emne-loading mono" data-role="status">henter emnedetaljer …</p>
+      <div data-role="body" hidden></div>
+    </section>
+
+    <section class="emne-section" id="grades-section">
+      <p class="sc-kicker">Karakterstatistikk</p>
+      <p class="emne-loading mono" data-role="status">henter karakterstatistikk …</p>
+      <div data-role="body" hidden></div>
+    </section>
+
+    <section class="emne-section" id="timetable-section">
+      <p class="sc-kicker">Timeplan</p>
+      <p class="emne-loading mono" data-role="status">henter timeplan …</p>
+      <div data-role="body" hidden></div>
+    </section>
+  </div>
+</Layout>
+
+<style>
+  .emne-kicker {
+    color: var(--muted);
+    font-size: var(--text-sm);
+    margin-bottom: var(--space-2);
+  }
+  .emne-title {
+    font-family: var(--font-display);
+    font-size: var(--text-2xl);
+    line-height: var(--leading-tight);
+    margin-bottom: var(--space-2);
+  }
+  .emne-meta {
+    font-size: var(--text-sm);
+    color: var(--muted);
+    margin-bottom: var(--space-5);
+    display: flex;
+    gap: var(--space-3);
+    align-items: center;
+  }
+  .emne-examonly {
+    color: var(--faint);
+  }
+  .emne-exams {
+    margin-bottom: var(--space-6);
+  }
+  .emne-exams-kicker {
+    color: var(--muted);
+    font-size: var(--text-xs);
+    margin-bottom: var(--space-2);
+  }
+  .emne-exams-list {
+    list-style: none;
+    font-family: var(--font-body);
+    font-size: var(--text-base);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+  }
+  .emne-exam-cont {
+    color: var(--muted);
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+  }
+  .emne-section {
+    margin-bottom: var(--space-7);
+  }
+  .emne-section > .sc-kicker {
+    color: var(--muted);
+    font-size: var(--text-sm);
+    margin-bottom: var(--space-3);
+  }
+  .emne-loading {
+    font-size: var(--text-sm);
+    color: var(--muted);
+  }
+
+  /* Island content below is built client-side via document.createElement, so
+     Astro's scoped-style attribute never reaches it — every selector that
+     targets island-rendered markup must go through :global(). */
+
+  :global(.details-facts) {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr));
+    gap: var(--space-3) var(--space-5);
+    background: var(--bg-elevated);
+    border-radius: var(--radius);
+    padding: var(--space-4) var(--space-5);
+    margin-bottom: var(--space-5);
+  }
+  :global(.details-fact) {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+  }
+  :global(.details-fact-label) {
+    font-size: var(--text-xs);
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: var(--tracking);
+  }
+  :global(.details-fact-value) {
+    font-family: var(--font-body);
+    font-size: var(--text-base);
+  }
+  :global(.details-prose) {
+    margin-bottom: var(--space-5);
+  }
+  :global(.details-prose-heading) {
+    color: var(--muted);
+    font-size: var(--text-xs);
+    margin-bottom: var(--space-2);
+  }
+  :global(.details-prose-body) {
+    font-family: var(--font-body);
+    font-size: var(--text-base);
+    line-height: var(--leading-normal);
+    white-space: pre-line;
+  }
+  :global(.details-activities-list),
+  :global(.details-reductions-list) {
+    font-family: var(--font-body);
+    font-size: var(--text-base);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+    padding-left: var(--space-5);
+  }
+  :global(.details-exam-table) {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: var(--text-sm);
+  }
+  :global(.details-exam-table td) {
+    padding: var(--space-2) var(--space-3) var(--space-2) 0;
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+  }
+  :global(.details-reductions) {
+    margin-bottom: var(--space-5);
+  }
+
+  :global(.grades-chart) {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    margin-bottom: var(--space-4);
+  }
+  :global(.grades-year-row) {
+    display: grid;
+    grid-template-columns: 4em 1fr 6em;
+    align-items: center;
+    gap: var(--space-3);
+  }
+  :global(.grades-year-label) {
+    font-size: var(--text-sm);
+    color: var(--muted);
+  }
+  :global(.grades-bar) {
+    display: flex;
+    height: 1.1rem;
+    border-radius: var(--radius-xs);
+    overflow: hidden;
+    background: var(--card-nested);
+  }
+  :global(.grades-segment) {
+    height: 100%;
+  }
+  :global(.grades-year-total) {
+    font-size: var(--text-xs);
+    color: var(--muted);
+    text-align: right;
+  }
+  :global(.grades-legend) {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-4);
+  }
+  :global(.grades-legend-item) {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-1);
+    font-size: var(--text-xs);
+    color: var(--muted);
+  }
+  :global(.grades-legend-swatch) {
+    display: inline-block;
+    width: 0.7em;
+    height: 0.7em;
+    border-radius: var(--radius-xs);
+  }
+
+  :global(.timetable-years) {
+    display: flex;
+    gap: var(--space-2);
+    margin-bottom: var(--space-4);
+  }
+  :global(.timetable-grid) {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+    gap: var(--space-5);
+  }
+  :global(.timetable-day-header) {
+    color: var(--muted);
+    font-size: var(--text-xs);
+    margin-bottom: var(--space-2);
+  }
+  :global(.timetable-entry) {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15em;
+    padding: var(--space-2) 0;
+    border-bottom: 1px solid var(--border);
+  }
+  :global(.timetable-entry-time) {
+    font-size: var(--text-xs);
+    color: var(--muted);
+  }
+  :global(.timetable-entry-name) {
+    font-family: var(--font-body);
+    font-size: var(--text-sm);
+  }
+  :global(.timetable-entry-room),
+  :global(.timetable-entry-weeks) {
+    font-size: var(--text-xs);
+    color: var(--faint);
+  }
+  :global(.timetable-empty),
+  :global(.timetable-loading) {
+    font-size: var(--text-sm);
+    color: var(--muted);
+  }
+</style>
+
+<script>
+  import { mountCourseDetails } from "../../components/site/courseDetails";
+  import { mountCourseGrades } from "../../components/site/courseGrades";
+  import { mountCourseTimetable } from "../../components/site/courseTimetable";
+
+  const root = document.getElementById("emne-islands");
+  const code = root?.dataset.courseCode ?? "";
+  const catalogYear = Number(root?.dataset.catalogYear ?? "0");
+
+  mountCourseDetails(code);
+  mountCourseGrades(code);
+  mountCourseTimetable(code, catalogYear);
+</script>

@@ -1,0 +1,182 @@
+---
+import programsData from "../../../data/programs.json";
+import semestersData from "../../../data/semesters.json";
+import Layout from "../../layouts/Layout.astro";
+
+// A handful of upstream program codes contain a literal "/" (e.g. "EMNE/HF",
+// "MSØK/5"), which would split across two path segments — Astro's dynamic
+// segments otherwise pass non-ASCII codes (e.g. "ÅALIT") through untouched,
+// so only "/" itself needs escaping. The matching /studier/ listing link
+// encodes with the same helper.
+export function codeToSegment(code: string): string {
+  return code.replaceAll("/", "%2F");
+}
+
+export function getStaticPaths() {
+  return programsData.programs.map((program) => ({
+    params: { code: codeToSegment(program.code) },
+    props: { program },
+  }));
+}
+
+interface Props {
+  program: (typeof programsData.programs)[number];
+}
+
+const { program } = Astro.props;
+// Best-effort guess for the study-plan island's first fetch — it steps back
+// on 404 and re-renders its chips from the response's publishedYears anyway.
+const currentYear = semestersData.current?.year ?? new Date().getFullYear();
+
+const description = `${program.name} — studieplan, opptak og studiested ved NTNU.`;
+---
+
+<Layout title={`${program.name} — NTNU-katalog`} description={description} wide>
+  <p class="sc-kicker studie-kicker">{program.code}</p>
+  <h1 class="studie-title">{program.name}</h1>
+  <p class="studie-meta mono">
+    {program.studyLevel}
+    {program.campuses.length > 0 && <span>· {program.campuses.join(", ")}</span>}
+  </p>
+
+  {program.departmentName && <p class="studie-department">{program.departmentName}</p>}
+  {program.description && <p class="studie-description">{program.description}</p>}
+
+  <section class="studie-section" id="plan-section" data-program-code={program.code} data-guess-year={currentYear}>
+    <p class="sc-kicker">Studieplan</p>
+    <div class="studie-plan-years" id="plan-years"></div>
+    <p class="studie-loading mono" data-role="status">henter studieplan …</p>
+    <div data-role="body" hidden></div>
+  </section>
+</Layout>
+
+<style>
+  .studie-kicker {
+    color: var(--muted);
+    font-size: var(--text-sm);
+    margin-bottom: var(--space-2);
+  }
+  .studie-title {
+    font-family: var(--font-display);
+    font-size: var(--text-2xl);
+    line-height: var(--leading-tight);
+    margin-bottom: var(--space-2);
+  }
+  .studie-meta {
+    font-size: var(--text-sm);
+    color: var(--muted);
+    margin-bottom: var(--space-4);
+    display: flex;
+    gap: var(--space-2);
+  }
+  .studie-department {
+    font-family: var(--font-body);
+    font-size: var(--text-sm);
+    color: var(--muted);
+    margin-bottom: var(--space-3);
+  }
+  .studie-description {
+    font-family: var(--font-body);
+    font-size: var(--text-base);
+    line-height: var(--leading-normal);
+    margin-bottom: var(--space-6);
+    max-width: var(--measure);
+  }
+  .studie-section {
+    margin-bottom: var(--space-7);
+  }
+  .studie-section > .sc-kicker {
+    color: var(--muted);
+    font-size: var(--text-sm);
+    margin-bottom: var(--space-3);
+  }
+  .studie-plan-years {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+    margin-bottom: var(--space-4);
+  }
+  .studie-loading {
+    font-size: var(--text-sm);
+    color: var(--muted);
+  }
+
+  /* Island content is built client-side; scoped styles need :global() to
+     reach it (see the equivalent note in emne/[code].astro). */
+  :global(.plan-period) {
+    margin-bottom: var(--space-6);
+  }
+  :global(.plan-period-header) {
+    color: var(--muted);
+    font-size: var(--text-sm);
+    margin-bottom: var(--space-3);
+  }
+  :global(.plan-group) {
+    margin-bottom: var(--space-4);
+  }
+  :global(.plan-group-name) {
+    font-family: var(--font-display);
+    font-size: var(--text-md);
+    margin-bottom: var(--space-2);
+  }
+  :global(.plan-course-row) {
+    display: flex;
+    align-items: baseline;
+    gap: var(--space-3);
+    padding: var(--space-2) 0;
+    border-bottom: 1px solid var(--border);
+  }
+  :global(.plan-course-code) {
+    font-family: var(--font-mono);
+    font-size: var(--text-sm);
+    color: var(--accent-ink);
+    text-decoration: none;
+    flex-shrink: 0;
+    width: 6em;
+  }
+  :global(.plan-course-code:hover) {
+    text-decoration: underline;
+  }
+  :global(.plan-course-name) {
+    font-family: var(--font-body);
+    font-size: var(--text-sm);
+    flex: 1;
+  }
+  :global(.plan-course-credits) {
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    color: var(--muted);
+    flex-shrink: 0;
+  }
+  :global(.plan-waypoint) {
+    margin-bottom: var(--space-2);
+    background: var(--card-nested);
+    border-radius: var(--radius-sm);
+    padding: 0 var(--space-3);
+  }
+  :global(.plan-waypoint > summary) {
+    padding: var(--space-2) 0;
+  }
+  :global(.plan-waypoint-body) {
+    padding-bottom: var(--space-3);
+  }
+  :global(.plan-direction-name) {
+    font-family: var(--font-display);
+    font-size: var(--text-base);
+    margin-bottom: var(--space-2);
+  }
+  :global(.plan-empty) {
+    font-size: var(--text-sm);
+    color: var(--muted);
+  }
+</style>
+
+<script>
+  import { mountStudyPlan } from "../../components/site/studyPlan";
+
+  const root = document.getElementById("plan-section");
+  const code = root?.dataset.programCode ?? "";
+  const guessYear = Number(root?.dataset.guessYear ?? "0");
+
+  mountStudyPlan(code, guessYear);
+</script>

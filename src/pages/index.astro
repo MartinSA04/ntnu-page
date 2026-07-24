@@ -1,0 +1,100 @@
+---
+import semestersData from "../../data/semesters.json";
+import Layout from "../layouts/Layout.astro";
+
+const description =
+  "Søk i NTNUs emnekatalog og studieprogram, med emnedetaljer, karakterstatistikk og timeplaner.";
+
+const currentSemester = semestersData.current;
+---
+
+<Layout title="NTNU-katalog" description={description}>
+  <p class="sc-kicker home-kicker">NTNU-katalog</p>
+  <h1 class="home-title">Emner og studier ved NTNU</h1>
+  <p class="home-lede">
+    Søk i emnekatalogen og studieprogrammene, med detaljer, karakterstatistikk
+    og timeplaner hentet fra NTNU og HK-dir (DBH).
+  </p>
+
+  <form class="sc-field home-search" action="/emner/" method="get">
+    <input
+      type="search"
+      name="q"
+      placeholder="Søk etter emnekode eller emnenavn …"
+      aria-label="Søk i emnekatalogen"
+    />
+  </form>
+
+  <div class="home-tiles">
+    <a class="sc-tile sc-lift sc-press home-tile" href="/emner/">
+      <span class="sc-kicker">Emner</span>
+      <span class="home-tile-body">Søk i emnekatalogen</span>
+    </a>
+    <a class="sc-tile sc-lift sc-press home-tile" href="/studier/">
+      <span class="sc-kicker">Studier</span>
+      <span class="home-tile-body">Studieprogram og studieplaner</span>
+    </a>
+  </div>
+
+  {
+    currentSemester && (
+      <p class="home-semester">Inneværende semester: {currentSemester.name}</p>
+    )
+  }
+</Layout>
+
+<style>
+  .home-kicker {
+    color: var(--muted);
+    font-size: var(--text-sm);
+    margin-bottom: var(--space-2);
+  }
+  .home-title {
+    font-family: var(--font-display);
+    font-size: var(--text-3xl);
+    line-height: var(--leading-tight);
+    margin-bottom: var(--space-4);
+  }
+  .home-lede {
+    font-size: var(--text-md);
+    color: var(--muted);
+    margin-bottom: var(--space-6);
+  }
+  .home-search {
+    margin-bottom: var(--space-6);
+  }
+  .home-search input {
+    flex: 1;
+    border: 0;
+    background: transparent;
+    color: inherit;
+    font-family: var(--font-body);
+    font-size: var(--text-base);
+  }
+  .home-search input:focus {
+    outline: none;
+  }
+  .home-tiles {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+    gap: var(--space-4);
+    margin-bottom: var(--space-6);
+  }
+  .home-tile {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    padding: var(--space-4);
+    text-decoration: none;
+    color: var(--fg);
+  }
+  .home-tile-body {
+    font-family: var(--font-body);
+    font-size: var(--text-md);
+  }
+  .home-semester {
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    color: var(--muted);
+  }
+</style>

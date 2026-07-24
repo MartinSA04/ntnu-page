@@ -1,0 +1,195 @@
+---
+import programsData from "../../../data/programs.json";
+import Layout from "../../layouts/Layout.astro";
+import { codeToSegment } from "./[code].astro";
+
+const description = "Bla i NTNUs studieprogram etter navn, kode eller studienivå.";
+
+const programs = programsData.programs
+  .map((p) => ({ code: p.code, name: p.name, studyLevel: p.studyLevel ?? "" }))
+  .sort((a, b) => a.name.localeCompare(b.name, "nb"));
+
+const levels = [...new Set(programs.map((p) => p.studyLevel).filter(Boolean))].sort((a, b) =>
+  a.localeCompare(b, "nb"),
+);
+---
+
+<Layout title="Studier — NTNU-katalog" description={description} wide>
+  <p class="sc-kicker studier-kicker">Studier</p>
+  <h1 class="studier-title">Studieprogram</h1>
+
+  <form class="sc-field studier-search" id="studier-search-field">
+    <input
+      type="search"
+      id="studier-search"
+      name="q"
+      placeholder="Søk etter studieprogram eller kode …"
+      aria-label="Søk i studieprogram"
+    />
+  </form>
+
+  <div class="studier-chips" role="group" aria-label="Filtrer på studienivå">
+    {
+      levels.map((level) => (
+        <button type="button" class="sc-chip studier-chip" data-level={level} aria-pressed="false">
+          {level}
+        </button>
+      ))
+    }
+  </div>
+
+  <p class="studier-status mono" id="studier-status" aria-live="polite">
+    {programs.length} studieprogram
+  </p>
+
+  <ul class="studier-results" id="studier-results">
+    {
+      programs.map((p) => (
+        <li>
+          <a
+            class="studier-row"
+            href={`/studier/${codeToSegment(p.code)}/`}
+            data-name={p.name}
+            data-code={p.code}
+            data-level={p.studyLevel}
+          >
+            <span class="studier-row-name">{p.name}</span>
+            <span class="studier-row-level mono">{p.studyLevel}</span>
+            <span class="studier-row-code mono">{p.code}</span>
+          </a>
+        </li>
+      ))
+    }
+  </ul>
+</Layout>
+
+<style>
+  .studier-kicker {
+    color: var(--muted);
+    font-size: var(--text-sm);
+    margin-bottom: var(--space-2);
+  }
+  .studier-title {
+    font-family: var(--font-display);
+    font-size: var(--text-2xl);
+    line-height: var(--leading-tight);
+    margin-bottom: var(--space-5);
+  }
+  .studier-search {
+    margin-bottom: var(--space-4);
+  }
+  .studier-search input {
+    flex: 1;
+    border: 0;
+    background: transparent;
+    color: inherit;
+    font-family: var(--font-body);
+    font-size: var(--text-base);
+  }
+  .studier-search input:focus {
+    outline: none;
+  }
+  .studier-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+    margin-bottom: var(--space-5);
+  }
+  .mono {
+    font-family: var(--font-mono);
+  }
+  .studier-status {
+    font-size: var(--text-sm);
+    color: var(--muted);
+    margin-bottom: var(--space-4);
+  }
+  .studier-results {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+  }
+  .studier-row {
+    display: flex;
+    align-items: baseline;
+    gap: var(--space-4);
+    padding: var(--space-3) var(--space-2);
+    border-bottom: 1px solid var(--border);
+    text-decoration: none;
+    color: var(--fg);
+    transition:
+      background-color var(--dur-fast) var(--ease),
+      color var(--dur-fast) var(--ease);
+  }
+  .studier-row:hover {
+    background: var(--wash);
+    color: var(--accent-ink);
+  }
+  .studier-row-name {
+    font-family: var(--font-body);
+    font-size: var(--text-base);
+  }
+  .studier-row-level {
+    font-size: var(--text-xs);
+    color: var(--muted);
+    margin-left: auto;
+    flex-shrink: 0;
+  }
+  .studier-row-code {
+    font-size: var(--text-xs);
+    color: var(--faint);
+    flex-shrink: 0;
+    width: 5em;
+    text-align: right;
+  }
+  .studier-row[hidden] {
+    display: none;
+  }
+</style>
+
+<script>
+  function fold(value: string): string {
+    return value
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase();
+  }
+
+  const searchInput = document.getElementById("studier-search") as HTMLInputElement;
+  const searchField = document.getElementById("studier-search-field") as HTMLFormElement;
+  const statusEl = document.getElementById("studier-status") as HTMLParagraphElement;
+  const rows = [...document.querySelectorAll<HTMLAnchorElement>(".studier-row")];
+  const chips = [...document.querySelectorAll<HTMLButtonElement>(".studier-chip")];
+
+  let activeLevel: string | null = null;
+
+  function render(): void {
+    const query = fold(searchInput.value.trim());
+    let shown = 0;
+    for (const row of rows) {
+      const matchesLevel = !activeLevel || row.dataset.level === activeLevel;
+      const matchesQuery =
+        !query ||
+        fold(row.dataset.name ?? "").includes(query) ||
+        fold(row.dataset.code ?? "").includes(query);
+      const visible = matchesLevel && matchesQuery;
+      row.hidden = !visible;
+      if (visible) shown++;
+    }
+    statusEl.textContent = `${shown} studieprogram`;
+  }
+
+  for (const chip of chips) {
+    chip.addEventListener("click", () => {
+      const level = chip.dataset.level ?? null;
+      const next = activeLevel === level ? null : level;
+      activeLevel = next;
+      for (const other of chips) {
+        other.setAttribute("aria-pressed", String(other === chip && next !== null));
+      }
+      render();
+    });
+  }
+
+  searchInput.addEventListener("input", render);
+  searchField.addEventListener("submit", (event) => event.preventDefault());
+</script>

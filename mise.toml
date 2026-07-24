@@ -1,0 +1,38 @@
+[tools]
+node = "22"
+
+[tasks.dev]
+description = "Run the Astro dev server (proxies /api to a running preview worker)"
+run = "npm run dev"
+
+[tasks.build]
+description = "Build the static site to dist/"
+run = "npm run build"
+
+[tasks.preview]
+description = "Serve the built site + API via wrangler dev"
+run = "npm run preview"
+
+[tasks.crawl]
+description = "Refresh crawled data (catalog, programs, semesters)"
+run = "npm run crawl"
+
+[tasks.test]
+description = "Run the test suite"
+run = "npm test"
+
+[tasks.lint]
+description = "Lint and check formatting"
+run = "npm run lint"
+
+[tasks.fmt]
+description = "Auto-format and apply lint fixes"
+run = "npm run fmt"
+
+[tasks.typecheck]
+description = "Static type check (astro check + worker + tests)"
+run = "npm run typecheck"
+
+[tasks.check]
+description = "Run lint, typecheck, and tests"
+depends = ["lint", "typecheck", "test"]

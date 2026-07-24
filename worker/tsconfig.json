@@ -1,0 +1,19 @@
+{
+  // Workers-runtime type surface. Tests type-check the same sources under
+  // Node types instead via ../tsconfig.test.json (two-pass pattern; ambient
+  // globals from workers-types and @types/node cannot coexist).
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022"],
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "types": ["@cloudflare/workers-types"],
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "verbatimModuleSyntax": true,
+    "isolatedModules": true,
+    "skipLibCheck": true,
+    "noEmit": true
+  },
+  "include": ["src/**/*.ts"]
+}

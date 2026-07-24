@@ -1,0 +1,559 @@
+/*
+ * Base element styles. Layered low so component styles and MDX author content
+ * win without !important. Assumes tokens.css is loaded first.
+ */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+* {
+  margin: 0;
+}
+
+html {
+  font-family: var(--font-body);
+  /* 1rem = 17px — the original's editorial reading size. */
+  font-size: 106.25%;
+  line-height: var(--leading-normal);
+  -webkit-text-size-adjust: 100%;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  scroll-behavior: smooth;
+  /* Reserve the classic-scrollbar gutter on every page so the centered content
+     column never shifts sideways. Most pages are long enough to scroll (gutter
+     present), but short ones — the hub, a stub page — don't, and on classic-
+     scrollbar platforms the browser nudges the whole centered column left by
+     the scrollbar width ONLY while a page scrolls: navigating between a
+     scrolling and a non-scrolling page then jerks the layout by that width. A
+     stable gutter reserves the space whether or not the page scrolls, so the
+     column holds still. Overlay-scrollbar platforms have no gutter to reserve,
+     so this is inert there. Released for print below (paper has no scrollbar). */
+  scrollbar-gutter: stable;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+}
+
+/* Paper has no scrollbar, so release the reserved gutter (above) for print —
+   engines that size the gutter from the OS scrollbar width would otherwise
+   print a blank right-hand strip and push the centered column off-centre. The
+   shell's own @media print block owns the rest of the paper adjustments; this
+   sits with the declaration it undoes. */
+@media print {
+  html {
+    scrollbar-gutter: auto;
+  }
+}
+
+/* Deep-link arrival: a targeted row flashes brighter for a moment, then settles
+   to its resting highlight (the row's own :target background) so the eye lands on
+   whatever a cross-reference link jumped to. Used by <FormulaRef>/<Term> targets. */
+@keyframes sc-target-flash {
+  from {
+    background-color: color-mix(in srgb, var(--accent) 28%, transparent);
+  }
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font-size: var(--text-base);
+  font-weight: var(--weight-normal);
+  min-height: 100dvh;
+  overflow-wrap: break-word;
+}
+
+/* The THEME flip is deliberately instant and rides NO transition of its own —
+   ThemeToggle.astro documents the two reverted attempts (WebKit compounds
+   per-element inherited-colour eases into a staircase, and gates
+   view-transition fade presentation on the main thread the flip itself
+   saturates). Do not re-add a colour transition or a view transition to the
+   swap.
+
+   But the resting controls DO carry standing colour/background eases for their
+   hover feel (--dur-fast, primitives.css + .code-copy below), so on the swap
+   they would ease alone ~120ms behind the already-snapped page — tiles visibly
+   lag. ThemeToggle adds .theme-snap to <html> for exactly one frame around the
+   setAttribute; the rule below zeroes every transition while it is present, so
+   the whole tree snaps in one recalc, then the class is dropped once the flip
+   has painted. It lives HERE (not shell.css) because the hub imports base.css
+   but not the course shell, and the hub uses the same ThemeToggle. The class is
+   gone by the next frame, so hover eases are untouched at rest. */
+html.theme-snap,
+html.theme-snap *,
+html.theme-snap *::before,
+html.theme-snap *::after {
+  transition: none !important;
+}
+
+/* The block below retimes ClientRouter NAVIGATION fades only. It lives HERE
+   (not shell.css) because the hub imports base.css but not the course shell.
+   The UA default is a plus-lighter cross-fade of BOTH snapshots inside an
+   isolation:isolate image-pair — an offscreen blend pass of two
+   full-viewport layers on every frame. Restyle to the cheap equivalent: hold
+   the OLD snapshot static and opaque beneath and fade only the NEW one in on
+   top (the later sibling, already on top), normal blending, no isolation —
+   one translucent layer per frame, a clean fade-through for navigations. */
+@keyframes sc-vt-fade-in {
+  from {
+    opacity: 0;
+  }
+}
+@media (prefers-reduced-motion: no-preference) {
+  ::view-transition-old(root),
+  ::view-transition-new(root) {
+    mix-blend-mode: normal;
+  }
+  ::view-transition-old(root) {
+    animation: none;
+  }
+  /* The `animation` shorthand resets animation-name, which is the load-bearing
+     part: the UA applies plus-lighter via a SECOND animation
+     (-ua-mix-blend-mode-plus-lighter) on this pseudo, so only replacing the
+     whole name list actually removes the blend — a bare mix-blend-mode
+     declaration loses to that animation while it runs. */
+  ::view-transition-new(root) {
+    animation: sc-vt-fade-in 180ms var(--ease);
+  }
+  ::view-transition-image-pair(root) {
+    isolation: auto;
+  }
+}
+
+::selection {
+  background: var(--selection);
+}
+
+/* --- Typography --- */
+h1,
+h2,
+h3,
+h4 {
+  font-family: var(--font-display);
+  line-height: var(--leading-tight);
+  font-weight: var(--weight-semibold);
+  letter-spacing: 0;
+  text-wrap: balance;
+}
+
+h1 {
+  font-size: var(--text-3xl);
+}
+h2 {
+  font-size: var(--text-2xl);
+}
+h3 {
+  font-size: var(--text-xl);
+}
+h4 {
+  font-size: var(--text-lg);
+}
+
+p,
+ul,
+ol,
+blockquote,
+table {
+  font-size: var(--text-base);
+}
+
+/* Ragged-edge prose (not headings, which balance instead): avoids a lonely
+   short last line where the browser supports it, no layout cost otherwise. */
+p,
+li,
+blockquote,
+figcaption {
+  text-wrap: pretty;
+}
+
+/* --- Reading measure ---
+   Two-width editorial scheme. The 820px content frame (--maxw, shell.css) is
+   the STRUCTURAL width — formula panels, figures, tables, code slabs and
+   asides fill it edge to edge as breakout plates. Running prose in the open
+   flow caps at --measure (70ch) instead: full-frame 17px Spectral measures
+   ~96ch, ~30% past the 65–75ch return-sweep ideal, and that fatigue compounds
+   over the long reading sessions the product exists for. 70ch sits mid-range
+   for sustained reading and widens the frame-vs-prose contrast (a 225px margin
+   strip) so the breakout reads as deliberate. Direct-child scoping IS the
+   panel exemption — prose inside a framed widget is that panel's own
+   interior, and a measure-capped line stopping short inside an 820px box reads
+   as an accident, so only the open column takes the measure (display math
+   renders as a top-level .katex-display, never inside a <p>, so it stays on
+   the reading edge — see below). Headings sit on the same edge as the text
+   they head — and with them the h3 section rule and hr — keeping ONE reading
+   edge so the full-frame plates read as deliberate. Stated in rem, not ch,
+   because ch resolves against each element's own font: on the larger Fraunces
+   headings 70ch would be inert; Spectral's "0" is exactly 0.5em, so 35rem IS
+   70ch at the 1rem body size, and the size-adjusted Georgia fallback
+   (fonts.css) tracks it within 0.05%. max-width only shrinks: below 640px the
+   column is already narrower and the cap goes inert on its own. */
+.prose > :is(p, ul, ol, blockquote, h2, h3, h4, hr) {
+  max-width: var(--measure);
+}
+/* Framed plates — every direct child that ISN'T measure-capped prose — clear a
+   preceding floated <Sidenote> so they drop BELOW it instead of sliding under
+   it: the note lives in the margin strip, a plate wants the full frame, and the
+   two can't share a row. Capped prose (the :is() list above) is deliberately
+   NOT cleared — it's narrower than the strip, so it flows past the note. Inert
+   when no note is floated (no other right floats exist), so pages without a
+   <Sidenote> are unaffected. */
+.prose > :not(p, ul, ol, blockquote, h2, h3, h4, hr, .sidenote, script, style) {
+  clear: right;
+}
+
+a {
+  color: var(--accent-ink);
+  text-decoration-color: var(--accent-ring);
+  text-underline-offset: 0.15em;
+}
+a:hover {
+  text-decoration-color: currentColor;
+}
+
+strong {
+  font-weight: var(--weight-semibold);
+  color: var(--fg);
+}
+
+ul,
+ol {
+  padding-left: 1.4em;
+}
+li::marker {
+  color: var(--muted);
+}
+
+blockquote {
+  border-left: 3px solid var(--border-strong);
+  padding-left: var(--space-4);
+  color: var(--muted);
+  font-style: italic;
+}
+
+hr {
+  border: 0;
+  border-top: 1px solid var(--border);
+  margin-block: var(--space-6);
+}
+
+img,
+svg,
+video,
+canvas {
+  max-width: 100%;
+  height: auto;
+}
+
+/* --- Code (Shiki output + inline) --- */
+code,
+kbd,
+samp,
+pre {
+  font-family: var(--font-mono);
+  font-size: 0.85em;
+}
+
+:not(pre) > code {
+  background: var(--card-nested);
+  border-radius: var(--radius-sm);
+  padding: 0.12em 0.4em;
+}
+
+/* Code blocks are always dark: Shiki paints the surface inline (flexoki-dark, see
+   shiki-flexoki.ts), so we only drop the border here to make the dark panel read
+   borderless. The --card fallback shows only for a non-highlighted <pre>. */
+pre {
+  position: relative;
+  background: var(--card);
+  border-radius: var(--radius);
+  padding: var(--space-4);
+  overflow-x: auto;
+  line-height: var(--leading-snug);
+}
+
+/* Overflow affordance for horizontally scrollable code. The background-
+   attachment scroll-shadow technique (opaque cover, local-attached, over a
+   scroll-attached edge shadow) is fragile against this element's own padding
+   and Shiki's scroll geometry, so this ships the documented fallback instead:
+   a persistent thin scrollbar, which browsers already suppress when the code
+   doesn't overflow (overflow-x: auto). Colours are literal, tuned against
+   Shiki's fixed dark surface (#1c1b1a, flexoki-dark) rather than the page
+   theme, since that surface never theme-switches. Scoped to pre.astro-code —
+   a plain un-highlighted <pre> keeps --card and the browser default. */
+pre.astro-code {
+  scrollbar-width: thin;
+  scrollbar-color: #6f6e69 #1c1b1a; /* Flexoki base-600 thumb, 3.4:1 on the fixed surface */
+}
+
+/* Copy button injected by the layout's enhancement script onto every <pre>.
+   Marginalia box, wash hover and icon-swap come from the shared .sc-copy /
+   .sc-press primitives; base.css owns only what is code-block-specific — it
+   floats over the code and fades in on hover. Shiki always paints the code
+   surface in its own fixed dark palette (#1c1b1a, flexoki-dark — see
+   shiki-flexoki.ts), independent of the page theme, so the shared primitive's
+   THEMED glyph/wash (tracking --muted/--fg) mis-contrast on that surface in
+   light mode. The overrides below are literal Flexoki tones picked against
+   #1c1b1a specifically: the surface never theme-switches, so the control
+   sitting on it shouldn't either. !important beats primitives.css's
+   later-loaded .sc-copy rule at equal selector specificity. */
+.code-copy {
+  position: absolute;
+  top: var(--space-2);
+  right: var(--space-2);
+  /* The GLYPH is the whole control at rest now (marginalia). The shared
+     resting `color: var(--muted)` is themed — in light mode that's the dark
+     ink, near-invisible on this fixed dark slab. Base-500 stays legible at
+     rest, not just on hover/copied — the button is visible in this exact state
+     whenever the pointer hasn't reached it, and permanently on touch devices. */
+  color: #878580 !important; /* Flexoki base-500, 4.7:1 on #1c1b1a */
+  opacity: 0;
+  /* !important + the transform sub-transition (matching .sc-press) because
+     primitives.css's .sc-press rule loads AFTER this file: at equal
+     specificity the later rule would otherwise win the whole `transition`
+     shorthand outright and silently drop this reveal/hover animation. */
+  transition:
+    opacity var(--dur-fast) var(--ease),
+    color var(--dur-fast) var(--ease),
+    background-color var(--dur-fast) var(--ease),
+    transform var(--dur-fast) var(--ease) !important;
+}
+pre:hover .code-copy,
+.code-copy:focus-visible {
+  opacity: 1;
+}
+/* Touch devices have no hover, so keep the control reachable there. */
+@media (hover: none) {
+  .code-copy {
+    opacity: 1;
+  }
+}
+/* The shared wash hover derives from the themed --fg — in light mode that is
+   the dark ink, invisible on this fixed dark slab — and the shared accent-ink
+   text measures as low as 1.7:1 for some course accents on #1c1b1a. Use the
+   slab's own warm ink literal for the wash, and lighten the accent toward
+   white for the glyph: each course keeps its hue identity with a legible mark
+   against the fixed dark surface in both page themes (≥6:1 across the Flexoki
+   accent set). */
+.code-copy:hover {
+  color: color-mix(in srgb, var(--accent) 55%, white) !important;
+  background: color-mix(in srgb, #cecdc3 12%, transparent) !important;
+}
+/* --tip's dark-theme value already reads at 11:1 on #1c1b1a; reused literally
+   here since the copied state sits on that same fixed surface in both page
+   themes (the light-theme --tip fails at 2.8:1). */
+.code-copy[data-copied="true"] {
+  color: #cdd597 !important;
+}
+pre code {
+  background: none;
+  border: 0;
+  padding: 0;
+}
+
+/* --- Nested content cards ---
+   Depth reads through ALTERNATING fill — not a stacked shadow (a shadow can't
+   nest) and not an ever-darker ramp (Flexoki has only two neutral surfaces). A
+   card nested inside another recesses to --card-nested; a card nested TWO deep
+   alternates back to --bg-elevated, so it contrasts with its already-recessed
+   parent instead of matching it. That fixes the double-nest (Example > Solution
+   > Formula), and it works for a merged formula run too — the whole run just
+   takes its level's fill. Only real nesting fires this, so a top-level card
+   stays light and floating; nested cards drop the lift. !important beats each
+   component's own scoped fill/shadow. .figure stays out of the ancestor lists
+   so a figure's own .figure-frame isn't treated as nested. */
+:is(
+  .example,
+  .quiz,
+  .selfcheck,
+  .simulation,
+  .stepper,
+  .compare-col,
+  .solution,
+  .hint,
+  .derivation,
+  .formula
+)
+:is(
+  .example,
+  .quiz,
+  .selfcheck,
+  .simulation,
+  .stepper,
+  .compare-col,
+  .solution,
+  .hint,
+  .derivation,
+  .formula,
+  .figure-frame
+) {
+  background: var(--card-nested) !important;
+  box-shadow: none !important;
+}
+:is(
+    .example,
+    .quiz,
+    .selfcheck,
+    .simulation,
+    .stepper,
+    .compare-col,
+    .solution,
+    .hint,
+    .derivation,
+    .formula
+  )
+  :is(
+    .example,
+    .quiz,
+    .selfcheck,
+    .simulation,
+    .stepper,
+    .compare-col,
+    .solution,
+    .hint,
+    .derivation,
+    .formula
+  )
+  :is(
+    .example,
+    .quiz,
+    .selfcheck,
+    .simulation,
+    .stepper,
+    .compare-col,
+    .solution,
+    .hint,
+    .derivation,
+    .formula,
+    .figure-frame
+  ) {
+  background: var(--bg-elevated) !important;
+}
+
+/* --- Tables ---
+   Editorial divider style (horizontal rules only, display-serif headers) so an
+   authored Markdown table matches the data-driven <Table> component. */
+table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: var(--text-sm);
+}
+th,
+td {
+  padding: var(--space-2) var(--space-4);
+  text-align: left;
+  vertical-align: baseline;
+}
+thead th {
+  background: var(--card);
+  /* Structural divider, not a control edge — tables take --border throughout
+     (Structural-Border Rule; keeps the authored-Markdown header rule in step with
+     <Table>'s). */
+  border-bottom: 1px solid var(--border);
+  font-family: var(--font-display);
+  font-weight: var(--weight-semibold);
+  color: var(--fg);
+}
+tbody th,
+tbody td {
+  border-bottom: 1px solid var(--border);
+}
+tbody th {
+  font-weight: var(--weight-medium);
+  color: var(--fg);
+}
+tbody td {
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+tbody tr:hover th,
+tbody tr:hover td {
+  background: var(--card-hover);
+}
+
+/* Wrapper a rehype plugin adds around plain Markdown tables (course MDX),
+   matching <Table>'s .data-table-scroll recipe so an authored table scrolls
+   the same way as the data-driven component. */
+.table-scroll {
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+/* The wrapper still sits inside `.prose`, so the bare `table` it wraps still
+   matches `.prose table { margin-bottom }` (shell.css, loaded AFTER this
+   file) — at equal selector specificity (one class + one type) the
+   later-loaded rule wins the cascade, so zeroing the margin here needs
+   !important to actually land (Table.astro's own `.data-table table`
+   override doesn't need it: Astro's per-component scoping attribute already
+   raises its specificity above `.prose table`, which this global rule has
+   no such boost to rely on). Without this the last row keeps a gap before
+   the wrapper's own bottom border. */
+.table-scroll table {
+  margin: 0 !important;
+}
+/* The wrapper's own border already closes the bottom edge; without this the
+   last row's border-bottom would double it (Table.astro carries the same
+   override for its .data-table-scroll). */
+.table-scroll tbody tr:last-child th,
+.table-scroll tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+/* --- Forms / interactive --- */
+button {
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+
+/* `:not([tabindex="-1"])` keeps the ring off programmatically-focused
+   containers (e.g. the skip-link target <main>, or a card whose focused sibling
+   was just hidden) — only real tab stops get the outline. */
+:where(a, button, input, select, summary, [tabindex]:not([tabindex="-1"])):focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
+/* --- KaTeX: keep wide display math from overflowing the column --- */
+.katex {
+  font-size: 1.05em;
+}
+/* Left-set display math to the shared reading edge instead of KaTeX's default
+   centering. The whole layout is built on ONE left edge (headings, prose,
+   plates all start at the same x); centering on the 820px frame was the sole
+   element that abandoned it, floating a short equation ~80px right of the
+   paragraph that introduces it. Left-aligned, narrow math stays tied to its
+   column and wide math still extends right into the frame and scrolls — both
+   starting where the reader's eye returns. base.css loads after katex.min.css,
+   so these win the same-specificity tie — and the inner selector is needed
+   because KaTeX left-justifies the glyphs via `.katex-display > .katex`, not
+   the wrapper. */
+.katex-display {
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding-block: var(--space-2);
+  text-align: left;
+}
+.katex-display > .katex {
+  text-align: left;
+}
+
+/* --- Accessibility helper --- */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}

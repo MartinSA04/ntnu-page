@@ -1,0 +1,217 @@
+---
+import Layout from "../../layouts/Layout.astro";
+
+const description = "Søk i NTNUs emnekatalog etter emnekode, emnenavn eller studiested.";
+---
+
+<Layout title="Emner — NTNU-katalog" description={description} wide>
+  <p class="sc-kicker emner-kicker">Emner</p>
+  <h1 class="emner-title">Emnekatalog</h1>
+
+  <form class="sc-field emner-search" id="emner-search-field">
+    <input
+      type="search"
+      id="emner-search"
+      name="q"
+      placeholder="Søk etter emnekode eller emnenavn …"
+      aria-label="Søk i emnekatalogen"
+    />
+  </form>
+
+  <div class="emner-chips" id="emner-chips" role="group" aria-label="Filtrer på studiested"></div>
+
+  <p class="emner-status mono" id="emner-status" aria-live="polite">henter emner …</p>
+
+  <ul class="emner-results" id="emner-results"></ul>
+</Layout>
+
+<style>
+  .emner-kicker {
+    color: var(--muted);
+    font-size: var(--text-sm);
+    margin-bottom: var(--space-2);
+  }
+  .emner-title {
+    font-family: var(--font-display);
+    font-size: var(--text-2xl);
+    line-height: var(--leading-tight);
+    margin-bottom: var(--space-5);
+  }
+  .emner-search {
+    margin-bottom: var(--space-4);
+  }
+  .emner-search input {
+    flex: 1;
+    border: 0;
+    background: transparent;
+    color: inherit;
+    font-family: var(--font-body);
+    font-size: var(--text-base);
+  }
+  .emner-search input:focus {
+    outline: none;
+  }
+  .emner-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+    margin-bottom: var(--space-5);
+  }
+  .mono {
+    font-family: var(--font-mono);
+  }
+  .emner-status {
+    font-size: var(--text-sm);
+    color: var(--muted);
+    margin-bottom: var(--space-4);
+  }
+  .emner-results {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+  }
+  .emner-row {
+    display: flex;
+    align-items: baseline;
+    gap: var(--space-4);
+    padding: var(--space-3) var(--space-2);
+    border-bottom: 1px solid var(--border);
+    text-decoration: none;
+    color: var(--fg);
+    transition:
+      background-color var(--dur-fast) var(--ease),
+      color var(--dur-fast) var(--ease);
+  }
+  .emner-row:hover {
+    background: var(--wash);
+    color: var(--accent-ink);
+  }
+  .emner-row-code {
+    font-family: var(--font-mono);
+    font-size: var(--text-sm);
+    color: var(--muted);
+    flex-shrink: 0;
+    width: 7em;
+  }
+  .emner-row-name {
+    font-family: var(--font-body);
+    font-size: var(--text-base);
+  }
+  .emner-row-location {
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    color: var(--faint);
+    margin-left: auto;
+    flex-shrink: 0;
+  }
+</style>
+
+<script>
+  interface SearchIndex {
+    year: number;
+    courses: [code: string, name: string, location: string][];
+  }
+
+  const RESULT_CAP = 200;
+
+  const statusEl = document.getElementById("emner-status") as HTMLParagraphElement;
+  const resultsEl = document.getElementById("emner-results") as HTMLUListElement;
+  const chipsEl = document.getElementById("emner-chips") as HTMLDivElement;
+  const searchInput = document.getElementById("emner-search") as HTMLInputElement;
+  const searchField = document.getElementById("emner-search-field") as HTMLFormElement;
+
+  // Case/diacritic-insensitive substring matching (Æ/Ø/Å fold to A/O/A).
+  function fold(value: string): string {
+    return value
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase();
+  }
+
+  let index: SearchIndex | null = null;
+  let activeLocation: string | null = null;
+
+  function render(): void {
+    if (!index) return;
+    const query = fold(searchInput.value.trim());
+    const filtered = index.courses.filter(([code, name, location]) => {
+      if (activeLocation && !location.includes(activeLocation)) return false;
+      if (!query) return true;
+      return fold(code).includes(query) || fold(name).includes(query);
+    });
+
+    resultsEl.replaceChildren();
+    const shown = filtered.slice(0, RESULT_CAP);
+    for (const [code, name, location] of shown) {
+      const row = document.createElement("a");
+      row.className = "emner-row";
+      row.href = `/emne/${code}/`;
+
+      const codeEl = document.createElement("span");
+      codeEl.className = "emner-row-code mono";
+      codeEl.textContent = code;
+
+      const nameEl = document.createElement("span");
+      nameEl.className = "emner-row-name";
+      nameEl.textContent = name;
+
+      const locEl = document.createElement("span");
+      locEl.className = "emner-row-location mono";
+      locEl.textContent = location;
+
+      row.append(codeEl, nameEl, locEl);
+      resultsEl.append(row);
+    }
+
+    statusEl.textContent =
+      filtered.length > RESULT_CAP
+        ? `viser ${RESULT_CAP} av ${filtered.length} treff`
+        : `${filtered.length} treff`;
+  }
+
+  function renderChips(locations: string[]): void {
+    chipsEl.replaceChildren();
+    for (const location of locations) {
+      const chip = document.createElement("button");
+      chip.type = "button";
+      chip.className = "sc-chip";
+      chip.textContent = location;
+      chip.setAttribute("aria-pressed", "false");
+      chip.addEventListener("click", () => {
+        const next = activeLocation === location ? null : location;
+        activeLocation = next;
+        for (const other of chipsEl.querySelectorAll(".sc-chip")) {
+          other.setAttribute("aria-pressed", String(other === chip && next !== null));
+        }
+        render();
+      });
+      chipsEl.append(chip);
+    }
+  }
+
+  async function init(): Promise<void> {
+    const params = new URLSearchParams(location.search);
+    const initialQuery = params.get("q");
+    if (initialQuery) searchInput.value = initialQuery;
+
+    try {
+      const res = await fetch("/data/search-index.json");
+      if (!res.ok) throw new Error(`${res.status}`);
+      index = (await res.json()) as SearchIndex;
+    } catch {
+      statusEl.textContent = "klarte ikke å hente emner";
+      return;
+    }
+
+    const locations = [...new Set(index.courses.map(([, , loc]) => loc))].sort((a, b) =>
+      a.localeCompare(b, "nb"),
+    );
+    renderChips(locations);
+    render();
+  }
+
+  searchInput.addEventListener("input", render);
+  searchField.addEventListener("submit", (event) => event.preventDefault());
+
+  init();
+</script>

@@ -1,0 +1,24 @@
+---
+import Layout from "../layouts/Layout.astro";
+---
+
+<Layout title="Fant ikke siden — NTNU-katalog" description="Siden finnes ikke.">
+  <p class="sc-kicker notfound-kicker">404</p>
+  <p class="notfound-lede">Vi fant ikke siden du lette etter.</p>
+  <a class="sc-pill notfound-home" href="/">Til forsiden</a>
+</Layout>
+
+<style>
+  .notfound-kicker {
+    color: var(--muted);
+    font-size: var(--text-sm);
+    margin-bottom: var(--space-3);
+  }
+  .notfound-lede {
+    font-size: var(--text-md);
+    margin-bottom: var(--space-5);
+  }
+  .notfound-home {
+    padding: 0.4em 0.8em;
+  }
+</style>

@@ -1,0 +1,67 @@
+/* Site shell — topbar, content column, footer. Hand-rolled for this site
+   (not a port of StudyCompanion's shell.css): only the chrome around pages
+   built from the other pages/crawler/worker agents' slices lives here. */
+
+.site {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* --- Topbar: sticky, brand left, nav pills + theme toggle right --- */
+.site-topbar {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: var(--gap-4);
+  height: var(--topbar-h);
+  padding-inline: var(--gutter);
+  background: var(--bg);
+  border-bottom: 1px solid var(--border);
+}
+
+.site-brand {
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
+  font-weight: var(--weight-semibold);
+  color: var(--fg);
+  text-decoration: none;
+}
+
+.site-nav {
+  display: flex;
+  align-items: center;
+  gap: var(--gap-2);
+  margin-left: auto;
+}
+
+.site-nav-pill {
+  padding: 0.4em 0.8em;
+}
+
+/* --- Content column ---
+   Default: StudyCompanion's reading measure. `.wide` (data pages: catalog
+   tables, study plans) widens to a ~72rem column instead. */
+.site-content {
+  flex: 1;
+  width: 100%;
+  max-width: var(--measure);
+  margin-inline: auto;
+  padding: var(--space-6) var(--gutter);
+}
+
+.site-content.wide {
+  max-width: 72rem;
+}
+
+/* --- Footer: quiet mono line --- */
+.site-footer {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--muted);
+  text-align: center;
+  padding: var(--space-5) var(--gutter);
+  border-top: 1px solid var(--border);
+}

@@ -1,0 +1,18 @@
+{
+  // Node-types pass over tests + the worker sources they import (see
+  // worker/tsconfig.json for the Workers-types pass).
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022"],
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "types": ["node"],
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "verbatimModuleSyntax": true,
+    "isolatedModules": true,
+    "skipLibCheck": true,
+    "noEmit": true
+  },
+  "include": ["tests/**/*.ts", "worker/src/**/*.ts"]
+}

@@ -1,0 +1,34 @@
+{
+  "name": "ntnu-page",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Uoffisiell nettside for NTNU-emnedata — katalog, karakterstatistikk, timeplaner og studieprogram",
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev": "astro dev",
+    "prebuild": "node crawler/ensure-data.mjs",
+    "build": "astro build",
+    "preview": "wrangler dev",
+    "crawl": "node crawler/crawl.mjs",
+    "test": "vitest run",
+    "typecheck": "astro check && tsc -p worker/tsconfig.json && tsc -p tsconfig.test.json",
+    "lint": "biome check .",
+    "fmt": "biome check --write ."
+  },
+  "dependencies": {
+    "astro": "^6.3.7",
+    "ntnu-api": "^0.3.0"
+  },
+  "devDependencies": {
+    "@astrojs/check": "^0.9.4",
+    "@biomejs/biome": "^2.5.5",
+    "@cloudflare/workers-types": "^5.20260721.1",
+    "@types/node": "^22.20.1",
+    "typescript": "^5.9.3",
+    "vitest": "^4.1.10",
+    "wrangler": "^4.0.0"
+  }
+}

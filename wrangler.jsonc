@@ -1,0 +1,23 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "ntnu-page",
+  "main": "worker/src/server.ts",
+  "compatibility_date": "2026-07-01",
+  "compatibility_flags": ["nodejs_compat"],
+  "observability": { "enabled": true },
+  // Static Astro build. Requests matching a built asset are served directly;
+  // everything else (i.e. /api/*) invokes the worker, which falls back to
+  // ASSETS.fetch for unknown paths so 404.html applies.
+  "assets": {
+    "directory": "./dist",
+    "binding": "ASSETS",
+    "not_found_handling": "404-page"
+  }
+  // Not connected to Cloudflare yet. When wiring it up:
+  // 1. KV cache (worker degrades to memory-only cache without it):
+  //      npx wrangler kv namespace create CACHE
+  //    then add:
+  //      "kv_namespaces": [{ "binding": "CACHE", "id": "<id>" }],
+  // 2. Custom domain:
+  //      "routes": [{ "pattern": "ntnu.martinsundal.no", "custom_domain": true }],
+}
