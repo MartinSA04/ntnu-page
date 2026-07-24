@@ -60,6 +60,14 @@ const path = Astro.url.pathname;
           else document.documentElement.removeAttribute("data-theme");
         }
         applyTheme();
+        // ClientRouter's swapRootAttributes() removes EVERY attribute from
+        // <html> and restores only the ones the server rendered — and
+        // data-theme is set here on the client, so it is wiped on every
+        // navigation and the page snaps back to light. This script does not
+        // re-execute on a swap (head elements are re-appended, not re-run),
+        // so re-apply from a listener on `document`, which survives swaps.
+        // astro:after-swap fires before the new page paints: no flash.
+        document.addEventListener("astro:after-swap", applyTheme);
         matchMedia("(prefers-color-scheme: dark)").addEventListener(
           "change",
           function () {

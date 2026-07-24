@@ -120,6 +120,8 @@ const levels = [...new Set(programs.map((p) => p.studyLevel).filter(Boolean))].s
 </style>
 
 <script>
+  import { onPage } from "../../lib/pageLifecycle.ts";
+
   function fold(value: string): string {
     return value
       .normalize("NFD")
@@ -127,14 +129,19 @@ const levels = [...new Set(programs.map((p) => p.studyLevel).filter(Boolean))].s
       .toLowerCase();
   }
 
-  const searchInput = document.getElementById("studier-search") as HTMLInputElement;
-  const statusEl = document.getElementById("studier-status") as HTMLParagraphElement;
+  // Per page-load, not per module: ClientRouter evaluates this module once,
+  // so wiring at top level left the filter dead after any in-site navigation.
+  onPage((signal) => {
+  const searchInput = document.getElementById("studier-search") as HTMLInputElement | null;
+  const statusEl = document.getElementById("studier-status") as HTMLParagraphElement | null;
+  if (!searchInput || !statusEl) return;
   const rows = [...document.querySelectorAll<HTMLAnchorElement>(".studier-row")];
   const chips = [...document.querySelectorAll<HTMLButtonElement>(".studier-chip")];
 
   let activeLevel: string | null = null;
 
   function render(): void {
+    if (!searchInput || !statusEl) return;
     const query = fold(searchInput.value.trim());
     let shown = 0;
     for (const row of rows) {
@@ -162,5 +169,6 @@ const levels = [...new Set(programs.map((p) => p.studyLevel).filter(Boolean))].s
     });
   }
 
-  searchInput.addEventListener("input", render);
+  searchInput.addEventListener("input", render, { signal });
+  });
 </script>

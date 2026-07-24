@@ -21,6 +21,10 @@ run = "npm run crawl"
 description = "Run the test suite"
 run = "npm test"
 
+[tasks.e2e]
+description = "Browser suite: builds + serves, then drives Chromium over client-side navigation"
+run = "npm run test:e2e"
+
 [tasks.lint]
 description = "Lint and check formatting"
 run = "npm run lint"

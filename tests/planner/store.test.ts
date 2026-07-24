@@ -357,7 +357,7 @@ describe("parsePlanHash / formatPlanHash — v2 grammar", () => {
     const parsed = parsePlanHash("#v2;26h;MTDT.2024;TDT4100,TMA4100.2,-IT2805,+PSY1000");
     expect(parsed).toEqual({
       semesterId: "26h",
-      program: { code: "MTDT", cohort: 2024 },
+      program: { code: "MTDT", cohort: 2024, direction: null },
       courses: [
         { code: "TDT4100", version: "1", source: "program" },
         { code: "TMA4100", version: "2", source: "program" },
@@ -412,6 +412,34 @@ describe("parsePlanHash / formatPlanHash — v2 grammar", () => {
     expect(hash).toBe("#v2;26h;-;");
   });
 
+  it("appends the studieretning to the programme segment when one is chosen", () => {
+    const hash = formatPlanHash({
+      semesterId: "26h",
+      program: {
+        code: "MTDT",
+        name: "Datateknologi",
+        cohort: 2024,
+        direction: { code: "MTDTDS-24", name: "Databaser og søk" },
+      },
+      courses: [{ code: "TDT4117", name: "A", version: "1", source: "program" }],
+    });
+    expect(hash).toBe("#v2;26h;MTDT.2024.MTDTDS-24;TDT4117");
+  });
+
+  it("parses the studieretning back out of the programme segment", () => {
+    const parsed = parsePlanHash("#v2;26h;MTDT.2024.MTDTDS-24;TDT4117");
+    expect(parsed?.program).toEqual({
+      code: "MTDT",
+      cohort: 2024,
+      direction: "MTDTDS-24",
+    });
+  });
+
+  it("still parses a programme segment written before studieretning existed", () => {
+    const parsed = parsePlanHash("#v2;26h;MTDT.2024;TDT4100");
+    expect(parsed?.program).toEqual({ code: "MTDT", cohort: 2024, direction: null });
+  });
+
   it("round-trips format → parse for every field (program, drops, extras, non-default versions)", () => {
     const original: Parameters<typeof formatPlanHash>[0] = {
       semesterId: "27v",
@@ -426,7 +454,7 @@ describe("parsePlanHash / formatPlanHash — v2 grammar", () => {
     const parsed = parsePlanHash(hash);
     expect(parsed).toEqual({
       semesterId: "27v",
-      program: { code: "MTIOT", cohort: 2023 },
+      program: { code: "MTIOT", cohort: 2023, direction: null },
       courses: [
         { code: "TDT4110", version: "1", source: "program" },
         { code: "TMA4115", version: "3", source: "program", dropped: true },

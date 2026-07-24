@@ -140,6 +140,7 @@ const seasonWord = isAutumn ? "høsten" : "våren";
     isSuspiciousPrefill,
     periodNumberFor,
   } from "../components/planner/programPlan.ts";
+  import { onPage } from "../lib/pageLifecycle.ts";
   import { semesterYear } from "../lib/planner/schedule.ts";
   import {
     type AddCourseInput,
@@ -155,6 +156,11 @@ const seasonWord = isAutumn ? "høsten" : "våren";
     .sort((a, b) => a[1].localeCompare(b[1], "nb"));
 
   const defaultSemesterId = semestersData.current?.id ?? "";
+
+  // Per page-load, not per module: ClientRouter evaluates this module once,
+  // so wiring at top level left the programme picker dead after any in-site
+  // navigation back to the homepage.
+  onPage((signal) => {
   const store = createPlanStore(defaultSemesterId);
 
   const input = document.getElementById("home-input") as HTMLInputElement | null;
@@ -196,7 +202,7 @@ const seasonWord = isAutumn ? "høsten" : "våren";
   }
 
   renderResume();
-  store.onPlanChange(renderResume);
+  signal.addEventListener("abort", store.onPlanChange(renderResume));
 
   if (input && field && listbox && kullSection && kullName && kullChips && statusEl) {
     let matches: ProgramOption[] = [];
@@ -374,4 +380,5 @@ const seasonWord = isAutumn ? "høsten" : "våren";
       if (!field.contains(event.relatedTarget as Node | null)) closeListbox();
     });
   }
+  });
 </script>

@@ -13,14 +13,12 @@ const programOptions: [code: string, name: string][] = programsData.programs
 ---
 
 <Layout title="Planlegger — Semesterplan" description={description} wide>
-  <div class="planner-headrow">
-    <div class="planner-context">
+  <div class="planner-banner">
+    <div class="planner-banner-main">
       <p class="np-kicker planner-kicker">Planlegger</p>
-      <p class="np-data planner-context-line" id="planner-context-line">
-        <button type="button" class="planner-context-change" id="planner-context-change">endre</button>
-      </p>
+      <p class="np-data planner-context-line" id="planner-context-line"></p>
     </div>
-    <div class="planner-headrow-controls">
+    <div class="planner-banner-controls">
       <div
         class="planner-semester-toggle"
         id="planner-semester-toggle"
@@ -28,7 +26,9 @@ const programOptions: [code: string, name: string][] = programsData.programs
         aria-label="Velg semester"
       >
       </div>
-      <span class="np-data planner-credit-line" id="planner-credit-line">0 av 30 sp</span>
+      <button type="button" class="np-btn planner-context-change" id="planner-context-change">
+        Endre
+      </button>
     </div>
   </div>
 
@@ -62,71 +62,125 @@ const programOptions: [code: string, name: string][] = programsData.programs
   </section>
 
   <p class="np-note planner-empty-invite" id="planner-empty-state" hidden>
-    Ingen emner i planen ennå. Velg et studieprogram over, eller legg til emner under.
+    Ingen emner i planen ennå. Velg et studieprogram over, eller legg til emner selv.
   </p>
 
   <div id="planner-main">
-    <div class="planner-section-head">
-      <p class="np-kicker">Ukeplan</p>
-      <p class="np-data planner-section-sub" id="planner-grid-status"></p>
+    <div class="planner-tabs" id="planner-tabs" role="group" aria-label="Bytt mellom uke og emner">
       <button
         type="button"
-        class="np-toggle planner-others-toggle"
-        id="planner-others-toggle"
+        class="np-toggle planner-tab"
+        id="planner-tab-week"
+        aria-pressed="true"
+      >
+        Uke
+      </button>
+      <button
+        type="button"
+        class="np-toggle planner-tab"
+        id="planner-tab-courses"
         aria-pressed="false"
       >
-        Vis øvinger og labber
+        Emner
       </button>
     </div>
-    <div class="np-frame np-ruled planner-grid-frame" id="planner-grid-frame"></div>
-    <div class="planner-grid-notes" id="planner-grid-notes"></div>
-    <p class="np-note planner-prepublish-note" id="planner-prepublish-note" hidden></p>
 
-    <div class="planner-section-head">
-      <p class="np-kicker">Eksamener</p>
-      <p class="np-data planner-section-sub" id="planner-exam-window"></p>
-      <p class="np-data planner-section-sub" id="planner-exam-status"></p>
+    <div class="planner-regions" id="planner-regions" data-region="week">
+      <section class="planner-region planner-region-week" id="planner-region-week" aria-label="Ukeplan">
+        <div class="np-panel planner-direction" id="planner-direction" hidden>
+          <p class="np-kicker" id="planner-direction-title"></p>
+          <p class="np-note planner-direction-note" id="planner-direction-note"></p>
+          <div
+            class="planner-direction-chips"
+            id="planner-direction-chips"
+            role="group"
+            aria-label="Velg studieretning"
+          >
+          </div>
+        </div>
+
+        <div class="planner-section-head">
+          <p class="np-kicker">Ukeplan</p>
+          <p class="np-data planner-section-sub" id="planner-grid-status"></p>
+          <button
+            type="button"
+            class="np-toggle planner-others-toggle"
+            id="planner-others-toggle"
+            aria-pressed="false"
+          >
+            Vis øvinger og labber
+          </button>
+        </div>
+        <div class="np-frame np-ruled planner-grid-frame" id="planner-grid-frame"></div>
+        <div class="planner-grid-notes" id="planner-grid-notes"></div>
+        <p class="np-note planner-prepublish-note" id="planner-prepublish-note" hidden></p>
+
+        <div class="planner-section-head">
+          <p class="np-kicker">Eksamener</p>
+          <p class="np-data planner-section-sub" id="planner-exam-window"></p>
+          <p class="np-data planner-section-sub" id="planner-exam-status"></p>
+        </div>
+        <div class="np-frame np-ruled planner-exam-frame" id="planner-exam-frame"></div>
+        <div class="planner-exam-list" id="planner-exam-list-host"></div>
+      </section>
+
+      <section class="planner-region planner-region-courses" id="planner-region-courses" aria-label="Emner i planen">
+        <div class="planner-section-head">
+          <p class="np-kicker">Emner</p>
+          <span class="np-data planner-credit-line" id="planner-credit-line">0 av 30 sp</span>
+        </div>
+
+        <div class="planner-course-rows" id="planner-course-rows"></div>
+
+        <p class="planner-gap-line" id="planner-gap-line" hidden>
+          <span class="np-note" id="planner-gap-text"></span>
+          <button type="button" class="np-btn planner-gap-btn" id="planner-gap-btn">
+            Velg fra studieplanen
+          </button>
+        </p>
+
+        <div class="planner-add-block" id="planner-add-block">
+          <form class="np-field planner-add-field" id="planner-add-field" autocomplete="off">
+            <input
+              type="text"
+              id="planner-add-input"
+              placeholder="+ legg til emne …"
+              aria-label="Legg til emne i planen"
+              role="combobox"
+              aria-expanded="false"
+              aria-autocomplete="list"
+              aria-controls="planner-add-listbox"
+            />
+          </form>
+          <div class="planner-scope" id="planner-scope" role="group" aria-label="Hvor det søkes">
+            <button type="button" class="np-toggle" id="planner-scope-plan" aria-pressed="true">
+              Fra studieplanen
+            </button>
+            <button type="button" class="np-toggle" id="planner-scope-all" aria-pressed="false">
+              Alle emner
+            </button>
+          </div>
+          <p class="np-note planner-scope-note" id="planner-scope-note" hidden></p>
+          <ul
+            class="planner-add-listbox"
+            id="planner-add-listbox"
+            role="listbox"
+            aria-label="Emneforslag"
+            hidden
+          >
+          </ul>
+        </div>
+      </section>
     </div>
-    <div class="np-frame np-ruled planner-exam-frame" id="planner-exam-frame"></div>
-    <div class="planner-exam-list" id="planner-exam-list-host"></div>
-
-    <div class="planner-section-head">
-      <p class="np-kicker">Emner</p>
-    </div>
-    <div class="planner-course-rows" id="planner-course-rows"></div>
-
-    <div class="planner-choice-section" id="planner-choice-section" hidden>
-      <p class="np-kicker">Valgemner i studieplanen</p>
-      <div class="planner-choice-rows" id="planner-choice-rows"></div>
-    </div>
-
-    <form class="np-field planner-add-field" id="planner-add-field" autocomplete="off">
-      <input
-        type="text"
-        id="planner-add-input"
-        placeholder="+ legg til emne …"
-        aria-label="Legg til emne i planen"
-        role="combobox"
-        aria-expanded="false"
-        aria-autocomplete="list"
-        aria-controls="planner-add-listbox"
-      />
-    </form>
-    <ul
-      class="planner-add-listbox"
-      id="planner-add-listbox"
-      role="listbox"
-      aria-label="Emneforslag"
-      hidden
-    >
-    </ul>
 
     <p class="np-note planner-provenance" id="planner-provenance"></p>
   </div>
 </Layout>
 
 <style>
-  .planner-headrow {
+  /* --- Banner ------------------------------------------------------------ */
+
+  .planner-banner {
     display: flex;
     align-items: flex-start;
     justify-content: space-between;
@@ -140,25 +194,14 @@ const programOptions: [code: string, name: string][] = programsData.programs
   }
 
   .planner-context-line {
-    font-size: var(--text-sm);
-    color: var(--muted);
+    font-size: var(--text-md);
   }
 
-  :global(.planner-context-change) {
-    font-family: var(--font-mono);
-    font-size: inherit;
-    color: var(--muted);
-    text-decoration: underline;
-    text-decoration-color: var(--border-strong);
-    text-underline-offset: 2px;
-  }
-
-  :global(.planner-context-change:hover) {
+  :global(.planner-context-direction) {
     color: var(--accent-ink);
-    text-decoration-color: currentColor;
   }
 
-  .planner-headrow-controls {
+  .planner-banner-controls {
     display: flex;
     align-items: center;
     gap: var(--gap-3);
@@ -169,16 +212,6 @@ const programOptions: [code: string, name: string][] = programsData.programs
     display: flex;
     gap: var(--gap-2);
     flex-wrap: wrap;
-  }
-
-  .planner-credit-line {
-    font-size: var(--text-md);
-    color: var(--muted);
-    transition: color var(--dur-fast) var(--ease);
-  }
-
-  .planner-credit-line.is-full {
-    color: var(--accent-ink);
   }
 
   .planner-empty-invite {
@@ -244,6 +277,77 @@ const programOptions: [code: string, name: string][] = programsData.programs
     gap: var(--gap-2);
   }
 
+  /* --- Two regions ------------------------------------------------------- */
+
+  /* Tabs exist only where there isn't room for both regions; the wide
+     layout below hides them and shows Uke + Emner side by side. */
+  .planner-tabs {
+    display: flex;
+    gap: var(--gap-2);
+    margin-bottom: var(--space-4);
+  }
+
+  .planner-regions {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-6);
+  }
+
+  /* Narrow: one region at a time, driven by [data-region] on the container.
+     display:none (not [hidden]) keeps the same rule from applying at wide
+     widths, where both regions are always shown. */
+  .planner-regions[data-region="week"] .planner-region-courses,
+  .planner-regions[data-region="courses"] .planner-region-week {
+    display: none;
+  }
+
+  .planner-region {
+    min-width: 0;
+  }
+
+  @media (min-width: 60rem) {
+    .planner-tabs {
+      display: none;
+    }
+
+    .planner-regions {
+      display: grid;
+      grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr);
+      align-items: start;
+      gap: var(--space-7, var(--space-6));
+    }
+
+    .planner-regions[data-region="week"] .planner-region-courses,
+    .planner-regions[data-region="courses"] .planner-region-week {
+      display: block;
+    }
+
+    .planner-region-courses {
+      position: sticky;
+      top: var(--space-4);
+    }
+  }
+
+  /* --- Studieretning question -------------------------------------------- */
+
+  .planner-direction:not([hidden]) {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    margin-bottom: var(--space-5);
+  }
+
+  .planner-direction-note {
+    margin: 0;
+  }
+
+  .planner-direction-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--gap-2);
+    margin-top: var(--space-1);
+  }
+
   /* --- Section headers --------------------------------------------------- */
 
   .planner-section-head {
@@ -261,6 +365,17 @@ const programOptions: [code: string, name: string][] = programsData.programs
 
   .planner-others-toggle {
     margin-left: auto;
+  }
+
+  .planner-credit-line {
+    margin-left: auto;
+    font-size: var(--text-md);
+    color: var(--muted);
+    transition: color var(--dur-fast) var(--ease);
+  }
+
+  .planner-credit-line.is-full {
+    color: var(--accent-ink);
   }
 
   /* --- Weekly grid --------------------------------------------------------- */
@@ -284,7 +399,7 @@ const programOptions: [code: string, name: string][] = programsData.programs
        grid-row-based rail and the absolutely-positioned blocks (top/height
        in --cell units) land on the same pixel grid. */
     grid-auto-rows: var(--cell);
-    min-width: 40rem;
+    min-width: 34rem;
   }
 
   :global(.planner-grid-rail) {
@@ -496,14 +611,15 @@ const programOptions: [code: string, name: string][] = programsData.programs
   .planner-course-rows {
     display: flex;
     flex-direction: column;
-    margin-bottom: var(--space-4);
+    margin-bottom: var(--space-3);
   }
 
   :global(.planner-course-row) {
-    display: flex;
-    align-items: center;
-    gap: var(--gap-4);
-    flex-wrap: wrap;
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    align-items: baseline;
+    column-gap: var(--gap-3);
+    row-gap: var(--space-1);
     padding: var(--space-3) var(--space-2);
     border-bottom: 1px solid var(--border);
     transition: color var(--dur-fast) var(--ease);
@@ -522,78 +638,78 @@ const programOptions: [code: string, name: string][] = programsData.programs
     display: inline-flex;
     align-items: center;
     gap: var(--gap-2);
-    width: 7em;
-    flex-shrink: 0;
   }
 
   :global(.planner-course-row-name) {
-    flex: 1;
-    min-width: 10rem;
+    min-width: 0;
   }
 
-  :global(.planner-course-row-assessment) {
+  :global(.planner-course-row-meta) {
+    grid-column: 2 / -1;
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--gap-3);
     color: var(--muted);
-    font-size: var(--text-sm);
-  }
-
-  :global(.planner-course-row-source) {
-    color: var(--faint);
     font-size: var(--text-xs);
   }
 
   :global(.planner-course-remove) {
-    margin-left: auto;
+    justify-self: end;
   }
 
-  /* --- Choice-group list ---------------------------------------------- */
+  /* --- Credit gap door --------------------------------------------------- */
 
-  .planner-choice-section {
-    margin-bottom: var(--space-6);
-  }
-
-  :global(.planner-choice-row) {
+  .planner-gap-line:not([hidden]) {
     display: flex;
-    align-items: center;
-    gap: var(--gap-4);
+    align-items: baseline;
+    gap: var(--gap-3);
     flex-wrap: wrap;
-    padding: var(--space-2) var(--space-2);
-    border-bottom: 1px solid var(--border);
+    margin-bottom: var(--space-4);
   }
 
-  :global(.planner-choice-name) {
-    flex: 1;
-    min-width: 10rem;
-    font-size: var(--text-sm);
-  }
+  /* --- Add / picker block ------------------------------------------------ */
 
-  :global(.planner-choice-add) {
-    margin-left: auto;
+  .planner-add-block {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
   }
-
-  /* --- Add field --------------------------------------------------------- */
 
   .planner-add-field {
-    max-width: 24rem;
     position: relative;
-    margin-bottom: var(--space-2);
+  }
+
+  .planner-scope {
+    display: flex;
+    gap: var(--gap-2);
+    flex-wrap: wrap;
+  }
+
+  .planner-scope-note {
+    margin: 0;
   }
 
   .planner-add-listbox {
     list-style: none;
-    max-width: 24rem;
     background: var(--card);
     border-radius: var(--radius-sm);
     box-shadow: var(--shadow);
-    max-height: 16rem;
+    max-height: 24rem;
     overflow-y: auto;
     padding: var(--space-1);
   }
 
+  :global(.planner-pool-group) {
+    padding: var(--space-3) var(--space-2) var(--space-1);
+    color: var(--faint);
+  }
+
   :global(.planner-typeahead-option) {
-    display: flex;
-    align-items: baseline;
-    gap: var(--gap-3);
-    padding: var(--space-2) var(--space-2);
+    display: grid;
+    grid-template-columns: 1fr auto;
+    column-gap: var(--gap-3);
+    row-gap: 2px;
+    padding: var(--space-2);
     border-radius: var(--radius-xs);
     cursor: pointer;
   }
@@ -603,15 +719,42 @@ const programOptions: [code: string, name: string][] = programsData.programs
     background: var(--card-hover);
   }
 
+  :global(.planner-typeahead-head) {
+    display: flex;
+    align-items: baseline;
+    gap: var(--gap-2);
+    min-width: 0;
+  }
+
   :global(.planner-typeahead-code) {
     color: var(--muted);
     font-size: var(--text-xs);
     flex-shrink: 0;
-    width: 6.5em;
   }
 
   :global(.planner-typeahead-name) {
     font-size: var(--text-sm);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  :global(.planner-typeahead-credits) {
+    color: var(--muted);
+    font-size: var(--text-xs);
+  }
+
+  :global(.planner-typeahead-facts) {
+    grid-column: 1 / -1;
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--gap-3);
+    font-size: var(--text-xs);
+    color: var(--muted);
+  }
+
+  :global(.planner-typeahead-facts .is-clash) {
+    color: var(--clash);
   }
 
   :global(.planner-typeahead-empty) {
@@ -620,7 +763,7 @@ const programOptions: [code: string, name: string][] = programsData.programs
   }
 
   .planner-provenance {
-    margin-top: var(--space-4);
+    margin-top: var(--space-6);
   }
 </style>
 
@@ -632,9 +775,17 @@ const programOptions: [code: string, name: string][] = programsData.programs
 />
 <script>
   import { mountPlannerApp } from "../../components/planner/plannerApp.js";
+  import { onPage } from "../../lib/pageLifecycle.ts";
   import semestersData from "../../../data/semesters.json";
 
-  const optionsEl = document.getElementById("planner-program-options");
-  const programOptions = optionsEl?.textContent ? JSON.parse(optionsEl.textContent) : [];
-  mountPlannerApp(semestersData, programOptions);
+  // Must run per page-load, not once per module: under ClientRouter this
+  // module is evaluated only the first time it is fetched, so mounting at
+  // top level left the planner an empty shell after any in-site navigation
+  // back to it ("the plan is gone").
+  onPage((signal) => {
+    const optionsEl = document.getElementById("planner-program-options");
+    if (!optionsEl) return;
+    const programOptions = optionsEl.textContent ? JSON.parse(optionsEl.textContent) : [];
+    mountPlannerApp(semestersData, programOptions, signal);
+  });
 </script>

@@ -101,6 +101,7 @@ const description = "Søk i NTNUs emnekatalog etter emnekode, emnenavn eller stu
 </style>
 
 <script>
+  import { onPage } from "../../lib/pageLifecycle.ts";
   import { createPlanStore } from "../../lib/planner/store.ts";
   import semestersData from "../../../data/semesters.json";
 
@@ -121,13 +122,6 @@ const description = "Søk i NTNUs emnekatalog etter emnekode, emnenavn eller stu
     WINTER: "vinter",
     SUMMER: "sommer",
   };
-
-  const statusEl = document.getElementById("emner-status") as HTMLParagraphElement;
-  const resultsEl = document.getElementById("emner-results") as HTMLUListElement;
-  const chipsEl = document.getElementById("emner-chips") as HTMLDivElement;
-  const searchInput = document.getElementById("emner-search") as HTMLInputElement;
-
-  const store = createPlanStore(semestersData.current?.id ?? "");
 
   // Case/diacritic-insensitive substring matching (Æ/Ø/Å fold to A/O/A).
   function fold(value: string): string {
@@ -151,10 +145,22 @@ const description = "Søk i NTNUs emnekatalog etter emnekode, emnenavn eller stu
     button.textContent = inPlan ? "✓" : "+";
   }
 
+  // Per page-load, not per module: ClientRouter evaluates this module once,
+  // so wiring at top level left the search dead after any in-site navigation.
+  onPage((signal) => {
+  const statusEl = document.getElementById("emner-status") as HTMLParagraphElement | null;
+  const resultsEl = document.getElementById("emner-results") as HTMLUListElement | null;
+  const chipsEl = document.getElementById("emner-chips") as HTMLDivElement | null;
+  const searchInput = document.getElementById("emner-search") as HTMLInputElement | null;
+  if (!statusEl || !resultsEl || !chipsEl || !searchInput) return;
+
+  const store = createPlanStore(semestersData.current?.id ?? "");
+
   let index: SearchIndex | null = null;
   let activeLocation: string | null = null;
 
   function render(): void {
+    if (!statusEl || !resultsEl || !searchInput) return;
     if (!index) return;
     const query = fold(searchInput.value.trim());
     const filtered = index.courses.filter(([code, name, location]) => {
@@ -219,6 +225,7 @@ const description = "Søk i NTNUs emnekatalog etter emnekode, emnenavn eller stu
   }
 
   function renderChips(locations: string[]): void {
+    if (!chipsEl) return;
     chipsEl.replaceChildren();
     for (const location of locations) {
       const chip = document.createElement("button");
@@ -239,6 +246,7 @@ const description = "Søk i NTNUs emnekatalog etter emnekode, emnenavn eller stu
   }
 
   async function init(): Promise<void> {
+    if (!statusEl || !searchInput) return;
     const params = new URLSearchParams(location.search);
     const initialQuery = params.get("q");
     if (initialQuery) searchInput.value = initialQuery;
@@ -259,8 +267,9 @@ const description = "Søk i NTNUs emnekatalog etter emnekode, emnenavn eller stu
     render();
   }
 
-  searchInput.addEventListener("input", render);
-  store.onPlanChange(render);
+  searchInput.addEventListener("input", render, { signal });
+  signal.addEventListener("abort", store.onPlanChange(render));
 
   init();
+  });
 </script>

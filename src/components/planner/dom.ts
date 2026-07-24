@@ -28,6 +28,30 @@ export function formatCredits(total: number): string {
   return `${text} av 30 sp`;
 }
 
+const MONTH_ABBR = [
+  "jan",
+  "feb",
+  "mar",
+  "apr",
+  "mai",
+  "jun",
+  "jul",
+  "aug",
+  "sep",
+  "okt",
+  "nov",
+  "des",
+];
+
+/** `"2026-12-09"` → `"9. des"`. Returns the input verbatim if it isn't an ISO date. */
+export function formatShortDate(iso: string): string {
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(iso.trim());
+  if (!m) return iso;
+  const month = MONTH_ABBR[Number(m[2]) - 1];
+  if (!month) return iso;
+  return `${Number(m[3])}. ${month}`;
+}
+
 const DAY_NAMES = ["mandag", "tirsdag", "onsdag", "torsdag", "fredag", "lørdag", "søndag"];
 
 export function dayName(dayNumber: number): string {

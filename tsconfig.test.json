@@ -15,5 +15,7 @@
     "skipLibCheck": true,
     "noEmit": true
   },
-  "include": ["tests/**/*.ts", "worker/src/**/*.ts"]
+  // e2e/ + playwright.config.ts ride along on the Node pass; they are excluded
+  // from vitest by filename (*.pw.ts), not by tsconfig.
+  "include": ["tests/**/*.ts", "e2e/**/*.ts", "playwright.config.ts", "worker/src/**/*.ts"]
 }

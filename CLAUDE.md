@@ -18,6 +18,19 @@
   to crawl automatically on a fresh checkout.
 - Upstream NTNU endpoint knowledge lives in the `ntnu-api` package only
   (same layering rule as ntnu-mcp); this repo consumes its public client.
+- **ClientRouter rule (load-bearing):** hoisted page/component scripts run
+  ONCE per module — they do NOT re-execute after a view-transition swap. Every
+  page's setup must go through `onPage(setup)` (`src/lib/pageLifecycle.ts`),
+  binding listeners with `{ signal }` and registering teardown on abort;
+  mounting at top level silently leaves the page dead after any in-site
+  navigation. Likewise `data-theme` is client-only state and Astro's
+  `swapRootAttributes()` wipes every `<html>` attribute on each swap, so
+  Layout's no-flash script re-applies it on `astro:after-swap`. Both are
+  covered by `mise run e2e`; don't "simplify" either away.
+- `mise run check` is the fast unit pass (no server). `mise run e2e` builds,
+  serves via wrangler and drives Chromium (`e2e/*.pw.ts` — named `.pw.ts` so
+  vitest's default `*.spec/test.*` include never picks them up). Navigation
+  regressions are only visible there.
 - Two-pass typecheck (Workers vs Node ambient types clash):
   `worker/tsconfig.json` + `tsconfig.test.json`; keep Workers-only ambient
   types out of files the Node pass includes (structural interfaces instead).

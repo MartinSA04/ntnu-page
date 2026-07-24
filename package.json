@@ -14,6 +14,7 @@
     "preview": "wrangler dev",
     "crawl": "node crawler/crawl.mjs",
     "test": "vitest run",
+    "test:e2e": "playwright test",
     "typecheck": "astro check && tsc -p worker/tsconfig.json && tsc -p tsconfig.test.json",
     "lint": "biome check .",
     "fmt": "biome check --write ."
@@ -26,6 +27,7 @@
     "@astrojs/check": "^0.9.4",
     "@biomejs/biome": "^2.5.5",
     "@cloudflare/workers-types": "^5.20260721.1",
+    "@playwright/test": "^1.61.1",
     "@types/node": "^22.20.1",
     "typescript": "^5.9.3",
     "vitest": "^4.1.10",

@@ -186,12 +186,20 @@ const description = `${program.name} — studieplan, opptak og studiested ved NT
 
 <script>
   import { mountStudyPlan } from "../../components/site/studyPlan";
+  import { onPage } from "../../lib/pageLifecycle.ts";
 
-  const root = document.getElementById("plan-section");
-  const code = root?.dataset.programCode ?? "";
-  const name = root?.dataset.programName ?? "";
-  const guessYear = Number(root?.dataset.guessYear ?? "0");
-  const defaultSemesterId = root?.dataset.defaultSemester ?? "";
-
-  mountStudyPlan(code, name, guessYear, defaultSemesterId);
+  // Per page-load, not per module: ClientRouter evaluates this module once,
+  // so mounting at top level left the study plan empty after any in-site
+  // navigation — including between two different programme pages, where the
+  // stale module would also have kept the first programme's data.
+  onPage(() => {
+    const root = document.getElementById("plan-section");
+    if (!root) return;
+    mountStudyPlan(
+      root.dataset.programCode ?? "",
+      root.dataset.programName ?? "",
+      Number(root.dataset.guessYear ?? "0"),
+      root.dataset.defaultSemester ?? "",
+    );
+  });
 </script>

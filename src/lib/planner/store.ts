@@ -34,10 +34,23 @@ export interface PlanCourse {
   dropped?: boolean;
 }
 
+/**
+ * The studieretning a student picked at a `Valg av studieretning` waypoint
+ * (programPlan.ts). Later-year periods of a sivilingeniør programme carry no
+ * top-level courses at all, so this is what turns the study plan from a
+ * choice space into a concrete course list.
+ */
+export interface PlanDirection {
+  code: string;
+  name: string;
+}
+
 export interface PlanProgram {
   code: string;
   name: string;
   cohort: number;
+  /** Absent until the student answers the studieretning question (or the plan has none). */
+  direction?: PlanDirection;
 }
 
 export interface PlanState {
@@ -96,6 +109,12 @@ const nullEvents: EventTargetLike = {
   },
 };
 
+/** Narrows an untrusted JSON value to a plain object, or `null`. */
+function asRecord(value: unknown): Record<string, unknown> | null {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) return null;
+  return value as Record<string, unknown>;
+}
+
 /**
  * Type-guards one course entry out of untrusted JSON. Handles both the v2
  * shape and a bare v1 course (`{code, name}`, no `version`/`source`) by
@@ -139,15 +158,26 @@ function coercePlan(raw: unknown, fallbackSemesterId: string): PlanState {
 
   const plan: PlanState = { v: 1, semesterId, courses };
 
-  const rawProgram = obj.program;
+  const rawProgram = asRecord(obj.program);
   if (
-    typeof rawProgram === "object" &&
-    rawProgram !== null &&
-    typeof (rawProgram as Record<string, unknown>).code === "string" &&
-    typeof (rawProgram as Record<string, unknown>).name === "string" &&
-    typeof (rawProgram as Record<string, unknown>).cohort === "number"
+    rawProgram &&
+    typeof rawProgram.code === "string" &&
+    typeof rawProgram.name === "string" &&
+    typeof rawProgram.cohort === "number"
   ) {
-    plan.program = rawProgram as PlanProgram;
+    const program: PlanProgram = {
+      code: rawProgram.code,
+      name: rawProgram.name,
+      cohort: rawProgram.cohort,
+    };
+    const rawDirection = asRecord(rawProgram.direction);
+    if (rawDirection && typeof rawDirection.code === "string") {
+      program.direction = {
+        code: rawDirection.code,
+        name: typeof rawDirection.name === "string" ? rawDirection.name : rawDirection.code,
+      };
+    }
+    plan.program = program;
   }
 
   return plan;
@@ -397,8 +427,12 @@ export interface HashCourse {
 
 export interface ParsedPlanHash {
   semesterId: string;
-  /** `null` when the hash carries no programme segment (`"-"`, or a legacy v1 hash). */
-  program: { code: string; cohort: number } | null;
+  /**
+   * `null` when the hash carries no programme segment (`"-"`, or a legacy v1
+   * hash). `direction` is the studieretning code only — its display name is
+   * recovered from the study plan, exactly as the programme's own name is.
+   */
+  program: { code: string; cohort: number; direction: string | null } | null;
   courses: HashCourse[];
 }
 
@@ -429,10 +463,10 @@ export function parsePlanHash(hash: string): ParsedPlanHash | null {
     const progRaw = (segments[2] ?? "").trim();
     let program: ParsedPlanHash["program"] = null;
     if (progRaw !== "" && progRaw !== "-") {
-      const [code = "", cohortRaw = ""] = progRaw.split(".");
+      const [code = "", cohortRaw = "", directionRaw = ""] = progRaw.split(".");
       const cohort = Number(cohortRaw);
       if (code !== "" && Number.isFinite(cohort) && cohortRaw !== "") {
-        program = { code, cohort };
+        program = { code, cohort, direction: directionRaw === "" ? null : directionRaw };
       }
     }
     const itemsRaw = segments[3] ?? "";
@@ -466,12 +500,19 @@ export function parsePlanHash(hash: string): ParsedPlanHash | null {
 /**
  * Format a plan into its v2 shareable hash form (D15 — no un-versioned
  * segment is ever written again), e.g.
- * `"#v2;26h;MTDT.2024;TDT4100,TMA4100.2,-IT2805,+PSY1000"`.
+ * `"#v2;26h;MTDT.2024.MTDTDS-24;TDT4100,TMA4100.2,-IT2805,+PSY1000"`.
+ *
+ * The programme segment is `code.cohort[.direction]`; the direction part is
+ * appended only when one was chosen, so hashes written before studieretning
+ * existed still parse (and still format) identically.
  */
 export function formatPlanHash(
   plan: Pick<PlanState, "semesterId" | "courses" | "program">,
 ): string {
-  const progSegment = plan.program ? `${plan.program.code}.${plan.program.cohort}` : "-";
+  const program = plan.program;
+  const progSegment = program
+    ? `${program.code}.${program.cohort}${program.direction ? `.${program.direction.code}` : ""}`
+    : "-";
   const items = plan.courses.map(formatHashToken).join(",");
   return `#v2;${plan.semesterId};${progSegment};${items}`;
 }

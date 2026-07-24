@@ -288,19 +288,25 @@ const description = `${course.code} ${course.name} — emnedetaljer, karaktersta
   import { mountCourseDetails } from "../../components/site/courseDetails";
   import { mountCourseGrades } from "../../components/site/courseGrades";
   import { mountCourseTimetable } from "../../components/site/courseTimetable";
+  import { onPage } from "../../lib/pageLifecycle.ts";
   import { createPlanStore } from "../../lib/planner/store.ts";
   import semestersData from "../../../data/semesters.json";
 
-  const root = document.getElementById("emne-islands");
-  const code = root?.dataset.courseCode ?? "";
-  const catalogYear = Number(root?.dataset.catalogYear ?? "0");
+  // Per page-load, not per module: ClientRouter evaluates this module once,
+  // so mounting at top level left every course page after the first showing
+  // the FIRST course's data (or nothing at all).
+  onPage((signal) => {
+    const root = document.getElementById("emne-islands");
+    if (!root) return;
+    const code = root.dataset.courseCode ?? "";
+    const catalogYear = Number(root.dataset.catalogYear ?? "0");
 
-  mountCourseDetails(code);
-  mountCourseGrades(code);
-  mountCourseTimetable(code, catalogYear);
+    mountCourseDetails(code);
+    mountCourseGrades(code);
+    mountCourseTimetable(code, catalogYear);
 
-  const planBtn = document.getElementById("emne-plan-btn") as HTMLButtonElement | null;
-  if (planBtn) {
+    const planBtn = document.getElementById("emne-plan-btn") as HTMLButtonElement | null;
+    if (!planBtn) return;
     const btnCode = planBtn.dataset.code ?? "";
     const btnName = planBtn.dataset.name ?? "";
     const store = createPlanStore(semestersData.current?.id ?? "");
@@ -312,16 +318,20 @@ const description = `${course.code} ${course.name} — emnedetaljer, karaktersta
       planBtn.textContent = inPlan ? "I planen · Fjern" : "Legg til i planen";
     }
 
-    planBtn.addEventListener("click", () => {
-      if (store.hasCourse(btnCode)) {
-        store.removeCourse(btnCode);
-      } else {
-        store.addCourse({ code: btnCode, name: btnName });
-      }
-      syncPlanBtn();
-    });
+    planBtn.addEventListener(
+      "click",
+      () => {
+        if (store.hasCourse(btnCode)) {
+          store.removeCourse(btnCode);
+        } else {
+          store.addCourse({ code: btnCode, name: btnName });
+        }
+        syncPlanBtn();
+      },
+      { signal },
+    );
 
-    store.onPlanChange(syncPlanBtn);
+    signal.addEventListener("abort", store.onPlanChange(syncPlanBtn));
     syncPlanBtn();
-  }
+  });
 </script>
