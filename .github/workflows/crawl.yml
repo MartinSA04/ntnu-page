@@ -1,0 +1,43 @@
+name: Crawl
+
+# Nightly data refresh: crawl fresh artifacts and redeploy the site with them
+# baked in. The worker code ships unchanged — only data/ + public/data/ differ
+# from the last deploy. 03:47 UTC is off the hour to avoid scheduler/upstream
+# thundering herds (and offset from ntnu-api's 05:17 drift job).
+#
+# Politeness: the whole job no-ops while the CLOUDFLARE_API_TOKEN secret is
+# absent, so no upstream requests are spent on a build that cannot deploy.
+
+on:
+  workflow_dispatch: {}
+  schedule:
+    - cron: "47 3 * * *"
+
+jobs:
+  crawl-deploy:
+    runs-on: ubuntu-latest
+    env:
+      HAS_DEPLOY_CREDS: ${{ secrets.CLOUDFLARE_API_TOKEN != '' }}
+    steps:
+      - name: Skip note (no Cloudflare credentials yet)
+        if: env.HAS_DEPLOY_CREDS != 'true'
+        run: echo "CLOUDFLARE_API_TOKEN secret not set — nothing to deploy, skipping the crawl."
+      - uses: actions/checkout@v7
+        if: env.HAS_DEPLOY_CREDS == 'true'
+      - uses: actions/setup-node@v7
+        if: env.HAS_DEPLOY_CREDS == 'true'
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+        if: env.HAS_DEPLOY_CREDS == 'true'
+      - run: npm run crawl
+        if: env.HAS_DEPLOY_CREDS == 'true'
+      - run: npm run build
+        if: env.HAS_DEPLOY_CREDS == 'true'
+      - name: Deploy Worker to Cloudflare
+        if: env.HAS_DEPLOY_CREDS == 'true'
+        run: npx wrangler deploy
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}

@@ -18,4 +18,9 @@
 - Biome reports ~40 `noUnusedVariables/noUnusedImports` warnings in `.astro`
   frontmatter — known false positives (template bindings), exit code stays 0;
   don't "fix" them.
+- Workflow split mirrors ntnu-api/ntnu-mcp: `ci.yml` (push/PR checks),
+  `release.yml` (tag-driven deploy: `npm version <bump> && git push
+  --follow-tags`), `crawl.yml` (nightly data redeploy; no-ops without
+  Cloudflare secrets). Keep the crawler polite: identifying UA, request gaps,
+  no retry layer outside ntnu-api's HttpClient.
 - `mise run check` must stay green; UI copy is Norwegian bokmål.

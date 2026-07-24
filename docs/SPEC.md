@@ -38,7 +38,7 @@ Astro static site (dist/)  ──served by──▶  Cloudflare Worker (Workers 
 | `src/components/ThemeToggle.astro`, `Icon.astro`, `src/lib/{color,favicon,pageLifecycle}.ts` | ported (edit only if imports break) | shell |
 | `src/layouts/Layout.astro`, `src/styles/site.css`, `src/pages/index.astro`, `src/pages/404.astro` | page shell, landing, 404 | shell |
 | `src/pages/emner/index.astro`, `src/pages/emne/[code].astro`, `src/pages/studier/index.astro`, `src/pages/studier/[code].astro`, `src/components/site/*` | data pages + islands | pages |
-| `crawler/crawl.mjs` (+ helpers), `data/*.json`, `public/data/search-index.json`, `.github/workflows/nightly-crawl.yml`, `tests/crawler.test.ts` | crawler | crawler |
+| `crawler/crawl.mjs` (+ helpers), `data/*.json`, `public/data/search-index.json`, `.github/workflows/` (ci/release/crawl), `tests/crawler.test.mjs` | crawler | crawler |
 | `worker/src/*.ts`, `worker/tsconfig.json`, `tests/worker/*.test.ts` | API worker | worker |
 | root configs (`package.json`, `astro.config.mjs`, `wrangler.jsonc`, `tsconfig*.json`, `biome.json`, `mise.toml`) | pre-written — edit only with clear need | — |
 

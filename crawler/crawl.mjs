@@ -8,6 +8,7 @@
  */
 import { mkdtemp, rename, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
+import { setTimeout as sleep } from "node:timers/promises";
 import { fileURLToPath } from "node:url";
 import { NTNUClient } from "ntnu-api";
 import { toCatalog, toPrograms, toSearchIndex, toSemesters } from "./transform.mjs";
@@ -16,6 +17,13 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, "..");
 const DATA_DIR = path.join(ROOT, "data");
 const PUBLIC_DATA_DIR = path.join(ROOT, "public", "data");
+
+/**
+ * Pause between consecutive upstream requests. The crawl is ~10 requests
+ * total, but they'd otherwise fire back-to-back; spacing them out costs a few
+ * seconds a night and keeps the burst shape friendly.
+ */
+const REQUEST_GAP_MS = 500;
 
 /**
  * Write `content` to `filePath` atomically: write a tmp file in the same
@@ -50,7 +58,12 @@ function parseArgs(argv) {
 
 async function main() {
   const { year: yearFlag } = parseArgs(process.argv.slice(2));
-  const client = new NTNUClient();
+  // Identify ourselves to the upstream. Retries/backoff (incl. Retry-After on
+  // 429) live in ntnu-api's HttpClient — no outer retry layer here, so a
+  // struggling upstream is never hammered twice over.
+  const client = new NTNUClient({
+    userAgent: "ntnu-page-crawler/0.1 (+https://github.com/MartinSA04/ntnu-page)",
+  });
   const crawledAt = new Date().toISOString();
 
   const current = await client.semesters.current();
@@ -58,9 +71,13 @@ async function main() {
 
   console.log(`crawl  year=${year}`);
 
+  // Stable sort order keeps courses from hopping between pages mid-crawl, so
+  // searchAll's cross-page dedup drops duplicates instead of real courses.
   const hits = [];
-  for await (const page of client.courses.searchAll(year)) {
+  await sleep(REQUEST_GAP_MS);
+  for await (const page of client.courses.searchAll(year, null, { sort: "+ntnucoursecode" })) {
     hits.push(...page.courses);
+    await sleep(REQUEST_GAP_MS);
   }
   const catalog = toCatalog(hits, year, crawledAt);
   console.log(`catalog     courses=${catalog.courses.length}`);
@@ -71,6 +88,7 @@ async function main() {
   const programs = toPrograms(await client.programs.all(), crawledAt);
   console.log(`programs    programs=${programs.programs.length}`);
 
+  await sleep(REQUEST_GAP_MS);
   const semesters = toSemesters(await client.semesters.all(), current, crawledAt);
   console.log(
     `semesters   semesters=${semesters.semesters.length} current=${current?.id ?? "null"}`,

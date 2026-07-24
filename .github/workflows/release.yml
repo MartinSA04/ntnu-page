@@ -1,0 +1,44 @@
+name: Release
+
+# Deploys the site Worker when a version tag lands — after the check suite
+# passes, with a fresh crawl baked into the release build. The flow is:
+# `npm version <patch|minor|major>` locally, then `git push --follow-tags` —
+# this workflow does the rest.
+#
+# The deploy needs the CLOUDFLARE_API_TOKEN + CLOUDFLARE_ACCOUNT_ID repo
+# secrets ("Edit Cloudflare Workers" token template), same as ntnu-mcp.
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write # create the GitHub Release
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+      - name: Tag must match package.json version
+        run: test "v$(node -p "require('./package.json').version")" = "$GITHUB_REF_NAME"
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm test
+      - name: Crawl fresh data for the release build
+        run: npm run crawl
+      - run: npm run build
+      - name: Deploy Worker to Cloudflare
+        run: npx wrangler deploy
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      - name: GitHub Release with generated notes
+        run: gh release create "$GITHUB_REF_NAME" --verify-tag --generate-notes
+        env:
+          GH_TOKEN: ${{ github.token }}
