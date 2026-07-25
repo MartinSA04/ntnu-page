@@ -6,9 +6,15 @@ courses (by search or from a program/kull), then see immediately whether
 lectures clash, how exams are spread, and whether credits sum to a full
 semester. Everything else on the site feeds this flow.
 
-Binding alongside docs/SPEC.md and docs/DESIGN.md. Where this file and SPEC.md
-disagree, this file wins (it supersedes the "Pages" section for the pages it
-touches).
+Binding alongside docs/SPEC.md and docs/DESIGN.md, for the Ruteark
+interaction/render detail below — the *file-and-function* architecture
+(store → data → programPlan → renderers → plannerApp) and the crawled data
+contracts are SPEC.md's, not restated here to avoid the two drifting.
+**Corrected 2026-07-24**: several sections below described the pre-mandate
+build (v1 plan state, a single-column layout, "Fjern" for every removal) and
+had drifted from what actually shipped once PRODUCT.md §0 landed — fixed in
+place rather than left stale, per the same docs-are-not-frozen instruction
+that corrected PRODUCT.md §7.
 
 ## 1. Product shape
 
@@ -20,9 +26,12 @@ touches).
   timetable with conflicts, exam timeline with collision/gap warnings,
   selection list with credit total.
 - **Entry paths**: (a) search-and-add from `/emner/` or the planner's own
-  add field; (b) `/emne/[code]` "Legg til i planen"; (c) `/studier/[code]`
-  study plan → per-course and per-period add, which also records the
-  program/kull context.
+  add field; (b) `/emne/[code]` "Legg til i planen"; (c) `/studier/[code]`'s
+  "Bruk som planen min" — a **whole-period** commit that records the
+  program/kull(/direction) context, not a per-course add. DR-10 killed
+  per-course "+" buttons on that page: adding a single course into a
+  semester you are not planning is a bug factory, and `/studier/[code]/` is
+  a browsable template, not a second plan owner (REVIEW.md §3).
 
 ## 2. Visual & interaction design
 
@@ -30,64 +39,61 @@ The design system is **Ruteark** (docs/DESIGN.md — designed for this site;
 its named rules are law). The planner is the system's home turf:
 
 **Signature — red ink on the squared spread.** The timetable is `.np-frame`
-+ `.np-ruled`: a paper sheet with the faint squared ruling, blocks laid on
-the grid like a hand-drawn timetable done neatly. When two courses collide,
-the page marks the sheet in red ink: colliding blocks get a subtle red
-hatch overlay (`repeating-linear-gradient`, `--clash` at low alpha over the
-block fill), the course code inside gets `text-decoration: underline wavy`
-in `--clash`, and a mono margin note under the grid reads like a correction:
-"TDT4100 kolliderer med TMA4100 · mandag 10:15–12:00 · uke 35–41". No
-warning triangles, no toasts — red ink on paper (Red-Is-Collision rule;
-literal `--clash`/`--clash-bg`, never mixes). Same treatment for exam
-collisions.
++ `.np-ruled` (+ `.np-ruled--hours` on the week — a heavier line every 4th
+cell): a paper sheet with the squared ruling in register with its own
+content box (DESIGN.md §4), blocks laid on the grid like a hand-drawn
+timetable done neatly. When two courses collide, the page marks the sheet
+in red ink: a solid 2px `--clash-edge` inline-start rule on the colliding
+block plus `--clash-bg` on the overlapping band only (not a hatch over the
+whole block — that read at the same weight as the pastel course wash and
+was barely separable), the course code keeps `underline wavy` in `--clash`,
+and a margin note under the grid reads like a correction — grouped by
+(day, overlap window), so a real 3-way clash is one note, not three:
+"Torsdag 14:15–16:00 · TDT4160, TDT4136 og TMA4145 kolliderer · uke 34–46".
+No warning triangles, no toasts — red ink on paper (Red-Is-Collision rule).
+Same treatment for exam collisions.
 
 **Course identity**: each selected course gets one of the six `--hue-*`
 categoricals in selection order (see hues.ts; green = accent, red =
 collision, neither is a course hue). The mark is the square `.np-dot`
-preceding the mono course code (tags, grid blocks, exam dots, list rows).
-Never colored borders, never hue-tinted text (Adjudicated in DESIGN.md §8).
+preceding the mono course code (`.np-tag`/`.np-tag--sm`, grid blocks, exam
+dots, list rows). Never colored borders, never hue-tinted text (Adjudicated
+in DESIGN.md §8).
 
-**Layout of `/planlegger/`** (wide column, stacked editorial sections, no
-tabs):
+**Layout of `/planlegger/`**: a real `<h1>` (the programme name/code or
+"Semesterplan"), a context line (kull · studieretning · resolved semester)
+behind a "Bytt semester" disclosure rather than fold-weight chips, then a
+two-column body — the week (grid + verdict line + exam ribbon) at
+`minmax(0,1fr)` against a fixed `20rem` course rail (course rows + credit
+line + add field), collapsing to one column below the tablet breakpoint.
+See SPEC.md's `/planlegger/` architecture section for the exact DOM ids and
+the store → data → programPlan → renderers → plannerApp seam; it isn't
+restated here because a second copy of the DOM contract is exactly what
+goes stale first (which is what happened to the ASCII mockup this section
+used to have).
 
-```
-PLANLEGGER (np-kicker)                 [HØST 2026][VÅR 2027]   ← .np-toggle
-Semesterplanen din (display grotesk)               22,5 av 30 sp ← .np-data, live
-┌ basket panel (.np-panel) ──────────────────────────────────┐
-│ [▪TDT4100 ×] [▪TMA4100 ×] [▪TFE4146 ×]  [ + legg til emne ]│  ← .np-tag + .np-field
-│ Fra MTDT, kull 2024 · 5. semester                (np-note, if program context)
-└─────────────────────────────────────────────────────────────┘
-UKEPLAN (np-kicker) ─ uke 34–47 (np-data)
-[ .np-frame.np-ruled weekly spread: Mon–Fri columns, 08–20 rows, blocks
-  = square hue dot + mono code (wavy-red when colliding) + name + rooms +
-  "uke 35–41" mono; overlapping blocks split side-by-side ]
-[ margin notes: .np-note-clash conflict lines, one per colliding pair ]
-EKSAMENER (np-kicker) ─ 25. nov – 18. des (np-data)
-[ ribbon on a .np-frame.np-ruled strip: horizontal date axis, mono month
-  labels, one square dot per exam in course hue; same-day dots stack with a
-  red ring + red-ink note ]
-[ list: date — ▪code — exam form — gap annotation ("2 dager til neste") ]
-EMNER (np-kicker)
-[ rows: ▪code name · credits · campus · exam form · [Fjern] ]
-```
+**Empty state is the picker, not a sentence** (REVIEW.md B5): when the plan
+has no courses and no programme, the picker renders open as the page's only
+content and the add field stays mounted below it — there is no "velg et
+studieprogram over" pointing at something hidden.
 
-**Empty state is an invitation**: "Ingen emner i planen ennå." + the add
-field, a link "Søk i emnekatalogen", and "Start fra et studieprogram" with a
-small program search that links to `/studier/[code]/`.
+**States**: every async block renders a quiet "henter timeplan …" line
+while loading (or a skeleton grid, reserving the week's height, once
+bundles are in flight — REVIEW.md U5); errors are one line stating what
+failed and what to do. A course whose timetable has no weeks inside the
+chosen semester gets a note "Undervises ikke i valgt semester" on its row
+(not red — it is information, not an error) and is excluded from the
+credit total (DR-10).
 
-**States**: every async block renders a quiet mono "henter timeplan …" line
-while loading; errors are one mono line stating what failed and what to do
-("Fikk ikke hentet timeplanen. Prøv igjen om litt."). A course whose
-timetable has no weeks inside the chosen semester gets a mono note
-"Undervises ikke i valgt semester" on its rows (not red — it is information,
-not an error).
-
-**Motion**: standard tokens only (`--dur-fast`/`--dur`/`--ease`). Adding a
-course lets its blocks fade/settle in over `--dur`; clicking a conflict note
-scrolls to and `np-target-flash`es the block. Nothing else moves.
+**Motion**: standard tokens only (`--dur-fast`/`--dur`/`--ease`). Clicking
+a conflict note scrolls to and `np-target-flash`es the block, honoring
+`prefers-reduced-motion` (falls back to an instant jump — REVIEW.md A5).
 
 **Copy vocabulary** (consistent verbs everywhere, bokmål, sentence case):
-"Legg til i planen" → state flips to "I planen · Fjern". "Fjern" removes.
+"Legg til i planen" → "I planen". A programme course's removal is
+reversible — "Dropp" → "Legg tilbake" — and gets a different verb from a
+manual add's outright "Fjern" (PRODUCT.md §0.3, DESIGN.md §7 — using
+"Fjern" for both used to make a reversible edit read as a delete).
 "kolliderer med" for clashes. Credits always "X av 30 sp" (comma decimals:
 "22,5"). Semester names as NTNU writes them ("Høst 2026"). The planner is
 "planen" in all copy, the page title "Planlegger".
@@ -101,80 +107,70 @@ are the system's 2px accent outline; the whole page works keyboard-only.
 
 All pure TS, unit-tested, no framework. Files owned by the "lib" agent:
 
-- **`store.ts`** — plan state + persistence.
-  ```ts
-  interface PlanState {
-    v: 1;
-    semesterId: string;            // "26h" | "27v" — Semester.id from semesters.json
-    courses: { code: string; name: string }[];   // insertion order = hue order
-    program?: { code: string; name: string; cohort: number };
-  }
-  ```
-  localStorage key `ntnu:plan:v1`. API: `loadPlan()`, `savePlan(p)`,
-  `addCourse`, `removeCourse`, `hasCourse`, `setSemester`, `setProgram`,
-  `onPlanChange(cb)` (storage + custom event `ntnu:plan-change`, fires
-  across components and tabs). Storage injectable for tests. Hash sync
-  (planner page only): `#26h;TDT4100,TMA4100` — parse on load (hash wins
-  over storage, so links are shareable), write on change.
+- **`store.ts`** — plan state + persistence + the hash grammar. The shape
+  is `PRODUCT.md §7`'s `PlanState` (v2: `source`/`dropped`/`credits` per
+  course, optional `program.direction`) — not restated here, it's the one
+  place this interface is defined. localStorage key `ntnu:plan:v1` (the
+  key name predates the v2 hash grammar; don't read anything into the
+  "v1"). API: `loadPlan()`, `savePlan(p)`, `addCourse`, `dropCourse`,
+  `restoreCourse`, `removeCourse`, `hasCourse`, `setSemester`,
+  `setProgramPlan`, `onPlanChange(cb)` (storage + custom event
+  `ntnu:plan-change`, fires across components, tabs and the sitewide plan
+  strip). Storage injectable for tests. Hash sync: `parsePlanHash`/
+  `formatPlanHash`, `hashchange`-aware so a pasted link applies live.
 - **`schedule.ts`** — time math. `parseWeeks(["2-13","15"]) → number[]`,
   `toMinutes("10:15") → 615`, `semesterYear("26h") → 2026`,
   `entriesInSemester(entries, teachingWeeks)` (intersects entry weeks with
   the semester's teaching weeks; empty ⇒ not taught this semester).
-- **`conflicts.ts`** — the engine. Pairwise over selected courses:
-  same `dayNumber` + time-range overlap + non-empty week intersection ⇒
-  `Conflict { a, b, dayNumber, start, end, weeks }`. Exam analysis over
-  `{ code, date }[]`: same-date ⇒ collision; 1-day gap ⇒ "tett" warning;
-  output sorted by date with day-gaps computed. Both must be thoroughly
-  unit-tested (edge: back-to-back 12:00/12:00 is NOT a conflict; disjoint
-  weeks NOT a conflict; multi-exam courses; null dates skipped).
-- **`data.ts`** — fetch + shape. Per course, in parallel:
-  `GET /api/course/:code/timetable?year=` (grid) and `GET /api/course/:code`
-  (credits, exams with date/time/form, assessment). Static tier for instant
-  add/name/exam-dates: the search index (see §4). In-memory memoization per
-  page load; tolerate individual failures per course (the page renders what
-  it has, one error line per failed course).
+- **`conflicts.ts`** — the engine. Pairwise over selected courses: same
+  `dayNumber` + time-range overlap + non-empty week intersection ⇒
+  `Conflict { a, b, dayNumber, start, end, weeks }`, then `groupConflicts()`
+  collapses pairwise conflicts sharing a (day, overlap window) into one
+  `ConflictGroup` — a real 3-way clash is one group, not three pairs, which
+  is what the verdict line and the grid's margin notes both count.
+  `mergeParallelSlots()` folds byte-identical parallel entries (four
+  identical "Lab" sessions) into one labelled group without losing a
+  genuinely distinct one (two campuses at the same time). Exam analysis
+  over `{ code, date }[]`: same-date ⇒ collision; 1-day gap ⇒ "tett"
+  warning; output sorted by date with day-gaps computed. All of it is
+  thoroughly unit-tested (edge: back-to-back 12:00/12:00 is NOT a conflict;
+  disjoint weeks NOT a conflict; multi-exam courses; null dates skipped).
+- **`data.ts`** — fetch + shape. Per course: `GET
+  /api/course/:code/timetable?year=&version=` (grid, version-threaded —
+  DR-4) and `GET /api/course/:code` (credits, exams, assessment), memoised
+  per `code:year:version`. Static tier for instant add/name/exam-dates: the
+  search index (§4 below). `indexForSemester()` narrows an index's exams to
+  one semester's window before anything renders them (REVIEW.md C3).
+  Tolerates individual per-course failures (the page renders what it has,
+  composing the gap into the provenance line — DR-8).
 - **`hues.ts`** — `hueForIndex(i)` cycling the six categorical custom
   properties by insertion order.
 
-## 4. Crawler change (search index gains planner fields)
+## 4. Crawler / search index
 
-`public/data/search-index.json` entries become
-`[code, name, location, exams]` where `exams` =
-`[[season, dateOrNull], ...]` (e.g. `[["AUTUMN","2026-12-05"]]`) — compact
-arrays, same file serves search page + planner (instant exam dates before
-details load). Bump nothing else; transform tests updated accordingly.
+`public/data/search-index.json`'s row shape and the two-year catalog union
+are SPEC.md's contract (`# Crawled data contracts`) — not duplicated here.
+In short: each row is `[code, name, location, exams, version, offeredYears]`
+(six elements; the first four are what this file originally shipped, the
+last two were added for DR-4's version threading and REVIEW.md C1's
+two-year union so a course absent from this year's catalog still renders
+honestly).
 
-## 5. Page work
+## 5. Page work — status
 
-- **`/planlegger/` (new, "planner-page" agent)**: one Astro page, wide
-  Layout, one main island module orchestrating the sections per §2; DOM built
-  with vanilla TS; grid via CSS grid (15-min row granularity, 08:00–20:00,
-  Mon–Fri + Sat only when data demands); side-by-side split for overlapping
-  blocks (2-way is enough; 3+ stacks by width). Semester chips offer the
-  current + next two semesters from semesters.json (prefer ones with
-  `timetablePublished`; mono note "timeplan ikke publisert ennå" when not).
-- **Integrations ("integrations" agent)**:
-  - `Layout.astro` nav: add "Planlegger" pill (first, before Emner/Studier).
-  - `/` landing: re-pitch hero around the planner ("Planlegg semesteret.
-    Se timeplankollisjoner og eksamensdatoer før du melder deg opp."),
-    primary tile → `/planlegger/`; if the stored plan is non-empty, a mono
-    line "Planen din: 4 emner · 22,5 sp" linking to the planner.
-  - `/emne/[code]`: "Legg til i planen" (paper button `.np-btn`) near the
-    title; reflects membership ("I planen · Fjern").
-  - `/emner/` rows: trailing `.np-icon-btn` "+" quick-add (aria-label "Legg
-    til CODE i planen"), flips to a checkmark when in plan.
-  - `/studier/[code]`: each plan course row gets a small add control; each
-    period header gets "Legg til alle"; any add from here calls
-    `setProgram({code, name, cohort})`. Auto-highlight the period matching
-    the planner's chosen semester for the selected kull (period n =
-    (semYear − cohort) × 2 + (autumn ? 1 : 2); mono kicker "ditt semester").
-- **Worker**: unchanged — existing endpoints cover everything.
+`/planlegger/` and its integrations across `/`, `/emne/[code]/`,
+`/emner/`, `/studier/[code]/` are built. What actually shipped, and where
+it diverged from this file's original plan, is tracked in
+`docs/ROADMAP.md`'s "Shipped" section and `docs/REVIEW.md` (the full-site
+review that fixed most of the divergences) — this section is intentionally
+not a duplicate task list.
 
 ## 6. Quality bar
 
-`mise run check` + `npm run build` green; conflict/schedule engines have
-real test coverage (not smoke tests); every interactive element has rest/
-hover/focus-visible/press states per DESIGN.md; keyboard-only pass works;
-`prefers-reduced-motion` honored via tokens; no console errors on any page;
-Norwegian copy per the vocabulary above. The planner must be genuinely
-pleasant with 0, 1, 6 and 12 selected courses.
+`mise run check` + `npm run build` green; `mise run e2e` green (now gates
+CI on the planner/worker paths and every release — REVIEW.md T1); conflict/
+schedule engines have real test coverage (not smoke tests); every
+interactive element has rest/hover/focus-visible/press states per
+DESIGN.md; keyboard-only pass works; `prefers-reduced-motion` honored; no
+console errors on any page; Norwegian copy per the vocabulary above. The
+planner must be genuinely pleasant with 0, 1, 6 and 12 selected courses.

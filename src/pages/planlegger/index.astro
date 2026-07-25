@@ -1,39 +1,71 @@
 ---
 import programsData from "../../../data/programs.json";
 import Layout from "../../layouts/Layout.astro";
+// The week's geometry and ink live in one stylesheet because two surfaces
+// render it through the same `renderGrid` (/planlegger/ and /emne/[code]/).
+// Only this page's scroll-edge mask and the exam ribbon stay scoped below.
+import "../../styles/planner-week.css";
 
 const description =
   "Velg studieprogram og kull, se ukeplanen med en gang: forelesninger, kollisjoner, eksamensdatoer og studiepoeng.";
 
-// Trimmed to [code, name] tuples: the programme picker only needs identity,
-// not the full crawled record (keeps the client payload small).
-const programOptions: [code: string, name: string][] = programsData.programs
-  .map((p): [string, string] => [p.code, p.name])
-  .sort((a, b) => a[1].localeCompare(b[1], "nb"));
+// Trimmed tuples: the picker needs identity plus the field that tells two
+// same-named programmes apart (B6 — MIDT and MTDT are both "Datateknologi",
+// with opposite outcomes), not the full crawled record; this ships to every
+// visitor. Same tuple as the homepage picker (src/pages/index.astro): the two
+// ask the same question and must not disagree about what a row shows.
+const programOptions: [code: string, name: string, studyLevel: string, cities: string[]][] =
+  programsData.programs
+    .map((p): [string, string, string, string[]] => [
+      p.code,
+      p.name,
+      p.studyLevel ?? "",
+      p.cities ?? [],
+    ])
+    .sort((a, b) => a[1].localeCompare(b[1], "nb"));
+
+// `JSON.stringify` escapes neither "<" nor "/", so an upstream programme name
+// containing "</script" would close this tag and everything after it would be
+// parsed as markup (C5c). < is a legal JSON escape, so the payload stays
+// valid JSON and the parser sees the original character.
+const programOptionsJson = JSON.stringify(programOptions).replaceAll("<", "\\u003c");
 ---
 
 <Layout title="Planlegger — Semesterplan" description={description} wide>
   <div class="planner-banner">
     <div class="planner-banner-main">
       <p class="np-kicker planner-kicker">Planlegger</p>
-      <p class="np-data planner-context-line" id="planner-context-line"></p>
+      <h1 class="planner-title" id="planner-title">Semesterplan</h1>
+      <p class="np-hint planner-context-line" id="planner-context-line"></p>
     </div>
     <div class="planner-banner-controls">
-      <div
-        class="planner-semester-toggle"
-        id="planner-semester-toggle"
-        role="group"
-        aria-label="Velg semester"
+      <button
+        type="button"
+        class="np-btn planner-context-change"
+        id="planner-context-change"
+        aria-expanded="false"
+        aria-controls="planner-picker"
       >
-      </div>
-      <button type="button" class="np-btn planner-context-change" id="planner-context-change">
-        Endre
+        Velg studieprogram
       </button>
     </div>
   </div>
 
-  <section class="np-panel planner-picker" id="planner-picker" hidden aria-label="Velg studieprogram og kull">
-    <p class="np-kicker planner-picker-kicker">Studieprogram</p>
+  <p class="np-hint planner-link-note" id="planner-link-note" hidden></p>
+
+  <details class="planner-semester" id="planner-semester">
+    <summary class="np-summary planner-semester-summary">Bytt semester</summary>
+    <div
+      class="planner-semester-toggle"
+      id="planner-semester-toggle"
+      role="group"
+      aria-label="Velg semester"
+    >
+    </div>
+  </details>
+
+  <section class="np-panel planner-picker" id="planner-picker" hidden aria-labelledby="planner-picker-heading">
+    <h2 class="np-kicker planner-picker-kicker" id="planner-picker-heading">Studieprogram</h2>
     <form class="np-field planner-picker-field" id="planner-picker-field" autocomplete="off">
       <input
         type="text"
@@ -47,7 +79,7 @@ const programOptions: [code: string, name: string][] = programsData.programs
       />
     </form>
     <ul
-      class="planner-picker-listbox"
+      class="np-popover planner-picker-listbox"
       id="planner-picker-listbox"
       role="listbox"
       aria-label="Studieprogramforslag"
@@ -57,13 +89,10 @@ const programOptions: [code: string, name: string][] = programsData.programs
     <div class="planner-picker-kull" id="planner-picker-kull" hidden>
       <p class="np-kicker">Kull</p>
       <div class="planner-picker-kull-chips" id="planner-picker-kull-chips" role="group" aria-label="Velg kull"></div>
+      <p class="np-hint planner-picker-kull-hint">Kull = året du startet på studiet.</p>
     </div>
-    <p class="np-note" id="planner-picker-status"></p>
+    <p class="np-hint" id="planner-picker-status" aria-live="polite"></p>
   </section>
-
-  <p class="np-note planner-empty-invite" id="planner-empty-state" hidden>
-    Ingen emner i planen ennå. Velg et studieprogram over, eller legg til emner selv.
-  </p>
 
   <div id="planner-main">
     <div class="planner-tabs" id="planner-tabs" role="group" aria-label="Bytt mellom uke og emner">
@@ -86,10 +115,10 @@ const programOptions: [code: string, name: string][] = programsData.programs
     </div>
 
     <div class="planner-regions" id="planner-regions" data-region="week">
-      <section class="planner-region planner-region-week" id="planner-region-week" aria-label="Ukeplan">
+      <section class="planner-region planner-region-week" id="planner-region-week" aria-labelledby="planner-week-heading">
         <div class="np-panel planner-direction" id="planner-direction" hidden>
-          <p class="np-kicker" id="planner-direction-title"></p>
-          <p class="np-note planner-direction-note" id="planner-direction-note"></p>
+          <h2 class="planner-direction-title" id="planner-direction-title"></h2>
+          <p class="np-hint planner-direction-note" id="planner-direction-note"></p>
           <div
             class="planner-direction-chips"
             id="planner-direction-chips"
@@ -97,11 +126,14 @@ const programOptions: [code: string, name: string][] = programsData.programs
             aria-label="Velg studieretning"
           >
           </div>
+          <div class="planner-direction-actions" id="planner-direction-actions" hidden>
+            <button type="button" class="np-btn" id="planner-direction-btn">Velg emner</button>
+          </div>
         </div>
 
         <div class="planner-section-head">
-          <p class="np-kicker">Ukeplan</p>
-          <p class="np-data planner-section-sub" id="planner-grid-status"></p>
+          <h2 class="np-kicker" id="planner-week-heading">Ukeplan</h2>
+          <p class="planner-section-sub" id="planner-grid-status" aria-live="polite"></p>
           <button
             type="button"
             class="np-toggle planner-others-toggle"
@@ -111,24 +143,25 @@ const programOptions: [code: string, name: string][] = programsData.programs
             Vis øvinger og labber
           </button>
         </div>
-        <div class="np-frame np-ruled planner-grid-frame" id="planner-grid-frame"></div>
+        <p class="np-hint planner-scroll-hint" id="planner-scroll-hint" hidden></p>
+        <div class="np-frame np-ruled np-ruled--hours planner-grid-frame" id="planner-grid-frame"></div>
         <div class="planner-grid-notes" id="planner-grid-notes"></div>
-        <p class="np-note planner-prepublish-note" id="planner-prepublish-note" hidden></p>
 
         <div class="planner-section-head">
-          <p class="np-kicker">Eksamener</p>
+          <h2 class="np-kicker" id="planner-exam-heading">Eksamener</h2>
           <p class="np-data planner-section-sub" id="planner-exam-window"></p>
-          <p class="np-data planner-section-sub" id="planner-exam-status"></p>
+          <p class="planner-section-sub" id="planner-exam-status" aria-live="polite"></p>
         </div>
         <div class="np-frame np-ruled planner-exam-frame" id="planner-exam-frame"></div>
         <div class="planner-exam-list" id="planner-exam-list-host"></div>
       </section>
 
-      <section class="planner-region planner-region-courses" id="planner-region-courses" aria-label="Emner i planen">
+      <section class="planner-region planner-region-courses" id="planner-region-courses" aria-labelledby="planner-courses-heading">
         <div class="planner-section-head">
-          <p class="np-kicker">Emner</p>
+          <h2 class="np-kicker" id="planner-courses-heading">Emner</h2>
           <span class="np-data planner-credit-line" id="planner-credit-line">0 av 30 sp</span>
         </div>
+        <p class="np-hint planner-credit-note" id="planner-credit-note" hidden></p>
 
         <div class="planner-course-rows" id="planner-course-rows"></div>
 
@@ -160,9 +193,9 @@ const programOptions: [code: string, name: string][] = programsData.programs
               Alle emner
             </button>
           </div>
-          <p class="np-note planner-scope-note" id="planner-scope-note" hidden></p>
+          <p class="np-hint planner-scope-note" id="planner-scope-note" hidden></p>
           <ul
-            class="planner-add-listbox"
+            class="np-popover planner-add-listbox"
             id="planner-add-listbox"
             role="listbox"
             aria-label="Emneforslag"
@@ -173,7 +206,7 @@ const programOptions: [code: string, name: string][] = programsData.programs
       </section>
     </div>
 
-    <p class="np-note planner-provenance" id="planner-provenance"></p>
+    <p class="np-hint planner-provenance" id="planner-provenance"></p>
   </div>
 </Layout>
 
@@ -186,15 +219,40 @@ const programOptions: [code: string, name: string][] = programsData.programs
     justify-content: space-between;
     gap: var(--gap-4);
     flex-wrap: wrap;
-    margin-bottom: var(--space-5);
+    margin-bottom: var(--space-4);
   }
 
   .planner-kicker {
     margin-bottom: var(--space-1);
   }
 
-  .planner-context-line {
+  /* The page title IS the answer to "whose plan is this" (D2/A1). The
+     programme name is set in the grotesk at the page-title step; the code
+     rides beside it in mono, because that is the part a student copies. */
+  .planner-title {
+    display: flex;
+    align-items: baseline;
+    gap: var(--gap-3);
+    flex-wrap: wrap;
+  }
+
+  :global(.planner-title-code) {
     font-size: var(--text-md);
+    color: var(--muted);
+  }
+
+  :global(.planner-title a) {
+    color: inherit;
+    text-decoration-color: color-mix(in srgb, var(--accent) 40%, transparent);
+  }
+
+  :global(.planner-title a:hover) {
+    color: var(--accent-ink);
+  }
+
+  .planner-context-line {
+    max-width: none;
+    margin-top: var(--space-1);
   }
 
   :global(.planner-context-direction) {
@@ -208,14 +266,41 @@ const programOptions: [code: string, name: string][] = programsData.programs
     flex-wrap: wrap;
   }
 
-  .planner-semester-toggle {
-    display: flex;
-    gap: var(--gap-2);
-    flex-wrap: wrap;
+  .planner-link-note:not([hidden]) {
+    max-width: none;
+    margin-bottom: var(--space-4);
   }
 
-  .planner-empty-invite {
-    margin-bottom: var(--space-6);
+  /* --- Semester disclosure ---------------------------------------------- */
+
+  /* DR-9/U6: the tool resolves the plannable term itself and states it in the
+     context line. Switching is still available, but it is a disclosure rather
+     than the fold's loudest control — two of the three terms it offers have
+     no published timetable, and each says so on its own chip. */
+  .planner-semester {
+    margin-bottom: var(--space-5);
+  }
+
+  .planner-semester-summary {
+    display: inline-flex;
+  }
+
+  .planner-semester-toggle {
+    display: flex;
+    gap: var(--gap-3);
+    flex-wrap: wrap;
+    margin-top: var(--space-2);
+  }
+
+  :global(.planner-semester-choice) {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-1);
+  }
+
+  :global(.planner-semester-note) {
+    color: var(--faint);
   }
 
   /* --- Programme/kull picker ------------------------------------------- */
@@ -237,27 +322,14 @@ const programOptions: [code: string, name: string][] = programsData.programs
   }
 
   .planner-picker-listbox {
-    list-style: none;
-    background: var(--card-nested);
-    border-radius: var(--radius-sm);
-    box-shadow: var(--shadow);
-    max-height: 16rem;
-    overflow-y: auto;
-    padding: var(--space-1);
+    --popover-max: 16rem;
   }
 
   :global(.planner-picker-option) {
     display: flex;
     align-items: baseline;
     gap: var(--gap-3);
-    padding: var(--space-2);
-    border-radius: var(--radius-xs);
-    cursor: pointer;
-  }
-
-  :global(.planner-picker-option.is-active),
-  :global(.planner-picker-option:hover) {
-    background: var(--card-hover);
+    flex-wrap: wrap;
   }
 
   :global(.planner-picker-code) {
@@ -271,10 +343,19 @@ const programOptions: [code: string, name: string][] = programsData.programs
     font-size: var(--text-sm);
   }
 
+  :global(.planner-picker-level) {
+    font-size: var(--text-xs);
+    color: var(--faint);
+  }
+
   .planner-picker-kull-chips {
     display: flex;
     flex-wrap: wrap;
     gap: var(--gap-2);
+  }
+
+  .planner-picker-kull-hint {
+    margin-top: var(--space-1);
   }
 
   /* --- Two regions ------------------------------------------------------- */
@@ -305,16 +386,39 @@ const programOptions: [code: string, name: string][] = programsData.programs
     min-width: 0;
   }
 
+  /* Empty plan (B5): the picker is the page. The week and the tabs have
+     nothing to say yet, but the add field stays mounted — a student who
+     already knows a course code should not have to pick a programme first. */
+  #planner-main.is-empty .planner-tabs,
+  #planner-main.is-empty .planner-region-week {
+    display: none;
+  }
+
+  #planner-main.is-empty .planner-regions {
+    display: block;
+  }
+
+  /* A credit total and a course list with nothing in them are not an
+     invitation; the field is. */
+  #planner-main.is-empty .planner-credit-line,
+  #planner-main.is-empty .planner-course-rows,
+  #planner-main.is-empty .planner-scope {
+    display: none;
+  }
+
   @media (min-width: 60rem) {
     .planner-tabs {
       display: none;
     }
 
+    /* The week is the primary surface (§0.2) and takes every pixel the rail
+       does not need; the rail only ever holds a code, a name and a button,
+       so it wants a fixed measure rather than a fraction (D7). */
     .planner-regions {
       display: grid;
-      grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr);
+      grid-template-columns: minmax(0, 1fr) 18rem;
       align-items: start;
-      gap: var(--space-7, var(--space-6));
+      gap: var(--space-7);
     }
 
     .planner-regions[data-region="week"] .planner-region-courses,
@@ -328,8 +432,16 @@ const programOptions: [code: string, name: string][] = programsData.programs
     }
   }
 
-  /* --- Studieretning question -------------------------------------------- */
+  @media (min-width: 72rem) {
+    .planner-regions {
+      grid-template-columns: minmax(0, 1fr) 20rem;
+    }
+  }
 
+  /* --- The week's open question ------------------------------------------ */
+
+  /* Studieretning, campus, or "your period is all electives" (B2/U8). It sits
+     above the grid because the same question behind a tab is a dead end. */
   .planner-direction:not([hidden]) {
     display: flex;
     flex-direction: column;
@@ -337,14 +449,31 @@ const programOptions: [code: string, name: string][] = programsData.programs
     margin-bottom: var(--space-5);
   }
 
+  /* A title, not a kicker: "Studieplanen din for Høst 2026 er valgfri" is a
+     sentence, and 11.5 px uppercase tracked mono is where D10 draws the line. */
+  .planner-direction-title {
+    font-size: var(--text-md);
+    font-weight: var(--weight-medium);
+    letter-spacing: normal;
+  }
+
   .planner-direction-note {
     margin: 0;
+    max-width: none;
   }
 
   .planner-direction-chips {
     display: flex;
     flex-wrap: wrap;
     gap: var(--gap-2);
+    margin-top: var(--space-1);
+  }
+
+  .planner-direction-chips:empty {
+    display: none;
+  }
+
+  .planner-direction-actions:not([hidden]) {
     margin-top: var(--space-1);
   }
 
@@ -359,8 +488,20 @@ const programOptions: [code: string, name: string][] = programsData.programs
   }
 
   .planner-section-sub {
+    font-family: var(--font-sans);
+    font-size: var(--text-sm);
     color: var(--muted);
-    font-size: var(--text-xs);
+  }
+
+  .planner-section-sub:empty {
+    display: none;
+  }
+
+  /* The verdict (U4): PRODUCT §1's primary job answered beside the kicker.
+     Accent when the week holds together, --clash when it does not — the two
+     states Green-Means-Fits and Red-Is-Collision are named for. */
+  :global(.planner-section-sub.is-clean) {
+    color: var(--accent-ink);
   }
 
   .planner-others-toggle {
@@ -374,173 +515,62 @@ const programOptions: [code: string, name: string][] = programsData.programs
     transition: color var(--dur-fast) var(--ease);
   }
 
+  /* Green means it fits — exactly a full load, never an overload. "37,5 av
+     30 sp" in the same green as 30 tells the student the opposite of the
+     truth (B9.3); the overload keeps neutral ink and explains itself in
+     .planner-credit-note below. */
   .planner-credit-line.is-full {
     color: var(--accent-ink);
   }
 
+  .planner-credit-note:not([hidden]) {
+    max-width: none;
+    margin-bottom: var(--space-3);
+  }
+
   /* --- Weekly grid --------------------------------------------------------- */
 
-  .planner-grid-frame {
-    padding: var(--space-4);
-    margin-bottom: var(--space-2);
-    overflow-x: auto;
+  /* The week's own geometry and ink are in src/styles/planner-week.css, shared
+     with /emne/[code]/. What follows is only what this page adds to it. */
+
+  /* A4: at 390 px the week is ~200 px narrower than its content and the
+     frame's own border closes right after ONS — no fade, no scrollbar, and
+     the page itself does not scroll, so the clip reads as an edge and a
+     student can conclude they have no Thursday lecture. The mask says
+     "there is more"; #planner-scroll-hint names which days. */
+  .planner-grid-frame[data-scroll="start"] {
+    mask-image: linear-gradient(to right, #000 calc(100% - 2rem), transparent 100%);
   }
 
-  :global(.planner-grid-empty),
-  :global(.planner-exam-empty) {
-    margin: var(--space-4);
-  }
-
-  :global(.planner-grid) {
-    position: relative;
-    display: grid;
-    grid-template-columns: 3.5em repeat(var(--planner-days), 1fr);
-    /* One CSS grid row per 15-min slot, sized to the ruling's --cell so the
-       grid-row-based rail and the absolutely-positioned blocks (top/height
-       in --cell units) land on the same pixel grid. */
-    grid-auto-rows: var(--cell);
-    min-width: 34rem;
-  }
-
-  :global(.planner-grid-rail) {
-    grid-column: 1;
-    grid-row: 1 / span var(--planner-rows);
-    position: relative;
-  }
-
-  :global(.planner-grid-hour) {
-    position: absolute;
-    /* Same pixel math as .planner-block's top — the rail is a positioned
-       box, so grid-row placement doesn't apply to its absolute children. */
-    top: calc((var(--planner-row-start) - 1) * var(--cell));
-    right: var(--gap-2);
-    transform: translateY(-0.5em);
-    color: var(--faint);
-    font-size: var(--text-xs);
-  }
-
-  :global(.planner-grid-day) {
-    grid-row: 1 / span var(--planner-rows);
-    grid-column: calc(var(--planner-day) + 1);
-    position: relative;
-  }
-
-  :global(.planner-grid-day-header) {
-    position: sticky;
-    top: 0;
-    text-align: center;
-    padding-bottom: var(--space-1);
-  }
-
-  :global(.planner-block) {
-    position: absolute;
-    inset-inline: calc(var(--planner-col, 0) * (100% / var(--planner-col-count, 1)))
-      calc((var(--planner-col-count, 1) - var(--planner-col, 0) - 1) * (100% / var(--planner-col-count, 1)));
-    top: calc((var(--planner-row-start) - 1) * var(--cell));
-    height: calc((var(--planner-row-end) - var(--planner-row-start)) * var(--cell));
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-    padding: var(--space-1) var(--space-2);
-    margin: 0 1px;
-    background: color-mix(in srgb, var(--dot) 16%, var(--card));
-    border-radius: var(--radius-xs);
-    overflow: hidden;
-    text-align: left;
-    transition: background var(--dur-fast) var(--ease);
-  }
-
-  :global(.planner-block:hover) {
-    background: color-mix(in srgb, var(--dot) 26%, var(--card));
-  }
-
-  /* Øving/lab display layer (DR-1): reduced ink, hue dot only, never red. */
-  :global(.planner-block.is-muted) {
-    background: color-mix(in srgb, var(--dot) 8%, var(--card));
-    color: var(--muted);
-  }
-
-  :global(.planner-block.is-muted:hover) {
-    background: color-mix(in srgb, var(--dot) 14%, var(--card));
-  }
-
-  :global(.planner-block.is-clash) {
-    background-image: repeating-linear-gradient(
-      45deg,
-      color-mix(in srgb, var(--clash) 22%, transparent),
-      color-mix(in srgb, var(--clash) 22%, transparent) 4px,
-      transparent 4px,
-      transparent 8px
+  .planner-grid-frame[data-scroll="middle"] {
+    mask-image: linear-gradient(
+      to right,
+      transparent 0,
+      #000 2rem,
+      #000 calc(100% - 2rem),
+      transparent 100%
     );
-    background-color: color-mix(in srgb, var(--dot) 16%, var(--card));
   }
 
-  :global(.planner-block-head) {
-    display: flex;
-    align-items: center;
-    gap: var(--gap-2);
-    min-width: 0;
+  .planner-grid-frame[data-scroll="end"] {
+    mask-image: linear-gradient(to right, transparent 0, #000 2rem);
   }
 
-  :global(.planner-block-code) {
-    font-size: var(--text-xs);
-    font-weight: var(--weight-medium);
-  }
-
-  :global(.planner-block.is-clash .planner-block-code) {
-    text-decoration: underline wavy var(--clash);
-    text-underline-offset: 2px;
-  }
-
-  :global(.planner-block-name) {
-    font-size: var(--text-xs);
-    line-height: var(--leading-snug);
-    overflow: hidden;
-    text-overflow: ellipsis;
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
-  }
-
-  :global(.planner-block-rooms),
-  :global(.planner-block-weeks) {
-    font-size: var(--text-xs);
-    color: var(--muted);
-  }
-
-  .planner-grid-notes {
+  .planner-scroll-hint:not([hidden]) {
     margin-bottom: var(--space-2);
-  }
-
-  :global(.planner-notes-list) {
-    list-style: none;
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-1);
-  }
-
-  :global(.planner-note-link) {
-    text-align: left;
-    text-decoration: underline;
-    text-decoration-color: color-mix(in srgb, var(--clash) 40%, transparent);
-    text-underline-offset: 2px;
-  }
-
-  :global(.planner-note-link:hover) {
-    text-decoration-color: currentColor;
-  }
-
-  .planner-prepublish-note {
-    margin-bottom: var(--space-6);
   }
 
   /* --- Exam ribbon ----------------------------------------------------- */
 
   .planner-exam-frame {
-    padding: var(--space-6) var(--space-4) var(--space-4);
+    padding: calc(var(--cell) * 2) var(--cell) var(--cell);
     margin-bottom: var(--space-2);
     position: relative;
-    min-height: 6rem;
+  }
+
+  /* The frame's own padding is the spacing; a message in it is not prose. */
+  :global(.planner-exam-empty) {
+    margin: 0;
   }
 
   :global(.planner-exam-axis) {
@@ -583,6 +613,11 @@ const programOptions: [code: string, name: string][] = programsData.programs
     margin-bottom: var(--space-6);
   }
 
+  :global(.planner-exam-list ul) {
+    list-style: none;
+    max-width: none;
+  }
+
   :global(.planner-exam-row) {
     display: flex;
     align-items: center;
@@ -592,10 +627,11 @@ const programOptions: [code: string, name: string][] = programsData.programs
     flex-wrap: wrap;
   }
 
+  /* 9em, not 6.5 — "dato ikke satt" is a real value and has to fit (D3). */
   :global(.planner-exam-date) {
     color: var(--muted);
     font-size: var(--text-sm);
-    width: 6.5em;
+    width: 9em;
     flex-shrink: 0;
   }
 
@@ -606,6 +642,10 @@ const programOptions: [code: string, name: string][] = programsData.programs
     font-size: var(--text-sm);
   }
 
+  :global(.planner-exam-gap.is-tight) {
+    color: var(--clash);
+  }
+
   /* --- Course rows ------------------------------------------------------- */
 
   .planner-course-rows {
@@ -614,9 +654,17 @@ const programOptions: [code: string, name: string][] = programsData.programs
     margin-bottom: var(--space-3);
   }
 
+  /* Three columns (code · name · button) is one column too many for a 20 rem
+     rail. D7 correctly gave the week the width it was missing, which left the
+     name sharing a line with "Dropp" on 130 px: "Informasjonsteknologi,
+     grunnkurs" ran under the button and "Examen philosophicum for
+     naturvitenskap og teknologi" broke into five one-word lines. So the row
+     is two columns — identity and the one verb on the top line, which is the
+     pair a student scans — and the name takes the rail's full measure on its
+     own line below. Nothing is taken back from the week. */
   :global(.planner-course-row) {
     display: grid;
-    grid-template-columns: auto 1fr auto;
+    grid-template-columns: minmax(0, 1fr) auto;
     align-items: baseline;
     column-gap: var(--gap-3);
     row-gap: var(--space-1);
@@ -635,17 +683,25 @@ const programOptions: [code: string, name: string][] = programsData.programs
   }
 
   :global(.planner-course-row-head) {
+    grid-column: 1;
+    grid-row: 1;
     display: inline-flex;
     align-items: center;
     gap: var(--gap-2);
   }
 
+  /* `anywhere` is the floor, not the plan: with the full measure almost every
+     name wraps at a space, but a single 21-character word is still wider than
+     the rail at the narrowest widths it reaches, and a word clipped mid-stroke
+     under a button is the one outcome worse than a break. */
   :global(.planner-course-row-name) {
+    grid-column: 1 / -1;
     min-width: 0;
+    overflow-wrap: anywhere;
   }
 
   :global(.planner-course-row-meta) {
-    grid-column: 2 / -1;
+    grid-column: 1 / -1;
     display: flex;
     flex-wrap: wrap;
     gap: var(--gap-3);
@@ -654,6 +710,8 @@ const programOptions: [code: string, name: string][] = programsData.programs
   }
 
   :global(.planner-course-remove) {
+    grid-column: 2;
+    grid-row: 1;
     justify-self: end;
   }
 
@@ -687,16 +745,11 @@ const programOptions: [code: string, name: string][] = programsData.programs
 
   .planner-scope-note {
     margin: 0;
+    max-width: none;
   }
 
   .planner-add-listbox {
-    list-style: none;
-    background: var(--card);
-    border-radius: var(--radius-sm);
-    box-shadow: var(--shadow);
-    max-height: 24rem;
-    overflow-y: auto;
-    padding: var(--space-1);
+    --popover-max: 24rem;
   }
 
   :global(.planner-pool-group) {
@@ -709,14 +762,6 @@ const programOptions: [code: string, name: string][] = programsData.programs
     grid-template-columns: 1fr auto;
     column-gap: var(--gap-3);
     row-gap: 2px;
-    padding: var(--space-2);
-    border-radius: var(--radius-xs);
-    cursor: pointer;
-  }
-
-  :global(.planner-typeahead-option.is-active),
-  :global(.planner-typeahead-option:hover) {
-    background: var(--card-hover);
   }
 
   :global(.planner-typeahead-head) {
@@ -760,9 +805,11 @@ const programOptions: [code: string, name: string][] = programsData.programs
   :global(.planner-typeahead-empty) {
     display: block;
     padding: var(--space-2);
+    max-width: none;
   }
 
   .planner-provenance {
+    max-width: none;
     margin-top: var(--space-6);
   }
 </style>
@@ -771,7 +818,7 @@ const programOptions: [code: string, name: string][] = programsData.programs
   is:inline
   type="application/json"
   id="planner-program-options"
-  set:html={JSON.stringify(programOptions)}
+  set:html={programOptionsJson}
 />
 <script>
   import { mountPlannerApp } from "../../components/planner/plannerApp.js";

@@ -5,11 +5,33 @@
  * passes `showOthers` (driven by the page's "Vis øvinger og labber" toggle)
  * to additionally render øving/lab/seminar blocks — muted (reduced ink, hue
  * dot only, never red) and never considered for collisions. Only
- * lecture×lecture overlaps get the red hatch + wavy underline;
- * `.np-note-clash` margin notes below link to and flash the blocks.
+ * lecture×lecture overlaps get the clash edge; `.np-note-clash` margin notes
+ * below link to and flash the blocks.
+ *
+ * Legibility is a correctness property here, not polish (REVIEW.md U1/U3):
+ * the week is 106 px per weekday at 1440, so the moment three things share a
+ * slot a column split renders one character per line. Three rules keep the
+ * surface readable at that width, in this order:
+ *
+ *   1. identical parallel slots of one course collapse to one block
+ *      ("Lab · 4 grupper") — DR-1 already concedes they are indistinguishable;
+ *   2. an all-day non-lecture drop-in window becomes a band behind the day
+ *      rather than a full-height column that squeezes everything else;
+ *   3. a cluster still 3+ deep stops splitting altogether and renders as one
+ *      cell listing its course codes stacked.
+ *
+ * The frame's ruling is owned here, not by the markup: it is stripped in
+ * every empty/message branch (Ruling-Marks-The-Plan — the ruling appears
+ * exactly where planning happens, never around an apology) and restored when
+ * a grid is drawn.
  */
 import { classifyActivity } from "../../lib/planner/activity.js";
-import { findConflicts } from "../../lib/planner/conflicts.js";
+import {
+  type ConflictGroup,
+  findConflicts,
+  groupConflicts,
+  mergeParallelSlots,
+} from "../../lib/planner/conflicts.js";
 import { parseWeeks, type ScheduleEntry } from "../../lib/planner/schedule.js";
 import { dayName, dot, el, weekLabel } from "./dom.js";
 import type { PlanCourseState } from "./types.js";
@@ -17,6 +39,23 @@ import type { PlanCourseState } from "./types.js";
 const ROW_MINUTES = 15;
 const DEFAULT_START_HOUR = 8;
 const DEFAULT_END_HOUR = 20;
+/** Hours the loading skeleton reserves, so the real grid lands without a reflow. */
+const SKELETON_END_HOUR = 16;
+/** Weekdays the skeleton draws before it knows whether Saturday is needed. */
+const SKELETON_DAYS = 5;
+
+/**
+ * Most columns a cluster is allowed to split into. At the week's real width a
+ * 3-way split is ~34 px per block — "TI", "F…", "M…le…" — so 3+ collapses
+ * into one cell instead (U3).
+ */
+const MAX_SPLIT_COLUMNS = 2;
+/** Course codes a collapsed cluster lists before it says "+N til". */
+const MAX_CLUSTER_CODES = 3;
+/** A non-lecture window at least this long is a drop-in band, not a column (U1). */
+const ALL_DAY_MINUTES = 5 * 60;
+/** Below this height a block only has room for its code — rooms/weeks move to the tooltip. */
+const COMPACT_BLOCK_MINUTES = 90;
 
 interface GridEntry extends ScheduleEntry {
   hueVar: string;
@@ -25,6 +64,50 @@ interface GridEntry extends ScheduleEntry {
   weeksNumbers: number[];
   weeksLabel: string;
   isLecture: boolean;
+  /** Identical parallel slots this block stands for. 1 = a single session. */
+  groupCount: number;
+  /** Per-render ordinal. Part of the DOM id, because (code, day, start) is not unique. */
+  ordinal: number;
+}
+
+export interface GridRenderOptions {
+  /**
+   * A bundle fetch is still in flight. With nothing to draw yet the grid
+   * renders a skeleton instead of asserting "Ingen timeplandata" — a loud
+   * false statement, and the 500 px reflow when the data lands throws the
+   * exam ribbon off screen mid-read (U5).
+   */
+  loading?: boolean;
+  /**
+   * The plan is waiting on a studieretning/campus answer. The week is not a
+   * failure while a question is open, so this message replaces the canned
+   * "Ingen forelesninger funnet" recovery copy, which points the wrong way
+   * (B2). It is the *empty* week's message only — see `renderGrid`.
+   */
+  pendingChoiceMessage?: string | null;
+}
+
+export interface GridRenderResult {
+  /**
+   * Distinct collision *slots* — one per (day, overlap window), so a 3-way
+   * clash counts once. This is the number for the page's verdict line.
+   */
+  conflictCount: number;
+  /** Raw pairwise conflicts behind those slots. Diagnostics; not for display. */
+  conflictPairCount: number;
+  /**
+   * The plan's courses have timetable entries but none classify as a lecture,
+   * so the muted øving/lab layer was revealed without being asked for (B7a).
+   * The caller must mirror this into the "Vis øvinger og labber" toggle's
+   * `aria-pressed`, or the control lies about what is on screen.
+   */
+  mutedLayerAutoRevealed: boolean;
+  /** Cells drawn (after merging and collapsing) — 0 in every message branch. */
+  blockCount: number;
+  /** Which branch rendered. Only `"grid"` carries meaningful counts. */
+  state: "grid" | "empty" | "loading" | "pending-choice";
+  /** A grid was drawn while bundles were still loading: the counts may still grow. */
+  partial: boolean;
 }
 
 function roomLabel(rooms: { building: string | null; room: string | null }[]): string {
@@ -42,9 +125,10 @@ function spokenWeekRange(weeks: number[]): string {
   return first === last ? `uke ${first}` : `uke ${first} til ${last}`;
 }
 
-function blockAriaLabel(entry: GridEntry, weeks: number[], conflictPartners: string[]): string {
+function blockAriaLabel(entry: GridEntry, conflictPartners: string[]): string {
   const time = `${entry.startTime} til ${entry.endTime}`;
-  const base = `${entry.courseCode}, ${dayName(entry.dayNumber)} ${time}, ${spokenWeekRange(weeks)}`;
+  const groups = entry.groupCount > 1 ? `, ${entry.groupCount} parallelle grupper` : "";
+  const base = `${entry.courseCode}, ${dayName(entry.dayNumber)} ${time}, ${spokenWeekRange(entry.weeksNumbers)}${groups}`;
   if (conflictPartners.length === 0) return base;
   return `${base}, kolliderer med ${conflictPartners.join(", ")}`;
 }
@@ -56,14 +140,12 @@ function collectEntries(courses: PlanCourseState[]): GridEntry[] {
     const timetable = state.bundle?.timetable;
     if (!timetable) continue;
     for (const raw of timetable) {
-      const startTime = raw.startTime;
-      const endTime = raw.endTime;
       const weeksNumbers = parseWeeks(raw.weeks);
       entries.push({
         courseCode: state.course.code,
         dayNumber: raw.dayNumber,
-        startTime,
-        endTime,
+        startTime: raw.startTime,
+        endTime: raw.endTime,
         weeks: raw.weeks,
         hueVar: state.hueVar,
         name: raw.title ?? raw.name ?? state.course.name,
@@ -71,10 +153,31 @@ function collectEntries(courses: PlanCourseState[]): GridEntry[] {
         weeksNumbers,
         weeksLabel: weekLabel(weeksNumbers),
         isLecture: classifyActivity(raw) === "lecture",
+        groupCount: 1,
+        ordinal: entries.length,
       });
     }
   }
   return entries;
+}
+
+/**
+ * Collapses a course's identical parallel slots into one block (U1). Kept
+ * apart by activity title and by lecture/other, so we never have to invent a
+ * joint label for two things the student would read as different — the
+ * EXPH0300 "Forelesningsparallell 2 Trondheim" / "…3 Gjøvik" pair stays two
+ * blocks, the four byte-identical "Lab" rows become one.
+ */
+function mergeSlots(entries: GridEntry[]): GridEntry[] {
+  return mergeParallelSlots(entries, (e) => `${e.isLecture ? "L" : "O"}|${e.name}`).map(
+    ({ representative, entries: members }) => {
+      if (members.length === 1) return representative;
+      const rooms = [...new Set(members.flatMap((m) => m.rooms.split(", ")))]
+        .filter(Boolean)
+        .join(", ");
+      return { ...representative, rooms, groupCount: members.length };
+    },
+  );
 }
 
 function timeToMinutes(time: string): number {
@@ -82,50 +185,493 @@ function timeToMinutes(time: string): number {
   return Number(h) * 60 + Number(m);
 }
 
-/** Renders the empty ukeplan placeholder (no courses with loaded timetables yet). */
-function renderEmpty(frame: HTMLElement, message: string): void {
-  frame.replaceChildren(el("p", "planner-grid-empty np-note", message));
+function minutesToTime(minutes: number): string {
+  const h = Math.floor(minutes / 60);
+  const m = minutes % 60;
+  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
 }
 
-export interface GridRenderResult {
-  /** Number of detected timetable conflicts, for the section's summary line. */
-  conflictCount: number;
+function capitalize(value: string): string {
+  return value.charAt(0).toUpperCase() + value.slice(1);
 }
+
+/** "A, B og C" — the Norwegian list separator, not a bare comma join. */
+function joinCodes(codes: string[]): string {
+  if (codes.length <= 1) return codes[0] ?? "";
+  return `${codes.slice(0, -1).join(", ")} og ${codes[codes.length - 1]}`;
+}
+
+/** Duration in minutes; 0 for a malformed pair rather than a negative height. */
+function durationMinutes(entry: GridEntry): number {
+  return Math.max(0, timeToMinutes(entry.endTime) - timeToMinutes(entry.startTime));
+}
+
+/** An all-day drop-in window (08:00–18:00 lab). Never a lecture — see the module docs. */
+function isBandEntry(entry: GridEntry): boolean {
+  return !entry.isLecture && durationMinutes(entry) >= ALL_DAY_MINUTES;
+}
+
+// --- Frame state ----------------------------------------------------------
+
+/**
+ * The ruling belongs to a drawn week, not to the frame (D5). `np-ruled--hours`
+ * goes with it: it overrides `background-image` but inherits
+ * `background-origin`/`-attachment` from `.np-ruled`, so the two are one unit.
+ */
+function setFrameRuled(frame: HTMLElement, ruled: boolean): void {
+  frame.classList.toggle("np-ruled", ruled);
+  frame.classList.toggle("np-ruled--hours", ruled);
+  frame.classList.toggle("is-empty", !ruled);
+}
+
+/**
+ * Renders a message where the week would be — unruled, in `.np-hint` (a
+ * sentence, so grotesk). Exported so the page's pre-publish branch (DR-2) can
+ * clear the frame through the same door instead of leaving a ruled rectangle
+ * with nothing in it.
+ */
+export function renderGridMessage(
+  frame: HTMLElement,
+  notesHost: HTMLElement,
+  message?: string | null,
+): void {
+  notesHost.replaceChildren();
+  frame.removeAttribute("aria-busy");
+  setFrameRuled(frame, false);
+  frame.replaceChildren(...(message ? [el("p", "planner-grid-empty np-hint", message)] : []));
+}
+
+/**
+ * A week-shaped placeholder while the bundles load: the rail, the day names
+ * and the height the real grid will need. Nothing here claims anything about
+ * the plan — the caller's status line already says "henter timeplan …".
+ */
+function renderSkeleton(frame: HTMLElement, notesHost: HTMLElement): void {
+  notesHost.replaceChildren();
+  setFrameRuled(frame, true);
+  frame.setAttribute("aria-busy", "true");
+
+  const minMinutes = DEFAULT_START_HOUR * 60;
+  const maxMinutes = SKELETON_END_HOUR * 60;
+  const grid = buildGridShell(minMinutes, maxMinutes, SKELETON_DAYS, "Henter ukeplan");
+  grid.element.classList.add("is-skeleton");
+  frame.replaceChildren(grid.element);
+}
+
+// --- Grid shell -----------------------------------------------------------
+
+interface GridShell {
+  element: HTMLElement;
+  dayColumns: Map<number, HTMLElement>;
+}
+
+/**
+ * The empty week: hour rail, day headers, day columns. Headers are children
+ * of the *grid* on their own first row, not of the day columns (U2) — a block
+ * is absolutely positioned from its column's top, so a header inside the
+ * column is painted over by any entry starting at the grid's first hour, and
+ * a week grid without day names is not a week grid.
+ */
+function buildGridShell(
+  minMinutes: number,
+  maxMinutes: number,
+  dayCount: number,
+  ariaLabel: string,
+): GridShell {
+  const totalRows = Math.ceil((maxMinutes - minMinutes) / ROW_MINUTES);
+  const grid = el("div", "planner-grid");
+  grid.style.setProperty("--planner-rows", String(totalRows));
+  grid.style.setProperty("--planner-days", String(dayCount));
+  // role="group", not "img": the grid holds focusable blocks (each with its own
+  // aria-label), and "img" would strip them from the accessibility tree.
+  grid.setAttribute("role", "group");
+  grid.setAttribute("aria-label", ariaLabel);
+
+  for (let day = 1; day <= dayCount; day++) {
+    const header = el("div", "planner-grid-day-header np-kicker", dayName(day).slice(0, 3));
+    header.style.setProperty("--planner-day", String(day));
+    grid.append(header);
+  }
+
+  const rail = el("div", "planner-grid-rail");
+  for (let hour = minMinutes / 60; hour <= maxMinutes / 60; hour++) {
+    const label = el("div", "planner-grid-hour np-data", `${String(hour).padStart(2, "0")}:00`);
+    label.style.setProperty(
+      "--planner-row-start",
+      String((hour * 60 - minMinutes) / ROW_MINUTES + 1),
+    );
+    rail.append(label);
+  }
+  grid.append(rail);
+
+  // Blocks are appended *inside* their own day's column — `.planner-block` is
+  // absolutely positioned relative to its nearest positioned ancestor, and
+  // `.planner-grid-day` is that ancestor. Appending them straight onto
+  // `.planner-grid` (as a former version of this code did) makes every day's
+  // blocks position against the whole grid's width, collapsing all weekdays
+  // into the same horizontal strip.
+  const dayColumns = new Map<number, HTMLElement>();
+  for (let day = 1; day <= dayCount; day++) {
+    const col = el("div", "planner-grid-day");
+    col.style.setProperty("--planner-day", String(day));
+    grid.append(col);
+    dayColumns.set(day, col);
+  }
+
+  return { element: grid, dayColumns };
+}
+
+// --- Clustering -----------------------------------------------------------
+
+interface Cluster {
+  entries: GridEntry[];
+  columnOf: Map<GridEntry, number>;
+  columnCount: number;
+  startMinutes: number;
+  endMinutes: number;
+}
+
+/**
+ * Greedy interval-graph coloring: entries overlapping in time on the same day
+ * get distinct columns, and a cluster is a maximal run of mutually reachable
+ * overlaps. The cluster — not the individual block — is the unit the renderer
+ * decides about, because "how narrow will this get" is a property of the
+ * whole pile.
+ */
+function buildClusters(dayEntries: GridEntry[]): Cluster[] {
+  const sorted = [...dayEntries].sort(
+    (a, b) => timeToMinutes(a.startTime) - timeToMinutes(b.startTime),
+  );
+
+  const active: { column: number; end: number }[] = [];
+  const clusters: Cluster[] = [];
+  let current: Cluster | null = null;
+
+  for (const entry of sorted) {
+    const start = timeToMinutes(entry.startTime);
+    const end = timeToMinutes(entry.endTime);
+
+    // Drop active entries that have ended before this one starts.
+    for (let i = active.length - 1; i >= 0; i--) {
+      const a = active[i];
+      if (a && a.end <= start) active.splice(i, 1);
+    }
+
+    if (active.length === 0 && current && start >= current.endMinutes) {
+      clusters.push(current);
+      current = null;
+    }
+    if (!current) {
+      current = {
+        entries: [],
+        columnOf: new Map(),
+        columnCount: 0,
+        startMinutes: start,
+        endMinutes: end,
+      };
+    }
+
+    const usedColumns = new Set(active.map((a) => a.column));
+    let column = 0;
+    while (usedColumns.has(column)) column++;
+
+    active.push({ column, end });
+    current.entries.push(entry);
+    current.columnOf.set(entry, column);
+    current.columnCount = Math.max(current.columnCount, column + 1);
+    current.endMinutes = Math.max(current.endMinutes, end);
+  }
+  if (current) clusters.push(current);
+
+  return clusters;
+}
+
+// --- Blocks ---------------------------------------------------------------
+
+interface BlockGeometry {
+  minMinutes: number;
+  /** Overlap window to paint the clash band over, in absolute minutes. */
+  clashWindow: { start: number; end: number } | null;
+}
+
+function positionBlock(
+  block: HTMLElement,
+  startMinutes: number,
+  endMinutes: number,
+  minMinutes: number,
+  column: number,
+  columnCount: number,
+): void {
+  const startRow = Math.round((startMinutes - minMinutes) / ROW_MINUTES) + 1;
+  const endRow = Math.round((endMinutes - minMinutes) / ROW_MINUTES) + 1;
+  block.style.setProperty("--planner-row-start", String(startRow));
+  block.style.setProperty("--planner-row-end", String(endRow));
+  block.style.setProperty("--planner-col", String(column));
+  block.style.setProperty("--planner-col-count", String(columnCount));
+}
+
+/**
+ * The overlap band (D9): `--clash-bg` over the minutes that actually collide,
+ * with the solid `--clash-edge` rule down the block's inline start. A hatch
+ * over the whole block reads at the same weight as a hue wash; a solid edge
+ * plus a filled band is categorically different ink, which is what
+ * Red-Is-Collision is for.
+ */
+function appendClashBand(
+  block: HTMLElement,
+  blockStart: number,
+  blockEnd: number,
+  window: { start: number; end: number },
+): void {
+  const start = Math.max(blockStart, window.start);
+  const end = Math.min(blockEnd, window.end);
+  if (end <= start) return;
+  const band = el("span", "planner-block-clash-band");
+  band.setAttribute("aria-hidden", "true");
+  band.style.setProperty("--planner-band-start", String((start - blockStart) / ROW_MINUTES));
+  band.style.setProperty("--planner-band-end", String((end - blockStart) / ROW_MINUTES));
+  block.prepend(band);
+}
+
+/** The course chip every block and cluster row wears — DESIGN §5's `.np-tag`, at the in-grid size. */
+function courseTag(hueVar: string, code: string): HTMLElement {
+  const tag = el("span", "np-tag np-tag--sm planner-block-tag");
+  tag.append(dot(hueVar));
+  tag.append(el("span", "planner-block-code np-data", code));
+  return tag;
+}
+
+function buildBlock(
+  entry: GridEntry,
+  geometry: BlockGeometry,
+  column: number,
+  columnCount: number,
+  partnerCodes: string[],
+): HTMLButtonElement {
+  const block = el("button", "planner-block");
+  block.type = "button";
+  if (geometry.clashWindow) block.classList.add("is-clash");
+  if (!entry.isLecture) block.classList.add("is-muted");
+  const isBand = isBandEntry(entry);
+  if (isBand) block.classList.add("is-band");
+  block.id = blockId(entry);
+  block.style.setProperty("--dot", `var(${entry.hueVar})`);
+
+  const startMinutes = timeToMinutes(entry.startTime);
+  const endMinutes = timeToMinutes(entry.endTime);
+  positionBlock(block, startMinutes, endMinutes, geometry.minMinutes, column, columnCount);
+  block.setAttribute("aria-label", blockAriaLabel(entry, partnerCodes));
+
+  const label = entry.groupCount > 1 ? `${entry.name} · ${entry.groupCount} grupper` : entry.name;
+  const timeRange = `${entry.startTime}–${entry.endTime}`;
+  block.title = [entry.courseCode, label, timeRange, entry.rooms, entry.weeksLabel]
+    .filter(Boolean)
+    .join(" · ");
+
+  block.append(courseTag(entry.hueVar, entry.courseCode));
+  block.append(el("span", "planner-block-name", label));
+  // Under ~90 min there is only room for the code and the name; rooms and
+  // weeks would clip mid-word ("uke 34–4"), and they are in `title`/`aria-label`.
+  if (durationMinutes(entry) >= COMPACT_BLOCK_MINUTES) {
+    if (entry.rooms) block.append(el("span", "planner-block-rooms np-data", entry.rooms));
+    block.append(el("span", "planner-block-weeks np-data", entry.weeksLabel));
+  }
+
+  if (geometry.clashWindow) {
+    appendClashBand(block, startMinutes, endMinutes, geometry.clashWindow);
+  }
+  return block;
+}
+
+/**
+ * A cluster too deep to split, drawn as one cell that stacks its course codes
+ * (U3). Legible at any column width, and it says the true thing — "these
+ * three are on top of each other" — instead of three unreadable slivers.
+ */
+function buildClusterBlock(
+  cluster: Cluster,
+  geometry: BlockGeometry,
+  hasClash: boolean,
+): HTMLButtonElement {
+  const block = el("button", "planner-block planner-block--cluster");
+  block.type = "button";
+  if (hasClash) block.classList.add("is-clash");
+  if (cluster.entries.every((e) => !e.isLecture)) block.classList.add("is-muted");
+  block.id = `planner-cluster-${cluster.entries[0]?.ordinal ?? 0}`;
+  positionBlock(block, cluster.startMinutes, cluster.endMinutes, geometry.minMinutes, 0, 1);
+
+  const codes: string[] = [];
+  const hueByCode = new Map<string, string>();
+  for (const entry of cluster.entries) {
+    if (codes.includes(entry.courseCode)) continue;
+    codes.push(entry.courseCode);
+    hueByCode.set(entry.courseCode, entry.hueVar);
+  }
+
+  const timeRange = `${minutesToTime(cluster.startMinutes)}–${minutesToTime(cluster.endMinutes)}`;
+  const list = el("span", "planner-cluster-codes");
+  for (const code of codes.slice(0, MAX_CLUSTER_CODES)) {
+    list.append(courseTag(hueByCode.get(code) ?? "--hue-blue", code));
+  }
+  const overflow = codes.length - MAX_CLUSTER_CODES;
+  if (overflow > 0) list.append(el("span", "planner-cluster-more np-note", `+${overflow} til`));
+  block.append(list);
+  // Several sessions of one course in the same slot (parallel øvingsgrupper
+  // that upstream titled differently, so `mergeSlots` could not fold them):
+  // the chips alone would understate the pile, so count it.
+  if (cluster.entries.length > codes.length) {
+    block.append(
+      el("span", "planner-cluster-count np-note", `${cluster.entries.length} aktiviteter`),
+    );
+  }
+  block.append(el("span", "planner-block-weeks np-data", timeRange));
+
+  block.title = `${codes.join(", ")} · ${timeRange}`;
+  block.setAttribute(
+    "aria-label",
+    `${cluster.entries.length} aktiviteter ${dayName(cluster.entries[0]?.dayNumber ?? 1)} ${minutesToTime(cluster.startMinutes)} til ${minutesToTime(cluster.endMinutes)}: ${joinCodes(codes)}`,
+  );
+
+  if (geometry.clashWindow) {
+    appendClashBand(block, cluster.startMinutes, cluster.endMinutes, geometry.clashWindow);
+  }
+  return block;
+}
+
+function blockId(entry: GridEntry): string {
+  // The ordinal is load-bearing: (code, day, start) is NOT unique — EXPH0300
+  // publishes "Forelesningsparallell 2 Trondheim" and "…3 Gjøvik" at the same
+  // Monday 10:15, and duplicate DOM ids made a conflict note flash the wrong
+  // block (REVIEW.md C5b).
+  return `planner-block-${entry.ordinal}`;
+}
+
+// --- Notes ----------------------------------------------------------------
+
+/**
+ * Builds the collision sentence into `host` and returns the same text flat,
+ * for the button's accessible name. `.np-note-clash` is grotesk now, so the
+ * day, time, codes and weeks it quotes carry `.np-data` (Data-Is-Mono).
+ */
+function fillConflictNote(host: HTMLElement, group: ConflictGroup): string {
+  const day = capitalize(dayName(group.dayNumber));
+  const time = `${minutesToTime(group.start)}–${minutesToTime(group.end)}`;
+  const weeks = weekLabel(group.weeks);
+
+  host.append(el("span", "np-data", day));
+  host.append(" ");
+  host.append(el("span", "np-data", time));
+  host.append(" · ");
+  group.codes.forEach((code, i) => {
+    if (i > 0) host.append(i === group.codes.length - 1 ? " og " : ", ");
+    host.append(el("span", "np-data", code));
+  });
+  host.append(" kolliderer");
+  if (weeks) {
+    host.append(" · ");
+    host.append(el("span", "np-data", weeks));
+  }
+
+  return `${day} ${time} · ${joinCodes(group.codes)} kolliderer${weeks ? ` · ${weeks}` : ""}`;
+}
+
+// --- Render ---------------------------------------------------------------
 
 /**
  * Renders the weekly spread + its margin conflict notes into `frame` /
  * `notesHost`. `showOthers` (the page's "Vis øvinger og labber" toggle)
  * decides whether non-lecture entries are drawn at all — when off, only
- * lectures render, matching DR-1's lecture-based-by-default rule. Hour
+ * lectures render, matching DR-1's lecture-based-by-default rule, *unless*
+ * the plan has no lecture-classified entry at all, in which case the muted
+ * layer is revealed anyway rather than showing a blank week (B7a). Hour
  * clamping follows the SHOWN entries so the default view stays compact.
- * Returns the conflict count so the caller can fold it into the page's
- * overview line.
  */
 export function renderGrid(
   frame: HTMLElement,
   notesHost: HTMLElement,
   courses: PlanCourseState[],
   showOthers: boolean,
+  options: GridRenderOptions = {},
 ): GridRenderResult {
-  const allEntries = collectEntries(courses);
-  const entries = showOthers ? allEntries : allEntries.filter((e) => e.isLecture);
-  notesHost.replaceChildren();
+  const loading = options.loading ?? false;
+  const rawEntries = collectEntries(courses);
 
+  const empty = (state: GridRenderResult["state"], message?: string): GridRenderResult => {
+    renderGridMessage(frame, notesHost, message);
+    return {
+      conflictCount: 0,
+      conflictPairCount: 0,
+      mutedLayerAutoRevealed: false,
+      blockCount: 0,
+      state,
+      partial: loading,
+    };
+  };
+
+  // An unanswered studieretning/campus question is what the *empty* week says
+  // instead of the canned recovery copy (B2) — it is not a curtain drawn over
+  // a week that already has something true to show. `programPlan.ts`'s
+  // intersection rule prefills every course that is obligatory in *all*
+  // directions precisely so a gated period still renders the student's real
+  // blocks before they answer; suppressing them re-created B2's symptom from
+  // the other side (a primary surface that says nothing while the data is
+  // there) and broke §0.1's "programme + kull → your week, instantly". The
+  // question panel sits directly above the frame and already says the week
+  // fills in on answering, so a partial week is read as partial.
+  const pending = options.pendingChoiceMessage ?? null;
   if (courses.length === 0) {
-    renderEmpty(frame, "Legg til emner for å se ukeplanen.");
-    return { conflictCount: 0 };
+    return pending
+      ? empty("pending-choice", pending)
+      : empty("empty", "Legg til emner for å se ukeplanen.");
   }
-  if (allEntries.length === 0) {
-    renderEmpty(frame, "Ingen timeplandata for emnene i planen ennå.");
-    return { conflictCount: 0 };
+  if (loading && rawEntries.length === 0) {
+    renderSkeleton(frame, notesHost);
+    return {
+      conflictCount: 0,
+      conflictPairCount: 0,
+      mutedLayerAutoRevealed: false,
+      blockCount: 0,
+      state: "loading",
+      partial: true,
+    };
   }
-  if (entries.length === 0) {
-    renderEmpty(frame, "Ingen forelesninger funnet — prøv «Vis øvinger og labber».");
-    return { conflictCount: 0 };
+  if (rawEntries.length === 0) {
+    return pending
+      ? empty("pending-choice", pending)
+      : empty("empty", "Ingen timeplandata for emnene i planen ennå.");
   }
+
+  // B7a: 47 programmes have timetable entries and not one that classifies as
+  // a lecture. DR-1 accepts under-classification *because* the toggle layer
+  // still shows the entry — so when that layer is the only thing there is,
+  // show it and say why, rather than shipping a blank week.
+  const lectureEntries = rawEntries.filter((e) => e.isLecture);
+  const mutedLayerAutoRevealed = !showOthers && lectureEntries.length === 0;
+  const shown = showOthers || mutedLayerAutoRevealed ? rawEntries : lectureEntries;
+  const entries = mergeSlots(shown);
 
   // Hard conflicts are lecture×lecture only (DR-1); øving/lab entries never clash.
   const conflicts = findConflicts(entries.filter((e) => e.isLecture));
+  const conflictGroups = groupConflicts(conflicts);
+  const groupsByEntry = new Map<ScheduleEntry, ConflictGroup[]>();
+  for (const group of conflictGroups) {
+    for (const entry of group.entries) {
+      const list = groupsByEntry.get(entry) ?? [];
+      list.push(group);
+      groupsByEntry.set(entry, list);
+    }
+  }
+  const clashWindowFor = (members: GridEntry[]): { start: number; end: number } | null => {
+    let start = Number.POSITIVE_INFINITY;
+    let end = Number.NEGATIVE_INFINITY;
+    for (const member of members) {
+      for (const group of groupsByEntry.get(member) ?? []) {
+        start = Math.min(start, group.start);
+        end = Math.max(end, group.end);
+      }
+    }
+    return Number.isFinite(start) && Number.isFinite(end) ? { start, end } : null;
+  };
 
   // Clamp displayed hours to the entries actually shown — the grid is as
   // tall as the visible week needs, not a fixed 08–20 canvas (a lecture-only
@@ -143,196 +689,139 @@ export function renderGrid(
   }
   minMinutes = Math.floor(minMinutes / 60) * 60;
   maxMinutes = Math.ceil(maxMinutes / 60) * 60;
-  const totalRows = Math.ceil((maxMinutes - minMinutes) / ROW_MINUTES);
 
-  const hasSaturday = allEntries.some((e) => e.dayNumber === 6);
+  const hasSaturday = entries.some((e) => e.dayNumber === 6);
   const dayCount = hasSaturday ? 6 : 5;
 
-  const grid = el("div", "planner-grid");
-  grid.style.setProperty("--planner-rows", String(totalRows));
-  grid.style.setProperty("--planner-days", String(dayCount));
-  // role="group", not "img": the grid holds focusable blocks (each with its own
-  // aria-label), and "img" would strip them from the accessibility tree.
-  grid.setAttribute("role", "group");
-  grid.setAttribute("aria-label", "Ukeplan med timeplanblokker for emnene i planen");
+  setFrameRuled(frame, true);
+  frame.removeAttribute("aria-busy");
+  const shell = buildGridShell(
+    minMinutes,
+    maxMinutes,
+    dayCount,
+    "Ukeplan med timeplanblokker for emnene i planen",
+  );
 
-  // Hour labels down the left rail.
-  const rail = el("div", "planner-grid-rail");
-  for (let hour = minMinutes / 60; hour <= maxMinutes / 60; hour++) {
-    const label = el("div", "planner-grid-hour np-data", `${String(hour).padStart(2, "0")}:00`);
-    label.style.setProperty(
-      "--planner-row-start",
-      String((hour * 60 - minMinutes) / ROW_MINUTES + 1),
-    );
-    rail.append(label);
-  }
-  grid.append(rail);
+  // Every rendered entry resolves to the element that represents it — a
+  // collapsed cluster stands in for all of its members. Conflict notes flash
+  // through this map rather than through getElementById (C5b).
+  const nodeByEntry = new Map<ScheduleEntry, HTMLElement>();
+  const geometryBase = { minMinutes };
+  let blockCount = 0;
 
-  // Day columns with headers. Kept in a map so blocks below can be appended
-  // *inside* their own day's column — `.planner-block` is absolutely
-  // positioned relative to its nearest positioned ancestor, and
-  // `.planner-grid-day` is that ancestor (position: relative). Appending
-  // blocks straight onto `.planner-grid` instead (as a former version of
-  // this code did) makes every day's blocks position against the *whole*
-  // grid's width, collapsing all weekdays into the same horizontal strip.
-  const dayColumns = new Map<number, HTMLElement>();
   for (let day = 1; day <= dayCount; day++) {
-    const col = el("div", "planner-grid-day");
-    col.style.setProperty("--planner-day", String(day));
-    const header = el("div", "planner-grid-day-header np-kicker", dayName(day).slice(0, 3));
-    col.append(header);
-    grid.append(col);
-    dayColumns.set(day, col);
-  }
-
-  // Lay out blocks per day, splitting overlaps side-by-side.
-  for (let day = 1; day <= dayCount; day++) {
+    const column = shell.dayColumns.get(day);
+    if (!column) continue;
     const dayEntries = entries.filter((e) => e.dayNumber === day);
-    const columns = assignColumns(dayEntries);
-    for (const { entry, column, columnCount } of columns) {
-      const startRow = Math.round((timeToMinutes(entry.startTime) - minMinutes) / ROW_MINUTES) + 1;
-      const endRow = Math.round((timeToMinutes(entry.endTime) - minMinutes) / ROW_MINUTES) + 1;
 
-      const entryConflicts = conflicts.filter((c) => c.a === entry || c.b === entry);
-      const isColliding = entryConflicts.length > 0;
-      const partnerCodes = [
-        ...new Set(entryConflicts.map((c) => (c.a === entry ? c.b : c.a).courseCode)),
-      ];
+    // All-day drop-in windows sit behind the day as a band; letting them take
+    // a column is what turns a Monday with one 08:00–18:00 lab into slivers.
+    const bands = dayEntries.filter(isBandEntry);
+    for (const entry of bands) {
+      const block = buildBlock(entry, { ...geometryBase, clashWindow: null }, 0, 1, []);
+      nodeByEntry.set(entry, block);
+      column.append(block);
+      blockCount++;
+    }
 
-      const block = el("button", "planner-block");
-      block.type = "button";
-      if (isColliding) block.classList.add("is-clash");
-      if (!entry.isLecture) block.classList.add("is-muted");
-      block.id = blockId(entry);
-      block.style.setProperty("--dot", `var(${entry.hueVar})`);
-      block.style.setProperty("--planner-day", String(day));
-      block.style.setProperty("--planner-row-start", String(startRow));
-      block.style.setProperty("--planner-row-end", String(endRow));
-      block.style.setProperty("--planner-col", String(column));
-      block.style.setProperty("--planner-col-count", String(columnCount));
-      block.setAttribute("aria-label", blockAriaLabel(entry, entry.weeksNumbers, partnerCodes));
-
-      const head = el("span", "planner-block-head");
-      head.append(dot(entry.hueVar));
-      head.append(el("span", "planner-block-code np-data", entry.courseCode));
-      block.append(head);
-      block.append(el("span", "planner-block-name", entry.name));
-      if (entry.rooms) block.append(el("span", "planner-block-rooms np-data", entry.rooms));
-      block.append(el("span", "planner-block-weeks np-data", entry.weeksLabel));
-
-      block.addEventListener("click", () => flashBlock(entry));
-
-      const dayColumnEl = dayColumns.get(day);
-      (dayColumnEl ?? grid).append(block);
+    for (const cluster of buildClusters(dayEntries.filter((e) => !isBandEntry(e)))) {
+      const clashWindow = clashWindowFor(cluster.entries);
+      if (cluster.columnCount > MAX_SPLIT_COLUMNS) {
+        const block = buildClusterBlock(
+          cluster,
+          { ...geometryBase, clashWindow },
+          clashWindow !== null,
+        );
+        for (const entry of cluster.entries) nodeByEntry.set(entry, block);
+        column.append(block);
+        blockCount++;
+        continue;
+      }
+      for (const entry of cluster.entries) {
+        const entryClash = clashWindowFor([entry]);
+        const partnerCodes = [
+          ...new Set(
+            (groupsByEntry.get(entry) ?? [])
+              .flatMap((g) => g.codes)
+              .filter((code) => code !== entry.courseCode),
+          ),
+        ];
+        const block = buildBlock(
+          entry,
+          { ...geometryBase, clashWindow: entryClash },
+          cluster.columnOf.get(entry) ?? 0,
+          cluster.columnCount,
+          partnerCodes,
+        );
+        nodeByEntry.set(entry, block);
+        column.append(block);
+        blockCount++;
+      }
     }
   }
 
-  frame.replaceChildren(grid);
+  const flash = (targets: ScheduleEntry[]): void => {
+    const nodes = targets
+      .map((entry) => nodeByEntry.get(entry))
+      .filter((node): node is HTMLElement => node !== undefined);
+    const [first] = nodes;
+    // A5: the tokens can zero a transition but not a scroll behaviour.
+    const reduced = globalThis.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
+    first?.scrollIntoView({ block: "center", behavior: reduced ? "auto" : "smooth" });
+    for (const node of nodes) {
+      node.classList.remove("np-target-flash");
+      // Force reflow so re-adding the class restarts the animation.
+      void node.offsetWidth;
+      node.classList.add("np-target-flash");
+    }
+    first?.focus({ preventScroll: true });
+  };
 
-  // Margin notes: one per colliding pair, mono, linking to + flashing both blocks.
-  if (conflicts.length > 0) {
+  // One listener per element, flashing every entry it stands for — a
+  // collapsed cluster is one button representing several.
+  const entriesByNode = new Map<HTMLElement, ScheduleEntry[]>();
+  for (const [entry, node] of nodeByEntry) {
+    entriesByNode.set(node, [...(entriesByNode.get(node) ?? []), entry]);
+  }
+  for (const [node, members] of entriesByNode) {
+    node.addEventListener("click", () => flash(members));
+  }
+
+  frame.replaceChildren(shell.element);
+
+  // Margin notes: one per collision slot, not one per pair — a 3-way clash is
+  // one Thursday afternoon to fix, and reporting it three times inflates the
+  // damage and buries the actionable fact (U3).
+  notesHost.replaceChildren();
+  if (mutedLayerAutoRevealed) {
+    notesHost.append(
+      el(
+        "p",
+        "planner-grid-note np-hint",
+        "Ingen aktiviteter er merket som forelesning i disse emnene — viser all undervisning.",
+      ),
+    );
+  }
+  if (conflictGroups.length > 0) {
     const list = el("ul", "planner-notes-list");
-    for (const conflict of conflicts) {
+    for (const group of conflictGroups) {
       const item = el("li");
-      const link = el("button", "np-note-clash planner-note-link", conflictNoteText(conflict));
+      const link = el("button", "np-note-clash planner-note-link");
       link.type = "button";
-      link.addEventListener("click", () => {
-        flashBlock(conflict.a);
-        flashBlock(conflict.b);
-      });
+      link.setAttribute("aria-label", fillConflictNote(link, group));
+      link.addEventListener("click", () => flash(group.entries));
       item.append(link);
       list.append(item);
     }
     notesHost.append(list);
   }
 
-  return { conflictCount: conflicts.length };
-}
-
-function blockId(entry: GridEntry): string {
-  return `planner-block-${entry.courseCode}-${entry.dayNumber}-${entry.startTime.replace(":", "")}`;
-}
-
-function minutesToTime(minutes: number): string {
-  const h = Math.floor(minutes / 60);
-  const m = minutes % 60;
-  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
-}
-
-function conflictNoteText(conflict: ReturnType<typeof findConflicts>[number]): string {
-  // The overlap window (conflict.start/end), not either entry's full block time.
-  const time = `${minutesToTime(conflict.start)}–${minutesToTime(conflict.end)}`;
-  const weeksText = weekLabel(conflict.weeks);
-  return `${conflict.a.courseCode} kolliderer med ${conflict.b.courseCode} · ${dayName(conflict.dayNumber)} ${time} · ${weeksText}`;
-}
-
-function flashBlock(entry: ScheduleEntry): void {
-  const node = document.getElementById(blockId(entry as GridEntry));
-  if (!node) return;
-  node.scrollIntoView({ block: "center", behavior: "smooth" });
-  node.classList.remove("np-target-flash");
-  // Force reflow so re-adding the class restarts the animation.
-  void node.offsetWidth;
-  node.classList.add("np-target-flash");
-  node.focus({ preventScroll: true });
-}
-
-interface ColumnAssignment {
-  entry: GridEntry;
-  column: number;
-  columnCount: number;
-}
-
-/**
- * Greedy interval-graph coloring: entries overlapping in time on the same
- * day get distinct columns; the column count for a block is the max
- * concurrency across the whole cluster it belongs to (so all blocks in an
- * overlapping cluster share equal width).
- */
-function assignColumns(dayEntries: GridEntry[]): ColumnAssignment[] {
-  const sorted = [...dayEntries].sort(
-    (a, b) => timeToMinutes(a.startTime) - timeToMinutes(b.startTime),
-  );
-
-  const active: { entry: GridEntry; column: number; end: number }[] = [];
-  const assignments = new Map<GridEntry, number>();
-  const clusters: GridEntry[][] = [];
-  let currentCluster: GridEntry[] = [];
-  let clusterMaxEnd = -1;
-
-  for (const entry of sorted) {
-    const start = timeToMinutes(entry.startTime);
-    const end = timeToMinutes(entry.endTime);
-
-    // Drop active entries that have ended before this one starts.
-    for (let i = active.length - 1; i >= 0; i--) {
-      const a = active[i];
-      if (a && a.end <= start) active.splice(i, 1);
-    }
-
-    if (active.length === 0 && currentCluster.length > 0 && start >= clusterMaxEnd) {
-      clusters.push(currentCluster);
-      currentCluster = [];
-      clusterMaxEnd = -1;
-    }
-
-    const usedColumns = new Set(active.map((a) => a.column));
-    let column = 0;
-    while (usedColumns.has(column)) column++;
-
-    active.push({ entry, column, end });
-    assignments.set(entry, column);
-    currentCluster.push(entry);
-    clusterMaxEnd = Math.max(clusterMaxEnd, end);
-  }
-  if (currentCluster.length > 0) clusters.push(currentCluster);
-
-  const result: ColumnAssignment[] = [];
-  for (const cluster of clusters) {
-    const columnCount = Math.max(...cluster.map((e) => (assignments.get(e) ?? 0) + 1));
-    for (const entry of cluster) {
-      result.push({ entry, column: assignments.get(entry) ?? 0, columnCount });
-    }
-  }
-  return result;
+  return {
+    conflictCount: conflictGroups.length,
+    conflictPairCount: conflicts.length,
+    mutedLayerAutoRevealed,
+    blockCount,
+    state: "grid",
+    partial: loading,
+  };
 }

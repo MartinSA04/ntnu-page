@@ -11,7 +11,6 @@ import { TieredCache } from "../../worker/src/cache.js";
 import {
   handleCourseDetails,
   handleCourseGrades,
-  handleCourseSchedule,
   handleCourseTimetable,
   handleHealth,
   handleProgramPlan,
@@ -100,31 +99,6 @@ const TIMETABLE_ENTRY = {
   to: "10:00",
   weeks: ["2-13"],
   rooms: [],
-  studyProgramKeys: [],
-};
-
-const SCHEDULE_ACTIVITY = {
-  courseCode: "TDT4100",
-  courseName: {
-    nob: "Objektorientert programmering",
-    nno: null,
-    eng: "Object-Oriented Programming",
-  },
-  acronym: null,
-  activityCode: null,
-  artermin: null,
-  termnr: null,
-  name: null,
-  title: null,
-  summary: null,
-  status: null,
-  tpId: null,
-  // Upstream carries start/end as epoch-millisecond numbers under "from"/"to".
-  from: Date.parse("2026-01-12T08:15:00.000Z"),
-  to: Date.parse("2026-01-12T10:00:00.000Z"),
-  week: 2,
-  rooms: [],
-  staff: [],
   studyProgramKeys: [],
 };
 
@@ -268,49 +242,6 @@ describe("GET /api/course/:code/timetable", () => {
   });
 });
 
-describe("GET /api/course/:code/schedule", () => {
-  it("Date fields survive a cache round-trip as the same JSON", async () => {
-    const { fetch, calls } = routeFetch([
-      {
-        match: "p_p_resource_id=schedules",
-        respond: () => jsonResponse({ schedules: [SCHEDULE_ACTIVITY] }),
-      },
-    ]);
-    const deps = makeDeps(fetch);
-    const first = await handleCourseSchedule(deps, "TDT4100", "2026");
-    const firstBody = await first.json();
-    const second = await handleCourseSchedule(deps, "TDT4100", "2026");
-    const secondBody = await second.json();
-    expect(secondBody).toEqual(firstBody);
-    expect(calls.length).toBe(1); // second call served from cache
-  });
-
-  it("passes a non-default ?version= through to the upstream call (DR-4)", async () => {
-    const { fetch, calls } = routeFetch([
-      {
-        match: "p_p_resource_id=schedules",
-        respond: () => jsonResponse({ schedules: [SCHEDULE_ACTIVITY] }),
-      },
-    ]);
-    const deps = makeDeps(fetch);
-    await handleCourseSchedule(deps, "TDT4100", "2026", "2");
-    expect(calls.some((c) => c.url.includes("version=2"))).toBe(true);
-  });
-
-  it("re-versioned and default-versioned schedules are cached under distinct keys", async () => {
-    const { fetch, calls } = routeFetch([
-      {
-        match: "p_p_resource_id=schedules",
-        respond: () => jsonResponse({ schedules: [SCHEDULE_ACTIVITY] }),
-      },
-    ]);
-    const deps = makeDeps(fetch);
-    await handleCourseSchedule(deps, "TDT4100", "2026");
-    await handleCourseSchedule(deps, "TDT4100", "2026", "2");
-    expect(calls).toHaveLength(2);
-  });
-});
-
 describe("GET /api/course/:code (details)", () => {
   it("maps NotFoundError to 404", async () => {
     const { fetch } = routeFetch([
@@ -381,6 +312,76 @@ describe("GET /api/program/:code/plan", () => {
   it("400 on invalid program code", async () => {
     const deps = makeDeps(routeFetch([]).fetch);
     const res = await handleProgramPlan(deps, "!!", "2022");
+    expect(res.status).toBe(400);
+  });
+});
+
+/**
+ * Handlers receive a raw `URL.pathname` segment, which stays percent-encoded.
+ * `CODE_RE` allow-lists Æ/Ø/Å, so without a decode 58 programmes (MTIØT and
+ * every Å-prefixed årsstudium) and 238 courses answered 400 to every route.
+ */
+describe("percent-encoded codes (Æ/Ø/Å)", () => {
+  const planRoutes = [
+    { match: "p_p_resource_id=studyplan", respond: () => jsonResponse(STUDY_PLAN_RESPONSE) },
+    { match: "studieplan", respond: () => htmlResponse(PLANNER_PORTLET_HTML) },
+  ];
+
+  it("decodes MTIØT on the program-plan route and passes it upstream", async () => {
+    const { fetch, calls } = routeFetch(planRoutes);
+    const res = await handleProgramPlan(makeDeps(fetch), "MTI%C3%98T", "2026");
+    expect(res.status).toBe(200);
+    expect(calls.some((c) => decodeURIComponent(c.url).includes("MTIØT"))).toBe(true);
+  });
+
+  it("decodes ÅSOS on the program-plan route", async () => {
+    const { fetch } = routeFetch(planRoutes);
+    const res = await handleProgramPlan(makeDeps(fetch), "%C3%85SOS", "2026");
+    expect(res.status).toBe(200);
+  });
+
+  it("decodes BØA1100 on the grades route", async () => {
+    const { fetch } = routeFetch([
+      { match: "hentJSONTabellData", respond: () => jsonResponse([GRADE_ROW]) },
+    ]);
+    const res = await handleCourseGrades(makeDeps(fetch), "B%C3%98A1100");
+    expect(res.status).toBe(200);
+  });
+
+  it("decodes BØA1100 on the timetable route and passes it upstream", async () => {
+    const { fetch, calls } = routeFetch([
+      {
+        match: "p_p_resource_id=timetable",
+        respond: () => jsonResponse({ summarized: [TIMETABLE_ENTRY] }),
+      },
+    ]);
+    const res = await handleCourseTimetable(makeDeps(fetch), "b%C3%B8a1100", "2026");
+    expect(res.status).toBe(200);
+    // Uppercased after decoding, as for any other code.
+    expect(calls.some((c) => decodeURIComponent(c.url).includes("BØA1100"))).toBe(true);
+  });
+
+  it("accepts an already-decoded code unchanged", async () => {
+    const { fetch } = routeFetch(planRoutes);
+    const res = await handleProgramPlan(makeDeps(fetch), "MTIØT", "2026");
+    expect(res.status).toBe(200);
+  });
+
+  it("400 on a malformed percent escape rather than throwing", async () => {
+    const deps = makeDeps(routeFetch([]).fetch);
+    const res = await handleProgramPlan(deps, "MTI%ZZT", "2026");
+    expect(res.status).toBe(400);
+    expect(await res.json()).toEqual({ error: "Invalid program code" });
+
+    const res2 = await handleCourseDetails(deps, "TDT%", null);
+    expect(res2.status).toBe(400);
+    expect(await res2.json()).toEqual({ error: "Invalid course code" });
+  });
+
+  it("still rejects a decoded code that is not a code", async () => {
+    const deps = makeDeps(routeFetch([]).fetch);
+    // "%2F" decodes to "/" -- valid escape, invalid code.
+    const res = await handleCourseGrades(deps, "TDT%2F4100");
     expect(res.status).toBe(400);
   });
 });

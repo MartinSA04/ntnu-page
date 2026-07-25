@@ -1,7 +1,15 @@
 ---
+// /studier/ is scheduled for deletion (PRODUCT.md D11/§12 — its job is
+// absorbed into /emner/), but it is the only route to /studier/[code]/
+// anywhere in the codebase (REVIEW.md I3), so it stays alive until those
+// pages have other entrances. Because it is going away, it is deliberately
+// NOT redesigned here (REVIEW.md §10 rules out pagination/virtualisation/
+// facet work on a page slated for deletion) — the only change is dropping
+// the always-rendered 403-row wall in favour of a search-first list, which
+// is a subtraction, not a redesign.
 import programsData from "../../../data/programs.json";
 import Layout from "../../layouts/Layout.astro";
-import { codeToSegment } from "./[code].astro";
+import { codeToSegment } from "../../lib/programUrl.js";
 
 const description = "Bla i NTNUs studieprogram etter navn, kode eller studienivå.";
 
@@ -38,11 +46,12 @@ const levels = [...new Set(programs.map((p) => p.studyLevel).filter(Boolean))].s
     }
   </div>
 
-  <p class="studier-status np-note" id="studier-status" aria-live="polite">
-    {programs.length} studieprogram
+  <p class="np-hint studier-hint" id="studier-hint">
+    Skriv for å søke i studieprogram, eller velg studienivå.
   </p>
+  <p class="studier-status np-note" id="studier-status" aria-live="polite" hidden></p>
 
-  <ul class="studier-results" id="studier-results">
+  <ul class="studier-results" id="studier-results" hidden>
     {
       programs.map((p) => (
         <li>
@@ -68,7 +77,6 @@ const levels = [...new Set(programs.map((p) => p.studyLevel).filter(Boolean))].s
     margin-bottom: var(--space-2);
   }
   .studier-title {
-    font-size: var(--text-2xl);
     margin-bottom: var(--space-5);
   }
   .studier-search {
@@ -81,11 +89,19 @@ const levels = [...new Set(programs.map((p) => p.studyLevel).filter(Boolean))].s
     gap: var(--space-2);
     margin-bottom: var(--space-5);
   }
+  .studier-hint,
   .studier-status {
     margin-bottom: var(--space-4);
   }
   .studier-results {
     list-style: none;
+  }
+  /* `display` only while shown. A bare `display: flex` outranks the UA's
+     `[hidden] { display: none }`, which left I3's search-first subtraction
+     inert: the attribute was set, the script believed the list was hidden,
+     and all 403 rows rendered anyway (21 000 px of page on first paint). The
+     rows already carry their own `[hidden]` rule for the same reason. */
+  .studier-results:not([hidden]) {
     display: flex;
     flex-direction: column;
   }
@@ -134,15 +150,27 @@ const levels = [...new Set(programs.map((p) => p.studyLevel).filter(Boolean))].s
   onPage((signal) => {
   const searchInput = document.getElementById("studier-search") as HTMLInputElement | null;
   const statusEl = document.getElementById("studier-status") as HTMLParagraphElement | null;
-  if (!searchInput || !statusEl) return;
+  const hintEl = document.getElementById("studier-hint") as HTMLParagraphElement | null;
+  const resultsEl = document.getElementById("studier-results") as HTMLUListElement | null;
+  if (!searchInput || !statusEl || !hintEl || !resultsEl) return;
   const rows = [...document.querySelectorAll<HTMLAnchorElement>(".studier-row")];
   const chips = [...document.querySelectorAll<HTMLButtonElement>(".studier-chip")];
 
   let activeLevel: string | null = null;
 
+  // I3: results render only once the visitor has started a search — a
+  // level chip alone counts (it is a search too), an empty field does not.
+  // This is the whole fix; the 403-row wall behind it is unchanged.
   function render(): void {
-    if (!searchInput || !statusEl) return;
+    if (!searchInput || !statusEl || !hintEl || !resultsEl) return;
     const query = fold(searchInput.value.trim());
+    const hasQuery = query.length > 0 || activeLevel !== null;
+
+    hintEl.hidden = hasQuery;
+    statusEl.hidden = !hasQuery;
+    resultsEl.hidden = !hasQuery;
+    if (!hasQuery) return;
+
     let shown = 0;
     for (const row of rows) {
       const matchesLevel = !activeLevel || row.dataset.level === activeLevel;

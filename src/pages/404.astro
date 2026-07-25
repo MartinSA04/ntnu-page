@@ -1,19 +1,130 @@
 ---
+import semestersData from "../../data/semesters.json";
 import Layout from "../layouts/Layout.astro";
+
+/**
+ * 404 recovery (U18). Course-code URLs (`/emne/TMA4100/`) are our largest
+ * cold-traffic surface and the one most likely to miss — a real course
+ * absent from this year's catalog (C1), a typo, a stale external link. A
+ * bare "til forsiden" button discards exactly the intent the visitor
+ * arrived with, so this page recovers it from the path instead: the
+ * `/emne/:code/` shape gets a course-search offer prefilled with the code
+ * it attempted; anything else gets the programme search offer prefilled
+ * with the path's last segment.
+ */
+const path = Astro.url.pathname;
+const segments = path.split("/").filter(Boolean);
+const isEmne = segments[0] === "emne";
+
+function decodeSegment(raw: string | undefined): string {
+  if (!raw) return "";
+  try {
+    return decodeURIComponent(raw);
+  } catch {
+    return raw;
+  }
+}
+
+const attempted = isEmne
+  ? decodeSegment(segments[1]).toUpperCase()
+  : decodeSegment(segments.at(-1)).replace(/[-_]+/g, " ").trim();
+
+const MONTH_ABBR = [
+  "jan",
+  "feb",
+  "mar",
+  "apr",
+  "mai",
+  "jun",
+  "jul",
+  "aug",
+  "sep",
+  "okt",
+  "nov",
+  "des",
+];
+
+/** `"2026-07-24T…"` → `"24. jul 2026"` (DR-8 provenance line). */
+function formatCrawlDate(iso: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return iso;
+  const month = MONTH_ABBR[d.getUTCMonth()] ?? "";
+  return `${d.getUTCDate()}. ${month} ${d.getUTCFullYear()}`;
+}
+
+const crawlDate = formatCrawlDate(semestersData.crawledAt);
 ---
 
 <Layout title="Fant ikke siden — Semesterplan" description="Siden finnes ikke.">
   <p class="np-kicker notfound-kicker">404</p>
-  <p class="notfound-lede">Vi fant ikke siden du lette etter.</p>
-  <a class="np-btn np-press notfound-home" href="/">Til forsiden</a>
+  {
+    isEmne ? (
+      <>
+        <h1 class="notfound-title">Vi fant ikke emnet {attempted}</h1>
+        <p class="np-hint notfound-lede">
+          Det kan være borte fra årets katalog eller stavet annerledes — søk etter det i
+          emnekatalogen.
+        </p>
+        <form class="notfound-form" action="/emner/" method="get">
+          <div class="np-field notfound-field">
+            <input
+              type="search"
+              name="q"
+              value={attempted}
+              aria-label="Søk i emnekatalogen"
+              autofocus
+            />
+          </div>
+          <button class="np-btn" type="submit">Søk i emner</button>
+        </form>
+      </>
+    ) : (
+      <>
+        <h1 class="notfound-title">Vi fant ikke siden du lette etter</h1>
+        <p class="np-hint notfound-lede">Prøv å finne studieprogrammet ditt i stedet.</p>
+        <form class="notfound-form" action="/" method="get">
+          <div class="np-field notfound-field">
+            <input
+              type="search"
+              name="q"
+              value={attempted}
+              aria-label="Søk etter studieprogram"
+              autofocus
+            />
+          </div>
+          <button class="np-btn" type="submit">Søk etter studieprogram</button>
+        </form>
+      </>
+    )
+  }
+  <p class="np-note notfound-crawldate">{`Data hentet ${crawlDate} fra NTNU`}</p>
+  <a class="np-navlink notfound-home" href="/">Til forsiden</a>
 </Layout>
 
 <style>
   .notfound-kicker {
     margin-bottom: var(--space-3);
   }
+  .notfound-title {
+    margin-bottom: var(--space-3);
+    max-width: var(--measure);
+  }
   .notfound-lede {
-    font-size: var(--text-md);
     margin-bottom: var(--space-5);
+  }
+  .notfound-form {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--gap-3);
+    max-width: var(--measure);
+    margin-bottom: var(--space-5);
+  }
+  .notfound-field {
+    flex: 1;
+    min-width: 14rem;
+  }
+  .notfound-crawldate {
+    margin-bottom: var(--space-4);
   }
 </style>

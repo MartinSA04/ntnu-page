@@ -11,7 +11,7 @@ import path from "node:path";
 import { setTimeout as sleep } from "node:timers/promises";
 import { fileURLToPath } from "node:url";
 import { NTNUClient } from "ntnu-api";
-import { toCatalog, toPrograms, toSearchIndex, toSemesters } from "./transform.mjs";
+import { mergeCatalogs, toCatalog, toPrograms, toSearchIndex, toSemesters } from "./transform.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, "..");
@@ -19,11 +19,20 @@ const DATA_DIR = path.join(ROOT, "data");
 const PUBLIC_DATA_DIR = path.join(ROOT, "public", "data");
 
 /**
- * Pause between consecutive upstream requests. The crawl is ~10 requests
+ * Pause between consecutive upstream requests. The crawl is ~20 requests
  * total, but they'd otherwise fire back-to-back; spacing them out costs a few
  * seconds a night and keeps the burst shape friendly.
  */
 const REQUEST_GAP_MS = 500;
+
+/**
+ * Catalog years to crawl, counting back from the canonical year. Two, because
+ * a course NTNU stops offering vanishes from the catalog immediately: 703 of
+ * 2025's courses (TMA4100 among them) are absent from 2026 while the API
+ * still serves their grades and timetables, and study plans still reference
+ * them. See `mergeCatalogs`.
+ */
+const CATALOG_YEARS = 2;
 
 /**
  * Write `content` to `filePath` atomically: write a tmp file in the same
@@ -69,18 +78,29 @@ async function main() {
   const current = await client.semesters.current();
   const year = yearFlag ?? current?.year ?? new Date().getUTCFullYear();
 
-  console.log(`crawl  year=${year}`);
+  const years = Array.from({ length: CATALOG_YEARS }, (_, i) => year - i);
+  console.log(`crawl  year=${year} catalogYears=${years.join(",")}`);
 
-  // Stable sort order keeps courses from hopping between pages mid-crawl, so
-  // searchAll's cross-page dedup drops duplicates instead of real courses.
-  const hits = [];
-  await sleep(REQUEST_GAP_MS);
-  for await (const page of client.courses.searchAll(year, null, { sort: "+ntnucoursecode" })) {
-    hits.push(...page.courses);
+  const perYear = [];
+  for (const catalogYear of years) {
+    // Stable sort order keeps courses from hopping between pages mid-crawl, so
+    // searchAll's cross-page dedup drops duplicates instead of real courses.
+    const hits = [];
     await sleep(REQUEST_GAP_MS);
+    for await (const page of client.courses.searchAll(catalogYear, null, {
+      sort: "+ntnucoursecode",
+    })) {
+      hits.push(...page.courses);
+      await sleep(REQUEST_GAP_MS);
+    }
+    const yearCatalog = toCatalog(hits, catalogYear, crawledAt);
+    console.log(`catalog     year=${catalogYear} courses=${yearCatalog.courses.length}`);
+    perYear.push(yearCatalog);
   }
-  const catalog = toCatalog(hits, year, crawledAt);
-  console.log(`catalog     courses=${catalog.courses.length}`);
+
+  const catalog = mergeCatalogs(perYear);
+  const carriedOver = catalog.courses.filter((c) => !c.offeredYears.includes(year)).length;
+  console.log(`catalog     courses=${catalog.courses.length} notOfferedIn${year}=${carriedOver}`);
 
   const searchIndex = toSearchIndex(catalog);
   console.log(`searchIndex courses=${searchIndex.courses.length}`);

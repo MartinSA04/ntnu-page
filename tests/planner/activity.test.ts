@@ -26,6 +26,27 @@ describe("classifyActivity — real-data validation set", () => {
     ["Main lecture", "FORM", "Formidling"],
     ["Assignment lecture", "FORM-P", "Formidling"],
     ["Plenumsregning", "FORM", "Formidling"],
+    // Modular/PBL course formats whose lecture half carries its own name
+    // (TDT4140's "1 Teorimodul", the health faculties' PBL plenary).
+    ["1 Teorimodul", "FORM", "Formidling"],
+    ["Teorimodul", "FORM", "Formidling"],
+    ["Problembasert læring", "DISAM", "Dialog- og samarbeidsbasert undervisning"],
+    ["Regneverksted", "FORM", "Formidling"],
+    // Slash-joined combined sessions (REVIEW.md B7b): the student is in the
+    // room either way, so a clash against one of these is a real clash. Every
+    // one of these is a title observed in live data.
+    ["Forelesning/Øving", "DISAM", "Dialog- og samarbeidsbasert undervisning"],
+    ["Forelesning/øving", "DISAM", "Dialog- og samarbeidsbasert undervisning"],
+    ["Forelesning / Øving", "DISAM", "Dialog- og samarbeidsbasert undervisning"],
+    ["Forelesning/øving Ålesund uke 19", "DISAM", "Dialog- og samarbeidsbasert undervisning"],
+    ["Forelesing/øving", "FORM", "Formidling"],
+    ["Forelesning/Gruppe", "DISAM", "Dialog- og samarbeidsbasert undervisning"],
+    ["Forelesning/Gruppe Arbeid", "DISAM", "Dialog- og samarbeidsbasert undervisning"],
+    ["Forelesning/Lab", "FERD-P", "Ferdighetstrening"],
+    ["1Forelesning/Lab", "DISAM", "Dialog- og samarbeidsbasert undervisning"],
+    ["Forelesning/Seminar", "DISAM", "Dialog- og samarbeidsbasert undervisning"],
+    // Same combination written the other way round — same session.
+    ["Fellesøving / forelesning", "DISAM", "Dialog- og samarbeidsbasert undervisning"],
   ];
 
   const other: Array<[string | null, string | null, string | null]> = [
@@ -65,17 +86,17 @@ describe("classifyActivity — real-data validation set", () => {
     ["Arkiv-timeplan", "FOR", "Forelesning"],
     // an abbreviated title with no recognizable keyword substring
     ["1FOR", "FOR", "Forelesning"],
-    // combined lecture+øving sessions: deliberately "other" per DR-1's
-    // asymmetric-risk tradeoff (a false red is worse than a hidden lecture)
-    ["Forelesning/Øving", "DISAM", "Dialog- og samarbeidsbasert undervisning"],
-    ["Forelesning/øving", "DISAM", "Dialog- og samarbeidsbasert undervisning"],
-    ["Forelesning/øving Ålesund uke 19", "DISAM", "Dialog- og samarbeidsbasert undervisning"],
-    ["Fellesøving / forelesning", "DISAM", "Dialog- og samarbeidsbasert undervisning"],
-    ["Forelesning/Lab", "FERD-P", "Ferdighetstrening"],
-    ["Forelesning/Seminar", "DISAM", "Dialog- og samarbeidsbasert undervisning"],
-    ["Forelesning/Gruppe Arbeid", "DISAM", "Dialog- og samarbeidsbasert undervisning"],
+    // A comma-joined enumeration is not a slash-joined combined session: it
+    // reads as "these things happen here over the term", so the
+    // under-classification bias still applies (DR-1).
     ["Øving, prosjektarbeid, forelesning", "DISAM", "Dialog- og samarbeidsbasert undervisning"],
-    ["1Forelesning/Lab", "DISAM", "Dialog- og samarbeidsbasert undervisning"],
+    // A slash-joined title we do not fully understand stays "other" — the
+    // carve-out only covers combinations of recognized activity qualifiers.
+    ["Forelesning/Øving/Frokost", "DISAM", "Dialog- og samarbeidsbasert undervisning"],
+    ["Lab/Ekskursjon", "FERD", "Ferdighetstrening"],
+    // Other modules of a modular course are not the lecture module.
+    ["2 Prosjektarbeid", "FORM", "Formidling"],
+    ["3 Refleksjonsmodul", "FORM", "Formidling"],
     // English course-topic titles used verbatim as the session title
     ["Flexibility in power grid and local markets", "FORM", "Formidling"],
     [

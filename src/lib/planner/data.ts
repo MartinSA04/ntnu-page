@@ -93,11 +93,14 @@ export function fetchCourseBundle(
 
   const promise = (async (): Promise<CourseBundle> => {
     const errors: string[] = [];
+    // The code stays percent-encoded until the worker's own parseCode decodes
+    // it — 238 catalog codes contain Æ/Ø/Å and used to take a hard 400 (B1).
+    const segment = encodeURIComponent(code);
     const [timetableResult, detailsResult] = await Promise.allSettled([
       fetchJson<TimetableEntry[]>(
-        `/api/course/${code}/timetable?year=${year}&version=${encodeURIComponent(version)}`,
+        `/api/course/${segment}/timetable?year=${year}&version=${encodeURIComponent(version)}`,
       ),
-      fetchJson<CourseDetails>(`/api/course/${code}`),
+      fetchJson<CourseDetails>(`/api/course/${segment}`),
     ]);
 
     let timetable: TimetableEntry[] | null = null;
@@ -129,11 +132,23 @@ export function clearCourseBundleMemo(): void {
 /** One catalog course as compacted in `search-index.json` (PLANNER.md §4). */
 export type PlannerIndexExam = [season: string, date: string | null];
 
+/**
+ * Positional tuple — elements 0–3 have never moved; 4 and 5 were appended by
+ * the two-year crawl (C1/C2).
+ *
+ * `offeredYears` is newest-first and never empty. When it does **not** contain
+ * `PlannerIndex.year`, the row's name/version/location/exams all come from the
+ * older catalog year: the course is not taught in the canonical year, and its
+ * exam dates are last year's. That is exactly what the semester-window filter
+ * below has to catch (C3).
+ */
 export type PlannerIndexCourse = [
   code: string,
   name: string,
-  location: string,
+  location: string | null,
   exams: PlannerIndexExam[],
+  version: string | null,
+  offeredYears: number[],
 ];
 
 export interface PlannerIndex {
@@ -168,29 +183,119 @@ export function seasonForSemesterId(semesterId: string): "AUTUMN" | "SPRING" | n
 }
 
 /**
+ * The **academic** year a semester belongs to: autumn `Y` and the following
+ * spring `Y+1` are one academic year `Y`. `search-index.json` is built from a
+ * single catalog year, so this is exactly which semesters its exam dates can
+ * speak for — `26h` and `27v` for the 2026 catalog, and nothing later (C3).
+ * `null` for a malformed id.
+ */
+export function academicYearOf(semesterId: string): number | null {
+  const m = /^(\d{2})([hv])$/i.exec(semesterId.trim());
+  if (!m) return null;
+  const year = 2000 + Number(m[1]);
+  return m[2]?.toLowerCase() === "h" ? year : year - 1;
+}
+
+/**
+ * True when the planner index's catalog year can speak for `semesterId` at
+ * all. Outside it the caller must say so ("eksamensdatoer er ikke publisert
+ * for Høst 2027") rather than presenting the previous year's dates as this
+ * semester's — which is what a season-only match did, a full year early.
+ */
+export function indexCoversSemester(index: PlannerIndex | null, semesterId: string): boolean {
+  if (!index) return false;
+  const academic = academicYearOf(semesterId);
+  return academic !== null && academic === index.year;
+}
+
+/** The date span an exam has to fall inside to belong to a semester — `semesters.json`'s own fields. */
+export interface ExamWindow {
+  fromDate: string | null;
+  examFinalDate: string | null;
+}
+
+/**
  * Catalog exam inputs for one course, filtered to a semester's season
  * (DR-3, PRODUCT.md §8): the exam ribbon's source of truth is catalog
  * `ExamDate`, not scraped `CourseExam` text — `details().exams` is
  * enrichment-only (popover text), never the ribbon source.
  *
- * Matches by **season, not calendar year**: an autumn semester's exam
- * window regularly spills into the following January/February (e.g. `26h`'s
- * `examLastDate` is `2027-02-01` in semesters.json), so a same-year filter
- * would silently drop real exams. `search-index.json` rows are built by
- * `crawler/transform.mjs`'s `toSearchIndex`, which already excludes
- * continuation (kont) exams before this data ever reaches the client — so,
- * unlike the raw catalog's `CatalogExam.continuation` field, there is
- * nothing left to filter here; this function's job is purely the season
- * match. A `null` date is kept (not dropped) so callers can render the
- * "dato ikke satt" bucket (DR-3) instead of silently losing the exam.
+ * Matches by season **and**, when a `window` is supplied, by the semester's
+ * own date span. The season match alone is not a year match: an autumn
+ * semester's exam window regularly spills into the following
+ * January/February (e.g. `26h`'s `examLastDate` is `2027-02-01`), so a
+ * same-calendar-year filter would silently drop real exams — but a
+ * season-only filter presented Høst 2026's dates as Høst 2027's, a year
+ * early and with no staleness marker (C3). The window is `fromDate` …
+ * `examFinalDate` straight out of `semesters.json`, which is both wide
+ * enough for the January spill and narrow enough to exclude the next
+ * year's.
+ *
+ * `search-index.json` rows are built by `crawler/transform.mjs`'s
+ * `toSearchIndex`, which already excludes continuation (kont) exams before
+ * this data ever reaches the client. A `null` date is kept (not dropped) so
+ * callers can render the "dato ikke satt" bucket (DR-3) instead of silently
+ * losing the exam — a dateless exam carries no year to be wrong about.
  */
 export function examsFromIndex(
   course: Pick<PlannerIndexCourse, 0 | 3>,
   semesterId: string,
+  window?: ExamWindow | null,
 ): { code: string; date: string | null }[] {
-  const code = course[0];
-  const exams = course[3];
+  const keep = examBelongsTo(semesterId, window);
+  if (!keep) return [];
+  return course[3].filter(keep).map(([, date]) => ({ code: course[0], date }));
+}
+
+/**
+ * The predicate `examsFromIndex` and `indexForSemester` share: does this
+ * catalog exam belong to `semesterId`? `null` when the semester id itself is
+ * unusable, so callers can distinguish "no exams" from "no question".
+ */
+function examBelongsTo(
+  semesterId: string,
+  window?: ExamWindow | null,
+): ((exam: PlannerIndexExam) => boolean) | null {
   const season = seasonForSemesterId(semesterId);
-  if (season === null) return [];
-  return exams.filter(([s]) => s === season).map(([, date]) => ({ code, date }));
+  if (season === null) return null;
+  const from = window?.fromDate ?? null;
+  const until = window?.examFinalDate ?? null;
+  return ([s, date]) => {
+    if (s !== season) return false;
+    if (date === null) return true;
+    if (from !== null && date < from) return false;
+    if (until !== null && date > until) return false;
+    return true;
+  };
+}
+
+/**
+ * A copy of the index whose every row carries only the exams that belong to
+ * `semesterId` — season **and** the semester's own `fromDate`…`examFinalDate`
+ * window.
+ *
+ * This exists because the exam ribbon reaches into the index itself and so
+ * cannot be handed a window per call. Pre-filtering here means the ribbon's
+ * season match becomes a no-op rather than a second, weaker filter, and the
+ * ribbon has no way to render a date from a semester it was not asked about:
+ * selecting "2027 HØST" used to present Høst 2026's dates as 27h's, a year
+ * early, with no staleness marker (C3).
+ *
+ * Cheap enough to run per semester (one pass over ~5 500 two-element arrays)
+ * but not per render — callers should memoise by `semesterId`.
+ */
+export function indexForSemester(
+  index: PlannerIndex,
+  semesterId: string,
+  window?: ExamWindow | null,
+): PlannerIndex {
+  const keep = examBelongsTo(semesterId, window);
+  const courses = index.courses.map((row): PlannerIndexCourse => {
+    const exams = keep ? row[3].filter(keep) : [];
+    // Most rows have no exams at all — hand the original back rather than
+    // allocating 5 470 identical tuples on every semester switch.
+    if (exams.length === row[3].length) return row;
+    return [row[0], row[1], row[2], exams, row[4], row[5]];
+  });
+  return { year: index.year, courses };
 }

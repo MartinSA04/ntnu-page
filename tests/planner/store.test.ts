@@ -503,3 +503,138 @@ describe("parsePlanHash — legacy v1-compat read (D15)", () => {
     expect(hash.startsWith("#v2;")).toBe(true);
   });
 });
+
+describe("parsePlanHash / formatPlanHash — encoding and validation (B10)", () => {
+  it("round-trips a direction code containing Ø", () => {
+    // BSPL kull 2026 → "Bachelor i sykepleie (Gjøvik)". Written raw, the
+    // browser handed the hash back percent-encoded, the direction lookup
+    // missed, the campus question re-opened and the banner showed a machine
+    // code — every Gjøvik/Ålesund campus split was affected.
+    const plan = {
+      semesterId: "26h",
+      program: {
+        code: "BSPL",
+        name: "Sykepleie",
+        cohort: 2026,
+        direction: { code: "BSPL26-V-GJØVIK", name: "Gjøvik" },
+      },
+      courses: [],
+    };
+    const hash = formatPlanHash(plan);
+    expect(hash).toBe("#v2;26h;BSPL.2026.BSPL26-V-GJ%C3%98VIK;");
+    expect(parsePlanHash(hash)?.program).toEqual({
+      code: "BSPL",
+      cohort: 2026,
+      direction: "BSPL26-V-GJØVIK",
+    });
+  });
+
+  it("round-trips a programme code containing Ø and a literal slash", () => {
+    const plan = {
+      semesterId: "26h",
+      program: { code: "MSØK/5", name: "Samfunnsøkonomi", cohort: 2024 },
+      courses: [],
+    };
+    const parsed = parsePlanHash(formatPlanHash(plan));
+    expect(parsed?.program?.code).toBe("MSØK/5");
+  });
+
+  it("round-trips a course code containing Ø", () => {
+    const plan = {
+      semesterId: "26h",
+      courses: [
+        { code: "BØA1100", name: "Bedriftsøkonomi", version: "1", source: "manual" as const },
+      ],
+    };
+    const hash = formatPlanHash(plan);
+    expect(hash).toBe("#v2;26h;-;+B%C3%98A1100");
+    expect(parsePlanHash(hash)?.courses).toEqual([
+      { code: "BØA1100", version: "1", source: "manual" },
+    ]);
+  });
+
+  it("keeps the token prefixes and the field separator readable", () => {
+    // encodeURIComponent leaves "." and "-" alone, which is what lets the
+    // grammar's own punctuation survive the encoding.
+    const hash = formatPlanHash({
+      semesterId: "26h",
+      program: { code: "MTDT", name: "Datateknologi", cohort: 2024 },
+      courses: [
+        { code: "TMA4100", name: "M1", version: "2", source: "program" as const },
+        { code: "IT2805", name: "Web", version: "1", source: "program" as const, dropped: true },
+      ],
+    });
+    expect(hash).toBe("#v2;26h;MTDT.2024;TMA4100.2,-IT2805");
+  });
+
+  it("rejects a programme segment whose cohort is not a plausible year", () => {
+    // The grammar PRODUCT §7 used to document put *courses* in this slot;
+    // feeding that form to the shipped parser produced {code:"TDT4100",
+    // cohort:1}, a 400 from ?year=1 and a banner reading "TDT4100 · kull 1".
+    const parsed = parsePlanHash("#v2;26h;TDT4100.1,TMA4100.1;IT2805.1");
+    expect(parsed?.program).toBeNull();
+    expect(parsed?.semesterId).toBe("26h");
+  });
+
+  it("rejects a cohort far in the future or before the university had plans", () => {
+    expect(parsePlanHash("#v2;26h;MTDT.3025;")?.program).toBeNull();
+    expect(parsePlanHash("#v2;26h;MTDT.1899;")?.program).toBeNull();
+    expect(parsePlanHash("#v2;26h;MTDT.2026;")?.program).not.toBeNull();
+  });
+
+  it("ignores a hash written by a future grammar rather than half-reading it", () => {
+    expect(parsePlanHash("#v3;26h;MTDT.2026;TDT4100")).toBeNull();
+    // ...and does not mistake it for the legacy v1 form.
+    expect(parsePlanHash("#v9;whatever")).toBeNull();
+  });
+
+  it("survives a hand-mangled percent escape instead of losing the whole plan", () => {
+    const parsed = parsePlanHash("#v2;26h;-;+TDT4100,+B%ZZA1100");
+    expect(parsed?.courses.map((c) => c.code)).toEqual(["TDT4100", "B%ZZA1100"]);
+  });
+});
+
+describe("credits carried into the plan (B9.1)", () => {
+  // MTKJ kull 2026 rendered "15 av 30 sp (+2 emner uten oppgitt sp)" because
+  // TMA4101 and TMT4115 are absent from the catalog — while the study plan
+  // response the prefill was built from gave both 7,5.
+  let creditStorage: StorageLike;
+  let creditStore: ReturnType<typeof createPlanStore>;
+
+  beforeEach(() => {
+    creditStorage = fakeStorage();
+    creditStore = createPlanStore("26h", { storage: creditStorage, events: fakeEvents() });
+  });
+
+  it("addCourse persists the study plan's credit figure", () => {
+    creditStore.addCourse({ code: "TMA4101", name: "Matematikk 2", credits: 7.5 });
+    expect(creditStore.loadPlan().courses[0]?.credits).toBe(7.5);
+  });
+
+  it("addCourse leaves credits absent when the caller has none", () => {
+    creditStore.addCourse({ code: "TDT4100", name: "OOP" });
+    expect(creditStore.loadPlan().courses[0]?.credits).toBeUndefined();
+  });
+
+  it("setProgramPlan carries credits for every programme course", () => {
+    creditStore.setProgramPlan({ code: "MTKJ", name: "Kjemi", cohort: 2026 }, [
+      { code: "TMA4101", name: "Matematikk 2", credits: 7.5 },
+      { code: "TMT4115", name: "Generell kjemi", credits: 7.5 },
+    ]);
+    expect(creditStore.loadPlan().courses.map((c) => c.credits)).toEqual([7.5, 7.5]);
+  });
+
+  it("survives the storage round trip", () => {
+    creditStore.addCourse({ code: "TMA4101", name: "Matematikk 2", credits: 7.5 });
+    const reread = createPlanStore("26h", { storage: creditStorage, events: fakeEvents() });
+    expect(reread.loadPlan().courses[0]?.credits).toBe(7.5);
+  });
+
+  it("keeps credits and the drop flag across a re-fetch of the same programme set", () => {
+    const program = { code: "MTKJ", name: "Kjemi", cohort: 2026 };
+    creditStore.setProgramPlan(program, [{ code: "TMA4101", name: "Matematikk 2", credits: 7.5 }]);
+    creditStore.dropCourse("TMA4101");
+    creditStore.setProgramPlan(program, [{ code: "TMA4101", name: "Matematikk 2", credits: 7.5 }]);
+    expect(creditStore.loadPlan().courses[0]).toMatchObject({ credits: 7.5, dropped: true });
+  });
+});

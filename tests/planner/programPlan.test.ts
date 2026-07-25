@@ -3,6 +3,8 @@ import {
   classifyPeriod,
   isSuspiciousPrefill,
   periodNumberFor,
+  prefillCredits,
+  resolvePeriodFor,
   type StudyPlan,
 } from "../../src/components/planner/programPlan.js";
 
@@ -281,5 +283,93 @@ describe("isSuspiciousPrefill", () => {
     expect(
       isSuspiciousPrefill([{ code: "A", name: "x", version: "1", credits: null, groupName: null }]),
     ).toBe(false);
+  });
+});
+
+describe("classifyPeriod — the gated pool (U7)", () => {
+  it("collects every direction's non-intersection courses into the pool", () => {
+    // In the gated branch only the intersection used to be collected and
+    // `choice` was never populated, so "Fra studieplanen" was disabled
+    // exactly when it was the student's only way forward and
+    // `effectiveScope()` handed them the whole 5 470-course catalog.
+    const result = classifyPeriod(directionGatedPlan(), 5);
+    expect(result?.choice.map((c) => c.code).sort()).toEqual([
+      "IT2810",
+      "TDT4117",
+      "TDT4165",
+      "TDT4172",
+    ]);
+  });
+
+  it("keeps intersection courses out of the pool — they are already prefilled", () => {
+    const result = classifyPeriod(directionGatedPlan(), 5);
+    const pool = result?.choice.map((c) => c.code) ?? [];
+    expect(pool).not.toContain("TDT4136");
+    expect(pool).not.toContain("TMA4135");
+  });
+
+  it("dedupes a course two directions both offer", () => {
+    const result = classifyPeriod(directionGatedPlan(), 5);
+    // IT2810 is `VA` in both MTDT directions.
+    expect(result?.choice.filter((c) => c.code === "IT2810")).toHaveLength(1);
+  });
+
+  it("quotes the study plan's own group title verbatim (DR-5)", () => {
+    const result = classifyPeriod(directionGatedPlan(), 5);
+    expect(
+      result?.choice.every((c) => c.groupName === "Obligatoriske og valgbare emner - 3. år"),
+    ).toBe(true);
+  });
+
+  it("still empties the pool of a chosen direction's obligatory courses", () => {
+    const result = classifyPeriod(directionGatedPlan(), 5, "MTDTDS-24");
+    expect(result?.choice.map((c) => c.code)).toEqual(["IT2810", "TDT4165"]);
+  });
+});
+
+describe("resolvePeriodFor", () => {
+  it("derives the period from semester + cohort and classifies it in one call", () => {
+    const resolved = resolvePeriodFor(directionGatedPlan(), "26h", 2024);
+    expect(resolved.periodNumber).toBe(5);
+    expect(resolved.courses?.obligatory.map((c) => c.code).sort()).toEqual(["TDT4136", "TMA4135"]);
+    expect(resolved.pendingChoice?.name).toBe("Valg av studieretning");
+  });
+
+  it("threads a chosen studieretning through", () => {
+    const resolved = resolvePeriodFor(directionGatedPlan(), "26h", 2024, "MTDTKI-24");
+    expect(resolved.pendingChoice).toBeNull();
+    expect(resolved.courses?.obligatory.map((c) => c.code)).toEqual([
+      "TDT4136",
+      "TDT4172",
+      "TMA4135",
+    ]);
+  });
+
+  it("reports a semester the plan has no period for (B4's honest dead end)", () => {
+    // Kull 2024 in 27v is period 6, which this fixture does not have.
+    const resolved = resolvePeriodFor(directionGatedPlan(), "27v", 2024);
+    expect(resolved.periodNumber).toBe(6);
+    expect(resolved.courses).toBeNull();
+    expect(resolved.pendingChoice).toBeNull();
+  });
+
+  it("reports a malformed semester id as no period at all", () => {
+    const resolved = resolvePeriodFor(directionGatedPlan(), "banana", 2024);
+    expect(resolved.periodNumber).toBeNull();
+    expect(resolved.courses).toBeNull();
+  });
+});
+
+describe("prefillCredits", () => {
+  it("sums the study plan's own figures, treating null as zero", () => {
+    const courses = [
+      { code: "MD4071", name: "", version: "1", credits: 30, groupName: null },
+      { code: "SMED8008", name: "", version: "1", credits: 7.5, groupName: null },
+      { code: "SMED8004", name: "", version: "1", credits: 5, groupName: null },
+    ];
+    // CMEDFORSK period 1: legitimately 42,5 sp, and it must reach the page
+    // with a note rather than being discarded into "0 av 30 sp" (B9.4).
+    expect(prefillCredits(courses)).toBe(42.5);
+    expect(isSuspiciousPrefill(courses)).toBe(true);
   });
 });

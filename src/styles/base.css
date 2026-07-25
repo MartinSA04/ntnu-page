@@ -40,13 +40,14 @@ h4 {
   text-wrap: balance;
 }
 
+/* Page title by default; only the homepage opts up to the display step. */
 h1 {
-  font-size: var(--text-3xl);
+  font-size: var(--text-xl);
   letter-spacing: -0.015em;
 }
 
 h2 {
-  font-size: var(--text-xl);
+  font-size: var(--text-lg);
   letter-spacing: -0.01em;
 }
 
@@ -55,9 +56,14 @@ h3 {
   font-weight: var(--weight-medium);
 }
 
-p,
-ul,
-ol {
+/* The reading measure belongs to prose, not to markup. Applied to every
+   <p>/<ul>/<ol> it silently capped the data lists — search results, exam
+   ribbons, credit-reduction tables — at 38rem inside a 72rem column, which
+   is the opposite of what DESIGN §3 asks for ("data surfaces use the full
+   --maxw column"). Anything that carries a class has a designer; only
+   unclassed prose gets the measure, and at zero specificity so it never
+   fights one. */
+:where(p, ul, ol):not([class]) {
   max-width: var(--measure);
 }
 

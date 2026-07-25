@@ -9,20 +9,48 @@ interface CacheEntry {
   storedAt: number;
 }
 
+/**
+ * Upper bound on live entries. The cache is module-level, so it lives for the
+ * isolate's whole lifetime; without a cap a long-lived isolate serving many
+ * distinct codes grows until the 128 MB limit kills it. Cached values are
+ * study plans and timetables (single-digit KB each), so a few hundred entries
+ * is a comfortable working set well inside the budget.
+ */
+const MAX_ENTRIES = 500;
+
 export class TTLCache {
   private readonly entries = new Map<string, CacheEntry>();
 
-  /** Returns the cached value, or `null` if absent or older than `ttlMs`. */
+  /**
+   * Returns the cached value, or `null` if absent or older than `ttlMs`.
+   * An expired entry is dropped on read: TTLs are per-route, so nothing else
+   * ever revisits a key that has fallen out of use.
+   */
   get(key: string, ttlMs: number): unknown | null {
     const entry = this.entries.get(key);
     if (!entry) return null;
-    if (Date.now() - entry.storedAt > ttlMs) return null;
+    if (Date.now() - entry.storedAt > ttlMs) {
+      this.entries.delete(key);
+      return null;
+    }
     return entry.value;
   }
 
-  /** Stores `value` under `key`, stamped with the current time. */
+  /**
+   * Stores `value` under `key`, stamped with the current time, evicting in
+   * insertion order once `MAX_ENTRIES` is exceeded. Re-setting an existing key
+   * deletes first so the refreshed entry moves to the back of the queue —
+   * otherwise a hot key keeps its original position and is evicted while cold
+   * keys stored after it survive.
+   */
   set(key: string, value: unknown): void {
+    this.entries.delete(key);
     this.entries.set(key, { value, storedAt: Date.now() });
+    while (this.entries.size > MAX_ENTRIES) {
+      const oldest = this.entries.keys().next();
+      if (oldest.done === true) break;
+      this.entries.delete(oldest.value);
+    }
   }
 }
 
@@ -34,9 +62,6 @@ export const GRADES_CACHE_TTL_MS = 24 * 60 * 60 * 1000;
 
 /** TTL for per-course weekly timetables — may shift during term planning. */
 export const TIMETABLE_CACHE_TTL_MS = 60 * 60 * 1000;
-
-/** TTL for per-course dated schedules — same volatility as timetables. */
-export const SCHEDULE_CACHE_TTL_MS = 60 * 60 * 1000;
 
 /** TTL for study plans — change a few times a year. */
 export const PLAN_CACHE_TTL_MS = 24 * 60 * 60 * 1000;

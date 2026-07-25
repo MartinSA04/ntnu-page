@@ -127,7 +127,10 @@ const MAX_STEP_BACK_TRIES = 3;
 
 async function fetchPlan(code: string, year: number): Promise<StudyPlan | null | "error"> {
   try {
-    const res = await fetch(`/api/program/${code}/plan?year=${year}`);
+    // The code stays encoded until the worker's own parseCode decodes it —
+    // Æ/Ø/Å and the handful of codes carrying a literal "/" ("MSØK/5") would
+    // otherwise become a 400 or a wrong route (B1).
+    const res = await fetch(`/api/program/${encodeURIComponent(code)}/plan?year=${year}`);
     if (res.status === 404) return null;
     if (!res.ok) return "error";
     return (await res.json()) as StudyPlan;
@@ -142,7 +145,7 @@ export type FindPlanResult =
   | { kind: "error" };
 
 /** Steps back from `guessYear` up to MAX_STEP_BACK_TRIES times on 404 (unpublished cohort, DR-7). */
-export async function findProgramPlan(code: string, guessYear: number): Promise<FindPlanResult> {
+async function findProgramPlanUncached(code: string, guessYear: number): Promise<FindPlanResult> {
   let year = guessYear;
   for (let attempt = 0; attempt < MAX_STEP_BACK_TRIES; attempt++) {
     const result = await fetchPlan(code, year);
@@ -151,6 +154,33 @@ export async function findProgramPlan(code: string, guessYear: number): Promise<
     year -= 1;
   }
   return { kind: "not-found" };
+}
+
+/**
+ * Memo keyed `CODE:year`, mirroring `fetchCourseBundle`'s. A study plan is a
+ * build-time-stable document that every re-render of the page asks for again:
+ * picking a kull used to cost three sequential round trips and every
+ * Dropp/Legg tilbake another one (C5d). Errors are evicted after they settle
+ * so a transient failure stays retryable; 404-ladder misses are not (they are
+ * a property of the data, not of the network).
+ */
+const planMemo = new Map<string, Promise<FindPlanResult>>();
+
+export function findProgramPlan(code: string, guessYear: number): Promise<FindPlanResult> {
+  const key = `${code.toUpperCase()}:${guessYear}`;
+  const cached = planMemo.get(key);
+  if (cached) return cached;
+  const promise = findProgramPlanUncached(code, guessYear).then((result) => {
+    if ("kind" in result && result.kind === "error") planMemo.delete(key);
+    return result;
+  });
+  planMemo.set(key, promise);
+  return promise;
+}
+
+/** Clears the in-memory study-plan memo. Exposed for tests only. */
+export function clearProgramPlanMemo(): void {
+  planMemo.clear();
 }
 
 /**
@@ -177,11 +207,7 @@ export function periodNumberFor(semesterId: string, cohort: number): number | nu
   return isAutumn ? (semYear - cohort) * 2 + 1 : (semYear - 1 - cohort) * 2 + 2;
 }
 
-/**
- * A grossly-over-30-sp obligatory prefill is a bug signal — surfaced as a
- * boolean rather than silently truncating, so the caller can guard without
- * inventing a truncation rule the product never asked for.
- */
+/** Above this an obligatory prefill is a bug signal, not a semester (see `isSuspiciousPrefill`). */
 const SUSPICIOUS_CREDIT_CEILING = 30;
 
 function toClassified(course: PlannedCourse, groupName: string | null): ClassifiedCourse {
@@ -218,6 +244,30 @@ function collectGroups(
       const classified = toClassified(course, group.name);
       if (isObligatory(course)) obligatory.push(classified);
       else choice.push(classified);
+    }
+  }
+}
+
+/**
+ * Everything a direction offers that isn't already accounted for, into the
+ * pool. Used only on the gated path: with the question still open the
+ * intersection is all we can prefill, so without this the pool is empty
+ * exactly when it is the student's only way forward — "Fra studieplanen"
+ * disabled, `effectiveScope()` falling back to the whole 5 470-course
+ * catalog (U7). Group names stay verbatim (DR-5); `seen` keeps a course that
+ * two directions share from being listed twice.
+ */
+function collectPool(
+  direction: PlanDirection,
+  seen: Set<string>,
+  choice: ClassifiedCourse[],
+): void {
+  for (const group of direction.courseGroups ?? []) {
+    for (const course of group.courses ?? []) {
+      if (!isRealCourse(course)) continue;
+      if (seen.has(course.code)) continue;
+      seen.add(course.code);
+      choice.push(toClassified(course, group.name));
     }
   }
 }
@@ -321,6 +371,12 @@ export function classifyPeriod(
     obligatory.push(course);
   }
 
+  // Everything else the directions offer becomes the pool (U7). It is offered,
+  // never prefilled — which is what `choice` already means everywhere else.
+  for (const direction of directions) {
+    collectPool(direction, seen, choice);
+  }
+
   return {
     obligatory,
     choice,
@@ -333,8 +389,52 @@ export function classifyPeriod(
   };
 }
 
-/** Sum of `credits` (nulls treated as 0) — used only for the bug-signal guard, never shown as-is. */
+/** Sum of `credits` (nulls treated as 0). The study plan's own figure, not the catalog's. */
+export function prefillCredits(courses: ClassifiedCourse[]): number {
+  return courses.reduce((sum, c) => sum + (c.credits ?? 0), 0);
+}
+
+/**
+ * A grossly-over-30-sp obligatory prefill is a bug signal — surfaced as a
+ * boolean rather than silently truncating, so the caller can guard without
+ * inventing a truncation rule the product never asked for. Note the caller
+ * must *say so* rather than drop the courses: CMEDFORSK period 1 legitimately
+ * sums to 42,5 sp and MJORM to 45, and discarding them silently produced "0
+ * av 30 sp" with no rows and no explanation (B9.4).
+ */
 export function isSuspiciousPrefill(courses: ClassifiedCourse[]): boolean {
-  const total = courses.reduce((sum, c) => sum + (c.credits ?? 0), 0);
-  return total > SUSPICIOUS_CREDIT_CEILING;
+  return prefillCredits(courses) > SUSPICIOUS_CREDIT_CEILING;
+}
+
+/** What one semester of one cohort's study plan resolves to — see `resolvePeriodFor`. */
+export interface ResolvedPeriod {
+  /** Period number derived from semester + cohort; `null` when the id doesn't parse. */
+  periodNumber: number | null;
+  /** The classified period, or `null` when the plan has no such period (DR-7). */
+  courses: PeriodCourses | null;
+  /** Shorthand for `courses?.pendingChoice` — the open studieretning/campus question. */
+  pendingChoice: DirectionChoice | null;
+}
+
+/**
+ * `semesterId` + cohort → the courses that semester's period resolves to.
+ *
+ * The one entry point for "what does this programme mean for this semester":
+ * the planner calls it on every semester change and on every studieretning
+ * answer, and the homepage picker asks the same question before it navigates
+ * (B2 — the question is asked in the picker, and the planner must be able to
+ * answer it identically or the two surfaces drift). Keeping the period
+ * arithmetic and the classification behind one call is what makes that
+ * cheap; `periodNumberFor` and `classifyPeriod` stay exported for the tests
+ * and for callers that already hold a period number.
+ */
+export function resolvePeriodFor(
+  plan: StudyPlan,
+  semesterId: string,
+  cohort: number,
+  directionCode?: string | null,
+): ResolvedPeriod {
+  const periodNumber = periodNumberFor(semesterId, cohort);
+  const courses = periodNumber === null ? null : classifyPeriod(plan, periodNumber, directionCode);
+  return { periodNumber, courses, pendingChoice: courses?.pendingChoice ?? null };
 }

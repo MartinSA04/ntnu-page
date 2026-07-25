@@ -26,6 +26,18 @@
   --border: #dad8ce;
   --border-strong: #cecdc3;
 
+  /* Controls. Ink-Before-Chrome forbids borders here, so the tonal step is
+     the whole affordance and it has to be seen: --card against --bg computes
+     1.11:1, far under WCAG 1.4.11's 3:1 for a control boundary. In light the
+     step plus warm paper carries it; in dark the fill lifts a full Flexoki
+     step above --card, and --control-edge (≈5:1 against --bg in both themes)
+     gives .np-field a rule that always reads — a margin line on squared
+     paper, not a border. Neutral on purpose: a green edge on every field
+     would spend Green-Means-Fits on chrome. */
+  --control-bg: var(--card);
+  --control-hover: var(--card-hover);
+  --control-edge: var(--faint);
+
   /* Accent: Flexoki green — "it fits". Text goes through --accent-ink. */
   --accent: #66800b;
   --accent-ink: color-mix(in srgb, var(--accent) 65%, var(--fg));
@@ -33,9 +45,14 @@
   --accent-weak: color-mix(in srgb, var(--accent) 12%, transparent);
   --accent-ring: color-mix(in srgb, var(--accent) 45%, transparent);
 
-  /* Collision ink: Flexoki red, reserved exclusively for conflicts. */
+  /* Collision ink: Flexoki red, reserved exclusively for conflicts.
+     --clash-edge is the solid inline-start rule a colliding block carries.
+     It is deliberately a different *kind* of mark from the hue washes below
+     — a wash can never out-shout another wash, and Red-Is-Collision means
+     red has to win on sight. --clash-bg fills the overlapping band only. */
   --clash: #af3029;
   --clash-bg: #ffe1d5;
+  --clash-edge: inset 2px 0 0 0 var(--clash);
 
   /* Course identity hues (Flexoki categorical 600s; green/red excluded). */
   --hue-blue: #205ea6;
@@ -49,23 +66,43 @@
   --wash: color-mix(in srgb, var(--fg) 6%, transparent);
   --selection: color-mix(in srgb, var(--accent) 24%, transparent);
 
-  /* The squared ruling (planning surfaces only — see .np-ruled). */
+  /* Course-hue wash strengths, as mix percentages: the block's fill is
+     color-mix(in srgb, var(--dot) var(--wash-course), var(--card)). They are
+     percentages rather than finished colours because --dot is set per block
+     and a custom property resolves its var()s where it is *declared*, not
+     where it is used. Kept faint on purpose — §8 says the square .np-dot
+     carries course identity, so the wash only has to group, and anything
+     heavier competes with the collision ink. */
+  --wash-course: 8%;
+  --wash-course-hover: 14%;
+  --wash-course-muted: 4%;
+
+  /* The squared ruling (planning surfaces only — see .np-ruled).
+     --ruling-hour is the heavier every-fourth-cell rule of .np-ruled--hours:
+     at --cell = 15 minutes that is the hour line a real timetable sheet has,
+     and without it uniform squares read as texture rather than a scale. */
   --cell: 24px;
   --ruling-line: color-mix(in srgb, var(--border) 55%, transparent);
+  --ruling-hour: color-mix(in srgb, var(--border-strong) 90%, transparent);
 
   /* Type. Sentences in the grotesk; data (times, dates, codes, counts)
      in the mono — the Data-Is-Mono rule. */
   --font-sans: "Schibsted Grotesk", system-ui, "Segoe UI", Arial, sans-serif;
   --font-mono: "Spline Sans Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
 
-  --text-xs: 0.72rem;
-  --text-sm: 0.84rem;
-  --text-base: 1rem;
-  --text-md: 1.13rem;
-  --text-lg: 1.35rem;
-  --text-xl: 1.6rem;
-  --text-2xl: 2rem;
-  --text-3xl: 2.6rem;
+  /* Seven steps, one per role docs/DESIGN.md §3 names — no step without a
+     job. The scale used to carry a dead 1.35rem rung while 2rem, the size
+     four page titles actually use, had no name at all; the names now follow
+     the ladder, so --text-lg is DESIGN's 1.6rem headline and --text-xl is
+     the page title. (Renamed: old --text-xl → --text-lg, old --text-2xl →
+     --text-xl, old --text-3xl → --text-2xl. The 1.35rem rung is gone.) */
+  --text-xs: 0.72rem; /* label — mono kickers, notes, toggles */
+  --text-sm: 0.84rem; /* small sentence — hints, control labels */
+  --text-base: 1rem; /* body */
+  --text-md: 1.13rem; /* title — section and row heads */
+  --text-lg: 1.6rem; /* headline — <h2> */
+  --text-xl: 2rem; /* page title — <h1> on content pages */
+  --text-2xl: 2.6rem; /* display — the homepage, and nowhere else */
 
   --leading-tight: 1.1;
   --leading-snug: 1.3;
@@ -135,6 +172,14 @@
   --border: #403e3c;
   --border-strong: #575653;
 
+  /* Dark controls lift a whole Flexoki step clear of --card (#1c1b1a), which
+     is where the light theme's tonal step disappears: on black paper #1c1b1a
+     against #100f0f is 1.10:1 and a resting search field is simply not there.
+     Hover then has to go a step further again, or the control would answer
+     with the fill it already has. --control-edge follows --faint per theme. */
+  --control-bg: #282726;
+  --control-hover: #343331;
+
   --accent: #879a39;
   --accent-contrast: #100f0f;
 
@@ -149,6 +194,7 @@
   --hue-yellow: #d0a215;
 
   --ruling-line: color-mix(in srgb, var(--border) 60%, transparent);
+  --ruling-hour: color-mix(in srgb, var(--border-strong) 95%, transparent);
 
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.35);
   --shadow: 0 3px 10px rgba(0, 0, 0, 0.4), 0 1px 3px rgba(0, 0, 0, 0.3);

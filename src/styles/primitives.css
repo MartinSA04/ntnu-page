@@ -4,6 +4,19 @@
  * controls take an ink wash) with text lighting to --accent-ink; press
  * dips 1px; focus is the global 2px accent outline. Interactive controls
  * never carry borders (hairlines are structure).
+ *
+ * The press dip lives on the controls themselves, not on an opt-in class:
+ * a grammar three of twenty controls remembered to import was not a
+ * grammar. `.np-press` stays as the escape hatch for one-off pressables.
+ *
+ * Two small-text classes, and the split is Data-Is-Mono, not size:
+ *   .np-note — a mono *fragment* a student could copy: "uke 38–40", "0 sp",
+ *              "dato ikke satt", "kull 2026".
+ *   .np-hint — a *sentence* in the grotesk: "Ingen forelesninger funnet i
+ *              denne uka." Anything with a verb belongs here.
+ * `.np-note-clash` is a sentence too (it has to name both things that
+ * collide), so it is set in the grotesk with `.np-data` spans around the
+ * day, time and week it quotes.
  */
 
 /* --- Labels & data ------------------------------------------------- */
@@ -22,27 +35,29 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* Mono fragments only — see the file header. */
 .np-note {
   font-family: var(--font-mono);
   font-size: var(--text-xs);
   color: var(--muted);
 }
 
-/* Collision ink — the only place red appears (Red-Is-Collision rule). */
-.np-note-clash {
-  font-family: var(--font-mono);
-  font-size: var(--text-xs);
-  color: var(--clash);
+/* Small sentences: help text, empty-state invitations, provenance lines. */
+.np-hint {
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  line-height: var(--leading-normal);
+  color: var(--muted);
+  max-width: var(--measure);
 }
 
-.np-kbd {
-  font-family: var(--font-mono);
-  font-size: var(--text-xs);
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-bottom-width: 2px;
-  border-radius: var(--radius-xs);
-  padding: 0.1em 0.45em;
+/* Collision ink — the only place red appears (Red-Is-Collision rule).
+   A sentence, so: grotesk, with the data it quotes in `.np-data` spans. */
+.np-note-clash {
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  line-height: var(--leading-normal);
+  color: var(--clash);
 }
 
 /* --- Buttons ------------------------------------------------------- */
@@ -53,7 +68,7 @@
   gap: var(--gap-2);
   min-height: var(--control-h);
   padding: 0 var(--space-3);
-  background: var(--card);
+  background: var(--control-bg);
   color: var(--fg);
   font-weight: var(--weight-medium);
   font-size: var(--text-sm);
@@ -65,7 +80,7 @@
 }
 
 .np-btn:hover {
-  background: var(--card-hover);
+  background: var(--control-hover);
   color: var(--accent-ink);
 }
 
@@ -120,7 +135,8 @@
 
 /* --- Tags & toggles ------------------------------------------------ */
 
-/* Course tag: squared (ruteark cell, not a pill), mono code, hue dot. */
+/* Course tag: squared (ruteark cell, not a pill), mono code, hue dot.
+   `--sm` is the in-grid size, for tags that sit inside a timetable block. */
 .np-tag {
   display: inline-flex;
   align-items: center;
@@ -129,13 +145,19 @@
   background: var(--card);
   color: var(--fg);
   font-family: var(--font-mono);
-  font-size: var(--text-xs);
+  font-size: var(--text-sm);
   font-weight: var(--weight-medium);
   border-radius: var(--radius-xs);
   text-decoration: none;
   transition:
     background var(--dur-fast) var(--ease),
     color var(--dur-fast) var(--ease);
+}
+
+.np-tag--sm {
+  gap: var(--gap-1);
+  padding: 0.2em 0.4em;
+  font-size: var(--text-xs);
 }
 
 a.np-tag:hover,
@@ -154,6 +176,11 @@ button.np-tag:hover {
   background: var(--dot, var(--accent));
 }
 
+.np-tag--sm .np-dot {
+  width: 6px;
+  height: 6px;
+}
+
 /* Selectable toggle (semester switcher, filters). aria-pressed drives it. */
 .np-toggle {
   display: inline-flex;
@@ -161,7 +188,7 @@ button.np-tag:hover {
   gap: var(--gap-2);
   min-height: var(--control-h);
   padding: 0 var(--space-3);
-  background: var(--card);
+  background: var(--control-bg);
   color: var(--muted);
   font-family: var(--font-mono);
   font-size: var(--text-xs);
@@ -174,8 +201,20 @@ button.np-tag:hover {
     color var(--dur-fast) var(--ease);
 }
 
+/* Same control, but for a proper name rather than a code. Uppercased tracked
+   mono is a label voice; "Visuell databehandling" set that way is a
+   20-character phrase in 11.5px caps that wraps to two rows and stops being
+   a name. Fills and aria-pressed behaviour are unchanged — only the voice.
+   Do NOT also .toUpperCase() the text: the transform is the CSS's job. */
+.np-toggle--text {
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  text-transform: none;
+  letter-spacing: normal;
+}
+
 .np-toggle:hover {
-  background: var(--card-hover);
+  background: var(--control-hover);
   color: var(--accent-ink);
 }
 
@@ -186,14 +225,20 @@ button.np-tag:hover {
 
 /* --- Fields -------------------------------------------------------- */
 
+/* The inline-start rule is the field's edge. Ink-Before-Chrome rules out a
+   border, and the tonal step alone computes ~1.1:1 against the page — in
+   dark mode a resting search field simply is not there. Two pixels of
+   --control-edge read at ~5:1 in both themes without becoming chrome: it is
+   the margin line on a sheet of ruteark. */
 .np-field {
   display: flex;
   align-items: center;
   gap: var(--gap-2);
   min-height: var(--control-h);
   padding: 0 var(--space-3);
-  background: var(--card);
+  background: var(--control-bg);
   border-radius: var(--radius-sm);
+  box-shadow: inset 2px 0 0 0 var(--control-edge);
   transition: background var(--dur-fast) var(--ease);
 }
 
@@ -215,8 +260,10 @@ button.np-tag:hover {
   outline: none;
 }
 
+/* --faint is for captions on paper; on a control fill it is the label of an
+   empty field, which is the only thing telling the student what to type. */
 .np-field input::placeholder {
-  color: var(--faint);
+  color: var(--muted);
 }
 
 /* --- Surfaces ------------------------------------------------------ */
@@ -227,14 +274,31 @@ button.np-tag:hover {
   padding: var(--space-4);
 }
 
-.np-tile {
-  display: block;
+/* Floating list surface for the typeahead comboboxes. On --card, never
+   --card-nested: nested is the *recessed* step, and in dark it is lighter
+   than --card, so a popover built on it inverts its relationship to the
+   page between themes. Override the height with --popover-max. */
+.np-popover {
+  list-style: none;
+  max-height: var(--popover-max, 18rem);
+  overflow-y: auto;
+  padding: var(--space-1);
   background: var(--card);
-  border-radius: var(--radius);
-  padding: var(--space-4);
-  color: var(--fg);
-  text-decoration: none;
-  box-shadow: var(--shadow-sm);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow);
+}
+
+/* One row. Layout is the call site's (the rows carry different content
+   shapes); the padding, corner and highlight are the system's. */
+.np-popover-option {
+  padding: var(--space-2);
+  border-radius: var(--radius-xs);
+  cursor: pointer;
+}
+
+.np-popover-option.is-active,
+.np-popover-option:hover {
+  background: var(--card-hover);
 }
 
 /* Planning surface: the paper spread with squared ruling and a frame.
@@ -246,11 +310,35 @@ button.np-tag:hover {
   overflow: hidden;
 }
 
+/* Two declarations here are load-bearing, both about where the tiling starts.
+   `background-origin` defaults to padding-box while the timetable's grid rows
+   start at the content box, so the squares sat a constant 16px off the blocks
+   they were supposed to be ruling. And `background-attachment` defaults to
+   scroll, which on the horizontally scrollable week frame pins the ruling to
+   the frame while the columns slide out from under it; `local` ties it to the
+   scrolled content instead. Ruled surfaces must also pad in whole --cell
+   multiples, or the ruling meets the frame mid-square. */
 .np-ruled {
   background-image:
     linear-gradient(var(--ruling-line) 1px, transparent 1px),
     linear-gradient(90deg, var(--ruling-line) 1px, transparent 1px);
   background-size: var(--cell) var(--cell);
+  background-origin: content-box;
+  background-attachment: local;
+}
+
+/* Timetable ruling: a heavier line every fourth cell. At --cell = 15 minutes
+   that is the hour, and it is what turns a field of identical squares back
+   into a scale you can read a time off. */
+.np-ruled--hours {
+  background-image:
+    linear-gradient(var(--ruling-hour) 1px, transparent 1px),
+    linear-gradient(var(--ruling-line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--ruling-line) 1px, transparent 1px);
+  background-size:
+    100% calc(var(--cell) * 4),
+    var(--cell) var(--cell),
+    var(--cell) var(--cell);
 }
 
 /* --- Disclosure ---------------------------------------------------- */
@@ -297,17 +385,15 @@ details[open] > .np-summary::before {
 
 /* --- Micro-interactions -------------------------------------------- */
 
-.np-lift {
-  transition:
-    transform var(--dur-fast) var(--ease),
-    box-shadow var(--dur-fast) var(--ease);
-}
-
-.np-lift:hover {
-  transform: translateY(-1px);
-  box-shadow: var(--shadow);
-}
-
+/* Press = a 1px dip, on every control that takes a press. Untransitioned on
+   purpose: a press is instant, and reduced motion has nothing to zero. */
+.np-btn:active,
+.np-icon-btn:active,
+.np-navlink:active,
+.np-toggle:active,
+.np-summary:active,
+a.np-tag:active,
+button.np-tag:active,
 .np-press:active {
   transform: translateY(1px);
 }

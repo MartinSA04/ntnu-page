@@ -1,7 +1,9 @@
 name: Release
 
 # Deploys the site Worker when a version tag lands — after the check suite
-# passes, with a fresh crawl baked into the release build. The flow is:
+# AND the e2e suite (e2e.yml's job, run again here directly so a deploy is
+# gated on it even if the tagged diff didn't touch e2e.yml's watched paths),
+# with a fresh crawl baked into the release build. The flow is:
 # `npm version <patch|minor|major>` locally, then `git push --follow-tags` —
 # this workflow does the rest.
 #
@@ -32,6 +34,10 @@ jobs:
       - run: npm test
       - name: Crawl fresh data for the release build
         run: npm run crawl
+      - name: End-to-end suite against live data (REVIEW.md T1 — gates every deploy)
+        run: |
+          npx playwright install --with-deps chromium
+          npm run test:e2e
       - run: npm run build
       - name: Deploy Worker to Cloudflare
         run: npx wrangler deploy

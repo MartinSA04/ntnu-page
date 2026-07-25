@@ -105,28 +105,31 @@ Two flows are co-primary: **the elective decide-loop (2)** and **the shared-plan
 
 **Four pages. One nav pill. Search is a mode, not a destination.** The draft's "two pills — Planlegger | Emner" still made search a co-equal top-level surface, which contradicts the positioning: the loudest surface would be the least differentiated (c4-2, c4-cut #1).
 
-- `/` — **dispatcher + proof.** Verb-first, shows the red-ink collision above the fold (§5).
-- `/planlegger/` — **the app.** The plan, the grid, the decide-loop, the temporal banner. Search lives *inside it* as an add field/mode.
-- `/emner/` — **find courses** (still a real page for deep search and for search-engine landing), merged program search as `?type=studier`. Reachable from the planner's add field and from footer/inline links — **not a primary nav pill.**
-- `/emne/[code]/` — **the fork point** (§3.4). Plan-aware. `?mot=` retained only as a lightweight two-course "legg begge til"-capable view for deep-linking (c3-7), *not* a compare matrix.
-- `/studier/[code]/` — **study plan as template**, host of the elective decide-loop.
+- `/` — **dispatcher + proof.** Verb-first, shows the red-ink collision above the fold (§5). **Shipped.**
+- `/planlegger/` — **the app.** The plan, the grid, the verdict lines, the "Bytt semester" disclosure. Search lives *inside it* as an add field/mode. **Shipped** (the temporal margin banner and the decide-loop's shortlist/swap-delta layer are Phase 3/4, not yet built — see ROADMAP.md).
+- `/emner/` — **find courses** (still a real page for deep search and for search-engine landing). Reachable from the planner's add field and from the footer — **not a nav pill. Shipped**; the `?type=studier` merge with programme search is not built (`/studier/` is still its own page, see below).
+- `/emne/[code]/` — **the fork point** (§3.4). Plan-aware, with a clash preview under the CTA. **Shipped**, reordered per REVIEW.md U10. `?mot=` as a deep-linked two-course view is COULD-tier and not built.
+- `/studier/[code]/` — **study plan template.** Current period expanded + credit subtotal + verbatim group prose, next period collapsed, "Bruk som planen min." **Shipped**; the decide-loop (shortlist, swap-delta) it was meant to eventually host is Phase 4, not yet built.
 
-**Nav: one pill — Planlegger.** `/studier/` standalone index is killed (redundant second search page — survived scrutiny, all critiques agree). `/emner/` is demoted from the nav to an inline/footer surface. The plan is never a nav item.
+**Nav: one pill — Planlegger. Shipped** (REVIEW.md I1) — `aria-current` is computed from an explicit per-page `sections` list rather than a path prefix, so `/emne/[code]/` (which is not a prefix-match of `/emner/`) still lights the right item. `/emner/` and `/studier/` are demoted to a footer link row (I5, **shipped**), not the nav. The plan is never a nav item.
 
-**The plan strip** (sitewide, non-empty only, built once in `Layout.astro`) is the connective tissue — it turns "add from anywhere" into "aware from anywhere," and it carries the **cross-page continuation affordance** the draft's core loop was missing (c3-3): *"5 emner til vurdering · Se på ukeplanen →."*
+**`/studier/` standalone index is NOT yet killed.** It is currently the *only* link anywhere in the codebase to `/studier/[code]/`; REVIEW.md I3 explicitly sequences this as "entrances before the deletion, not after." `/planlegger/`'s context line now links to `/studier/[code]/` (one entrance, shipped); once a second is confirmed reachable, `/studier/` can be deleted (or absorbed as `/emner/?type=studier`, still open). Until then it stays live, search-first, at its current MoSCoW weight — do not add features to it, and do not delete it without adding the entrances first.
 
-**URL is the state, and it is the growth object** (c1-1, c2-F7). Frozen, versioned hash grammar (§7): `#v2;<semesterId>;<committed-codes+versions>;<shortlist-codes+versions>`. Query params for page-local view: `?q=&sted=&språk=&type=`, `?mot=`, `?kull=`.
+**The plan strip** (sitewide, built once in `Layout.astro`, **shipped**) is the connective tissue — it turns "add from anywhere" into "aware from anywhere," and it carries the **cross-page continuation affordance** the draft's core loop was missing (c3-3): *"{N} emne(r) · {sp} sp · Se på ukeplanen →."* Suppressed on **both** `/` and `/planlegger/` (§13 originally said only the latter — the homepage's own resume line already says the same thing, and `/planlegger/` *is* the plan) — shown on every other page whenever the stored plan has at least one active course. Credits shown are best-effort and explicitly not authoritative; the planner page's own credit line is.
+
+**URL is the state, and it is the growth object** (c1-1, c2-F7). Hash grammar (§7, corrected 2026-07-24): `#v2;<semesterId>;<programme>;<courses>` — see §7 for the full grammar, the percent-encoding rule, and why it isn't the three-segment form this line used to show. Query params for page-local view: `?q=` (search prefill, also used for cross-page intent recovery from 404).
 
 ---
 
-## 5. Homepage (was under-specified; now a MUST, and the growth proof)
+## 5. Homepage (was under-specified; now a MUST, and the growth proof) — largely shipped
 
-The current hero ("Planlegg semesteret … se … samlet") is passive, calendar-generic, read-only, and hides our one instantly-legible differentiator on another page (c4-3). Fix, concretely:
+The original hero ("Planlegg semesteret … se … samlet") was passive, calendar-generic, read-only, and hid our one instantly-legible differentiator on another page (c4-3). Status of the fix:
 
-- **Verb-first H1:** *"Kan du ta disse emnene sammen?"* Sub-copy commits to the decide framing: *"Sjekk kollisjoner og eksamensklynger — og se hva du bytter — før oppmeldingen."*
-- **Above-the-fold proof:** a small `.np-frame.np-ruled` fragment showing a **red-ink collision** — the product's one instantly-legible signal — not a triptych of tiles.
-- **One CTA** ("Lag en plan" → `/planlegger/`), plus, when the stored plan is non-empty, the mono resume line ("Planen din: 4 emner · 22,5 sp"). The three-tile triptych is cut for the same redundancy reason `/studier/` index was (c4).
-- **Name the share as a visible action** in the proof ("del planen med en lenke — ingen innlogging") — the growth loop the draft knew about in §1 but forgot in the IA (c4-double-down #3).
+- **Verb-first H1** and above-the-fold typeahead: **shipped.** The programme field autofocuses, carries `studyLevel` + `cities` on every row (REVIEW.md B6 — this is what stops MIDT and MTDT rendering as identical "Datateknologi" rows), and kull chips are filtered to cohorts whose computed period actually exists (B3) rather than a 20-chip dead-end grid.
+- **The studieretning/campus question inline before navigating** (B2): **shipped.** A picked programme with a `pendingChoice` renders its direction chips on `/` itself; the dispatcher never sends a student to a week it can't fill.
+- **Above-the-fold proof fragment** (a small `.np-frame.np-ruled` red-ink collision showing "del planen med en lenke — ingen innlogging"): **not yet built.** The homepage today ends at the picker/direction question with no static proof fragment below it. This is the one MUST in this section still open.
+- **One CTA + resume line** ("Planen din: N emner · X sp" when a plan is already stored): **shipped**, plus the plan strip is suppressed here (§4) since the resume line already says the same thing.
+- **Kull caption** ("kull = året du startet"): **shipped** (U18).
 
 ---
 
@@ -134,29 +137,29 @@ The current hero ("Planlegg semesteret … se … samlet") is passive, calendar-
 
 The draft's MoSCoW was ~60% incumbent-owned nouns (catalog, grid, description, grade stats), reading as "course browser + bolted-on planner" (c4-1). v2 keeps the nouns we genuinely need but **elevates the verbs that are ours** (decide / preview / swap-delta / share / admit-gaps) and demotes the elective *apparatus* that a twice-a-year user won't reach until evidence says otherwise (c1-2).
 
-**MUST (the buildable spine + the differentiators):**
-- Merged weekly grid (`.np-frame.np-ruled`, red-ink collisions per PLANNER.md).
-- **Conflict engine — lecture-only hard conflicts** (see DR-1; the draft's "øving-group clustering with alternative-avoidance" is **cut as unbuildable** — §12/DR-1). Øving/lab shown as a muted, non-clashing display label.
-- **Exam ribbon sourced from catalog `ExamDate`** (structured `date`+`continuation`), not scraped exam text (DR-3). Ordinary-only by default; kont filtered out.
-- **Live, null-aware credit total**: *"22,5 av 30 sp (+2 emner uten oppgitt sp)"* (DR-6).
-- **Plan-aware clash preview *before* add** — the verb, everywhere (`/emner/` rows, `/emne/[code]`).
-- **Decide-loop inline facts**: in each choice-group row, "kolliderer med planen din" + assessment form + grade shape (no compare matrix).
-- **Plain-language swap delta sentence** on promotion (c4-double-down #2). *This is the product.*
-- **Shortlist tier** (committed vs. considering) as pure localStorage + hash — **candidates in the hash from day one** (c3-2, c4-double-down #1; open question closed). No `v:2`-only compare dependency.
-- **Shared-plan as a first-class object**: static-tier first paint, real unfurl title, **merge/replace/keep** three-way interstitial (c1-1, c3-5).
-- **Code↔name pairing** and **code-first paste entry** (persona B's real artifact) (c3-6).
-- **Season-split grade trend**, rendered *in decision context* (see the differentiation note below).
-- **Provenance / staleness line** on every composed verdict (DR-8) — the honest-join MUST (c1-5).
-- **Temporal margin banner** driven by `termContext()` (c3-1) and **"next plannable term" as an explicit rule** across the Sep-15/Feb-1 seam (c3-1, DR-9).
-- **Designed pre-publish mode as a *primary* mode** (DR-2, c2-F8): exam ribbon + credits + grades + assessment carry real value with no grid; clash engine degrades to exam-clash + campus-spread.
-- **Commit summary**: copyable committed-code list + "bekreft i Studentweb" (c3-4).
-- Language / campus (city-level) / assessment filters (absorbs old persona D).
-- Plan strip (sitewide, with cross-page continuation affordance) (c3-3).
-- Mobile day-agenda + 44px touch targets.
-- `notices[]` at add-time, incl. **off-semester add handling**: message defined, and **off-semester credits excluded from the 30-sp total** so the "full load" signal isn't corrupted (c3-8).
-- **Version threading** made first-class in `PlanState` + every API call + hash (DR-4, c2-F4) — a correctness MUST, not a nicety.
-- Dateless-exam state ("dato ikke satt", DR-3).
-- **Frozen versioned hash grammar with v1-compat parse** (c2-F7).
+**MUST (the buildable spine + the differentiators)** — status as of 2026-07-24, this branch:
+- Merged weekly grid (`.np-frame.np-ruled`, red-ink collisions). **Shipped.**
+- **Conflict engine — lecture-only hard conflicts** (see DR-1; the draft's "øving-group clustering with alternative-avoidance" is **cut as unbuildable** — §12/DR-1). Øving/lab shown as a muted, non-clashing display label. **Shipped**, including the B7 fix (auto-reveal the muted layer when a plan has entries but zero lecture-classified ones, instead of a blank default week).
+- **Exam ribbon sourced from catalog `ExamDate`** (structured `date`+`continuation`), not scraped exam text (DR-3). Ordinary-only by default; kont filtered out. **Shipped**, plus the semester-window filter (REVIEW.md C3) so a carried-over course can't show a stale year's date.
+- **Live, null-aware credit total**: *"22,5 av 30 sp (+2 emner uten oppgitt sp)"* (DR-6). **Shipped** — B9's four independent defects (discarded study-plan credits, off-semester courses counted, overload painted green, suspicious prefills silently zeroed) are all fixed.
+- **Plan-aware clash preview *before* add** — the verb, everywhere (`/emner/` rows, `/emne/[code]`). **Shipped** (`components/site/planClash.ts`, computed lazily on first hover/focus).
+- **Decide-loop inline facts**: in each choice-group row, "kolliderer med planen din" + assessment form + grade shape (no compare matrix). **Not yet built** — Phase 4, ROADMAP.md.
+- **Plain-language swap delta sentence** on promotion (c4-double-down #2). *This is the product.* **Not yet built** — Phase 4; there is no promote/swap flow yet to attach it to.
+- **Shortlist tier** (committed vs. considering) as pure localStorage + hash — **candidates in the hash from day one** (c3-2, c4-double-down #1; open question closed). No `v:2`-only compare dependency. **Not yet built** — Phase 4; `PlanState` (§7) has no `tier` field yet.
+- **Shared-plan as a first-class object**: static-tier first paint, real unfurl title, **merge/replace/keep** three-way interstitial (c1-1, c3-5). **Partial.** The hash itself round-trips correctly including non-ASCII (B10) and `hashchange` applies a pasted link live; there is no unfurl title and no merge/replace/keep interstitial yet — Phase 3.
+- **Code↔name pairing** and **code-first paste entry** (persona B's real artifact) (c3-6). **Partial.** The planner's add field is code-first once you're on `/planlegger/`, and B8 turns a missing study plan into a link there ("legg til emnekodene dine selv →"); the homepage still leads with the programme picker, not a code-paste field, so a cold Persona-B visitor doesn't see this first.
+- **Season-split grade trend**, rendered *in decision context* (see the differentiation note below). **Not yet built.** The browsable grade chart was removed from `/emne/[code]/` per D12 (shipped); nothing has replaced it in a decision cell yet because the decision cell (Phase 4) doesn't exist yet. The worker still serves `/api/course/:code/grades` — the data is reachable, no page shows it.
+- **Provenance / staleness line** on every composed verdict (DR-8) — the honest-join MUST (c1-5). **Shipped** on `/planlegger/` (composed per-render from what actually happened: live timetable fetch, catalog-dated exams, study-plan cohort, real per-course fetch failures). Not yet present on `/emne/[code]/`.
+- **Temporal margin banner** driven by `termContext()` (c3-1) and **"next plannable term" as an explicit rule** across the Sep-15/Feb-1 seam (c3-1, DR-9). **Partial.** DR-9's rule is enforced (semester chips for an unpublished term carry an inline "timeplan publiseres ~måned" note rather than a silent trap — REVIEW.md U6); the deadline-countdown banner itself is not built.
+- **Designed pre-publish mode as a *primary* mode** (DR-2, c2-F8): exam ribbon + credits + grades + assessment carry real value with no grid; clash engine degrades to exam-clash + campus-spread. **Partial** — an unpublished semester is now an informed choice (U6) rather than a silent blank grid, but there is no dedicated pre-publish layout distinct from the normal empty-grid message.
+- **Commit summary**: copyable committed-code list + "bekreft i Studentweb" (c3-4). **Not yet built.**
+- Language / campus (city-level) / assessment filters (absorbs old persona D). **Partial** — campus is shipped as ~4 city facets on `/emner/` (REVIEW.md U15, replacing 8 raw location strings); language and assessment filters are not built.
+- Plan strip (sitewide, with cross-page continuation affordance) (c3-3). **Shipped** — see §4.
+- Mobile day-agenda + 44px touch targets. **Not yet built.** A4's narrower fix shipped instead (edge fade + scroll-to-today + a hint naming the clipped days, so the horizontal-scroll week stops silently truncating Thursday/Friday) — the agenda *restructure* for mobile is still open.
+- `notices[]` at add-time, incl. **off-semester add handling**: message defined, and **off-semester credits excluded from the 30-sp total** so the "full load" signal isn't corrupted (c3-8). **Shipped** (part of the B9 credit-line fix).
+- **Version threading** made first-class in `PlanState` + every API call + hash (DR-4, c2-F4) — a correctness MUST, not a nicety. **Shipped** (REVIEW.md C2 — the search index and every add path now carry the catalog version; 293 of 5 470 courses are not version "1").
+- Dateless-exam state ("dato ikke satt", DR-3). **Shipped.**
+- **Frozen versioned hash grammar with v1-compat parse** (c2-F7). **Shipped** — see §7 for the corrected grammar.
 
 **SHOULD:**
 - Day-load strip + free-day sentence (persona C lens).
@@ -178,25 +181,84 @@ The draft's MoSCoW was ~60% incumbent-owned nouns (catalog, grid, description, g
 
 ## 7. State model & hash grammar (frozen now — c2-F4, c2-F7)
 
-The hash is the moat *and* the growth object; it must be frozen before shortlist/version land or shared links silently drop state (c2-F7).
+**Corrected 2026-07-24, after the fact.** This section originally froze
+`#v2;26h;TDT4100.1,TMA4100.1;IT2805.1` — courses in segment 3, no programme
+segment at all. That was never buildable against our actual domain model: a
+programme pick needs to carry `code`, `cohort` *and* an optional resolved
+`direction` (studieretning/campus) through the hash, or a shared link to a
+studieretning-gated programme (REVIEW.md B2, B10) can't round-trip. The
+shipped grammar below is what the code has always actually done; freezing
+the wrong grammar on paper is exactly the failure mode this section exists
+to prevent, so it's corrected here rather than left to drift (docs are not
+frozen; the code was right, the doc wasn't — REVIEW.md B10.2).
 
 ```ts
 interface PlanState {
   v: 2;
   semesterId: string;                 // "26h" | "27v" — Semester.id
   courses: {
-    code: string;                     // bare code, e.g. "TDT4100"
+    code: string;
     name: string;
-    version: string;                  // FIRST-CLASS — "1" default; threads to API + grid + exam + grade join
-    tier: "committed" | "shortlist";  // considering vs. taking, in the hash from day one
+    version: string;                  // FIRST-CLASS — "1" default; threads to API + grid + exam
+    source: "program" | "manual";     // programme-derived vs. added by hand
+    dropped: boolean;                 // programme course grayed out, never deleted
+    credits: number | null;           // carried from the study plan, so a catalog-miss doesn't zero it (B9.1)
   }[];
-  program?: { code: string; name: string; cohort: number };
+  program?: { code: string; name: string; cohort: number; direction?: { code: string; name: string } };
 }
 ```
 
-- **Hash grammar (versioned, v1-compat):** `#v2;26h;TDT4100.1,TMA4100.1;IT2805.1` — segment 1 version token, 2 semester, 3 committed (`code.version`), 4 shortlist. A parser reads legacy `#26h;TDT4100,TMA4100` (no `v` token, bare codes, all committed, version "1") and upgrades in memory. **No un-versioned segment may ever be appended again.**
-- **Static-tier first paint** (c1-1): codes/names/credits resolve from the hash + `search-index.json` with zero API calls — the received-plan first render and the unfurl title both come from here.
-- **Grade join** (DR-4): `GradeRow.courseCode` is suffixed (`"TDT4100-1"`), a different string space than bare codes. Join is defined as **bare-prefix match aggregating across versions**, never string-equality on the bare code.
+- **Hash grammar (versioned, v1-compat):**
+  `#v2;<semesterId>;<programme>;<courses>`
+
+  - `semesterId` — `/^\d{2}[hv]$/i`, e.g. `26h`. Whether the *site* can plan
+    that id is the caller's problem, not the grammar's: an id the site has
+    no plannable data for falls back to the current semester with a visible
+    note, it never fails to parse.
+  - `programme` — `-` (none) or `code[.cohort[.direction]]`. `cohort` MUST
+    be a plausible 4-digit year (`[1990, currentYear + 5]`) or the **whole**
+    programme segment is rejected (`program: null`) while the rest of the
+    hash still parses — this is exactly what would otherwise misread
+    `TDT4100.1,TMA4100.1` (the grammar this section used to freeze) as
+    `{code:"TDT4100", cohort: 1}`.
+  - `courses` — comma-separated `[-|+]code[.version]`. No prefix = an active
+    programme course; `-` = a dropped programme course (still listed,
+    excluded from the grid/credits, one tap restores it); `+` = a manual
+    add (removable outright). `.version` is omitted when it equals the
+    default (`"1"`).
+  - **Encoding is load-bearing.** Every field is
+    `encodeURIComponent`-escaped on write and `decodeURIComponent`-unescaped
+    on read. `encodeURIComponent` leaves the grammar's own punctuation
+    (`. - _ ~ ! * ' ( )`) untouched while escaping `; , / %` and every
+    non-ASCII byte — so `Ø`/`Å`/`Æ` in a direction code (e.g.
+    `BSPL26-V-GJØVIK` → `BSPL26-V-GJ%C3%98VIK`) round-trips exactly, which
+    it did not before (REVIEW.md B10.1). A malformed escape is returned
+    verbatim rather than failing the whole parse.
+  - A legacy unversioned `#<semesterId>;<codes>` (no `v` token, bare comma
+    codes, all `source:"manual"`, version `"1"`, no programme) is still
+    **read** for backward compatibility with any link written before this
+    grammar existed. `formatPlanHash` only ever **writes** `v2`. A hash with
+    any other version token (`v1`, `v3`, …) parses to `null` — it is never
+    half-read and never falls through to the legacy branch.
+  - `hashchange` is listened for (aborted with the page's own signal) so
+    pasting a shared link into an already-open tab applies it, ignoring the
+    hash the page just wrote itself.
+
+- **Static-tier first paint** (c1-1): codes/names/credits resolve from the
+  hash + `search-index.json` with zero API calls where possible — the
+  received-plan first render and any future unfurl title both come from
+  here.
+- `PLAN_HASH_VERSION = "v2"` is exported from `src/lib/planner/store.ts`;
+  reference that constant rather than the literal string.
+- **Not yet shipped, forward-compatible:** §6's shortlist tier
+  (`committed`/`shortlist`) and the grade-join bare-prefix aggregation
+  belong to the Phase 4 decide-loop (ROADMAP.md), which hasn't landed. When
+  it does, a `tier` field is a new, additive `courses[]` property — it does
+  not need a new hash version, since an old client encountering a courses
+  segment it doesn't understand a sub-field of still round-trips the parts
+  it does understand. A change that is NOT additive (e.g. restructuring the
+  `courses` segment's grammar itself) does need a new version token, per the
+  rule above: no un-versioned or silently-reinterpreted segment, ever.
 
 ---
 
@@ -245,7 +307,7 @@ The critiques' whole value is here: what did **not** survive scrutiny, made expl
 | D12 | **Grade stats only in the decision cell.** | Draft's browsable grade shape on the course page. | Browsable grade trivia is DBH-mirror parasitism and violates the p4 discipline; in-decision it informs and differentiates (c4-cut #3). |
 | D13 | **Temporal margin banner + return trigger are MUST; "next plannable term" is an explicit rule.** | Draft had the deadline in zero of six flows; "next term" was an invisible default. | The entire positioning is "before the deadline" — it was off-screen (c3-1, c1-7). |
 | D14 | **Cut week-scrubber, personal fixed blocks, assessment-mix workload counts; fold persona D into filters.** | Draft SHOULD/COULD-listed all of them. | During-semester concern in a before-semester tool; breaks shared-URL parity; wrong side of no-fabricated-scores; dragged translation work back for a sliver (c1-6, c3-9). |
-| D15 | **Frozen versioned hash grammar (`#v2;…`) with v1-compat parse, before shortlist/version land.** | Draft accreted hash segments across six flows with no version token. | Un-versioned accretion means shared links silently drop state as the grammar grows (c2-F7). |
+| D15 | **Frozen versioned hash grammar (`#v2;…`), v1-compat parse, four segments: semester · programme (`code.cohort.direction`) · courses (`[-\|+]code.version`).** *(Corrected 2026-07-24 — see §7. This row originally froze a three-segment grammar with courses in segment 3 and no programme segment; that was never what the code did, and feeding it to the shipped parser misread a course code as a programme+cohort. §7 now documents the grammar that actually round-trips, including the percent-encoding rule that makes an Ø/Å/Æ-bearing direction code survive a share.)* | Draft accreted hash segments across six flows with no version token. | Un-versioned accretion means shared links silently drop state as the grammar grows (c2-F7). |
 
 **Kept from the draft because it survived all four critiques:** the read/verify → "hva bytter jeg?" decide reframing; killing the `/studier/` standalone index; the grade-data discipline (season-split, cohort-`n`, trend, no sortable column, never hue-tinted); refusing fabricated scores; compare-as-a-component-not-a-page *when built at all*; the plan strip as sitewide connective tissue; URL-as-state.
 
@@ -279,7 +341,7 @@ Ordered by "produces confidently-wrong answers if wrong" > "load-bearing for the
 | Øving-heuristic accuracy floor + validation set | Moot — clustering cut (DR-1). Only the lecture/øving keyword classifier needs a small validation set; a misclassified øving degrades to a muted label, never a wrong hard-flag. |
 | Shortlist auto-opens compare or not | No compare page exists; shortlist surfaces inline facts. Auto-open is a COULD micro-decision, not architectural. |
 | Candidates-in-hash from day one | **Yes** — `tier` is in `PlanState` and the hash from v2 (§7, c3-2, c4). |
-| Plan strip suppressed on `/planlegger/` or not | Suppressed on `/planlegger/` (the page *is* the plan); shown everywhere else. |
+| Plan strip suppressed on `/planlegger/` or not | **Shipped, corrected from the original answer:** suppressed on both `/` (its own resume line already says this) and `/planlegger/` (the page *is* the plan); shown everywhere else. |
 | Which single grade figure in the compare cell | Season-split distribution *shape* (two derived facts, never a score/sortable column), per the p4 discipline (D12). |
 | First-year on-ramp when `publishedYears` gaps | Fall back to nearest published year; pre-fill labeled "foreslåtte emner, juster selv" (DR-7). |
 | Personal-blocks worth the `store.ts` complexity | **No** — cut (D14). |

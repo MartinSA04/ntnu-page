@@ -1,0 +1,58 @@
+name: E2E
+
+# The only end-to-end test of PRODUCT.md §0 (programme + kull → your week,
+# instantly) against real, live NTNU data. `ci.yml`'s unit pass cannot see
+# this — it structurally excludes `*.pw.ts` (mise run check is a fast,
+# server-free run) — so this ran nowhere until now, which is how B2/B4-class
+# regressions (REVIEW.md T1) reached a build with a green badge.
+#
+# Scoped to the paths where a regression is plausible, plus a nightly run:
+# live upstream data drifts (a programme's plan reshapes, a timetable
+# publishes) independently of any commit here, and only a schedule catches
+# that. `release.yml` also runs this suite directly before every deploy, so
+# a tag push is gated even if the triggering diff missed these paths.
+
+on:
+  pull_request:
+    paths:
+      - "src/lib/planner/**"
+      - "src/components/planner/**"
+      - "worker/**"
+      - "e2e/**"
+      - "playwright.config.ts"
+  push:
+    branches: [main]
+    paths:
+      - "src/lib/planner/**"
+      - "src/components/planner/**"
+      - "worker/**"
+      - "e2e/**"
+      - "playwright.config.ts"
+  schedule:
+    - cron: "17 5 * * *" # off-hour, offset from crawl.yml's 03:47 and ntnu-api's 05:17
+  workflow_dispatch: {}
+
+jobs:
+  e2e:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+      - id: date
+        run: echo "today=$(date -u +%F)" >> "$GITHUB_OUTPUT"
+      - name: Restore crawl artifacts (any recent day is fine)
+        uses: actions/cache@v4
+        with:
+          path: |
+            data
+            public/data
+          key: crawl-data-${{ steps.date.outputs.today }}
+          restore-keys: crawl-data-
+      - run: npm ci
+      - name: Ensure crawl artifacts (crawls only on a cold cache)
+        run: node crawler/ensure-data.mjs
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:e2e

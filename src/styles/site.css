@@ -8,6 +8,28 @@
   flex-direction: column;
 }
 
+/* --- Skip link: invisible until focused, first stop before the topbar --- */
+.skip-link {
+  position: absolute;
+  top: var(--space-2);
+  left: var(--space-2);
+  z-index: 100;
+  padding: var(--space-2) var(--space-3);
+  background: var(--accent);
+  color: var(--accent-contrast);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  text-decoration: none;
+  transform: translateY(-150%);
+  transition: transform var(--dur-fast) var(--ease);
+}
+
+.skip-link:focus {
+  transform: translateY(0);
+}
+
 /* --- Topbar: sticky, wordmark left, nav + theme toggle right --- */
 .site-topbar {
   position: sticky;
@@ -67,6 +89,34 @@
   }
 }
 
+/* --- Plan strip: the continuation affordance (I2) ---
+   Non-empty plans only, suppressed on `/` and `/planlegger/` by the script
+   in Layout.astro. A quiet full-width bar between the topbar and the
+   content column — visible on every other page a plan can be built from. */
+.plan-strip {
+  border-bottom: 1px solid var(--border);
+  background: var(--card);
+}
+
+.plan-strip-link {
+  display: block;
+  /* .np-hint (the sentence voice this line is set in) caps width at
+     --measure; override to the data column's width instead. */
+  max-width: var(--maxw);
+  margin-inline: auto;
+  padding: var(--space-2) var(--gutter);
+  color: var(--muted);
+  text-decoration: none;
+  transition:
+    background var(--dur-fast) var(--ease),
+    color var(--dur-fast) var(--ease);
+}
+
+.plan-strip-link:hover {
+  background: var(--wash);
+  color: var(--accent-ink);
+}
+
 /* --- Content column ---
    Default: the reading measure. `.wide` (data pages: catalog tables, study
    plans, the planner) widens to the `--maxw` column instead. */
@@ -82,12 +132,28 @@
   max-width: var(--maxw);
 }
 
-/* --- Footer: quiet mono line --- */
+/* --- Footer: provenance + the demoted catalog links (I5) --- */
 .site-footer {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--space-2);
   font-family: var(--font-mono);
   font-size: var(--text-xs);
   color: var(--muted);
   text-align: center;
   padding: var(--space-5) var(--gutter);
   border-top: 1px solid var(--border);
+}
+
+.site-footer a {
+  color: var(--muted);
+}
+
+.site-footer a:hover {
+  color: var(--accent-ink);
+}
+
+.site-footer-sep {
+  color: var(--faint);
 }

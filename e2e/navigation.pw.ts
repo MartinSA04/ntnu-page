@@ -22,9 +22,23 @@ import { expect, type Page, test } from "@playwright/test";
 const THEME_KEY = "np:theme";
 const PLAN_KEY = "ntnu:plan:v1";
 
-/** Clicks a topbar link and waits for the swap to settle. */
+/**
+ * Clicks a real in-site link to `href` and waits for the swap to settle.
+ *
+ * It has to be a *click on an anchor* — `page.goto()` would be a full document
+ * load, which is precisely the case these tests do not care about and would
+ * make the whole file pass against a broken ClientRouter.
+ *
+ * The topbar is no longer the only place links live: I1 cut the nav to a
+ * single "Planlegger" pill and I5 demoted `/emner/` and `/studier/` to the
+ * footer link row. Both rows are sitewide chrome rendered by `Layout.astro`,
+ * so either one is reachable from every page; the selector spans both rather
+ * than hardcoding which chrome a given route currently sits in.
+ */
 async function navTo(page: Page, href: string): Promise<void> {
-  await page.click(`.site-nav a[href="${href}"]`);
+  const link = page.locator(`.site-nav a[href="${href}"], .site-footer a[href="${href}"]`).first();
+  await expect(link, `no in-site link to ${href}`).toBeAttached();
+  await link.click();
   await page.waitForURL(`**${href}`);
   await page.waitForLoadState("networkidle");
 }
@@ -133,12 +147,36 @@ test.describe("other pages keep working after navigation", () => {
   test("programme filter still responds", async ({ page }) => {
     await page.goto("/");
     await navTo(page, "/studier/");
-    const status = page.locator("#studier-status");
+
+    // I3 made this page search-first: the 403-row wall stays hidden until the
+    // visitor types, so "the filter responded" is a change of state, not a
+    // change of one status string (the status keeps its last text while
+    // hidden).
+    const results = page.locator("#studier-results");
+    const hint = page.locator("#studier-hint");
+    const shownRows = page.locator(".studier-row:not([hidden])");
+    const allRows = page.locator(".studier-row");
+    await expect(results).toBeHidden();
+    const total = await allRows.count();
+    expect(total).toBeGreaterThan(100);
+
     await page.fill("#studier-search", "datateknologi");
-    await expect(status).not.toHaveText("", { timeout: 15_000 });
-    const filtered = await status.textContent();
+    await expect(results).toBeVisible({ timeout: 15_000 });
+    await expect(hint).toBeHidden();
+    await expect(page.locator("#studier-status")).toHaveText(/^[1-9]\d* studieprogram$/, {
+      timeout: 15_000,
+    });
+    // Narrowed, not merely revealed — a dead handler leaves every row shown.
+    const matched = await shownRows.count();
+    expect(matched).toBeGreaterThan(0);
+    expect(matched).toBeLessThan(total);
+
+    // Clearing runs the same listener back to the empty state, which is the
+    // part that proves the binding survived the swap rather than one keystroke
+    // having happened to land.
     await page.fill("#studier-search", "");
-    await expect(status).not.toHaveText(filtered ?? "", { timeout: 15_000 });
+    await expect(results).toBeHidden({ timeout: 15_000 });
+    await expect(hint).toBeVisible();
   });
 
   test("a course page fetches its own course, not the previous one", async ({ page }) => {

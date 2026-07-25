@@ -13,6 +13,10 @@ const seasonWord = isAutumn ? "høsten" : "våren";
 <Layout title="Semesterplan — planlegg semesteret ved NTNU" description={description}>
   <p class="np-kicker home-kicker">Semesterplan</p>
   <h1 class="home-title">Se timeplanen din for {seasonWord}.</h1>
+  <p class="np-hint home-subcopy">
+    Skriv inn studieprogrammet og kullet ditt, så vises ukeplanen med en gang — en uoffisiell
+    side, ikke laget av NTNU.
+  </p>
 
   <div class="np-field home-field" id="home-field">
     <input
@@ -27,25 +31,57 @@ const seasonWord = isAutumn ? "høsten" : "våren";
       autocomplete="off"
     />
   </div>
-  <ul class="home-listbox" id="home-listbox" role="listbox" aria-label="Studieprogramforslag" hidden>
+  <ul
+    class="home-listbox np-popover"
+    id="home-listbox"
+    role="listbox"
+    aria-label="Studieprogramforslag"
+    hidden
+  >
   </ul>
 
   <div class="home-kull" id="home-kull" hidden>
     <p class="np-kicker home-kull-kicker" id="home-kull-name"></p>
+    <p class="np-note home-kull-caption">kull = året du startet</p>
     <div class="home-kull-chips" id="home-kull-chips" role="group" aria-label="Velg kull"></div>
   </div>
 
-  <p class="np-note home-status" id="home-status" aria-live="polite"></p>
+  <div class="home-direction" id="home-direction" hidden>
+    <p class="np-hint home-direction-prompt" id="home-direction-prompt"></p>
+    <div
+      class="home-direction-chips"
+      id="home-direction-chips"
+      role="group"
+      aria-label="Velg studieretning"
+    >
+    </div>
+  </div>
 
-  <p class="home-resume np-note" id="home-resume" hidden>
+  <p class="np-hint home-status" id="home-status" aria-live="polite"></p>
+
+  <p class="home-resume np-hint" id="home-resume" hidden>
     <a href="/planlegger/" id="home-resume-link"></a>
   </p>
 
-  <p class="home-links np-note">
-    <a href="/emner/">Søk i emnekatalogen</a>
-    <span class="home-links-sep">·</span>
-    <a href="/planlegger/">Har du emnekoder? Legg dem til i planleggeren</a>
-  </p>
+  <div class="home-proof">
+    <div class="np-frame np-ruled home-proof-frame" aria-hidden="true">
+      <div class="home-proof-row">
+        <span class="np-tag home-proof-tag" style="--dot: var(--hue-blue)">
+          <span class="np-dot"></span>TDT4110
+        </span>
+      </div>
+      <div class="home-proof-row is-clash">
+        <span class="np-tag home-proof-tag" style="--dot: var(--hue-magenta)">
+          <span class="np-dot"></span>TMA4100
+        </span>
+        <span class="np-note-clash home-proof-clash">
+          Kolliderer med <span class="np-data">TDT4110</span> torsdag
+          <span class="np-data">14:15</span>
+        </span>
+      </div>
+    </div>
+    <p class="np-hint home-proof-caption">Del planen med en lenke — ingen innlogging.</p>
+  </div>
 </Layout>
 
 <style>
@@ -53,45 +89,39 @@ const seasonWord = isAutumn ? "høsten" : "våren";
     margin-bottom: var(--space-3);
   }
   .home-title {
-    font-size: var(--text-3xl);
-    margin-bottom: var(--space-5);
+    font-size: var(--text-2xl);
+    margin-bottom: var(--space-3);
     max-width: var(--measure);
+  }
+  .home-subcopy {
+    margin-bottom: var(--space-5);
   }
   .home-field {
     max-width: var(--measure);
     position: relative;
   }
   .home-listbox {
-    list-style: none;
     max-width: var(--measure);
-    background: var(--card-nested);
-    border-radius: var(--radius-sm);
-    box-shadow: var(--shadow);
-    max-height: 18rem;
-    overflow-y: auto;
-    padding: var(--space-1);
     margin-top: var(--space-1);
+    --popover-max: 18rem;
   }
   :global(.home-option) {
     display: flex;
+    flex-wrap: wrap;
     align-items: baseline;
-    gap: var(--gap-3);
-    padding: var(--space-2);
-    border-radius: var(--radius-xs);
-    cursor: pointer;
-  }
-  :global(.home-option.is-active),
-  :global(.home-option:hover) {
-    background: var(--card-hover);
+    gap: var(--gap-1) var(--gap-3);
   }
   :global(.home-option-code) {
     color: var(--muted);
-    font-size: var(--text-xs);
     flex-shrink: 0;
     width: 6em;
   }
   :global(.home-option-name) {
     font-size: var(--text-sm);
+    flex: 1;
+  }
+  :global(.home-option-level) {
+    flex-shrink: 0;
   }
   :global(.home-listbox-empty) {
     display: block;
@@ -102,6 +132,9 @@ const seasonWord = isAutumn ? "høsten" : "våren";
     max-width: var(--measure);
   }
   .home-kull-kicker {
+    margin-bottom: var(--space-1);
+  }
+  .home-kull-caption {
     margin-bottom: var(--space-2);
   }
   .home-kull-chips {
@@ -109,8 +142,23 @@ const seasonWord = isAutumn ? "høsten" : "våren";
     flex-wrap: wrap;
     gap: var(--gap-2);
   }
+  .home-direction {
+    margin-top: var(--space-4);
+    max-width: var(--measure);
+  }
+  .home-direction-prompt {
+    margin-bottom: var(--space-2);
+  }
+  .home-direction-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--gap-2);
+  }
   .home-status {
     margin-top: var(--space-3);
+  }
+  .home-status :global(a) {
+    color: var(--accent-ink);
   }
   .home-resume {
     margin-top: var(--space-6);
@@ -119,14 +167,38 @@ const seasonWord = isAutumn ? "høsten" : "våren";
   .home-resume a {
     color: var(--accent-ink);
   }
-  .home-links {
-    margin-top: var(--space-5);
+  .home-proof {
+    margin-top: var(--space-7);
     display: flex;
     flex-wrap: wrap;
-    gap: var(--space-2);
+    align-items: center;
+    gap: var(--gap-6);
+    max-width: var(--maxw);
   }
-  .home-links-sep {
-    color: var(--faint);
+  .home-proof-frame {
+    padding: var(--cell);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    min-width: 16rem;
+  }
+  .home-proof-row {
+    display: flex;
+    align-items: center;
+    gap: var(--gap-2);
+  }
+  .home-proof-row.is-clash {
+    flex-wrap: wrap;
+    box-shadow: var(--clash-edge);
+    background: var(--clash-bg);
+    padding: var(--space-1) var(--space-2);
+    border-radius: var(--radius-xs);
+  }
+  .home-proof-clash {
+    flex-basis: 100%;
+  }
+  .home-proof-caption {
+    max-width: 18rem;
   }
 </style>
 
@@ -135,10 +207,12 @@ const seasonWord = isAutumn ? "høsten" : "våren";
   import semestersData from "../../data/semesters.json";
   import { fold } from "../components/planner/dom.ts";
   import {
-    classifyPeriod,
+    type ClassifiedCourse,
+    type DirectionChoice,
     findProgramPlan,
     isSuspiciousPrefill,
-    periodNumberFor,
+    resolvePeriodFor,
+    type StudyPlan,
   } from "../components/planner/programPlan.ts";
   import { onPage } from "../lib/pageLifecycle.ts";
   import { semesterYear } from "../lib/planner/schedule.ts";
@@ -146,16 +220,31 @@ const seasonWord = isAutumn ? "høsten" : "våren";
     type AddCourseInput,
     createPlanStore,
     formatPlanHash,
+    type PlanDirection,
     type PlanProgram,
   } from "../lib/planner/store.ts";
 
-  type ProgramOption = [code: string, name: string];
+  /** code, name, studyLevel, cities — B6: MIDT and MTDT are both bare
+   * "Datateknologi" without this, and they lead to opposite outcomes. */
+  type ProgramOption = [code: string, name: string, studyLevel: string, cities: string[]];
 
   const programOptions: ProgramOption[] = programsData.programs
-    .map((p): ProgramOption => [p.code, p.name])
+    .map((p): ProgramOption => [p.code, p.name, p.studyLevel ?? "", p.cities ?? []])
     .sort((a, b) => a[1].localeCompare(b[1], "nb"));
 
   const defaultSemesterId = semestersData.current?.id ?? "";
+
+  function semesterLabel(): string {
+    const current = semestersData.current;
+    if (!current) return "dette semesteret";
+    const season = /h$/i.test(current.id) ? "Høst" : "Vår";
+    return `${season} ${current.year}`;
+  }
+
+  /** "Master 5 år" -> "master 5 år" — sentence-case fragment after the middle dot. */
+  function lowerFirst(text: string): string {
+    return text.length === 0 ? text : text.charAt(0).toLowerCase() + text.slice(1);
+  }
 
   // Per page-load, not per module: ClientRouter evaluates this module once,
   // so wiring at top level left the programme picker dead after any in-site
@@ -169,6 +258,9 @@ const seasonWord = isAutumn ? "høsten" : "våren";
   const kullSection = document.getElementById("home-kull") as HTMLElement | null;
   const kullName = document.getElementById("home-kull-name") as HTMLElement | null;
   const kullChips = document.getElementById("home-kull-chips") as HTMLElement | null;
+  const directionSection = document.getElementById("home-direction") as HTMLElement | null;
+  const directionPrompt = document.getElementById("home-direction-prompt") as HTMLElement | null;
+  const directionChips = document.getElementById("home-direction-chips") as HTMLElement | null;
   const statusEl = document.getElementById("home-status") as HTMLElement | null;
   const resumeEl = document.getElementById("home-resume") as HTMLElement | null;
   const resumeLink = document.getElementById("home-resume-link") as HTMLAnchorElement | null;
@@ -204,9 +296,24 @@ const seasonWord = isAutumn ? "høsten" : "våren";
   renderResume();
   signal.addEventListener("abort", store.onPlanChange(renderResume));
 
-  if (input && field && listbox && kullSection && kullName && kullChips && statusEl) {
+  if (
+    input &&
+    field &&
+    listbox &&
+    kullSection &&
+    kullName &&
+    kullChips &&
+    directionSection &&
+    directionPrompt &&
+    directionChips &&
+    statusEl
+  ) {
     let matches: ProgramOption[] = [];
     let activeIndex = -1;
+
+    function optionId(index: number): string {
+      return `home-option-${index}`;
+    }
 
     function closeListbox(): void {
       if (!listbox || !input) return;
@@ -215,13 +322,22 @@ const seasonWord = isAutumn ? "høsten" : "våren";
       activeIndex = -1;
       matches = [];
       input.setAttribute("aria-expanded", "false");
+      input.removeAttribute("aria-activedescendant");
     }
 
     function setActive(index: number): void {
-      if (!listbox) return;
+      if (!listbox || !input) return;
       activeIndex = index;
       for (const [i, opt] of [...listbox.children].entries()) {
-        opt.classList.toggle("is-active", i === index);
+        const isActive = i === index;
+        opt.classList.toggle("is-active", isActive);
+        opt.setAttribute("aria-selected", String(isActive));
+      }
+      const activeOption = listbox.children[index];
+      if (activeOption instanceof HTMLElement && activeOption.id) {
+        input.setAttribute("aria-activedescendant", activeOption.id);
+      } else {
+        input.removeAttribute("aria-activedescendant");
       }
     }
 
@@ -229,12 +345,86 @@ const seasonWord = isAutumn ? "høsten" : "våren";
       if (!kullSection || !kullChips || !statusEl) return;
       kullSection.hidden = true;
       kullChips.replaceChildren();
-      statusEl.textContent = "";
+      statusEl.replaceChildren();
+    }
+
+    function resetDirection(): void {
+      if (!directionSection || !directionChips || !directionPrompt) return;
+      directionSection.hidden = true;
+      directionChips.replaceChildren();
+      directionPrompt.textContent = "";
+    }
+
+    /** Builds a plan for one resolved period and navigates to /planlegger/. */
+    async function commitProgram(
+      code: string,
+      name: string,
+      cohort: number,
+      obligatory: ClassifiedCourse[],
+      direction: PlanDirection | undefined,
+    ): Promise<void> {
+      if (!statusEl) return;
+      let toClassify = obligatory;
+      if (isSuspiciousPrefill(toClassify)) toClassify = [];
+      const toAdd: AddCourseInput[] = toClassify.map((c) => ({
+        code: c.code,
+        name: c.name,
+        version: c.version,
+        source: "program",
+      }));
+
+      const program: PlanProgram = direction
+        ? { code, name, cohort, direction }
+        : { code, name, cohort };
+
+      store.setSemester(defaultSemesterId);
+      const next = store.setProgramPlan(program, toAdd);
+
+      statusEl.replaceChildren();
+      location.href = `/planlegger/${formatPlanHash(next)}`;
+    }
+
+    /**
+     * Ask the studieretning/campus question here, before navigating (B2) —
+     * the dispatcher's job is to dispatch to a *working* week. The waypoint
+     * name is quoted verbatim (DR-5); the question sentence is a friendly
+     * paraphrase that only needs to distinguish "which specialization" from
+     * "which campus", so it keys off the waypoint's own wording.
+     */
+    function renderDirectionChoice(
+      code: string,
+      name: string,
+      cohort: number,
+      plan: StudyPlan,
+      pending: DirectionChoice,
+    ): void {
+      if (!directionSection || !directionPrompt || !directionChips || !statusEl) return;
+      statusEl.replaceChildren();
+      const isCampus = /studiested|campus/i.test(pending.name);
+      directionPrompt.textContent = isCampus ? "Hvilket studiested?" : "Hvilken studieretning følger du?";
+      directionChips.replaceChildren();
+      for (const option of pending.directions) {
+        const chip = el("button", "np-toggle np-toggle--text", option.name);
+        chip.type = "button";
+        chip.setAttribute("aria-pressed", "false");
+        chip.addEventListener("click", () => {
+          const { courses } = resolvePeriodFor(plan, defaultSemesterId, cohort, option.code);
+          if (!courses) return;
+          resetDirection();
+          void commitProgram(code, name, cohort, courses.obligatory, {
+            code: option.code,
+            name: option.name,
+          });
+        });
+        directionChips.append(chip);
+      }
+      directionSection.hidden = false;
     }
 
     /** Builds the programme baseline for one cohort and navigates to /planlegger/. */
     async function useCohort(code: string, name: string, cohort: number): Promise<void> {
       if (!statusEl) return;
+      resetDirection();
       statusEl.textContent = "henter studieplan …";
       const result = await findProgramPlan(code, cohort);
       if ("kind" in result) {
@@ -242,43 +432,38 @@ const seasonWord = isAutumn ? "høsten" : "våren";
         return;
       }
 
-      const program: PlanProgram = { code, name, cohort };
-      const targetSemesterId = defaultSemesterId;
-      const periodNumber = periodNumberFor(targetSemesterId, cohort);
-      const classified = periodNumber !== null ? classifyPeriod(result.plan, periodNumber) : null;
+      // One entry point, shared with the planner, so the picker and the page
+      // it navigates to cannot disagree about what this cohort's semester is.
+      const { courses, pendingChoice } = resolvePeriodFor(result.plan, defaultSemesterId, cohort);
+      if (!courses) {
+        statusEl.textContent = `studieplanen for kull ${cohort} dekker ikke ${semesterLabel()}`;
+        return;
+      }
 
-      let obligatory = classified?.obligatory ?? [];
-      if (isSuspiciousPrefill(obligatory)) obligatory = [];
-      const toAdd: AddCourseInput[] = obligatory.map((c) => ({
-        code: c.code,
-        name: c.name,
-        version: c.version,
-        source: "program",
-      }));
-
-      store.setSemester(targetSemesterId);
-      const next = store.setProgramPlan(program, toAdd);
+      if (pendingChoice) {
+        renderDirectionChoice(code, name, cohort, result.plan, pendingChoice);
+        return;
+      }
 
       statusEl.textContent = "";
-      location.href = `/planlegger/${formatPlanHash(next)}`;
+      await commitProgram(code, name, cohort, courses.obligatory, undefined);
     }
 
-    /**
-     * The cohort NTNU auto-enrolls into the computed period for the default
-     * semester, i.e. the newest published year whose period actually exists
-     * in the fetched plan (DR-7) — falls back to the newest published year
-     * when no period matches (still the least-surprising default; period math
-     * is a suggestion, not authoritative).
-     */
-    function defaultCohort(years: number[], plan: { periods: { periodNumber: number | null }[] }): number {
-      const sorted = [...years].sort((a, b) => b - a);
-      for (const year of sorted) {
-        const periodNumber = periodNumberFor(defaultSemesterId, year);
-        if (periodNumber !== null && plan.periods.some((p) => p.periodNumber === periodNumber)) {
-          return year;
-        }
-      }
-      return sorted[0] ?? new Date().getFullYear();
+    /** Whether `year`'s computed period exists at all in the fetched plan (B3). */
+    function periodExists(plan: StudyPlan, year: number): boolean {
+      return resolvePeriodFor(plan, defaultSemesterId, year).courses !== null;
+    }
+
+    /** Renders the "no plan yet" offer as a real link rather than a dead end (B8). */
+    function renderNoPlanOffer(name: string): void {
+      if (!statusEl) return;
+      statusEl.replaceChildren();
+      statusEl.append(
+        document.createTextNode(`Vi har ingen studieplan for ${name} ennå. Du kan legge til `),
+      );
+      const link = el("a", undefined, "emnekodene dine selv →");
+      link.href = `/planlegger/${formatPlanHash({ semesterId: defaultSemesterId, courses: [], program: undefined })}`;
+      statusEl.append(link);
     }
 
     async function pickProgram(option: ProgramOption): Promise<void> {
@@ -287,21 +472,24 @@ const seasonWord = isAutumn ? "høsten" : "våren";
       input.value = name;
       closeListbox();
       resetKull();
+      resetDirection();
       statusEl.textContent = "henter studieplan …";
 
       const guessYear = semesterYear(defaultSemesterId) ?? new Date().getFullYear();
       const result = await findProgramPlan(code, guessYear);
       if ("kind" in result) {
-        statusEl.textContent =
-          result.kind === "not-found"
-            ? "ingen studieplan funnet for dette programmet"
-            : "klarte ikke å hente studieplan";
+        if (result.kind === "not-found") renderNoPlanOffer(name);
+        else statusEl.textContent = "klarte ikke å hente studieplan";
         return;
       }
 
-      const years = [...result.plan.publishedYears].sort((a, b) => b - a);
+      // B3: only cohorts whose computed period exists in the fetched plan —
+      // 88% of the un-filtered chips led nowhere.
+      const years = [...result.plan.publishedYears]
+        .sort((a, b) => b - a)
+        .filter((year) => periodExists(result.plan, year));
       if (years.length === 0) {
-        statusEl.textContent = "ingen kull publisert for dette programmet ennå";
+        statusEl.textContent = `studieplanen for ${name} dekker ikke ${semesterLabel()}`;
         return;
       }
 
@@ -309,7 +497,7 @@ const seasonWord = isAutumn ? "høsten" : "våren";
       kullName.textContent = name;
       kullSection.hidden = false;
       kullChips.replaceChildren();
-      const preferred = defaultCohort(years, result.plan);
+      const preferred = years[0];
       for (const year of years) {
         const chip = el("button", "np-toggle", `kull ${year}`);
         chip.type = "button";
@@ -328,6 +516,7 @@ const seasonWord = isAutumn ? "høsten" : "våren";
       if (query === "") {
         closeListbox();
         resetKull();
+        resetDirection();
         return;
       }
       matches = programOptions
@@ -340,16 +529,29 @@ const seasonWord = isAutumn ? "høsten" : "våren";
         listbox.hidden = false;
         activeIndex = -1;
         input.setAttribute("aria-expanded", "true");
+        input.removeAttribute("aria-activedescendant");
         return;
       }
-      matches.forEach((option) => {
-        const [code, name] = option;
-        const item = el("li", "home-option");
+      matches.forEach((option, index) => {
+        const [code, name, studyLevel, cities] = option;
+        const item = el("li", "home-option np-popover-option");
+        item.id = optionId(index);
         item.setAttribute("role", "option");
+        item.setAttribute("aria-selected", "false");
         item.append(el("span", "np-data home-option-code", code));
         item.append(el("span", "home-option-name", name));
+        if (studyLevel) {
+          const level = cities.length > 0 ? `${lowerFirst(studyLevel)}, ${cities.join(", ")}` : lowerFirst(studyLevel);
+          item.append(el("span", "np-note home-option-level", level));
+        }
+        // mousedown only prevents the input from blurring before the click
+        // lands; selection itself happens on click so activation paths that
+        // dispatch click without a preceding mousedown (VoiceOver/TalkBack
+        // double-tap, some switch access) can select too (A2).
         item.addEventListener("mousedown", (event) => {
           event.preventDefault();
+        });
+        item.addEventListener("click", () => {
           void pickProgram(option);
         });
         listbox?.append(item);
@@ -379,6 +581,14 @@ const seasonWord = isAutumn ? "høsten" : "våren";
     field.addEventListener("focusout", (event) => {
       if (!field.contains(event.relatedTarget as Node | null)) closeListbox();
     });
+
+    // Recover intent from a 404's "search etter studieprogram" redirect
+    // (U18): `/?q=<segment>` prefills and runs the search immediately.
+    const initialQuery = new URLSearchParams(location.search).get("q");
+    if (initialQuery) {
+      input.value = initialQuery;
+      renderOptions();
+    }
   }
   });
 </script>

@@ -1,150 +1,171 @@
 /**
- * Timetable island for `/emne/[code]/`: fetches
- * `/api/course/:code/timetable?year=` (default = catalog year), groups
- * entries per weekday (mono day header, rows time + name + rooms +
- * "uke N–M"), and re-fetches when the year changes.
+ * Timetable island for `/emne/[code]/` — the page's fork point (REVIEW U10).
+ *
+ * It renders the *same* ruled week the planner renders, by handing the
+ * fetched entries to `components/planner/grid.ts` as a one-course plan. The
+ * flat day-column list this module used to build was a second timetable
+ * renderer with its own geometry; §3 adjudicated the extraction as correct
+ * precisely because it deletes a renderer rather than adding one.
+ *
+ * Two honesty rules ride along:
+ *   - U14: upstream has exactly one timetable snapshot per course, so the
+ *     old ±1-year chips implied a choice that does not exist. There is one
+ *     view, labelled with the season the entries actually carry, and it says
+ *     so when that is not the semester the student is planning.
+ *   - C2 (DR-4): the fetch carries the catalog `version`. 293 of 5 470
+ *     courses are not version "1", and the default-version payload for those
+ *     is a different timetable for the same slot.
  */
+import type { TimetableEntry as PlannerTimetableEntry } from "../../lib/planner/data.js";
+import { hueForIndex } from "../../lib/planner/hues.js";
+import { el } from "../planner/dom.js";
+import { renderGrid } from "../planner/grid.js";
+import type { PlanCourseState } from "../planner/types.js";
 
-interface Room {
-  id: string | null;
-  building: string | null;
-  room: string | null;
-  url: string | null;
+/** The planner's entry shape plus the `term` field only this page reads. */
+export interface CourseTimetableEntry extends PlannerTimetableEntry {
+  /** Upstream term key, e.g. `"2026_HØST"` / `"2026_VÅR"`. */
+  term?: string | null;
 }
 
-interface TimetableEntry {
-  courseCode: string;
-  acronym: string | null;
-  name: string | null;
-  title: string | null;
-  dayNumber: number;
-  startTime: string;
-  endTime: string;
-  weeks: string[];
-  rooms: Room[];
+export interface CourseTimetableOptions {
+  code: string;
+  name: string;
+  /** Catalog course version (DR-4) — threaded into the timetable call. */
+  version: string;
+  /** Catalog year to fetch: the newest year the course is actually offered in. */
+  year: number;
+  /** The semester the plan is for, so an off-semester timetable can say so. */
+  semester: { season: string; year: number; label: string };
 }
 
-const DAY_NAMES = ["mandag", "tirsdag", "onsdag", "torsdag", "fredag", "lørdag", "søndag"];
+const SEASON_TERMS: Record<string, string> = {
+  AUTUMN: "HØST",
+  SPRING: "VÅR",
+  SUMMER: "SOMMER",
+};
 
-function el<K extends keyof HTMLElementTagNameMap>(
-  tag: K,
-  className?: string,
-  text?: string,
-): HTMLElementTagNameMap[K] {
-  const node = document.createElement(tag);
-  if (className) node.className = className;
-  if (text !== undefined) node.textContent = text;
-  return node;
+const TERM_LABELS: Record<string, string> = {
+  HØST: "Høst",
+  VÅR: "Vår",
+  SOMMER: "Sommer",
+};
+
+/** `"2026_HØST"` → `"Høst 2026"`; unknown shapes pass through verbatim. */
+export function termLabel(term: string): string {
+  const [year = "", season = ""] = term.split("_");
+  const label = TERM_LABELS[season];
+  return label && year ? `${label} ${year}` : term;
 }
 
-function weekRangeLabel(weeks: string[]): string {
-  if (weeks.length === 0) return "";
-  return weeks.map((w) => `uke ${w.replace("-", "–")}`).join(", ");
-}
-
-function roomLabel(rooms: Room[]): string {
-  if (rooms.length === 0) return "";
-  return rooms
-    .map((r) => r.room ?? r.building ?? "")
-    .filter(Boolean)
-    .join(", ");
-}
-
-async function fetchTimetable(code: string, year: number): Promise<TimetableEntry[] | null> {
-  const res = await fetch(`/api/course/${code}/timetable?year=${year}`);
+async function fetchTimetable(
+  code: string,
+  year: number,
+  version: string,
+): Promise<CourseTimetableEntry[] | null> {
+  const res = await fetch(
+    `/api/course/${encodeURIComponent(code)}/timetable?year=${year}&version=${encodeURIComponent(version)}`,
+  );
   if (!res.ok) return null;
-  return (await res.json()) as TimetableEntry[];
+  return (await res.json()) as CourseTimetableEntry[];
 }
 
-function renderTimetable(body: HTMLElement, entries: TimetableEntry[]): void {
-  if (entries.length === 0) {
-    body.append(el("p", "timetable-empty np-note", "ingen timeplanoppføringer for dette året"));
-    return;
-  }
-
-  const byDay = new Map<number, TimetableEntry[]>();
-  for (const entry of entries) {
-    const list = byDay.get(entry.dayNumber) ?? [];
-    list.push(entry);
-    byDay.set(entry.dayNumber, list);
-  }
-
-  const grid = el("div", "timetable-grid");
-  for (let day = 1; day <= 5; day++) {
-    const dayEntries = byDay.get(day);
-    if (!dayEntries || dayEntries.length === 0) continue;
-    dayEntries.sort((a, b) => a.startTime.localeCompare(b.startTime));
-
-    const dayCol = el("div", "timetable-day");
-    dayCol.append(el("p", "np-kicker timetable-day-header", DAY_NAMES[day - 1]));
-    for (const entry of dayEntries) {
-      const row = el("div", "timetable-entry");
-      row.append(el("span", "timetable-entry-time np-data", `${entry.startTime}–${entry.endTime}`));
-      row.append(el("span", "timetable-entry-name", entry.title ?? entry.name ?? entry.courseCode));
-      const rooms = roomLabel(entry.rooms);
-      if (rooms) row.append(el("span", "timetable-entry-room np-data", rooms));
-      const weeks = weekRangeLabel(entry.weeks);
-      if (weeks) row.append(el("span", "timetable-entry-weeks np-data", weeks));
-      dayCol.append(row);
-    }
-    grid.append(dayCol);
-  }
-  body.append(grid);
+/**
+ * The "Viser …" provenance line (DR-8). Names the term(s) the entries carry
+ * and, when the planned semester is not among them, says that outright —
+ * a bare room-numbered grid a student plans around is the failure U14 names.
+ */
+export function termNote(entries: CourseTimetableEntry[], options: CourseTimetableOptions): string {
+  const { semester } = options;
+  const terms = [...new Set(entries.map((e) => e.term).filter((t): t is string => !!t))].sort();
+  // Upstream can send entries with no term key at all; the fetched year is
+  // then the only thing we actually know, and the line says only that.
+  if (terms.length === 0) return `Viser timeplanen for ${options.year}.`;
+  const plannedTerm = `${semester.year}_${SEASON_TERMS[semester.season] ?? ""}`;
+  const shown = terms.map(termLabel).join(", ");
+  if (terms.includes(plannedTerm)) return `Viser ${shown}.`;
+  return `Viser ${shown} — ikke undervist i ${semester.label}.`;
 }
 
-export async function mountCourseTimetable(code: string, catalogYear: number): Promise<void> {
+/**
+ * Renders the course's week into `#timetable-section`. Returns the fetched
+ * entries so the page's clash line can reuse them instead of fetching the
+ * same timetable a second time; `null` means the fetch failed (unknown, not
+ * empty).
+ */
+export async function mountCourseTimetable(
+  options: CourseTimetableOptions,
+): Promise<CourseTimetableEntry[] | null> {
   const section = document.getElementById("timetable-section");
   const status = section?.querySelector<HTMLElement>('[data-role="status"]');
   const body = section?.querySelector<HTMLElement>('[data-role="body"]');
-  if (!section || !status || !body || !code || !catalogYear) return;
-  // Rebind as non-optional locals: TS doesn't narrow captured outer bindings
-  // inside nested function declarations below.
-  const statusEl = status;
-  const bodyEl = body;
+  if (!section || !status || !body || !options.code || !options.year) return null;
 
-  const yearSelect = el("div", "timetable-years", "");
-  yearSelect.setAttribute("role", "group");
-  yearSelect.setAttribute("aria-label", "Velg år");
-
-  const years = [catalogYear - 1, catalogYear, catalogYear + 1];
-  let activeYear = catalogYear;
-
-  async function loadYear(year: number): Promise<void> {
-    statusEl.hidden = true;
-    bodyEl.hidden = false;
-    // Only the year-chip bar (yearSelect) persists across loads; everything
-    // else in bodyEl is per-fetch content and must be cleared each time.
-    bodyEl.replaceChildren(yearSelect);
-    const loading = el("p", "timetable-loading np-note", "henter timeplan …");
-    bodyEl.append(loading);
-
-    try {
-      const entries = await fetchTimetable(code, year);
-      loading.remove();
-      if (entries === null) {
-        bodyEl.append(el("p", "timetable-empty np-note", "klarte ikke å hente timeplan"));
-        return;
-      }
-      renderTimetable(bodyEl, entries);
-    } catch {
-      loading.remove();
-      bodyEl.append(el("p", "timetable-empty np-note", "klarte ikke å hente timeplan"));
-    }
+  let entries: CourseTimetableEntry[] | null = null;
+  try {
+    entries = await fetchTimetable(options.code, options.year, options.version);
+  } catch {
+    entries = null;
   }
 
-  for (const year of years) {
-    const chip = el("button", "np-toggle timetable-year-chip", String(year));
-    chip.type = "button";
-    chip.setAttribute("aria-pressed", String(year === activeYear));
-    chip.addEventListener("click", () => {
-      activeYear = year;
-      for (const other of yearSelect.querySelectorAll(".timetable-year-chip")) {
-        other.setAttribute("aria-pressed", String(other === chip));
-      }
-      loadYear(year);
-    });
-    yearSelect.append(chip);
+  if (entries === null) {
+    status.className = "emne-loading np-hint";
+    status.textContent = "Klarte ikke å hente timeplanen.";
+    return null;
   }
 
-  await loadYear(activeYear);
+  status.hidden = true;
+  body.hidden = false;
+  body.replaceChildren();
+
+  // No ruled paper behind an apology (D5): with nothing to place, the page
+  // says so in one sentence instead of framing an empty week.
+  if (entries.length === 0) {
+    body.append(
+      el("p", "np-hint", `Ingen timeplan er publisert for ${options.year}.`),
+      el("p", "np-hint", `Emnet er ikke oppført med undervisning i ${options.semester.label}.`),
+    );
+    return entries;
+  }
+
+  body.append(el("p", "np-hint timetable-term", termNote(entries, options)));
+
+  const toggle = el("button", "np-toggle timetable-others", "Vis øvinger og labber");
+  toggle.type = "button";
+  toggle.setAttribute("aria-pressed", "false");
+  body.append(toggle);
+
+  // Same class names as /planlegger/'s week: the geometry lives in
+  // src/styles/planner-week.css, which both surfaces import.
+  const frame = el("div", "np-frame np-ruled np-ruled--hours planner-grid-frame");
+  const notes = el("div", "planner-grid-notes");
+  body.append(frame, notes);
+
+  // One-course plan: the grid's conflict pass is lecture×lecture across
+  // *different* courses, so a single course can never paint itself red here.
+  const state: PlanCourseState = {
+    course: { code: options.code, name: options.name, version: options.version, source: "manual" },
+    hueVar: hueForIndex(0),
+    bundle: { timetable: entries, details: null, errors: [] },
+    loading: false,
+  };
+
+  function draw(showOthers: boolean): void {
+    // renderGrid owns the ruling (D5) — it strips `np-ruled` itself when
+    // there is no week to rule, so this must not second-guess the class list.
+    const result = renderGrid(frame, notes, [state], showOthers);
+    // B7a: when nothing in the course classifies as a lecture the grid
+    // reveals the muted layer unasked. The toggle has to describe what is
+    // actually on screen.
+    if (result.mutedLayerAutoRevealed) toggle.setAttribute("aria-pressed", "true");
+  }
+
+  toggle.addEventListener("click", () => {
+    const next = toggle.getAttribute("aria-pressed") !== "true";
+    toggle.setAttribute("aria-pressed", String(next));
+    draw(next);
+  });
+
+  draw(false);
+  return entries;
 }

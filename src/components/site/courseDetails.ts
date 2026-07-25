@@ -1,8 +1,16 @@
 /**
- * Course-details island for `/emne/[code]/`: fetches `/api/course/:code`
- * and renders the facts panel, prose sections, exam table and credit
- * reductions into the static shell's "Om emnet" section.
+ * Course-details island for `/emne/[code]/`: one fetch of `/api/course/:code`
+ * feeding three places on the reordered page (REVIEW U10/U13):
+ *   - the 9 key facts, below the week;
+ *   - every prose section, collapsed into the page's one "Mer om emnet"
+ *     disclosure — the encyclopedia stays available, it stops being the page;
+ *   - the scraped exam enrichment (form/duration/aid code), which now hangs
+ *     under the *catalog* exam headline instead of standing beside it as a
+ *     peer section. DR-3 makes the catalog the authority and the scrape the
+ *     enrichment; two peer exam blocks invited exactly the confusion the rule
+ *     prevents.
  */
+import { formatCreditNumber } from "../planner/dom.js";
 
 interface CourseFact {
   label: string;
@@ -83,37 +91,44 @@ function prose(heading: string, text: string | null): HTMLElement | null {
   if (!text) return null;
   const section = el("div", "details-prose");
   section.append(
-    el("p", "np-kicker details-prose-heading", heading),
+    el("h3", "np-kicker details-prose-heading", heading),
     el("p", "details-prose-body", text),
   );
   return section;
 }
 
-function renderExams(exams: CourseExam[]): HTMLElement | null {
-  if (exams.length === 0) return null;
-  const wrap = el("div", "details-exams");
-  wrap.append(el("p", "np-kicker details-prose-heading", "Eksamensdetaljer"));
-  const table = el("table", "details-exam-table");
-  const tbody = el("tbody");
-  for (const exam of exams) {
-    const row = el("tr");
-    const parts = [exam.occasion, exam.season, exam.form].filter(Boolean).join(" · ");
-    row.append(el("td", "np-data", parts));
-    row.append(el("td", "np-data", exam.dateText ?? exam.date ?? "—"));
-    row.append(el("td", "np-data", exam.timeText ?? exam.time ?? ""));
-    row.append(el("td", "np-data", exam.duration ?? ""));
-    row.append(el("td", "np-data", exam.aidCode ?? ""));
-    tbody.append(row);
-  }
-  table.append(tbody);
-  wrap.append(table);
-  return wrap;
+/**
+ * The scraped exam rows as enrichment under the catalog headline: form,
+ * duration and aid code — the facts the catalog's `ExamDate` does not carry.
+ * The date itself is deliberately NOT repeated here; it is the headline.
+ */
+function renderExamDetails(exams: CourseExam[]): HTMLElement | null {
+  const rows = exams
+    .map((exam) => {
+      const head = [exam.occasion, exam.season, exam.form].filter(Boolean).join(" · ");
+      const facts = [
+        exam.timeText ?? exam.time,
+        exam.duration,
+        exam.aidCode ? `hjelpemidler ${exam.aidCode}` : null,
+        exam.weighting,
+      ].filter(Boolean);
+      if (!head && facts.length === 0) return null;
+      const row = el("li", "details-exam-row");
+      if (head) row.append(el("span", "details-exam-form", head));
+      if (facts.length > 0) row.append(el("span", "details-exam-facts np-data", facts.join(" · ")));
+      return row;
+    })
+    .filter((row): row is HTMLLIElement => row !== null);
+  if (rows.length === 0) return null;
+  const list = el("ul", "details-exam-list");
+  for (const row of rows) list.append(row);
+  return list;
 }
 
 function renderCreditReductions(reductions: CreditReduction[]): HTMLElement | null {
   if (reductions.length === 0) return null;
   const wrap = el("div", "details-reductions");
-  wrap.append(el("p", "np-kicker details-prose-heading", "Studiepoengreduksjon"));
+  wrap.append(el("h3", "np-kicker details-prose-heading", "Studiepoengreduksjon"));
   const list = el("ul", "details-reductions-list");
   for (const r of reductions) {
     const item = el("li");
@@ -131,12 +146,14 @@ export async function mountCourseDetails(code: string): Promise<void> {
   const section = document.getElementById("details-section");
   const status = section?.querySelector<HTMLElement>('[data-role="status"]');
   const body = section?.querySelector<HTMLElement>('[data-role="body"]');
-  if (!section || !status || !body || !code) return;
+  const proseHost = section?.querySelector<HTMLElement>('[data-role="prose"]');
+  const proseWrap = section?.querySelector<HTMLElement>('[data-role="prose-wrap"]');
+  if (!section || !status || !body || !proseHost || !code) return;
 
   try {
-    const res = await fetch(`/api/course/${code}`);
+    const res = await fetch(`/api/course/${encodeURIComponent(code)}`);
     if (res.status === 404) {
-      status.textContent = "ingen emnedetaljer funnet";
+      status.textContent = "Vi har ingen emnedetaljer for dette emnet.";
       return;
     }
     if (!res.ok) throw new Error(`${res.status}`);
@@ -144,7 +161,11 @@ export async function mountCourseDetails(code: string): Promise<void> {
 
     const facts = el("div", "details-facts");
     for (const row of [
-      factRow("Studiepoeng", details.credits, true),
+      factRow(
+        "Studiepoeng",
+        details.credits === null ? null : formatCreditNumber(details.credits),
+        true,
+      ),
       factRow("Nivå", details.level),
       factRow("Undervises", details.teachingStart, true),
       factRow("Varighet", details.teachingDuration, true),
@@ -158,7 +179,7 @@ export async function mountCourseDetails(code: string): Promise<void> {
     }
     body.append(facts);
 
-    for (const section of [
+    for (const block of [
       prose("Faglig innhold", details.content),
       prose("Læringsutbytte", details.learningOutcome),
       prose("Læringsformer og aktiviteter", details.learningMethods),
@@ -166,28 +187,36 @@ export async function mountCourseDetails(code: string): Promise<void> {
       prose("Forkunnskapskrav", details.requiredKnowledge),
       prose("Anbefalte forkunnskaper", details.recommendedKnowledge),
     ]) {
-      if (section) body.append(section);
+      if (block) proseHost.append(block);
     }
 
     if (details.mandatoryActivities.length > 0) {
       const wrap = el("div", "details-prose");
-      wrap.append(el("p", "np-kicker details-prose-heading", "Obligatoriske aktiviteter"));
+      wrap.append(el("h3", "np-kicker details-prose-heading", "Obligatoriske aktiviteter"));
       const list = el("ul", "details-activities-list");
       for (const activity of details.mandatoryActivities)
         list.append(el("li", undefined, activity));
       wrap.append(list);
-      body.append(wrap);
+      proseHost.append(wrap);
     }
 
-    const examsEl = renderExams(details.exams);
-    if (examsEl) body.append(examsEl);
-
     const reductionsEl = renderCreditReductions(details.creditReductions);
-    if (reductionsEl) body.append(reductionsEl);
+    if (reductionsEl) proseHost.append(reductionsEl);
+
+    if (proseWrap) proseWrap.hidden = proseHost.childElementCount === 0;
+
+    // Exam enrichment lands in the exam block above, never as a peer section.
+    const examMore = document.querySelector<HTMLElement>('#exam-section [data-role="exam-more"]');
+    const examBody = document.querySelector<HTMLElement>('#exam-section [data-role="exam-body"]');
+    const examDetails = renderExamDetails(details.exams);
+    if (examMore && examBody && examDetails) {
+      examBody.replaceChildren(examDetails);
+      examMore.hidden = false;
+    }
 
     status.hidden = true;
     body.hidden = false;
   } catch {
-    status.textContent = "klarte ikke å hente emnedetaljer";
+    status.textContent = "Klarte ikke å hente emnedetaljer.";
   }
 }

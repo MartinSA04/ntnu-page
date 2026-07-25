@@ -10,7 +10,7 @@
 
 import { analyzeExams, type ExamInput, type ExamRow } from "../../lib/planner/conflicts.js";
 import { examsFromIndex, type PlannerIndex } from "../../lib/planner/data.js";
-import { dot, el } from "./dom.js";
+import { dot, el, formatShortDate } from "./dom.js";
 import type { PlanCourseState } from "./types.js";
 
 const MONTH_NAMES = [
@@ -57,16 +57,63 @@ function dayGapText(row: ExamRow): string | null {
   return `${row.dayGap} dager til neste`;
 }
 
+export interface ExamRenderOptions {
+  /**
+   * A course bundle or the planner index is still loading. Nothing is
+   * asserted about the exam window until it isn't — "Ingen eksamensdatoer
+   * funnet" while the fetch is in flight is the same false-and-loud statement
+   * U5 removed from the week.
+   */
+  loading?: boolean;
+}
+
 export interface ExamRenderResult {
   collisionCount: number;
   /** "25. nov – 18. des" span of the rendered exams, or `null` when none are shown. */
   windowLabel: string | null;
+  /** Which branch rendered. Only `"ribbon"` carries a meaningful `collisionCount`. */
+  state: "ribbon" | "empty" | "loading";
 }
 
-function renderEmpty(frame: HTMLElement, listHost: HTMLElement, message: string): ExamRenderResult {
-  frame.replaceChildren(el("p", "planner-exam-empty np-note", message));
+/**
+ * The ruling belongs to a ribbon with exams on it, not to the frame
+ * (Ruling-Marks-The-Plan / D5) — an empty ruled rectangle holding an apology
+ * is the opposite of what the rule says the ruling means.
+ */
+function setFrameRuled(frame: HTMLElement, ruled: boolean): void {
+  frame.classList.toggle("np-ruled", ruled);
+  frame.classList.toggle("is-empty", !ruled);
+}
+
+function renderEmpty(
+  frame: HTMLElement,
+  listHost: HTMLElement,
+  message: string | null,
+): ExamRenderResult {
+  setFrameRuled(frame, false);
+  frame.replaceChildren(...(message ? [el("p", "planner-exam-empty np-hint", message)] : []));
   listHost.replaceChildren();
-  return { collisionCount: 0, windowLabel: null };
+  return {
+    collisionCount: 0,
+    windowLabel: null,
+    state: message === null ? "loading" : "empty",
+  };
+}
+
+/**
+ * Renders a message where the ribbon would be — the exam half of
+ * `renderGridMessage`. Use it when the CALLER knows something the ribbon
+ * cannot work out for itself: C3's case is a semester the shipped index does
+ * not cover at all, where "Ingen eksamensdatoer funnet ennå" would be a
+ * finding reported by something that never looked. Pass no message to just
+ * empty the frame.
+ */
+export function renderExamMessage(
+  frame: HTMLElement,
+  listHost: HTMLElement,
+  message?: string | null,
+): ExamRenderResult {
+  return renderEmpty(frame, listHost, message ?? null);
 }
 
 function formatAxisDate(dateStr: string): string {
@@ -74,14 +121,19 @@ function formatAxisDate(dateStr: string): string {
   return `${d.getDate()}. ${MONTH_NAMES[d.getMonth()]}`;
 }
 
+/** The course chip a row wears — DESIGN §5's `.np-tag`, hue dot + mono code. */
+function examCodeTag(code: string, hueVar: string): HTMLElement {
+  const tag = el("span", "planner-exam-code np-tag");
+  tag.append(dot(hueVar));
+  tag.append(el("span", "np-data", code));
+  return tag;
+}
+
 /** One "dato ikke satt" row (DR-3) — kept, not dropped, so the course isn't silently missing. */
 function datelessRow(code: string, hueVar: string): HTMLLIElement {
   const item = el("li", "planner-exam-row");
   item.append(el("span", "planner-exam-date np-data", "dato ikke satt"));
-  const codeWrap = el("span", "planner-exam-code");
-  codeWrap.append(dot(hueVar));
-  codeWrap.append(el("span", "np-data", code));
-  item.append(codeWrap);
+  item.append(examCodeTag(code, hueVar));
   return item;
 }
 
@@ -92,7 +144,9 @@ export function renderExamRibbon(
   courses: PlanCourseState[],
   semesterId: string,
   index: PlannerIndex | null,
+  options: ExamRenderOptions = {},
 ): ExamRenderResult {
+  const loading = options.loading ?? false;
   if (courses.length === 0) {
     return renderEmpty(frame, listHost, "Legg til emner for å se eksamensdatoer.");
   }
@@ -102,7 +156,11 @@ export function renderExamRibbon(
   const dateless = inputs.filter((e) => e.date === null);
 
   if (inputs.length === 0) {
-    return renderEmpty(frame, listHost, "Ingen eksamensdatoer funnet ennå for emnene i planen.");
+    return renderEmpty(
+      frame,
+      listHost,
+      loading ? null : "Ingen eksamensdatoer funnet ennå for emnene i planen.",
+    );
   }
 
   const rows = analyzeExams(inputs);
@@ -111,10 +169,11 @@ export function renderExamRibbon(
   if (!first || !last) {
     // Dated rows are empty, but dateless exams exist: still list them, no ribbon axis to plot.
     if (dateless.length > 0) {
+      setFrameRuled(frame, false);
       frame.replaceChildren(
         el(
           "p",
-          "planner-exam-empty np-note",
+          "planner-exam-empty np-hint",
           "Ingen eksamensdatoer satt ennå for emnene i planen.",
         ),
       );
@@ -123,9 +182,13 @@ export function renderExamRibbon(
         list.append(datelessRow(exam.code, hueByCode.get(exam.code) ?? "--hue-blue"));
       }
       listHost.replaceChildren(list);
-      return { collisionCount: 0, windowLabel: null };
+      return { collisionCount: 0, windowLabel: null, state: "empty" };
     }
-    return renderEmpty(frame, listHost, "Ingen eksamensdatoer funnet ennå for emnene i planen.");
+    return renderEmpty(
+      frame,
+      listHost,
+      loading ? null : "Ingen eksamensdatoer funnet ennå for emnene i planen.",
+    );
   }
 
   const firstMs = Date.parse(first.date);
@@ -174,25 +237,33 @@ export function renderExamRibbon(
   }
   ribbon.append(dotsLayer);
 
+  setFrameRuled(frame, true);
   frame.replaceChildren(ribbon);
 
-  // Sorted mono list with gap annotations.
+  // Sorted list with gap annotations. The date is formatted the same way the
+  // section's own window label is — "9. des", not "2026-12-09" (D3).
   const list = el("ul", "planner-exam-list");
   for (const row of rows) {
     const item = el("li", "planner-exam-row");
-    item.append(el("span", "planner-exam-date np-data", row.date));
+    item.append(el("span", "planner-exam-date np-data", formatShortDate(row.date)));
     const hueVar = hueByCode.get(row.code) ?? "--hue-blue";
-    const codeWrap = el("span", "planner-exam-code");
-    codeWrap.append(dot(hueVar));
-    codeWrap.append(el("span", "np-data", row.code));
-    item.append(codeWrap);
+    item.append(examCodeTag(row.code, hueVar));
 
     const gapText = dayGapText(row);
     if (row.collision) {
-      item.append(el("span", "np-note-clash", `${row.code} kolliderer med eksamen samme dag`));
+      // A sentence, so grotesk with the code it quotes in `.np-data` (D1).
+      const note = el("span", "np-note-clash");
+      note.append(el("span", "np-data", row.code));
+      note.append(" kolliderer med eksamen samme dag");
+      note.setAttribute("aria-label", `${row.code} kolliderer med eksamen samme dag`);
+      item.append(note);
     } else if (gapText) {
-      const gapClass = row.tight ? "np-note-clash" : "np-note";
-      item.append(el("span", gapClass, gapText));
+      // The gap is a mono fragment in both states — swapping it to
+      // `.np-note-clash` when it turns red would also change its size and
+      // voice mid-list. `.is-tight` carries the warning instead.
+      const gap = el("span", "planner-exam-gap np-note", gapText);
+      if (row.tight) gap.classList.add("is-tight");
+      item.append(gap);
     }
     list.append(item);
   }
@@ -210,5 +281,6 @@ export function renderExamRibbon(
   return {
     collisionCount: [...byDate.values()].filter((g) => g.length > 1).length,
     windowLabel,
+    state: "ribbon",
   };
 }

@@ -21,11 +21,19 @@ export function dot(hueVar: string): HTMLSpanElement {
   return span;
 }
 
+/**
+ * A credit figure on its own: "7,5", "30", "0". Comma decimals, one decimal
+ * place — the single formatter every credit number goes through, so "7.5"
+ * can never appear eight lines above "7,5 sp" again (D3).
+ */
+export function formatCreditNumber(value: number): string {
+  const rounded = Math.round(value * 10) / 10;
+  return Number.isInteger(rounded) ? String(rounded) : rounded.toFixed(1).replace(".", ",");
+}
+
 /** Formats a credit total per DESIGN.md/PLANNER.md: comma decimals, "X av 30 sp". */
 export function formatCredits(total: number): string {
-  const rounded = Math.round(total * 10) / 10;
-  const text = Number.isInteger(rounded) ? String(rounded) : rounded.toFixed(1).replace(".", ",");
-  return `${text} av 30 sp`;
+  return `${formatCreditNumber(total)} av 30 sp`;
 }
 
 const MONTH_ABBR = [
@@ -80,9 +88,19 @@ export function weekLabel(weeks: number[]): string {
   return `uke ${ranges.join(", ")}`;
 }
 
-/** Case/diacritic-insensitive fold (Æ/Ø/Å -> A/O/A), matches /emner/'s search. */
+/**
+ * Case/diacritic-insensitive fold (Æ/Ø/Å -> a/o/a), matches /emner/'s search.
+ *
+ * The pre-map is not decoration. NFD decomposes Å (A + combining ring) but Æ
+ * and Ø are *atomic* letters with no combining form, so the mark strip alone
+ * left `fold("Økonomi") === "økonomi"` and typing "okonomi" found nothing —
+ * on a site with 238 Ø/Æ course codes and Ø-initial programme names (C4).
+ */
 export function fold(value: string): string {
   return value
+    .replace(/[æÆ]/g, "a")
+    .replace(/[øØ]/g, "o")
+    .replace(/[åÅ]/g, "a")
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
     .toLowerCase();

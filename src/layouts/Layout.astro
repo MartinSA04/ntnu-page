@@ -1,7 +1,10 @@
 ---
 import { ClientRouter } from "astro:transitions";
+import semestersData from "../../data/semesters.json";
 import ThemeToggle from "../components/ThemeToggle.astro";
 import { ACCENT, faviconDataUri } from "../lib/favicon.ts";
+import groteskLatin from "../styles/fonts/schibsted-grotesk-latin.woff2?url";
+import monoLatin from "../styles/fonts/spline-sans-mono-latin.woff2?url";
 import "../styles/fonts.css";
 import "../styles/tokens.css";
 import "../styles/base.css";
@@ -9,10 +12,12 @@ import "../styles/primitives.css";
 import "../styles/site.css";
 
 /**
- * Site shell: sticky topbar (wordmark + nav + theme toggle), a centered
- * content column (reading measure by default, the `--maxw` data column when
- * `wide`), and a quiet mono footer. Ruteark's accent lives in tokens.css —
- * no inline accent vars here (see docs/SPEC.md "Design-system usage").
+ * Site shell: sticky topbar (wordmark + nav + theme toggle), a plan strip
+ * (non-empty plans only, suppressed on the two surfaces that already show
+ * the plan), a centered content column (reading measure by default, the
+ * `--maxw` data column when `wide`), and a footer that carries the demoted
+ * catalog links plus provenance. Ruteark's accent lives in tokens.css — no
+ * inline accent vars here (see docs/SPEC.md "Design-system usage").
  */
 interface Props {
   title: string;
@@ -23,13 +28,42 @@ const { title, description, wide = false } = Astro.props;
 
 const THEME_KEY = "np:theme";
 
-const NAV = [
-  { href: "/planlegger/", label: "Planlegger" },
-  { href: "/emner/", label: "Emner" },
-  { href: "/studier/", label: "Studier" },
-] as const;
+// One destination (I1): the mandate has exactly one product surface. Kept as
+// a list of sections (not a bare href prefix) so a future addition can't
+// reintroduce the aria-current substring bug (`/emne/` is not a prefix of
+// `/emner/`, which orphaned the highest-traffic page from its own nav).
+const NAV = [{ href: "/planlegger/", label: "Planlegger", sections: ["/planlegger/"] }] as const;
 
 const path = Astro.url.pathname;
+
+function isCurrentSection(sections: readonly string[]): boolean {
+  return sections.some((prefix) => path === prefix || path.startsWith(prefix));
+}
+
+const MONTH_ABBR = [
+  "jan",
+  "feb",
+  "mar",
+  "apr",
+  "mai",
+  "jun",
+  "jul",
+  "aug",
+  "sep",
+  "okt",
+  "nov",
+  "des",
+];
+
+/** `"2026-07-24T…"` → `"24. jul 2026"` (DR-8 provenance line, footer). */
+function formatCrawlDate(iso: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return iso;
+  const month = MONTH_ABBR[d.getUTCMonth()] ?? "";
+  return `${d.getUTCDate()}. ${month} ${d.getUTCFullYear()}`;
+}
+
+const crawlDate = formatCrawlDate(semestersData.crawledAt);
 ---
 
 <!doctype html>
@@ -37,6 +71,8 @@ const path = Astro.url.pathname;
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="preload" href={groteskLatin} as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href={monoLatin} as="font" type="font/woff2" crossorigin />
     <title>{title}</title>
     <meta name="description" content={description} />
     <link rel="icon" href={faviconDataUri(ACCENT)} />
@@ -92,6 +128,7 @@ const path = Astro.url.pathname;
     <ClientRouter />
   </head>
   <body>
+    <a href="#main-content" class="skip-link">Hopp til innhold</a>
     <div class="site">
       <header class="site-topbar">
         <a class="site-brand" href="/">
@@ -103,7 +140,7 @@ const path = Astro.url.pathname;
               <a
                 class="np-navlink"
                 href={item.href}
-                aria-current={path.startsWith(item.href) ? "page" : undefined}
+                aria-current={isCurrentSection(item.sections) ? "page" : undefined}
               >
                 {item.label}
               </a>
@@ -112,12 +149,102 @@ const path = Astro.url.pathname;
         </nav>
         <ThemeToggle storageKey={THEME_KEY} />
       </header>
-      <main class:list={["site-content", { wide }]}>
+      <div class="plan-strip" id="plan-strip" hidden>
+        <a class="plan-strip-link np-hint" href="/planlegger/" id="plan-strip-link"></a>
+      </div>
+      <main id="main-content" class:list={["site-content", { wide }]}>
         <slot />
       </main>
       <footer class="site-footer">
-        Uoffisiell side · data fra NTNU og HK-dir (DBH)
+        <a href="/emner/">Søk i emner</a>
+        <span class="site-footer-sep">·</span>
+        <a href="/studier/">Studieprogram</a>
+        <span class="site-footer-sep">·</span>
+        {`Data hentet ${crawlDate} fra NTNU`}
+        <span class="site-footer-sep">·</span>
+        uoffisiell
       </footer>
     </div>
+    <script>
+      import { onPage } from "../lib/pageLifecycle.ts";
+      import { fetchCourseBundle } from "../lib/planner/data.ts";
+      import { semesterYear } from "../lib/planner/schedule.ts";
+      import { activeCourses, createPlanStore } from "../lib/planner/store.ts";
+
+      // Three surfaces write to the plan (course page, catalog search, the
+      // planner itself) and none of them showed it or led back to the week
+      // (I2). This strip is sitewide chrome: it renders once here,
+      // subscribes to the store's change event, and every other page gets
+      // it for free — no other lane needs to touch it to keep it in sync.
+      onPage((signal) => {
+        const strip = document.getElementById("plan-strip") as HTMLElement | null;
+        const link = document.getElementById("plan-strip-link") as HTMLAnchorElement | null;
+        if (!strip || !link) return;
+
+        const path = location.pathname;
+        // The plan already has a home on these two surfaces — showing a
+        // strip that points at itself is noise, not a continuation
+        // affordance.
+        const suppressed = path === "/" || path.startsWith("/planlegger/");
+        if (suppressed) {
+          strip.hidden = true;
+          return;
+        }
+
+        const store = createPlanStore("");
+        let renderToken = 0;
+
+        async function render(): Promise<void> {
+          if (!strip || !link) return;
+          const plan = store.loadPlan();
+          const active = activeCourses(plan);
+          if (active.length === 0) {
+            strip.hidden = true;
+            return;
+          }
+
+          const token = ++renderToken;
+          const year = semesterYear(plan.semesterId) ?? new Date().getFullYear();
+          const bundles = await Promise.all(
+            active.map((c) => fetchCourseBundle(c.code, year, c.version)),
+          );
+          if (token !== renderToken) return; // a newer render started while this one was fetching
+
+          let credits = 0;
+          let known = false;
+          for (const bundle of bundles) {
+            const value = bundle.details?.credits;
+            if (typeof value === "number") {
+              credits += value;
+              known = true;
+            }
+          }
+
+          const count = active.length;
+          const noun = count === 1 ? "emne" : "emner";
+          link.replaceChildren();
+          const countEl = document.createElement("span");
+          countEl.className = "np-data";
+          countEl.textContent = `${count} ${noun}`;
+          link.append(countEl);
+          if (known) {
+            link.append(document.createTextNode(" · "));
+            const creditsEl = document.createElement("span");
+            creditsEl.className = "np-data";
+            const rounded = Math.round(credits * 10) / 10;
+            creditsEl.textContent = Number.isInteger(rounded)
+              ? `${rounded} sp`
+              : `${rounded.toFixed(1).replace(".", ",")} sp`;
+            link.append(creditsEl);
+          }
+          link.append(document.createTextNode(" · Se på ukeplanen →"));
+          strip.hidden = false;
+        }
+
+        void render();
+        const unsubscribe = store.onPlanChange(() => void render());
+        signal.addEventListener("abort", unsubscribe);
+      });
+    </script>
   </body>
 </html>

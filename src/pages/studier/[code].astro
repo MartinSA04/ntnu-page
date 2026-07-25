@@ -2,15 +2,11 @@
 import programsData from "../../../data/programs.json";
 import semestersData from "../../../data/semesters.json";
 import Layout from "../../layouts/Layout.astro";
-
-// A handful of upstream program codes contain a literal "/" (e.g. "EMNE/HF",
-// "MSØK/5"), which would split across two path segments — Astro's dynamic
-// segments otherwise pass non-ASCII codes (e.g. "ÅALIT") through untouched,
-// so only "/" itself needs escaping. The matching /studier/ listing link
-// encodes with the same helper.
-export function codeToSegment(code: string): string {
-  return code.replaceAll("/", "%2F");
-}
+// Shared with the /studier/ listing links and the planner's back-link. The
+// planner is a plain .ts island and cannot import from a .astro file, so the
+// escaping rule lives in src/lib/ — see that file for why "/" is the only
+// character that needs it.
+import { codeToSegment } from "../../lib/programUrl.js";
 
 export function getStaticPaths() {
   return programsData.programs.map((program) => ({
@@ -41,7 +37,12 @@ const description = `${program.name} — studieplan, opptak og studiested ved NT
   </p>
 
   {program.departmentName && <p class="studie-department">{program.departmentName}</p>}
-  {program.description && <p class="studie-description">{program.description}</p>}
+  {
+    /* program.description is a crawler-supplied marketing string, duplicated
+       on ~88% of programmes ("Datateknologi - master (5-årig) Datateknologi")
+       — PRODUCT.md §12 already kills "program marketing prose as primary
+       content", so it is deliberately not rendered here (U17c). */
+  }
 
   <section
     class="studie-section"
@@ -51,10 +52,11 @@ const description = `${program.name} — studieplan, opptak og studiested ved NT
     data-guess-year={currentYear}
     data-default-semester={defaultSemesterId}
   >
-    <p class="np-kicker">Studieplan</p>
+    <h2 class="np-kicker">Studieplan</h2>
     <p class="np-kicker studie-kull-kicker" id="plan-years-kicker" hidden>Kull</p>
     <div class="studie-plan-years" id="plan-years"></div>
-    <p class="studie-loading np-note" data-role="status">henter studieplan …</p>
+    <p class="studie-loading np-hint" data-role="status" aria-live="polite">henter studieplan …</p>
+    <p class="np-hint studie-provenance" id="plan-provenance" hidden></p>
     <div data-role="body" hidden></div>
   </section>
 </Layout>
@@ -64,7 +66,6 @@ const description = `${program.name} — studieplan, opptak og studiested ved NT
     margin-bottom: var(--space-2);
   }
   .studie-title {
-    font-size: var(--text-2xl);
     margin-bottom: var(--space-2);
   }
   .studie-meta {
@@ -77,12 +78,6 @@ const description = `${program.name} — studieplan, opptak og studiested ved NT
     color: var(--muted);
     margin-bottom: var(--space-3);
   }
-  .studie-description {
-    font-size: var(--text-base);
-    line-height: var(--leading-normal);
-    margin-bottom: var(--space-6);
-    max-width: var(--measure);
-  }
   .studie-section {
     margin-bottom: var(--space-7);
   }
@@ -94,16 +89,27 @@ const description = `${program.name} — studieplan, opptak og studiested ved NT
   }
   .studie-plan-years {
     display: flex;
-    flex-wrap: wrap;
+    flex-direction: column;
     gap: var(--space-2);
     margin-bottom: var(--space-4);
   }
-  .studie-loading {
-    font-size: var(--text-sm);
+  .studie-provenance {
+    margin-bottom: var(--space-4);
   }
 
   /* Island content is built client-side; scoped styles need :global() to
      reach it (see the equivalent note in emne/[code].astro). */
+  :global(.plan-years-row) {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+  }
+  :global(.plan-years-more) {
+    margin-top: var(--space-2);
+  }
+  :global(.plan-years-more .plan-years-row) {
+    margin-top: var(--space-2);
+  }
   :global(.plan-period) {
     margin-bottom: var(--space-6);
   }
@@ -116,22 +122,40 @@ const description = `${program.name} — studieplan, opptak og studiested ved NT
   :global(.plan-period-current) {
     color: var(--accent-ink);
   }
+  /* "ditt semester" is a membership state — the Green-Means-Fits case, not
+     a muted mono fragment (D9). */
+  :global(.plan-period-badge) {
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    font-weight: var(--weight-medium);
+    text-transform: uppercase;
+    letter-spacing: var(--tracking-wide);
+    color: var(--accent-ink);
+    background: var(--accent-weak);
+    padding: 0.15em 0.5em;
+    border-radius: var(--radius-xs);
+  }
+  :global(.plan-period-subtotal) {
+    color: var(--muted);
+  }
   :global(.plan-use-as-mine) {
     margin-left: auto;
+  }
+  :global(.plan-gate-hint) {
+    margin-bottom: var(--space-3);
+  }
+  :global(.plan-fallback-hint) {
+    margin-bottom: var(--space-4);
   }
   :global(.plan-group) {
     margin-bottom: var(--space-4);
   }
-  :global(.plan-group-header) {
-    display: flex;
-    align-items: baseline;
-    justify-content: space-between;
-    gap: var(--space-3);
-    margin-bottom: var(--space-2);
-  }
   :global(.plan-group-name) {
     font-size: var(--text-md);
     font-weight: var(--weight-medium);
+  }
+  :global(.plan-group-description) {
+    margin: var(--space-1) 0 var(--space-2);
   }
   :global(.plan-course-row) {
     display: flex;
@@ -173,14 +197,16 @@ const description = `${program.name} — studieplan, opptak og studiested ved NT
   :global(.plan-waypoint-body) {
     padding-bottom: var(--space-3);
   }
+  :global(.plan-waypoint-description) {
+    margin-bottom: var(--space-2);
+  }
   :global(.plan-direction-name) {
     font-size: var(--text-base);
     font-weight: var(--weight-medium);
     margin-bottom: var(--space-2);
   }
   :global(.plan-empty) {
-    font-size: var(--text-sm);
-    color: var(--muted);
+    margin-top: var(--space-2);
   }
 </style>
 

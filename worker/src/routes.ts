@@ -13,7 +13,6 @@ import {
   DETAILS_CACHE_TTL_MS,
   GRADES_CACHE_TTL_MS,
   PLAN_CACHE_TTL_MS,
-  SCHEDULE_CACHE_TTL_MS,
   TIMETABLE_CACHE_TTL_MS,
   type TieredCache,
 } from "./cache.js";
@@ -53,10 +52,27 @@ function errorJson(
   });
 }
 
-/** Validates + uppercases a course/program code, or returns `null` on failure. */
+/**
+ * Decodes, validates and uppercases a course/program code, or returns `null`
+ * on failure.
+ *
+ * The decode is the load-bearing step: handlers are called with a raw
+ * `URL.pathname` segment, which the WHATWG URL spec keeps percent-encoded, so
+ * `BØA1100` arrives as `B%C3%98A1100` and `CODE_RE`'s deliberate Æ/Ø/Å
+ * allow-list never sees the characters it exists for — 58 programmes (every
+ * Å-prefixed årsstudium, MTIØT, BØA…) and 238 courses used to hard-400.
+ * A malformed escape (`%zz`) throws `URIError`, which is a 400 like any other
+ * unparseable code.
+ */
 function parseCode(raw: string): string | null {
-  if (!CODE_RE.test(raw)) return null;
-  return raw.toUpperCase();
+  let decoded: string;
+  try {
+    decoded = decodeURIComponent(raw);
+  } catch {
+    return null;
+  }
+  if (!CODE_RE.test(decoded)) return null;
+  return decoded.toUpperCase();
 }
 
 /** Validates a 4-digit year string, or returns `null` on failure (absent or malformed). */
@@ -162,36 +178,6 @@ export async function handleCourseTimetable(
     const entries = await deps.client.courses.timetable(parsedCode, year, { version });
     await deps.cache.set(key, entries, TIMETABLE_CACHE_TTL_MS);
     return json(entries, 200, TIMETABLE_CACHE_TTL_MS);
-  } catch (err) {
-    return mapUpstreamError(err);
-  }
-}
-
-export async function handleCourseSchedule(
-  deps: RouteDeps,
-  code: string,
-  yearParam: string | null,
-  versionParam: string | null = null,
-): Promise<Response> {
-  const parsedCode = parseCode(code);
-  if (parsedCode === null) return errorJson("Invalid course code", 400);
-  const year = parseYear(yearParam);
-  if (year === null) return errorJson("Invalid year", 400);
-  const version = parseVersion(versionParam);
-
-  const key = JSON.stringify(["schedule", parsedCode, year, version ?? null]);
-  const hit = await deps.cache.get(key, SCHEDULE_CACHE_TTL_MS);
-  // `ScheduleActivity.start`/`end` are `Date`s upstream; after a KV round-trip
-  // they come back as ISO strings. `JSON.stringify` renders a `Date` and its
-  // ISO-string equivalent identically, so the response body is the same
-  // either way — no revival needed here (unlike ntnu-mcp, which hands the
-  // parsed value to callers instead of serializing it directly).
-  if (hit !== null) return json(hit, 200, SCHEDULE_CACHE_TTL_MS);
-
-  try {
-    const activities = await deps.client.courses.schedules(parsedCode, year, { version });
-    await deps.cache.set(key, activities, SCHEDULE_CACHE_TTL_MS);
-    return json(activities, 200, SCHEDULE_CACHE_TTL_MS);
   } catch (err) {
     return mapUpstreamError(err);
   }

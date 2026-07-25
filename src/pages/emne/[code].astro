@@ -1,6 +1,10 @@
 ---
 import catalogData from "../../../data/catalog.json";
+import semestersData from "../../../data/semesters.json";
 import Layout from "../../layouts/Layout.astro";
+// The week is rendered by components/planner/grid.ts, so this page needs the
+// same geometry /planlegger/ uses — one shared stylesheet, not a second copy.
+import "../../styles/planner-week.css";
 
 export function getStaticPaths() {
   return catalogData.courses.map((course) => ({
@@ -16,6 +20,18 @@ interface Props {
 const { course } = Astro.props;
 const catalogYear = catalogData.year;
 
+// C1: the catalog now unions two crawl years. A course missing from the
+// canonical year is a real course that simply is not taught this year — its
+// name, version, exams and timetable all belong to `offeredYears[0]`, and the
+// page has to say so rather than render an empty current-year week.
+const offeredYears: number[] = course.offeredYears ?? [catalogYear];
+const isOffered = offeredYears.includes(catalogYear);
+const sourceYear = isOffered ? catalogYear : (offeredYears[0] ?? catalogYear);
+
+const semester = semestersData.current;
+// "2026 Høst" is how semesters.json stores it; the copy reads "Høst 2026".
+const semesterLabel = semester.name.replace(/^(\d{4})\s+(.+)$/, "$2 $1");
+
 const SEASON_LABELS: Record<string, string> = {
   SPRING: "vår",
   AUTUMN: "høst",
@@ -30,116 +46,190 @@ function formatDate(date: string | null): string | null {
   return d.toLocaleDateString("nb-NO", { day: "numeric", month: "long", year: "numeric" });
 }
 
-const description = `${course.code} ${course.name} — emnedetaljer, karakterstatistikk og timeplan fra NTNU.`;
+const description = `${course.code} ${course.name} — timeplan, eksamen og nøkkeltall fra NTNU.`;
 ---
 
 <Layout title={`${course.code} — ${course.name}`} description={description} wide>
-  <p class="np-kicker emne-kicker">{course.code}</p>
+  <p class="np-data emne-code">{course.code}</p>
   <h1 class="emne-title">{course.name}</h1>
   <p class="emne-meta np-note">
     {course.location}
     {course.examOnly && <span class="emne-examonly">kun eksamen</span>}
+    {
+      !isOffered && (
+        <span class="emne-stale">
+          ikke undervist i {catalogYear} · sist undervist {sourceYear}
+        </span>
+      )
+    }
   </p>
 
-  <button
-    type="button"
-    class="np-btn np-press emne-plan-btn"
-    id="emne-plan-btn"
-    data-code={course.code}
-    data-name={course.name}
-    aria-pressed="false"
+  {/* The fork point (U10/U11): the verdict comes before the encyclopedia. */}
+  <div class="emne-cta">
+    <button
+      type="button"
+      class="np-btn emne-plan-btn"
+      id="emne-plan-btn"
+      data-code={course.code}
+      aria-pressed="false"
+    >
+      Legg til i planen
+    </button>
+    <a class="emne-plan-link" id="emne-plan-link" href="/planlegger/" hidden>se ukeplanen →</a>
+  </div>
+  <div class="emne-clash-slot" id="emne-clash" aria-live="polite">
+    <p class="np-hint">Sjekker planen din for {semesterLabel} …</p>
+  </div>
+
+  <div
+    id="emne-islands"
+    data-course-code={course.code}
+    data-course-name={course.name}
+    data-course-version={course.version ?? "1"}
+    data-source-year={sourceYear}
+    data-offered={String(isOffered)}
   >
-    Legg til i planen
-  </button>
-
-  {
-    course.exams.length > 0 && (
-      <div class="emne-exams">
-        <p class="np-kicker emne-exams-kicker">Eksamen</p>
-        <ul class="emne-exams-list">
-          {course.exams.map((exam) => (
-            <li>
-              {exam.season && SEASON_LABELS[exam.season] ? SEASON_LABELS[exam.season] : exam.season}
-              {" — "}
-              <span class="np-data">{formatDate(exam.date) ?? "dato ikke fastsatt"}</span>
-              {exam.continuation && <span class="emne-exam-cont np-note">(kontinuasjon)</span>}
-            </li>
-          ))}
-        </ul>
-      </div>
-    )
-  }
-
-  <div id="emne-islands" data-course-code={course.code} data-catalog-year={catalogYear}>
-    <section class="emne-section" id="details-section">
-      <p class="np-kicker">Om emnet</p>
-      <p class="emne-loading np-note" data-role="status">henter emnedetaljer …</p>
-      <div data-role="body" hidden></div>
-    </section>
-
-    <section class="emne-section" id="grades-section">
-      <p class="np-kicker">Karakterstatistikk</p>
-      <p class="emne-loading np-note" data-role="status">henter karakterstatistikk …</p>
-      <div data-role="body" hidden></div>
-    </section>
-
     <section class="emne-section" id="timetable-section">
-      <p class="np-kicker">Timeplan</p>
-      <p class="emne-loading np-note" data-role="status">henter timeplan …</p>
+      <h2 class="np-kicker emne-section-head">Timeplan</h2>
+      <p class="emne-loading np-hint" data-role="status" aria-live="polite">Henter timeplanen …</p>
       <div data-role="body" hidden></div>
+    </section>
+
+    <section class="emne-section" id="exam-section">
+      <h2 class="np-kicker emne-section-head">Eksamen</h2>
+      {
+        course.exams.length > 0 ? (
+          <ul class="emne-exams-list">
+            {course.exams.map((exam) => (
+              <li class="emne-exam-row">
+                <span class="emne-exam-season">
+                  {exam.season && SEASON_LABELS[exam.season]
+                    ? SEASON_LABELS[exam.season]
+                    : (exam.season ?? "eksamen")}
+                </span>
+                <span class="np-data emne-exam-date">
+                  {formatDate(exam.date) ?? "eksamensdato ikke fastsatt"}
+                </span>
+                {exam.continuation && <span class="emne-exam-cont np-note">kontinuasjon</span>}
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p class="np-hint">Eksamensdato er ikke fastsatt i emnekatalogen.</p>
+        )
+      }
+      {
+        !isOffered && course.exams.length > 0 && (
+          <p class="np-hint">Datoene er fra {sourceYear} — emnet er ikke i katalogen for {catalogYear}.</p>
+        )
+      }
+      <details class="emne-disclosure" data-role="exam-more" hidden>
+        <summary class="np-summary">Eksamensdetaljer</summary>
+        <div class="emne-disclosure-body" data-role="exam-body"></div>
+      </details>
+    </section>
+
+    <section class="emne-section" id="details-section">
+      <h2 class="np-kicker emne-section-head">Nøkkeltall</h2>
+      <p class="emne-loading np-hint" data-role="status" aria-live="polite">
+        Henter emnedetaljer …
+      </p>
+      <div data-role="body" hidden></div>
+      <details class="emne-disclosure" data-role="prose-wrap" hidden>
+        <summary class="np-summary">Mer om emnet</summary>
+        <div class="emne-disclosure-body" data-role="prose"></div>
+      </details>
     </section>
   </div>
 </Layout>
 
 <style>
-  .emne-kicker {
-    margin-bottom: var(--space-2);
+  .emne-code {
+    font-size: var(--text-sm);
+    color: var(--muted);
+    margin-bottom: var(--space-1);
   }
   .emne-title {
-    font-size: var(--text-2xl);
     margin-bottom: var(--space-2);
   }
   .emne-meta {
     margin-bottom: var(--space-4);
     display: flex;
+    flex-wrap: wrap;
     gap: var(--space-3);
-    align-items: center;
+    align-items: baseline;
   }
   .emne-examonly {
     color: var(--faint);
   }
-  .emne-plan-btn {
-    margin-bottom: var(--space-6);
+  .emne-stale {
+    color: var(--faint);
   }
-  .emne-exams {
-    margin-bottom: var(--space-6);
-  }
-  .emne-exams-kicker {
+
+  .emne-cta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-4);
     margin-bottom: var(--space-2);
   }
-  .emne-exams-list {
-    list-style: none;
-    font-size: var(--text-base);
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-1);
+  .emne-plan-link {
+    font-size: var(--text-sm);
+    color: var(--accent-ink);
   }
-  .emne-exam-cont {
-    margin-left: 0.3em;
+  .emne-clash-slot {
+    /* Reserved so the verdict landing does not shove the week down the page. */
+    min-height: 1.6em;
+    margin-bottom: var(--space-6);
   }
+
   .emne-section {
     margin-bottom: var(--space-7);
   }
-  .emne-section > .np-kicker {
+  .emne-section-head {
     margin-bottom: var(--space-3);
   }
-  .emne-loading {
-    font-size: var(--text-sm);
+
+  .emne-exams-list {
+    list-style: none;
+    max-width: none;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+    margin-bottom: var(--space-3);
+  }
+  .emne-exam-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: var(--space-3);
+  }
+  .emne-exam-date {
+    font-size: var(--text-md);
+  }
+  .emne-exam-cont {
+    color: var(--faint);
+  }
+
+  .emne-disclosure {
+    margin-top: var(--space-3);
+  }
+  .emne-disclosure-body {
+    padding-top: var(--space-3);
   }
 
   /* Island content below is built client-side via document.createElement, so
      Astro's scoped-style attribute never reaches it — every selector that
      targets island-rendered markup must go through :global(). */
+
+  :global(.timetable-term) {
+    margin-bottom: var(--space-3);
+  }
+  :global(.timetable-others) {
+    margin-bottom: var(--space-3);
+  }
+
+  /* --- Facts, exam enrichment and prose ----------------------------------- */
 
   :global(.details-facts) {
     display: grid;
@@ -148,18 +238,11 @@ const description = `${course.code} ${course.name} — emnedetaljer, karaktersta
     background: var(--card);
     border-radius: var(--radius);
     padding: var(--space-4) var(--space-5);
-    margin-bottom: var(--space-5);
   }
   :global(.details-fact) {
     display: flex;
     flex-direction: column;
     gap: var(--space-1);
-  }
-  :global(.details-fact-label) {
-    font-size: var(--text-xs);
-    color: var(--muted);
-    text-transform: uppercase;
-    letter-spacing: var(--tracking);
   }
   :global(.details-fact-value) {
     font-size: var(--text-base);
@@ -175,119 +258,42 @@ const description = `${course.code} ${course.name} — emnedetaljer, karaktersta
     line-height: var(--leading-normal);
     white-space: pre-line;
   }
+  /* D6: data lists are not prose and must not inherit base.css's 38rem cap. */
   :global(.details-activities-list),
   :global(.details-reductions-list) {
     font-size: var(--text-base);
+    max-width: none;
     display: flex;
     flex-direction: column;
     gap: var(--space-1);
     padding-left: var(--space-5);
   }
-  :global(.details-exam-table) {
-    width: 100%;
+  :global(.details-exam-list) {
+    list-style: none;
+    max-width: none;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+  }
+  :global(.details-exam-row) {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: var(--space-3);
     font-size: var(--text-sm);
   }
-  :global(.details-exam-table td) {
-    padding: var(--space-2) var(--space-3) var(--space-2) 0;
-    vertical-align: top;
+  :global(.details-exam-facts) {
+    color: var(--muted);
   }
   :global(.details-reductions) {
     margin-bottom: var(--space-5);
-  }
-
-  :global(.grades-chart) {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-2);
-    margin-bottom: var(--space-4);
-  }
-  :global(.grades-year-row) {
-    display: grid;
-    grid-template-columns: 4em 1fr 6em;
-    align-items: center;
-    gap: var(--space-3);
-  }
-  :global(.grades-year-label) {
-    font-size: var(--text-sm);
-    color: var(--muted);
-  }
-  :global(.grades-bar) {
-    display: flex;
-    height: 1.1rem;
-    border-radius: var(--radius-xs);
-    overflow: hidden;
-    background: var(--card-nested);
-  }
-  :global(.grades-segment) {
-    height: 100%;
-  }
-  :global(.grades-year-total) {
-    font-size: var(--text-xs);
-    color: var(--muted);
-    text-align: right;
-  }
-  :global(.grades-legend) {
-    display: flex;
-    flex-wrap: wrap;
-    gap: var(--space-4);
-  }
-  :global(.grades-legend-item) {
-    display: inline-flex;
-    align-items: center;
-    gap: var(--space-1);
-    font-size: var(--text-xs);
-    color: var(--muted);
-  }
-  :global(.grades-legend-swatch) {
-    display: inline-block;
-    width: 0.7em;
-    height: 0.7em;
-    border-radius: var(--radius-xs);
-  }
-
-  :global(.timetable-years) {
-    display: flex;
-    gap: var(--space-2);
-    margin-bottom: var(--space-4);
-  }
-  :global(.timetable-grid) {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
-    gap: var(--space-5);
-  }
-  :global(.timetable-day-header) {
-    margin-bottom: var(--space-2);
-  }
-  :global(.timetable-entry) {
-    display: flex;
-    flex-direction: column;
-    gap: 0.15em;
-    padding: var(--space-2) 0;
-    border-bottom: 1px solid var(--border);
-  }
-  :global(.timetable-entry-time) {
-    font-size: var(--text-xs);
-    color: var(--muted);
-  }
-  :global(.timetable-entry-name) {
-    font-size: var(--text-sm);
-  }
-  :global(.timetable-entry-room),
-  :global(.timetable-entry-weeks) {
-    font-size: var(--text-xs);
-    color: var(--faint);
-  }
-  :global(.timetable-empty),
-  :global(.timetable-loading) {
-    font-size: var(--text-sm);
-    color: var(--muted);
   }
 </style>
 
 <script>
   import { mountCourseDetails } from "../../components/site/courseDetails";
-  import { mountCourseGrades } from "../../components/site/courseGrades";
   import { mountCourseTimetable } from "../../components/site/courseTimetable";
+  import { clashNode, planClash, semesterLabel } from "../../components/site/planClash";
   import { onPage } from "../../lib/pageLifecycle.ts";
   import { createPlanStore } from "../../lib/planner/store.ts";
   import semestersData from "../../../data/semesters.json";
@@ -299,39 +305,79 @@ const description = `${course.code} ${course.name} — emnedetaljer, karaktersta
     const root = document.getElementById("emne-islands");
     if (!root) return;
     const code = root.dataset.courseCode ?? "";
-    const catalogYear = Number(root.dataset.catalogYear ?? "0");
+    const name = root.dataset.courseName ?? "";
+    const version = root.dataset.courseVersion || "1";
+    const sourceYear = Number(root.dataset.sourceYear ?? "0");
+    const isOffered = root.dataset.offered === "true";
+
+    const semester = semestersData.current;
+    const term = semesterLabel(semester.name);
 
     mountCourseDetails(code);
-    mountCourseGrades(code);
-    mountCourseTimetable(code, catalogYear);
+    const timetable = mountCourseTimetable({
+      code,
+      name,
+      version,
+      year: sourceYear,
+      semester: { season: semester.season, year: semester.year, label: term },
+    });
 
     const planBtn = document.getElementById("emne-plan-btn") as HTMLButtonElement | null;
+    const planLink = document.getElementById("emne-plan-link") as HTMLAnchorElement | null;
+    const clashSlot = document.getElementById("emne-clash");
     if (!planBtn) return;
-    const btnCode = planBtn.dataset.code ?? "";
-    const btnName = planBtn.dataset.name ?? "";
-    const store = createPlanStore(semestersData.current?.id ?? "");
+    const store = createPlanStore(semester.id);
+    const clashSemester = {
+      id: semester.id,
+      name: semester.name,
+      teachingWeeks: semester.teachingWeeks,
+    };
 
     function syncPlanBtn(): void {
       if (!planBtn) return;
-      const inPlan = store.hasCourse(btnCode);
+      const inPlan = store.hasCourse(code);
       planBtn.setAttribute("aria-pressed", String(inPlan));
-      planBtn.textContent = inPlan ? "I planen · Fjern" : "Legg til i planen";
+      planBtn.textContent = inPlan ? "Fjern fra planen" : "Legg til i planen";
+      if (planLink) planLink.hidden = !inPlan;
+    }
+
+    // U11: the verdict is recomputed on every plan change, and a stale
+    // in-flight check must never overwrite a newer one.
+    let clashToken = 0;
+    async function renderClash(): Promise<void> {
+      if (!clashSlot) return;
+      const token = ++clashToken;
+      // A course outside the planned semester's catalog year has no entries
+      // that could legitimately land in this semester's weeks — asserting
+      // that with `[]` beats fetching last year's grid and matching on it.
+      const sameYear = isOffered && sourceYear === semester.year;
+      const own = sameYear ? await timetable : [];
+      const verdict = await planClash({ code, version }, store.loadPlan(), clashSemester, own);
+      if (token !== clashToken) return;
+      clashSlot.replaceChildren(clashNode(verdict, clashSemester));
     }
 
     planBtn.addEventListener(
       "click",
       () => {
-        if (store.hasCourse(btnCode)) {
-          store.removeCourse(btnCode);
+        if (store.hasCourse(code)) {
+          store.removeCourse(code);
         } else {
-          store.addCourse({ code: btnCode, name: btnName });
+          store.addCourse({ code, name, version });
         }
         syncPlanBtn();
       },
       { signal },
     );
 
-    signal.addEventListener("abort", store.onPlanChange(syncPlanBtn));
+    signal.addEventListener(
+      "abort",
+      store.onPlanChange(() => {
+        syncPlanBtn();
+        renderClash();
+      }),
+    );
     syncPlanBtn();
+    renderClash();
   });
 </script>

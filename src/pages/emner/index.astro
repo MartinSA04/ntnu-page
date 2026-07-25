@@ -18,9 +18,9 @@ const description = "Søk i NTNUs emnekatalog etter emnekode, emnenavn eller stu
     />
   </div>
 
-  <div class="emner-chips" id="emner-chips" role="group" aria-label="Filtrer på studiested"></div>
+  <div class="emner-facets" id="emner-facets" role="group" aria-label="Filtrer på studiested"></div>
 
-  <p class="emner-status np-note" id="emner-status" aria-live="polite">henter emner …</p>
+  <p class="emner-status np-hint" id="emner-status" aria-live="polite">Henter emner …</p>
 
   <ul class="emner-results" id="emner-results"></ul>
 </Layout>
@@ -30,14 +30,13 @@ const description = "Søk i NTNUs emnekatalog etter emnekode, emnenavn eller stu
     margin-bottom: var(--space-2);
   }
   .emner-title {
-    font-size: var(--text-2xl);
     margin-bottom: var(--space-5);
   }
   .emner-search {
     margin-bottom: var(--space-4);
     max-width: var(--measure);
   }
-  .emner-chips {
+  .emner-facets {
     display: flex;
     flex-wrap: wrap;
     gap: var(--space-2);
@@ -48,14 +47,20 @@ const description = "Søk i NTNUs emnekatalog etter emnekode, emnenavn eller stu
   }
   .emner-results {
     list-style: none;
+    /* D6: a result list is a data surface, not prose — no 38rem cap. */
+    max-width: none;
     display: flex;
     flex-direction: column;
   }
+  .emner-retry {
+    margin-left: var(--space-3);
+  }
+
   :global(.emner-row) {
     display: flex;
     align-items: center;
     gap: var(--space-4);
-    padding: var(--space-2) var(--space-2);
+    padding: var(--space-2);
     border-bottom: 1px solid var(--border);
   }
   :global(.emner-row-link) {
@@ -77,41 +82,113 @@ const description = "Søk i NTNUs emnekatalog etter emnekode, emnenavn eller stu
     font-size: var(--text-sm);
     color: var(--muted);
     flex-shrink: 0;
-    width: 7em;
+    min-width: 7em;
   }
   :global(.emner-row-name) {
     font-size: var(--text-base);
+    flex: 1 1 auto;
+    min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
   }
-  :global(.emner-row-exam) {
-    font-family: var(--font-mono);
-    font-size: var(--text-xs);
-    color: var(--faint);
-    flex-shrink: 0;
-  }
+  :global(.emner-row-exam),
   :global(.emner-row-location) {
     font-family: var(--font-mono);
     font-size: var(--text-xs);
     color: var(--faint);
-    margin-left: auto;
     flex-shrink: 0;
+  }
+  :global(.emner-row-stale) {
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    color: var(--faint);
+    flex-shrink: 0;
+  }
+  :global(.emner-row-actions) {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    flex-shrink: 0;
+  }
+  :global(.emner-row-planlink) {
+    font-size: var(--text-sm);
+    color: var(--accent-ink);
+    white-space: nowrap;
+  }
+  /* I2's copy is "Lagt til · se ukeplanen →" — one statement across a button
+     and a link. The separator is decoration, so it stays out of the link's
+     accessible name. */
+  :global(.emner-row-planlink::before) {
+    content: "· ";
+    color: var(--faint);
+  }
+
+  /* A3: at 390px the exam note used to overflow into the location, and the
+     name collapsed to zero width. Wrap the link instead: code + notes on the
+     first line, the full name on its own. */
+  @media (max-width: 40rem) {
+    :global(.emner-row) {
+      align-items: flex-start;
+      gap: var(--space-2);
+    }
+    :global(.emner-row-link) {
+      flex-wrap: wrap;
+      gap: var(--space-2);
+    }
+    :global(.emner-row-code) {
+      order: 1;
+      min-width: 0;
+    }
+    :global(.emner-row-exam) {
+      order: 2;
+      flex-shrink: 1;
+    }
+    :global(.emner-row-location),
+    :global(.emner-row-stale) {
+      order: 3;
+      flex-shrink: 1;
+    }
+    :global(.emner-row-name) {
+      order: 4;
+      flex-basis: 100%;
+      white-space: normal;
+      overflow: visible;
+    }
+    :global(.emner-row-actions) {
+      flex-direction: column;
+      align-items: flex-end;
+      gap: var(--space-1);
+    }
+    /* Stacked, the two halves are no longer one line, so the separator that
+       joined them would read as a stray mark. */
+    :global(.emner-row-planlink::before) {
+      content: none;
+    }
   }
 </style>
 
 <script>
+  import { clashSentence, planClash, semesterLabel } from "../../components/site/planClash";
   import { onPage } from "../../lib/pageLifecycle.ts";
   import { createPlanStore } from "../../lib/planner/store.ts";
   import semestersData from "../../../data/semesters.json";
 
+  /**
+   * `public/data/search-index.json`, positional. Elements 4 and 5 were
+   * appended by the two-year crawl (C1/C2): the catalog course version that
+   * has to ride along on every timetable call, and the catalog years the
+   * course is actually offered in.
+   */
   interface SearchIndex {
     year: number;
     courses: [
       code: string,
       name: string,
-      location: string,
-      exams: [season: string | null, date: string | null][],
+      location: string | null,
+      exams: [season: string, date: string | null][],
+      version: string | null,
+      offeredYears: number[],
     ][];
   }
 
@@ -123,153 +200,312 @@ const description = "Søk i NTNUs emnekatalog etter emnekode, emnenavn eller stu
     SUMMER: "sommer",
   };
 
-  // Case/diacritic-insensitive substring matching (Æ/Ø/Å fold to A/O/A).
+  // Case/diacritic-insensitive substring matching. NFD decomposes Å but not
+  // Æ/Ø, so those two are pre-mapped — "okonomi" has to find "Økonomi" on a
+  // Norwegian site, and 238 course codes contain Ø or Æ.
   function fold(value: string): string {
     return value
+      .toLowerCase()
+      .replace(/æ/g, "a")
+      .replace(/ø/g, "o")
       .normalize("NFD")
-      .replace(/[\u0300-\u036f]/g, "")
-      .toLowerCase();
+      .replace(/[\u0300-\u036f]/g, "");
   }
 
-  function examNote(exams: [string | null, string | null][]): string {
+  /** The comma-joined catalog location string as city facets: "Gjøvik, Trondheim" → 2. */
+  function cities(location: string | null): string[] {
+    if (!location) return [];
+    return location
+      .split(",")
+      .map((c) => c.trim())
+      .filter((c) => c !== "");
+  }
+
+  function examNote(exams: [string, string | null][]): string {
     if (exams.length === 0) return "";
-    const seasons = [
-      ...new Set(exams.map(([season]) => (season ? (SEASON_LABELS[season] ?? season) : null))),
-    ].filter((s): s is string => s !== null);
+    const seasons = [...new Set(exams.map(([season]) => SEASON_LABELS[season] ?? season))];
     return seasons.length > 0 ? `eksamen ${seasons.join(", ")}` : "";
-  }
-
-  function setAddState(button: HTMLButtonElement, inPlan: boolean, code: string): void {
-    button.setAttribute("aria-pressed", String(inPlan));
-    button.setAttribute("aria-label", inPlan ? `Fjern ${code} fra planen` : `Legg til ${code} i planen`);
-    button.textContent = inPlan ? "✓" : "+";
   }
 
   // Per page-load, not per module: ClientRouter evaluates this module once,
   // so wiring at top level left the search dead after any in-site navigation.
   onPage((signal) => {
-  const statusEl = document.getElementById("emner-status") as HTMLParagraphElement | null;
-  const resultsEl = document.getElementById("emner-results") as HTMLUListElement | null;
-  const chipsEl = document.getElementById("emner-chips") as HTMLDivElement | null;
-  const searchInput = document.getElementById("emner-search") as HTMLInputElement | null;
-  if (!statusEl || !resultsEl || !chipsEl || !searchInput) return;
+    const statusEl = document.getElementById("emner-status") as HTMLParagraphElement | null;
+    const resultsEl = document.getElementById("emner-results") as HTMLUListElement | null;
+    const facetsEl = document.getElementById("emner-facets") as HTMLDivElement | null;
+    const searchInput = document.getElementById("emner-search") as HTMLInputElement | null;
+    if (!statusEl || !resultsEl || !facetsEl || !searchInput) return;
 
-  const store = createPlanStore(semestersData.current?.id ?? "");
+    const semester = semestersData.current;
+    const term = semesterLabel(semester.name);
+    const store = createPlanStore(semester.id);
+    const clashSemester = {
+      id: semester.id,
+      name: semester.name,
+      teachingWeeks: semester.teachingWeeks,
+    };
 
-  let index: SearchIndex | null = null;
-  let activeLocation: string | null = null;
+    let index: SearchIndex | null = null;
+    let loading = false;
+    const activeCities = new Set<string>();
+    /**
+     * The add controls of the rows currently on screen. A plan change updates
+     * them in place instead of re-running `render()`: rebuilding the list
+     * removed the very button the student had just pressed, which threw
+     * keyboard focus back to `<body>` on every add (A5).
+     */
+    const rows: { sync: () => void; invalidate: () => void }[] = [];
 
-  function render(): void {
-    if (!statusEl || !resultsEl || !searchInput) return;
-    if (!index) return;
-    const query = fold(searchInput.value.trim());
-    const filtered = index.courses.filter(([code, name, location]) => {
-      if (activeLocation && !location.includes(activeLocation)) return false;
-      if (!query) return true;
-      return fold(code).includes(query) || fold(name).includes(query);
-    });
+    function setStatus(text: string, voice: "hint" | "note"): void {
+      if (!statusEl) return;
+      statusEl.className = `emner-status ${voice === "note" ? "np-note" : "np-hint"}`;
+      statusEl.textContent = text;
+    }
 
-    resultsEl.replaceChildren();
-    const shown = filtered.slice(0, RESULT_CAP);
-    for (const [code, name, location, exams] of shown) {
-      const row = document.createElement("li");
-      row.className = "emner-row";
+    function setAddState(button: HTMLButtonElement, inPlan: boolean, code: string): void {
+      button.setAttribute("aria-pressed", String(inPlan));
+      button.textContent = inPlan ? "Lagt til" : "Legg til";
+      if (!inPlan) button.setAttribute("aria-label", `Legg til ${code} i planen`);
+      else button.setAttribute("aria-label", `Fjern ${code} fra planen`);
+    }
 
-      const link = document.createElement("a");
-      link.className = "emner-row-link";
-      link.href = `/emne/${code}/`;
+    /**
+     * U11: the clash verdict has to be available *before* the student
+     * commits, but a verdict per visible row is 200 timetable fetches. So it
+     * is computed lazily on first hover/focus of the row's add button and
+     * cached on the element — by the time a pointer or keyboard focus is on
+     * the button, the answer is on its tooltip and accessible name.
+     */
+    function attachClashPreview(
+      button: HTMLButtonElement,
+      code: string,
+      version: string,
+    ): () => void {
+      let checked = false;
+      const check = async (): Promise<void> => {
+        if (checked) return;
+        checked = true;
+        const verdict = await planClash({ code, version }, store.loadPlan(), clashSemester);
+        const sentence = clashSentence(verdict, clashSemester);
+        button.title = sentence;
+        const inPlan = store.hasCourse(code);
+        button.setAttribute(
+          "aria-label",
+          `${inPlan ? `Fjern ${code} fra planen` : `Legg til ${code} i planen`} — ${sentence}`,
+        );
+      };
+      button.addEventListener("pointerenter", check);
+      button.addEventListener("focus", check);
+      // The verdict is a diff against the plan, so it expires the moment the
+      // plan does. Dropping the cached answer is honest; recomputing 200 of
+      // them eagerly is 200 timetable fetches.
+      return () => {
+        checked = false;
+        button.title = "";
+      };
+    }
 
-      const codeEl = document.createElement("span");
-      codeEl.className = "emner-row-code";
-      codeEl.textContent = code;
+    function render(): void {
+      if (!statusEl || !resultsEl || !searchInput) return;
+      if (!index) return;
+      const query = fold(searchInput.value.trim());
 
-      const nameEl = document.createElement("span");
-      nameEl.className = "emner-row-name";
-      nameEl.textContent = name;
-
-      link.append(codeEl, nameEl);
-
-      const note = examNote(exams);
-      if (note) {
-        const noteEl = document.createElement("span");
-        noteEl.className = "emner-row-exam";
-        noteEl.textContent = note;
-        link.append(noteEl);
+      // §3: no 200-row dump on an empty query — the page is a search mode,
+      // not a browsable catalog.
+      if (query === "") {
+        resultsEl.replaceChildren();
+        setStatus(`Skriv for å søke i ${index.courses.length} emner.`, "hint");
+        return;
       }
 
-      const locEl = document.createElement("span");
-      locEl.className = "emner-row-location";
-      locEl.textContent = location;
-
-      const addBtn = document.createElement("button");
-      addBtn.type = "button";
-      addBtn.className = "np-icon-btn np-press";
-      setAddState(addBtn, store.hasCourse(code), code);
-      addBtn.addEventListener("click", () => {
-        if (store.hasCourse(code)) {
-          store.removeCourse(code);
-        } else {
-          store.addCourse({ code, name });
-        }
-        setAddState(addBtn, store.hasCourse(code), code);
+      const filtered = index.courses.filter(([code, name, location]) => {
+        if (activeCities.size > 0 && !cities(location).some((c) => activeCities.has(c)))
+          return false;
+        return fold(code).includes(query) || fold(name).includes(query);
       });
 
-      row.append(link, locEl, addBtn);
-      resultsEl.append(row);
+      resultsEl.replaceChildren();
+      rows.length = 0;
+      const shown = filtered.slice(0, RESULT_CAP);
+      for (const [code, name, location, exams, version, offeredYears] of shown) {
+        const row = document.createElement("li");
+        row.className = "emner-row";
+
+        const link = document.createElement("a");
+        link.className = "emner-row-link";
+        link.href = `/emne/${encodeURIComponent(code)}/`;
+
+        const codeEl = document.createElement("span");
+        codeEl.className = "emner-row-code";
+        codeEl.textContent = code;
+
+        const nameEl = document.createElement("span");
+        nameEl.className = "emner-row-name";
+        nameEl.textContent = name;
+
+        link.append(codeEl, nameEl);
+
+        const note = examNote(exams);
+        if (note) {
+          const noteEl = document.createElement("span");
+          noteEl.className = "emner-row-exam";
+          noteEl.textContent = note;
+          link.append(noteEl);
+        }
+
+        if (location) {
+          const locEl = document.createElement("span");
+          locEl.className = "emner-row-location";
+          locEl.textContent = location;
+          link.append(locEl);
+        }
+
+        // C1: 703 of these rows come from last year's catalog only. Adding
+        // one contributes zero blocks to this semester's week, so the row
+        // says so rather than letting the "+" imply otherwise.
+        const stale = !offeredYears.includes(index.year);
+        if (stale) {
+          const staleEl = document.createElement("span");
+          staleEl.className = "emner-row-stale";
+          staleEl.textContent = `ikke undervist i ${index.year}`;
+          link.append(staleEl);
+        }
+
+        const actions = document.createElement("span");
+        actions.className = "emner-row-actions";
+
+        const addBtn = document.createElement("button");
+        addBtn.type = "button";
+        addBtn.className = "np-btn emner-row-add";
+
+        // I2: the row was write-only — the "+" mutated localStorage and said
+        // nothing. The button now reports the state and names the destination.
+        const planLink = document.createElement("a");
+        planLink.className = "emner-row-planlink";
+        planLink.href = "/planlegger/";
+        planLink.textContent = "se ukeplanen →";
+
+        const sync = (): void => {
+          const inPlan = store.hasCourse(code);
+          setAddState(addBtn, inPlan, code);
+          planLink.hidden = !inPlan;
+        };
+        sync();
+
+        addBtn.addEventListener("click", () => {
+          if (store.hasCourse(code)) {
+            store.removeCourse(code);
+          } else {
+            store.addCourse({ code, name, version: version || "1" });
+          }
+          // `savePlan` dispatches synchronously, so `syncRows` has normally
+          // already run by here; this keeps the button honest if it has not.
+          sync();
+        });
+
+        let invalidate = (): void => {};
+        if (!stale) invalidate = attachClashPreview(addBtn, code, version || "1");
+        else addBtn.title = `Undervises ikke i ${term} — ingen kollisjon å sjekke.`;
+        rows.push({ sync, invalidate });
+
+        actions.append(addBtn, planLink);
+        row.append(link, actions);
+        resultsEl.append(row);
+      }
+
+      setStatus(
+        filtered.length > RESULT_CAP
+          ? `viser ${RESULT_CAP} av ${filtered.length} treff`
+          : `${filtered.length} treff`,
+        "note",
+      );
     }
 
-    statusEl.textContent =
-      filtered.length > RESULT_CAP
-        ? `viser ${RESULT_CAP} av ${filtered.length} treff`
-        : `${filtered.length} treff`;
-  }
+    /**
+     * U15: the raw catalog strings are combinations ("Gjøvik, Trondheim"),
+     * so one chip per string filtered with `includes` *excluded* courses
+     * taught in more cities than the chip named. Facets are cities, and
+     * selecting several means OR.
+     */
+    function renderFacets(): void {
+      if (!facetsEl || !index) return;
+      const all = new Set<string>();
+      for (const [, , location] of index.courses) for (const city of cities(location)) all.add(city);
+      const sorted = [...all].sort((a, b) => a.localeCompare(b, "nb"));
 
-  function renderChips(locations: string[]): void {
-    if (!chipsEl) return;
-    chipsEl.replaceChildren();
-    for (const location of locations) {
-      const chip = document.createElement("button");
-      chip.type = "button";
-      chip.className = "np-toggle";
-      chip.textContent = location;
-      chip.setAttribute("aria-pressed", "false");
-      chip.addEventListener("click", () => {
-        const next = activeLocation === location ? null : location;
-        activeLocation = next;
-        for (const other of chipsEl.querySelectorAll(".np-toggle")) {
-          other.setAttribute("aria-pressed", String(other === chip && next !== null));
+      facetsEl.replaceChildren();
+      for (const city of sorted) {
+        const chip = document.createElement("button");
+        chip.type = "button";
+        chip.className = "np-toggle np-toggle--text";
+        chip.textContent = city;
+        chip.setAttribute("aria-pressed", String(activeCities.has(city)));
+        chip.addEventListener("click", () => {
+          if (activeCities.has(city)) activeCities.delete(city);
+          else activeCities.add(city);
+          chip.setAttribute("aria-pressed", String(activeCities.has(city)));
+          render();
+        });
+        facetsEl.append(chip);
+      }
+    }
+
+    /**
+     * Fetches the index. On failure the page keeps a way back: an explicit
+     * "prøv igjen" action, plus a retry on the next keystroke — the previous
+     * version left `index` undefined for the rest of the session.
+     */
+    async function loadIndex(): Promise<void> {
+      if (index || loading || !statusEl) return;
+      loading = true;
+      setStatus("Henter emner …", "hint");
+      try {
+        const res = await fetch("/data/search-index.json");
+        if (!res.ok) throw new Error(`${res.status}`);
+        index = (await res.json()) as SearchIndex;
+      } catch {
+        setStatus("Klarte ikke å hente emnene.", "hint");
+        const retry = document.createElement("button");
+        retry.type = "button";
+        retry.className = "np-btn emner-retry";
+        retry.textContent = "prøv igjen";
+        retry.addEventListener("click", () => {
+          loadIndex();
+        });
+        statusEl.append(retry);
+        return;
+      } finally {
+        loading = false;
+      }
+      renderFacets();
+      render();
+    }
+
+    searchInput.addEventListener(
+      "input",
+      () => {
+        if (!index) {
+          loadIndex();
+          return;
         }
         render();
-      });
-      chipsEl.append(chip);
+      },
+      { signal },
+    );
+    /** In-place refresh of the rows on screen — see `rows`. */
+    function syncRows(): void {
+      for (const row of rows) {
+        row.invalidate();
+        row.sync();
+      }
     }
-  }
 
-  async function init(): Promise<void> {
-    if (!statusEl || !searchInput) return;
+    signal.addEventListener("abort", store.onPlanChange(syncRows));
+
     const params = new URLSearchParams(location.search);
     const initialQuery = params.get("q");
     if (initialQuery) searchInput.value = initialQuery;
 
-    try {
-      const res = await fetch("/data/search-index.json");
-      if (!res.ok) throw new Error(`${res.status}`);
-      index = (await res.json()) as SearchIndex;
-    } catch {
-      statusEl.textContent = "klarte ikke å hente emner";
-      return;
-    }
-
-    const locations = [...new Set(index.courses.map(([, , loc]) => loc))].sort((a, b) =>
-      a.localeCompare(b, "nb"),
-    );
-    renderChips(locations);
-    render();
-  }
-
-  searchInput.addEventListener("input", render, { signal });
-  signal.addEventListener("abort", store.onPlanChange(render));
-
-  init();
+    loadIndex();
   });
 </script>

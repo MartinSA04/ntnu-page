@@ -12,7 +12,6 @@ import { type KVCacheBinding, TieredCache, TTLCache } from "./cache.js";
 import {
   handleCourseDetails,
   handleCourseGrades,
-  handleCourseSchedule,
   handleCourseTimetable,
   handleHealth,
   handleProgramPlan,
@@ -59,9 +58,9 @@ export default {
     const year = url.searchParams.get("year");
     const version = url.searchParams.get("version");
 
-    const courseMatch = pathname.match(
-      /^\/api\/course\/([^/]+)(?:\/(grades|timetable|schedule))?$/,
-    );
+    // `code` is still percent-encoded here (WHATWG keeps `pathname` encoded);
+    // `parseCode` in routes.ts decodes it for every route in one place.
+    const courseMatch = pathname.match(/^\/api\/course\/([^/]+)(?:\/(grades|timetable))?$/);
     if (courseMatch) {
       const [, code, sub] = courseMatch;
       if (code === undefined) return notFound();
@@ -72,8 +71,6 @@ export default {
           return handleCourseGrades(deps, code);
         case "timetable":
           return handleCourseTimetable(deps, code, year, version);
-        case "schedule":
-          return handleCourseSchedule(deps, code, year, version);
         default:
           return notFound();
       }
