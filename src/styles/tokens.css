@@ -70,12 +70,14 @@
      color-mix(in srgb, var(--dot) var(--wash-course), var(--card)). They are
      percentages rather than finished colours because --dot is set per block
      and a custom property resolves its var()s where it is *declared*, not
-     where it is used. Kept faint on purpose — §8 says the square .np-dot
-     carries course identity, so the wash only has to group, and anything
-     heavier competes with the collision ink. */
-  --wash-course: 8%;
-  --wash-course-hover: 14%;
-  --wash-course-muted: 4%;
+     where it is used. Tuned PER THEME: the same 8% that reads as a clear hue
+     over dark paper collapses into one flat gray-beige over warm light paper
+     (study T14), so light lifts the mix until each course is visibly its own
+     colour. Still well under the collision ink, which is a categorically
+     different, louder mark (Red-Is-Collision) — a wash never out-shouts it. */
+  --wash-course: 18%;
+  --wash-course-hover: 26%;
+  --wash-course-muted: 9%;
 
   /* The squared ruling (planning surfaces only — see .np-ruled).
      --ruling-hour is the heavier every-fourth-cell rule of .np-ruled--hours:
@@ -195,6 +197,12 @@
 
   --ruling-line: color-mix(in srgb, var(--border) 60%, transparent);
   --ruling-hour: color-mix(in srgb, var(--border-strong) 95%, transparent);
+
+  /* Dark paper already reads the hue at these strengths — kept as-is so dark
+     is unchanged; only light needed lifting (see the light values above). */
+  --wash-course: 8%;
+  --wash-course-hover: 14%;
+  --wash-course-muted: 4%;
 
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.35);
   --shadow: 0 3px 10px rgba(0, 0, 0, 0.4), 0 1px 3px rgba(0, 0, 0, 0.3);

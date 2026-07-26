@@ -8,17 +8,23 @@
  * lecture×lecture overlaps get the clash edge; `.np-note-clash` margin notes
  * below link to and flash the blocks.
  *
- * Legibility is a correctness property here, not polish (REVIEW.md U1/U3):
- * the week is 106 px per weekday at 1440, so the moment three things share a
- * slot a column split renders one character per line. Three rules keep the
- * surface readable at that width, in this order:
+ * Legibility is a correctness property here, not polish (REVIEW.md U1/U3, and
+ * the REWORK mandate's "render simultaneous courses properly"). Overlap is a
+ * *supported* state — people deliberately take colliding courses — so the
+ * surface stays readable at the week's ~106 px weekday width by these rules,
+ * in this order:
  *
- *   1. identical parallel slots of one course collapse to one block
- *      ("Lab · 4 grupper") — DR-1 already concedes they are indistinguishable;
- *   2. an all-day non-lecture drop-in window becomes a band behind the day
+ *   1. each course renders only its *selected* group set — the programme's
+ *      own lecture parallel by default (`applyGroupSelection`), so the pile
+ *      is what the student actually attends, not every section overlaid;
+ *   2. identical parallel slots that survive that filter collapse to one
+ *      block ("Lab · 4 grupper") — DR-1 concedes they are indistinguishable;
+ *   3. an all-day non-lecture drop-in window becomes a band behind the day
  *      rather than a full-height column that squeezes everything else;
- *   3. a cluster still 3+ deep stops splitting altogether and renders as one
- *      cell listing its course codes stacked.
+ *   4. `layoutDay` packs the rest into side-by-side columns; a cluster deeper
+ *      than `MAX_COLUMNS` renders the first columns as blocks and the rest as
+ *      one "+N til" chip that opens the block popover (via `onBlockClick`),
+ *      instead of splitting into unreadable slivers.
  *
  * The frame's ruling is owned here, not by the markup: it is stripped in
  * every empty/message branch (Ruling-Marks-The-Plan — the ruling appears
@@ -32,6 +38,8 @@ import {
   groupConflicts,
   mergeParallelSlots,
 } from "../../lib/planner/conflicts.js";
+import { applyGroupSelection } from "../../lib/planner/groups.js";
+import { type LayoutInput, layoutDay } from "../../lib/planner/layout.js";
 import { parseWeeks, type ScheduleEntry } from "../../lib/planner/schedule.js";
 import { dayName, dot, el, weekLabel } from "./dom.js";
 import type { PlanCourseState } from "./types.js";
@@ -44,21 +52,16 @@ const SKELETON_END_HOUR = 16;
 /** Weekdays the skeleton draws before it knows whether Saturday is needed. */
 const SKELETON_DAYS = 5;
 
-/**
- * Most columns a cluster is allowed to split into. At the week's real width a
- * 3-way split is ~34 px per block — "TI", "F…", "M…le…" — so 3+ collapses
- * into one cell instead (U3).
- */
-const MAX_SPLIT_COLUMNS = 2;
-/** Course codes a collapsed cluster lists before it says "+N til". */
-const MAX_CLUSTER_CODES = 3;
 /** A non-lecture window at least this long is a drop-in band, not a column (U1). */
 const ALL_DAY_MINUTES = 5 * 60;
-/** Below this height a block only has room for its code — rooms/weeks move to the tooltip. */
+/** Below this height a block only has room for its code + room·time — name/weeks move to the popover. */
 const COMPACT_BLOCK_MINUTES = 90;
 
 interface GridEntry extends ScheduleEntry {
   hueVar: string;
+  /** The course's proper name (for the block popover), distinct from `name`. */
+  courseName: string;
+  /** The activity/group label — `title`, e.g. "Forelesningsparallell 2 Trondheim". */
   name: string;
   rooms: string;
   weeksNumbers: number[];
@@ -68,6 +71,25 @@ interface GridEntry extends ScheduleEntry {
   groupCount: number;
   /** Per-render ordinal. Part of the DOM id, because (code, day, start) is not unique. */
   ordinal: number;
+}
+
+/**
+ * What a clicked block (or "+N til" chip) hands its listener — the material
+ * for the block popover (§5). A chip's `code` is the hidden entries' codes
+ * joined with " · "; a single block's is one course code.
+ */
+export interface BlockDetail {
+  /** Course code, or joined codes for a "+N til" chip. */
+  code: string;
+  /** Course name (the proper name), or joined names for a chip. */
+  name: string;
+  /** The activity/group label ("Forelesningsparallell 2"), when the block is one entry. */
+  entryName: string | null;
+  /** Spoken slot, e.g. "mandag 08:15–10:00". */
+  timeLabel: string;
+  rooms: string;
+  weeksLabel: string;
+  isLecture: boolean;
 }
 
 export interface GridRenderOptions {
@@ -85,6 +107,12 @@ export interface GridRenderOptions {
    * (B2). It is the *empty* week's message only — see `renderGrid`.
    */
   pendingChoiceMessage?: string | null;
+  /**
+   * Called when a block or a "+N til" chip is clicked, with the block's
+   * detail and the clicked element (the popover's anchor). Optional: the
+   * one-course `/emne/` reuse passes none, so its blocks are inert.
+   */
+  onBlockClick?: (detail: BlockDetail, anchor: HTMLElement) => void;
 }
 
 export interface GridRenderResult {
@@ -133,13 +161,21 @@ function blockAriaLabel(entry: GridEntry, conflictPartners: string[]): string {
   return `${base}, kolliderer med ${conflictPartners.join(", ")}`;
 }
 
-/** Collects every timetable entry (with course context) for courses that have a loaded bundle. */
+/**
+ * Collects every timetable entry (with course context) for courses that have
+ * a loaded bundle. Each course's raw entries pass through
+ * `applyGroupSelection` FIRST (§5 mandate point 1): the grid never shows a
+ * parallel the student did not select — the programme's own lecture parallel
+ * is the default, unpicked øving/lab groups stay all-muted until chosen. The
+ * programme code and any explicit selection ride on the course state.
+ */
 function collectEntries(courses: PlanCourseState[]): GridEntry[] {
   const entries: GridEntry[] = [];
   for (const state of courses) {
     const timetable = state.bundle?.timetable;
     if (!timetable) continue;
-    for (const raw of timetable) {
+    const selected = applyGroupSelection(timetable, state.course.groups, state.programCode);
+    for (const raw of selected) {
       const weeksNumbers = parseWeeks(raw.weeks);
       entries.push({
         courseCode: state.course.code,
@@ -148,6 +184,7 @@ function collectEntries(courses: PlanCourseState[]): GridEntry[] {
         endTime: raw.endTime,
         weeks: raw.weeks,
         hueVar: state.hueVar,
+        courseName: state.course.name,
         name: raw.title ?? raw.name ?? state.course.name,
         rooms: roomLabel(raw.rooms),
         weeksNumbers,
@@ -323,65 +360,38 @@ function buildGridShell(
 
 // --- Clustering -----------------------------------------------------------
 
-interface Cluster {
-  entries: GridEntry[];
-  columnOf: Map<GridEntry, number>;
-  columnCount: number;
-  startMinutes: number;
-  endMinutes: number;
-}
-
 /**
- * Greedy interval-graph coloring: entries overlapping in time on the same day
- * get distinct columns, and a cluster is a maximal run of mutually reachable
- * overlaps. The cluster — not the individual block — is the unit the renderer
- * decides about, because "how narrow will this get" is a property of the
- * whole pile.
+ * Partitions a day's entries into overlap clusters — a maximal run where each
+ * entry starts before the running end of the cluster so far (a touching
+ * `start === prevEnd` boundary is NOT an overlap and starts a new cluster,
+ * matching conflicts.ts / layout.ts). The sort mirrors `layoutDay`'s, so the
+ * clusters here line up one-to-one with the columns `layoutDay` assigns — the
+ * renderer needs the cluster only to place one "+N til" chip over the pile's
+ * overflow, since column packing itself lives in `layoutDay` now.
  */
-function buildClusters(dayEntries: GridEntry[]): Cluster[] {
+function dayClusters(dayEntries: GridEntry[]): GridEntry[][] {
   const sorted = [...dayEntries].sort(
-    (a, b) => timeToMinutes(a.startTime) - timeToMinutes(b.startTime),
+    (a, b) =>
+      timeToMinutes(a.startTime) - timeToMinutes(b.startTime) ||
+      timeToMinutes(a.endTime) - timeToMinutes(b.endTime) ||
+      blockId(a).localeCompare(blockId(b)),
   );
 
-  const active: { column: number; end: number }[] = [];
-  const clusters: Cluster[] = [];
-  let current: Cluster | null = null;
+  const clusters: GridEntry[][] = [];
+  let current: GridEntry[] = [];
+  let maxEnd = Number.NEGATIVE_INFINITY;
 
   for (const entry of sorted) {
     const start = timeToMinutes(entry.startTime);
-    const end = timeToMinutes(entry.endTime);
-
-    // Drop active entries that have ended before this one starts.
-    for (let i = active.length - 1; i >= 0; i--) {
-      const a = active[i];
-      if (a && a.end <= start) active.splice(i, 1);
-    }
-
-    if (active.length === 0 && current && start >= current.endMinutes) {
+    if (current.length > 0 && start >= maxEnd) {
       clusters.push(current);
-      current = null;
+      current = [];
+      maxEnd = Number.NEGATIVE_INFINITY;
     }
-    if (!current) {
-      current = {
-        entries: [],
-        columnOf: new Map(),
-        columnCount: 0,
-        startMinutes: start,
-        endMinutes: end,
-      };
-    }
-
-    const usedColumns = new Set(active.map((a) => a.column));
-    let column = 0;
-    while (usedColumns.has(column)) column++;
-
-    active.push({ column, end });
-    current.entries.push(entry);
-    current.columnOf.set(entry, column);
-    current.columnCount = Math.max(current.columnCount, column + 1);
-    current.endMinutes = Math.max(current.endMinutes, end);
+    current.push(entry);
+    maxEnd = Math.max(maxEnd, timeToMinutes(entry.endTime));
   }
-  if (current) clusters.push(current);
+  if (current.length > 0) clusters.push(current);
 
   return clusters;
 }
@@ -433,12 +443,36 @@ function appendClashBand(
   block.prepend(band);
 }
 
-/** The course chip every block and cluster row wears — DESIGN §5's `.np-tag`, at the in-grid size. */
+/** The course chip every block wears — DESIGN §5's `.np-tag`, at the in-grid size. */
 function courseTag(hueVar: string, code: string): HTMLElement {
   const tag = el("span", "np-tag np-tag--sm planner-block-tag");
   tag.append(dot(hueVar));
   tag.append(el("span", "planner-block-code np-data", code));
   return tag;
+}
+
+/** The activity/group label a block shows — merged parallels count themselves. */
+function groupLabel(entry: GridEntry): string {
+  return entry.groupCount > 1 ? `${entry.name} · ${entry.groupCount} grupper` : entry.name;
+}
+
+/** The block's second line: `room · start` (just the start when there is no room). */
+function metaLine(entry: GridEntry): string {
+  return [entry.rooms, entry.startTime].filter(Boolean).join(" · ");
+}
+
+/** The popover material for a single block. */
+function blockDetailFor(entry: GridEntry): BlockDetail {
+  const label = groupLabel(entry);
+  return {
+    code: entry.courseCode,
+    name: entry.courseName,
+    entryName: label || null,
+    timeLabel: `${dayName(entry.dayNumber)} ${entry.startTime}–${entry.endTime}`,
+    rooms: entry.rooms,
+    weeksLabel: entry.weeksLabel,
+    isLecture: entry.isLecture,
+  };
 }
 
 function buildBlock(
@@ -447,6 +481,7 @@ function buildBlock(
   column: number,
   columnCount: number,
   partnerCodes: string[],
+  onBlockClick?: GridRenderOptions["onBlockClick"],
 ): HTMLButtonElement {
   const block = el("button", "planner-block");
   block.type = "button";
@@ -462,80 +497,73 @@ function buildBlock(
   positionBlock(block, startMinutes, endMinutes, geometry.minMinutes, column, columnCount);
   block.setAttribute("aria-label", blockAriaLabel(entry, partnerCodes));
 
-  const label = entry.groupCount > 1 ? `${entry.name} · ${entry.groupCount} grupper` : entry.name;
+  const label = groupLabel(entry);
   const timeRange = `${entry.startTime}–${entry.endTime}`;
   block.title = [entry.courseCode, label, timeRange, entry.rooms, entry.weeksLabel]
     .filter(Boolean)
     .join(" · ");
 
+  // Two-line minimum (§5): the FULL course code, never truncated, then
+  // `room · start`. The activity name and week range are extra lines the
+  // block only earns above ~90 min — below that they clip mid-word, and the
+  // popover carries them anyway.
   block.append(courseTag(entry.hueVar, entry.courseCode));
-  block.append(el("span", "planner-block-name", label));
-  // Under ~90 min there is only room for the code and the name; rooms and
-  // weeks would clip mid-word ("uke 34–4"), and they are in `title`/`aria-label`.
+  block.append(el("span", "planner-block-meta np-data", metaLine(entry)));
   if (durationMinutes(entry) >= COMPACT_BLOCK_MINUTES) {
-    if (entry.rooms) block.append(el("span", "planner-block-rooms np-data", entry.rooms));
-    block.append(el("span", "planner-block-weeks np-data", entry.weeksLabel));
+    block.append(el("span", "planner-block-name", label));
+    if (entry.weeksLabel) block.append(el("span", "planner-block-weeks np-data", entry.weeksLabel));
   }
 
   if (geometry.clashWindow) {
     appendClashBand(block, startMinutes, endMinutes, geometry.clashWindow);
   }
+  if (onBlockClick)
+    block.addEventListener("click", () => onBlockClick(blockDetailFor(entry), block));
   return block;
 }
 
 /**
- * A cluster too deep to split, drawn as one cell that stacks its course codes
- * (U3). Legible at any column width, and it says the true thing — "these
- * three are on top of each other" — instead of three unreadable slivers.
+ * The "+N til" chip for a cluster's overflow (the entries `layoutDay` marked
+ * `overflow`, i.e. beyond `MAX_COLUMNS`). One chip per cluster, pinned to the
+ * pile's inline-end at the hidden window's top so it never paints over a
+ * visible block's code. Clicking hands the hidden entries to `onBlockClick`.
  */
-function buildClusterBlock(
-  cluster: Cluster,
-  geometry: BlockGeometry,
-  hasClash: boolean,
+function buildOverflowChip(
+  hidden: GridEntry[],
+  minMinutes: number,
+  onBlockClick?: GridRenderOptions["onBlockClick"],
 ): HTMLButtonElement {
-  const block = el("button", "planner-block planner-block--cluster");
-  block.type = "button";
-  if (hasClash) block.classList.add("is-clash");
-  if (cluster.entries.every((e) => !e.isLecture)) block.classList.add("is-muted");
-  block.id = `planner-cluster-${cluster.entries[0]?.ordinal ?? 0}`;
-  positionBlock(block, cluster.startMinutes, cluster.endMinutes, geometry.minMinutes, 0, 1);
+  const start = Math.min(...hidden.map((e) => timeToMinutes(e.startTime)));
+  const chip = el("button", "planner-block-overflow np-data", `+${hidden.length} til`);
+  chip.type = "button";
+  const startRow = Math.round((start - minMinutes) / ROW_MINUTES) + 1;
+  chip.style.setProperty("--planner-row-start", String(startRow));
 
-  const codes: string[] = [];
-  const hueByCode = new Map<string, string>();
-  for (const entry of cluster.entries) {
-    if (codes.includes(entry.courseCode)) continue;
-    codes.push(entry.courseCode);
-    hueByCode.set(entry.courseCode, entry.hueVar);
-  }
+  const detail = overflowDetail(hidden);
+  chip.title = `${detail.code} · ${detail.timeLabel}`;
+  chip.setAttribute("aria-label", `${hidden.length} flere aktiviteter: ${detail.code}`);
+  if (onBlockClick) chip.addEventListener("click", () => onBlockClick(detail, chip));
+  return chip;
+}
 
-  const timeRange = `${minutesToTime(cluster.startMinutes)}–${minutesToTime(cluster.endMinutes)}`;
-  const list = el("span", "planner-cluster-codes");
-  for (const code of codes.slice(0, MAX_CLUSTER_CODES)) {
-    list.append(courseTag(hueByCode.get(code) ?? "--hue-blue", code));
-  }
-  const overflow = codes.length - MAX_CLUSTER_CODES;
-  if (overflow > 0) list.append(el("span", "planner-cluster-more np-note", `+${overflow} til`));
-  block.append(list);
-  // Several sessions of one course in the same slot (parallel øvingsgrupper
-  // that upstream titled differently, so `mergeSlots` could not fold them):
-  // the chips alone would understate the pile, so count it.
-  if (cluster.entries.length > codes.length) {
-    block.append(
-      el("span", "planner-cluster-count np-note", `${cluster.entries.length} aktiviteter`),
-    );
-  }
-  block.append(el("span", "planner-block-weeks np-data", timeRange));
-
-  block.title = `${codes.join(", ")} · ${timeRange}`;
-  block.setAttribute(
-    "aria-label",
-    `${cluster.entries.length} aktiviteter ${dayName(cluster.entries[0]?.dayNumber ?? 1)} ${minutesToTime(cluster.startMinutes)} til ${minutesToTime(cluster.endMinutes)}: ${joinCodes(codes)}`,
-  );
-
-  if (geometry.clashWindow) {
-    appendClashBand(block, cluster.startMinutes, cluster.endMinutes, geometry.clashWindow);
-  }
-  return block;
+/** Synthetic popover material for a "+N til" chip: the hidden entries, codes joined " · ". */
+function overflowDetail(hidden: GridEntry[]): BlockDetail {
+  const first = hidden[0];
+  const codes = [...new Set(hidden.map((e) => e.courseCode))].join(" · ");
+  const names = [...new Set(hidden.map((e) => e.courseName))].join(" · ");
+  const start = Math.min(...hidden.map((e) => timeToMinutes(e.startTime)));
+  const end = Math.max(...hidden.map((e) => timeToMinutes(e.endTime)));
+  const rooms = [...new Set(hidden.flatMap((e) => e.rooms.split(", ")))].filter(Boolean).join(", ");
+  const weeks = [...new Set(hidden.flatMap((e) => e.weeksNumbers))].sort((a, b) => a - b);
+  return {
+    code: codes,
+    name: names,
+    entryName: null,
+    timeLabel: `${dayName(first?.dayNumber ?? 1)} ${minutesToTime(start)}–${minutesToTime(end)}`,
+    rooms,
+    weeksLabel: weekLabel(weeks),
+    isLecture: hidden.some((e) => e.isLecture),
+  };
 }
 
 function blockId(entry: GridEntry): string {
@@ -702,8 +730,8 @@ export function renderGrid(
     "Ukeplan med timeplanblokker for emnene i planen",
   );
 
-  // Every rendered entry resolves to the element that represents it — a
-  // collapsed cluster stands in for all of its members. Conflict notes flash
+  // Every rendered entry resolves to the element that represents it — an
+  // overflow entry stands behind the "+N til" chip. Conflict notes flash
   // through this map rather than through getElementById (C5b).
   const nodeByEntry = new Map<ScheduleEntry, HTMLElement>();
   const geometryBase = { minMinutes };
@@ -718,26 +746,40 @@ export function renderGrid(
     // a column is what turns a Monday with one 08:00–18:00 lab into slivers.
     const bands = dayEntries.filter(isBandEntry);
     for (const entry of bands) {
-      const block = buildBlock(entry, { ...geometryBase, clashWindow: null }, 0, 1, []);
+      const block = buildBlock(
+        entry,
+        { ...geometryBase, clashWindow: null },
+        0,
+        1,
+        [],
+        options.onBlockClick,
+      );
       nodeByEntry.set(entry, block);
       column.append(block);
       blockCount++;
     }
 
-    for (const cluster of buildClusters(dayEntries.filter((e) => !isBandEntry(e)))) {
-      const clashWindow = clashWindowFor(cluster.entries);
-      if (cluster.columnCount > MAX_SPLIT_COLUMNS) {
-        const block = buildClusterBlock(
-          cluster,
-          { ...geometryBase, clashWindow },
-          clashWindow !== null,
-        );
-        for (const entry of cluster.entries) nodeByEntry.set(entry, block);
-        column.append(block);
-        blockCount++;
-        continue;
-      }
-      for (const entry of cluster.entries) {
+    // Everything else is column-packed by layoutDay: overlapping sessions get
+    // distinct side-by-side columns (overlap is supported, both stay readable),
+    // and a pile deeper than MAX_COLUMNS keeps its first columns and folds the
+    // rest into one "+N til" chip rather than splitting into slivers.
+    const packable = dayEntries.filter((e) => !isBandEntry(e));
+    const layoutInput: LayoutInput[] = packable.map((e) => ({
+      id: blockId(e),
+      start: timeToMinutes(e.startTime),
+      end: timeToMinutes(e.endTime),
+    }));
+    const slotById = new Map(layoutDay(layoutInput).map((slot) => [slot.id, slot]));
+
+    for (const cluster of dayClusters(packable)) {
+      const hidden: GridEntry[] = [];
+      for (const entry of cluster) {
+        const slot = slotById.get(blockId(entry));
+        if (!slot) continue;
+        if (slot.overflow) {
+          hidden.push(entry);
+          continue;
+        }
         const entryClash = clashWindowFor([entry]);
         const partnerCodes = [
           ...new Set(
@@ -749,12 +791,21 @@ export function renderGrid(
         const block = buildBlock(
           entry,
           { ...geometryBase, clashWindow: entryClash },
-          cluster.columnOf.get(entry) ?? 0,
-          cluster.columnCount,
+          slot.col,
+          slot.cols,
           partnerCodes,
+          options.onBlockClick,
         );
         nodeByEntry.set(entry, block);
         column.append(block);
+        blockCount++;
+      }
+      // One chip stands in for the overflow; every entry it hides resolves to
+      // it (C5b) so a conflict note can still flash the pile it belongs to.
+      if (hidden.length > 0) {
+        const chip = buildOverflowChip(hidden, minMinutes, options.onBlockClick);
+        for (const entry of hidden) nodeByEntry.set(entry, chip);
+        column.append(chip);
         blockCount++;
       }
     }
@@ -777,16 +828,9 @@ export function renderGrid(
     first?.focus({ preventScroll: true });
   };
 
-  // One listener per element, flashing every entry it stands for — a
-  // collapsed cluster is one button representing several.
-  const entriesByNode = new Map<HTMLElement, ScheduleEntry[]>();
-  for (const [entry, node] of nodeByEntry) {
-    entriesByNode.set(node, [...(entriesByNode.get(node) ?? []), entry]);
-  }
-  for (const [node, members] of entriesByNode) {
-    node.addEventListener("click", () => flash(members));
-  }
-
+  // Blocks own their click now (it opens the popover via onBlockClick); the
+  // conflict-note links below are what drive `flash`, resolving each entry to
+  // its block or overflow chip through `nodeByEntry`.
   frame.replaceChildren(shell.element);
 
   // Margin notes: one per collision slot, not one per pair — a 3-way clash is

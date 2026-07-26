@@ -125,14 +125,20 @@
   display: flex;
   flex-direction: column;
   gap: 2px;
+  /* So the code line can break rather than force the block wider than its
+     column (its inline size is fixed by the column split above). */
+  min-width: 0;
   padding: var(--space-1) var(--space-2);
   margin: 0 1px;
-  /* D9: the hue wash carries identity at 8%, leaving the collision ink alone
-     to be the loudest mark on the sheet (Red-Is-Collision). */
+  /* The per-course hue wash carries identity in BOTH themes (T14: on light
+     paper the old 8% mix read as one flat gray-beige across every course).
+     --wash-course is tuned per theme in tokens.css; the collision ink stays a
+     categorically different, louder mark (Red-Is-Collision), untouched. */
   background: color-mix(in srgb, var(--dot) var(--wash-course), var(--card));
   border-radius: var(--radius-xs);
   overflow: hidden;
   text-align: left;
+  cursor: pointer;
   transition: background var(--dur-fast) var(--ease);
 }
 
@@ -194,9 +200,14 @@
   padding-inline: 0;
 }
 
+/* The full course code, never truncated (§5): it may WRAP inside a narrow
+   column ("TDT4110" → two rows) but it is never cut with an ellipsis, so the
+   student always reads which course a block is. */
 .planner-block-code {
+  min-width: 0;
   font-size: var(--text-sm);
   font-weight: var(--weight-medium);
+  overflow-wrap: anywhere;
 }
 
 /* The one collision mark that survives at a 34 px block height. */
@@ -205,6 +216,16 @@
   text-underline-offset: 2px;
 }
 
+/* The guaranteed second line: room · start time (Data-Is-Mono). */
+.planner-block-meta {
+  font-size: var(--text-xs);
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Extra lines a tall block earns: the activity/group label, then week range. */
 .planner-block-name {
   font-size: var(--text-xs);
   line-height: var(--leading-snug);
@@ -215,28 +236,34 @@
   -webkit-box-orient: vertical;
 }
 
-.planner-block-rooms,
 .planner-block-weeks {
   font-size: var(--text-xs);
   color: var(--muted);
 }
 
-/* --- Collapsed cluster (U3) ---------------------------------------------- */
+/* --- Overflow chip (a cluster deeper than MAX_COLUMNS) ------------------- */
 
-.planner-block--cluster {
-  gap: var(--space-1);
+/* One "+N til" chip per over-full pile, pinned to the pile's inline-end at
+   the hidden window's top so it never paints over a visible block's code.
+   Clicking it opens the block popover listing the hidden entries. */
+.planner-block-overflow {
+  position: absolute;
+  z-index: 3;
+  inset-inline-end: 2px;
+  top: calc((var(--planner-row-start) - 1) * var(--cell) + 2px);
+  padding: 1px var(--space-1);
+  background: color-mix(in srgb, var(--fg) 10%, var(--card));
+  color: var(--fg);
+  font-size: var(--text-xs);
+  line-height: var(--leading-tight);
+  border-radius: var(--radius-xs);
+  box-shadow: var(--shadow-sm);
+  cursor: pointer;
+  white-space: nowrap;
 }
 
-.planner-cluster-codes {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--gap-1);
-  min-width: 0;
-}
-
-.planner-cluster-count,
-.planner-cluster-more {
-  color: var(--muted);
+.planner-block-overflow:hover {
+  background: color-mix(in srgb, var(--fg) 18%, var(--card));
 }
 
 /* --- Margin notes -------------------------------------------------------- */

@@ -14,4 +14,13 @@ export interface PlanCourseState {
   bundle: CourseBundle | null;
   /** True while the course's bundle fetch is in flight. */
   loading: boolean;
+  /**
+   * The plan's programme code, so the grid can narrow multi-section courses
+   * to the programme's own lecture parallel (`applyGroupSelection` →
+   * `entriesForProgram`). plannerApp sets it from `plan.program?.code`;
+   * one-course reuses (courseTimetable) leave it unset — no programme means
+   * "keep the parallel-1 default", which is exactly `entriesForProgram`'s
+   * behaviour with a null code.
+   */
+  programCode?: string | null;
 }
