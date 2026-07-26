@@ -48,9 +48,17 @@ export function groupKey(name: string | null | undefined): string | null {
   return slug === "" ? null : slug;
 }
 
-/** The name a group is identified/labeled by: `name`, falling back to `title`. */
+/**
+ * The name a group is identified/labeled by: `title`, falling back to
+ * `name`. `title` carries the distinguishing activity label on real NTNU
+ * data ("Forelesningsparallell 2 Trondheim", "Lab BDIGSEC") — `name` is a
+ * coarse delivery-format bucket that can be identical across genuinely
+ * distinct groups (see activity.ts's classifier docs). Matches the priority
+ * `classifyActivity` (activity.ts) and the grid's block label (grid.ts)
+ * already use.
+ */
 function rawGroupName(entry: Pick<TimetableEntry, "name" | "title">): string | null {
-  return entry.name?.trim() || entry.title?.trim() || null;
+  return entry.title?.trim() || entry.name?.trim() || null;
 }
 
 function distinctLectureKeys(entries: TimetableEntry[]): string[] {
@@ -73,13 +81,14 @@ export function groupOptions(entries: TimetableEntry[]): GroupOption[] {
   const byKey = new Map<string, GroupOption>();
   for (const entry of entries) {
     const raw = rawGroupName(entry);
+    if (raw === null) continue;
     const key = groupKey(raw);
     if (key === null) continue;
     const existing = byKey.get(key);
     if (existing) {
       existing.entryCount += 1;
     } else {
-      byKey.set(key, { key, label: raw ?? key, kind: classifyActivity(entry), entryCount: 1 });
+      byKey.set(key, { key, label: raw, kind: classifyActivity(entry), entryCount: 1 });
     }
   }
   return [...byKey.values()].sort((a, b) => {
