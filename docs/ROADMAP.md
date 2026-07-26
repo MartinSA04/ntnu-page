@@ -14,7 +14,68 @@ Do not re-litigate what §10 of PRODUCT.md already decided against (compare
 matrix, week-scrubber, personal fixed blocks, etc.) — this file only
 sequences what's still MUST/SHOULD per PRODUCT.md §6.
 
+## 2026-07-25 — the rework (shipped, active phase superseded)
+
+A second user mandate landed the day after the section below was written
+(full spec: `docs/plan/REWORK-2026-07-25-design.md`; recorded in PRODUCT.md
+as the §0 addendum). It rebuilt several of the surfaces the 2026-07-24 pass
+below shipped, so **read this section first** — where the two disagree,
+this one is current. e2e: 18/18 green on the tree this shipped against.
+
+- **Studieinfo modal** (`studieinfo.ts`) is now the *only* programme/kull/
+  retning/semester picker: the homepage picker and the planner's inline
+  picker are both deleted.
+- **Unversioned hash grammar**, `#<semesterId>;<programme>;<courses>` with
+  repeatable `~group` course suffixes; `np:plans` (semester-scoped course
+  lists) + `np:profile` (global programme choice) + `removeProgram`; all
+  legacy/versioned hash parsing deleted (no compat, per the mandate).
+- **Calendar-engine grid** (`layout.ts` + `grid.ts`): side-by-side overlap
+  clusters, group-filtered parallels (default = the programme's own,
+  `groups.ts`), a block popover (`popover.ts`) with a group picker, "+N til"
+  overflow for 4+-way clashes.
+- **Exam date list** (`examSchedule.ts` + `examList.ts`) with explicit gap
+  lines, replacing the exam ribbon.
+- **Persistent nav**: Planlegger + Emner + a studieinfo chip + a plan-count
+  link, identical on every page; the plan strip is deleted.
+- **Add-course modal** (`addCourse.ts`); `planClash` is now
+  programme-section-aware everywhere (kills the false-positive preview);
+  `setProgramPlan` preserves group selections across re-derivation.
+- **Four honest planner empty/fallback states**, including a real
+  fetch-failure retry path; `/studier/*` (both surfaces) + `studyPlan.ts` +
+  `programUrl.ts` deleted with no redirects; 404 simplified.
+
+**UX-STUDY.md folded in.** This rework subsumes S1–S4 (picker regression +
+kull-chip dead-end — the modal + kull-relevance rule fix all four), S5 (the
+parallel-groups unreadable-stack blocker — `groups.ts` + the grid rebuild),
+S6 (the one-fallback-for-three-causes bug — the four honest states), S7
+(the false-positive clash preview — shared section-aware path), S9 (the
+sabotaged 404 search value), S10 (the ambiguous "X dager til neste" — the
+gap-line exam list), S12 (grid-block truncation — full two-line blocks by
+construction), S13 (the raw "Not found" row copy), and S15 (the mobile
+scroll-hint typo). **S14 is moot**, not fixed: the homepage input it
+described no longer exists (homepage is a landing). **Not touched by this
+pass, still open**: S8 (`/emne/[code]/`'s self-contradicting semester
+labels — the course page was explicitly left alone except the clash
+rewire) and S11's dark-mode clash-text contrast figure (the light/dark
+tint-parity half of S11 *is* fixed by the grid rebuild's "both-theme
+tints").
+
+**Known polish, deliberately deferred** (see
+`.superpowers/sdd/REWORK-2026-07-25-plan/progress.md` for the full ledger):
+`/emne/[code]/`'s read-only grid renders inert group-picker affordance
+(cursor/click styling should be gated on whether a click handler is
+actually wired); `removeProgram` prunes only the active semester's
+`np:plans` entry, so a programme course can be orphaned in a *different*
+semester's stored plan; and one e2e status-text regex (`/kollisjon/` in
+`flows.pw.ts`) over-matches "ingen kollisjoner" and should tighten to
+`/\d+ kollisjon/`.
+
 ## Shipped — the mandate core + correctness floor (was Phase §0–2)
+
+*(2026-07-24, superseded in part by the rework above — the v2 hash grammar,
+plan strip and single nav pill this section describes were replaced
+2026-07-25; the rest — B1/B3/B6/B7/B9/C1/C2/C5, the a11y and design-system
+items, the CI/docs hygiene — still stands as shipped.)*
 
 The programme → kull → weekly-schedule flow now resolves correctly for the
 large majority of programmes, against live data, with the collision engine,
@@ -169,14 +230,16 @@ first (PRODUCT.md §7's forward-compatibility note):
 
 ## Phase 5 — remaining IA (small, mostly sequencing)
 
-- **`/studier/` standalone index**: not yet killed. It is currently the
-  *only* link to `/studier/[code]/` in the codebase; `/planlegger/`'s
-  context line is one entrance (shipped), a second is needed before
-  deletion (REVIEW.md I3). Do not delete without adding it.
-- Code-first paste entry as the homepage's *lead* path for persona B — the
-  add field is code-first once on `/planlegger/`, and B8 links there from a
-  missing-study-plan dead end, but the homepage itself still leads with the
-  programme picker.
+- ~~`/studier/` standalone index: not yet killed~~ — **done, 2026-07-25**:
+  both `/studier/` surfaces are deleted outright, no redirects, no entrance
+  sequencing needed (the user mandate overrode REVIEW.md I3's
+  entrances-before-deletion rule — see 2026-07-25 rework section above).
+- Code-first paste entry as persona B's on-ramp — **re-scoped, 2026-07-25**:
+  the homepage no longer leads with the programme picker at all (it's a
+  landing with one CTA), so this item is no longer "promote paste above the
+  picker" but "does a cold Persona-B visitor need a paste entry point on the
+  landing page at all, given the planner's own empty states already offer
+  one" — open question, not yet decided.
 - Language / assessment filters on `/emner/` (campus is done — U15).
 - Mobile day-agenda restructure (A4's narrower fix — edge fade, scroll to
   today, a hint naming the clipped days — shipped in its place; the
@@ -186,9 +249,9 @@ first (PRODUCT.md §7's forward-compatibility note):
 
 - Day-load strip + free-day sentence (persona C lens).
 - Provenance line on `/emne/[code]/` (currently only on `/planlegger/`).
-- Bulk-add above prose on `/studier/[code]/` — arguably subsumed by "Bruk
-  som planen min" (a whole-period commit); revisit only if evidence shows
-  students want a narrower unit than the period.
+- ~~Bulk-add above prose on `/studier/[code]/`~~ — **moot, 2026-07-25**: the
+  page is deleted; "Bruk som planen min" is now the studieinfo modal's
+  Lagre action (a whole-period commit, same semantics).
 - SR conflict summary; recursive retning render (`pending.deadlineDate` is
   already surfaced in the direction panel's note — the rest of the
   recursion is not).

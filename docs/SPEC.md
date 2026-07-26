@@ -49,9 +49,9 @@ Astro static site (dist/)  ──served by──▶  Cloudflare Worker (Workers 
 |---|---|---|
 | `src/styles/` | the Ruteark system: tokens/base/primitives.css (owned here), `planner-week.css` (the week's geometry, shared by `/planlegger/` and `/emne/[code]/`) + generated fonts.css/fonts/ | design |
 | `src/components/ThemeToggle.astro`, `Icon.astro`, `src/lib/{favicon,pageLifecycle}.ts` | shell components | shell |
-| `src/layouts/Layout.astro`, `src/styles/site.css`, `src/pages/index.astro`, `src/pages/404.astro` | page shell, nav/footer/plan strip, landing, 404 | shell |
+| `src/layouts/Layout.astro`, `src/styles/site.css`, `src/pages/index.astro`, `src/pages/404.astro` | page shell — persistent nav (Planlegger + Emner + studieinfo chip + plan-count link, replacing the 2026-07-24 one-pill nav + plan strip), footer, landing, 404 | shell |
 | `src/pages/planlegger/index.astro`, `src/components/planner/*`, `src/lib/planner/*` | **the app** — see the architecture section below | planner |
-| `src/pages/emner/index.astro`, `src/pages/emne/[code].astro`, `src/pages/studier/index.astro`, `src/pages/studier/[code].astro`, `src/components/site/*` | catalog + study-programme pages and islands | pages |
+| `src/pages/emner/index.astro`, `src/pages/emne/[code].astro`, `src/components/site/*` | catalog pages and islands (`/studier/*` deleted 2026-07-25, no replacement page) | pages |
 | `crawler/crawl.mjs` (+ helpers), `data/*.json`, `public/data/search-index.json`, `.github/workflows/crawl.yml`, `tests/crawler.test.mjs` | crawler | crawler |
 | `worker/src/*.ts`, `worker/tsconfig.json`, `tests/worker/*.test.ts` | API worker | worker |
 | `e2e/*.pw.ts`, `playwright.config.ts` | browser suite: what only shows up after a ClientRouter navigation, and the four+ flagship flows against live data | docs/CI |
@@ -60,43 +60,68 @@ Astro static site (dist/)  ──served by──▶  Cloudflare Worker (Workers 
 
 ## `/planlegger/` architecture — the flagship surface
 
-Five layers, each a thin, testable seam. Reading order for a change:
+**Rebuilt 2026-07-25** (design spec `docs/plan/REWORK-2026-07-25-design.md`,
+recorded as PRODUCT.md's §0 addendum). Reading order for a change:
 
 ```
-store.ts        the plan's shape + persistence + the hash grammar
+store.ts        the plan's shape + persistence + the unversioned hash grammar
    │
 data.ts         fetch + shape: search-index rows, per-course bundles,
    │             indexForSemester() (the exam-window filter)
    │
 programPlan.ts  study-plan resolution: resolvePeriodFor() is the one
-   │             entry point (homepage picker and planner both call it —
-   │             they must never diverge on how a period resolves)
+   │             entry point (the studieinfo modal and the planner both
+   │             call it — they must never diverge on how a period resolves)
    │
-grid.ts / examRibbon.ts   pure(ish) renderers: DOM in, DOM out, given a
-   │                       PlanCourseState[] and a semester id
+layout.ts       pure day-column layout engine (clusters, columns, overflow)
+   │             — consumed by grid.ts, no DOM
+groups.ts       pure group/parallel selection engine — consumed by grid.ts
+   │             and popover.ts, no DOM
+examSchedule.ts pure exam-list model (sort, gaps, tight flag, countdown)
+   │             — consumed by examList.ts, no DOM
+   │
+grid.ts / examList.ts / studieinfo.ts / popover.ts / addCourse.ts
+   │             DOM renderers/dialogs: the week grid, the exam date list,
+   │             the studieinfo modal, the block popover, the add-course
+   │             search modal
    │
 plannerApp.ts    orchestration: owns the DOM ids in planlegger/index.astro,
                   wires store → data → programPlan → the renderers, and is
                   the one place a `<script>` module talks to `document`
 ```
 
-- **`store.ts`** — `PlanState` (v2: `semesterId`, `courses[]` with
-  `source: "program" | "manual"` + `dropped` + `credits`, optional
-  `program: { code, name, cohort, direction? }`). LocalStorage key
-  `ntnu:plan:v1` (the key name predates the v2 hash grammar and is
-  unrelated to it — do not read anything into the "v1" here).
-  `onPlanChange(cb)` fires on storage events, the custom `ntnu:plan-change`
-  event, and the page's own writes, so the sitewide plan strip
-  (`Layout.astro`) and every page that reads the plan stay live without
-  polling.
-  **Hash grammar (frozen, v2 — see PRODUCT.md §7 for the full grammar and
-  why it differs from the version that file used to freeze):**
-  `#v2;<semesterId>;<programme>;<courses>`, every field
-  `encodeURIComponent`-escaped so `Ø`/`Å`/`Æ` and the grammar's own `.`/`-`/`+`
-  survive the round trip (REVIEW.md B10). A legacy unversioned
-  `#<semesterId>;<codes>` hash is still read (all courses `source:"manual"`)
-  but never written. `parsePlanHash`/`formatPlanHash` live here;
-  `hashchange` is listened for so a pasted link updates an already-open tab.
+- **`store.ts`** — `PlanState` (`semesterId`, `courses[]` with
+  `source: "program" | "manual"` + `dropped` + `credits` + `groups?: string[]`,
+  optional `program: { code, name, cohort, direction? }`). Storage is split
+  three ways: `np:profile` (the programme choice, global, survives a
+  semester switch), `np:plans` (the course list, keyed per `semesterId` — a
+  manual add in one semester never leaks into another), `np:lastSemester`
+  (session restore). `removeProgram()` clears the profile and drops
+  programme-sourced courses in the *active* semester's plan while keeping
+  manual adds (a programme course in another semester's stored plan is not
+  pruned — known-minor, see ROADMAP.md). `onPlanChange(cb)` fires on
+  storage events, the custom `ntnu:plan-change` event, and the page's own
+  writes, so the persistent nav's studieinfo chip/count-link and every page
+  that reads the plan stay live without polling.
+  **Hash grammar — unversioned, no compat parse** (per the 2026-07-25
+  mandate: "no versioning/compat apparatus, delete old code outright"; see
+  PRODUCT.md §7's suspension note for why a versioned grammar existed
+  before and why that requirement is now suspended):
+  `#<semesterId>;<programme>;<courses>` — three `;`-separated segments,
+  every field `encodeURIComponent`-escaped so `Ø`/`Å`/`Æ` and the grammar's
+  own `.`/`-`/`+`/`~` survive the round trip (REVIEW.md B10). `programme` is
+  `-` (none) or `code[.cohort[.direction]]`, `cohort` gated to a plausible
+  4-digit year or the whole segment is rejected. `courses` is a comma list
+  of `[-|+]code[.version][~groupKey…]`: `-` = dropped programme course,
+  `+` = manual add, bare = active programme course; a version equal to the
+  default (`"1"`) is omitted; each trailing `~groupKey` is a selected
+  parallel/øving group for that course (repeatable — a course can carry
+  both a lecture parallel and an øving group pick). Malformed course tokens
+  are dropped rather than failing the whole parse. `parsePlanHash`/
+  `formatPlanHash` live here; `hashchange` is listened for so a pasted link
+  updates an already-open tab. **No legacy/versioned hash is read any
+  more** — an old `#v2;…` link (or any hash with a version token) simply
+  fails to parse `semesterId` and is treated as absent, by design.
 - **`data.ts`** — `PlannerIndex`/`PlannerIndexCourse` (the typed shape of
   `search-index.json`, six-element tuple — see below), `fetchCourseBundle`
   (memoised per `code:year:version`), `indexForSemester(index, semesterId,
@@ -109,8 +134,24 @@ plannerApp.ts    orchestration: owns the DOM ids in planlegger/index.astro,
   vs. elective-pool), `resolvePeriodFor(plan, semesterId, cohort,
   direction?)` — the one function that turns a fetched study plan into "this
   semester's courses, or the question that has to be answered first". The
-  homepage picker and the planner page both call it; nothing else
+  studieinfo modal and the planner page both call it; nothing else
   re-implements period resolution.
+- **`layout.ts`** — `layoutDay(items: LayoutInput[]) → LayoutSlot[]`, pure
+  and dependency-free: greedy calendar-column packing into overlap
+  clusters, `MAX_COLUMNS = 3`, entries beyond that marked `overflow: true`
+  for the grid's "+N til" chip instead of ever-narrower slivers.
+- **`groups.ts`** — `groupKey(name)` (slug, never contains `~` — load-
+  bearing for the hash grammar above), `groupOptions(entries)`,
+  `defaultLectureKeys(entries, programCode?)` (the programme's own lecture
+  parallel, or parallel 1 with a "1 av N" badge when no programme mapping
+  exists), `applyGroupSelection(entries, selectedKeys)` — narrows a
+  course's rendered entries to its selected group set; øving/lab entries
+  are never defaulted away, only narrowed once a group is picked.
+- **`examSchedule.ts`** — `buildExamList(exams, todayIso) → ExamListModel`,
+  pure date math (`Date.UTC` day-differencing, no `Date.parse`, locale/
+  timezone-independent): sorts dated exams chronologically, annotates
+  `gapToNext`/`tight`/`sameDay`, sets `daysFromToday` on the first upcoming
+  exam only, keeps dateless exams in a separate bucket.
 - **`grid.ts`** — `renderGrid(frame, notesHost, courses, showOthers,
   options?) → GridRenderResult` (`conflictCount` = grouped collision slots,
   `mutedLayerAutoRevealed`, `blockCount`, `state`, `partial`), plus
@@ -118,21 +159,55 @@ plannerApp.ts    orchestration: owns the DOM ids in planlegger/index.astro,
   (loading, empty, pending-choice) so a message never renders inside a ruled
   frame it doesn't belong in (DESIGN's Ruling-Marks-The-Plan). Shared by
   `/planlegger/` (the full week) and `/emne/[code]/` (a single-course
-  read-only week) — one renderer, not two.
-- **`examRibbon.ts`** — `renderExamRibbon(frame, listHost, courses,
-  semesterId, index, options?) → ExamRenderResult`, reading an already
-  `indexForSemester`-narrowed index so a stale exam date cannot reach it.
+  read-only week) — one renderer, not two. `GridRenderOptions.onBlockClick`
+  hands a clicked block/overflow chip's `BlockDetail` to the block popover.
+- **`examList.ts`** — `renderExamList(frame, listHost, courses, semesterId,
+  index, options?) → ExamRenderResult` and `renderExamMessage(...)`,
+  rendering `examSchedule.ts`'s `ExamListModel` as a chronological
+  `.exam-row`/`.exam-gap` list with a summary kicker line — **replaces the
+  deleted `examRibbon.ts`**. Reads an already `indexForSemester`-narrowed
+  index so a stale exam date cannot reach it.
+- **`studieinfo.ts`** — `mountStudieinfo(deps, signal) → StudieinfoHandle`,
+  `OPEN_STUDIEINFO_EVENT` (the event `Layout.astro`'s chip dispatches on
+  `/planlegger/`, and the `?studieinfo` query param triggers elsewhere),
+  `publishMonthFor(semesterId)`. **The only surface that picks
+  programme/kull/retning/semester** — the deleted homepage picker and
+  planner inline picker are gone. Absorbed `/studier/[code]/`'s "Bruk som
+  planen min" import semantics: Lagre calls `setProgramPlan`, preserving
+  manual adds/drops and (since Task 10/12) course `groups`.
+- **`popover.ts`** — `mountBlockPopover(store, signal) → BlockPopoverHandle`,
+  one shared non-modal `<dialog>` (`show()`, not `showModal()`, so the grid
+  stays interactive behind it) for a clicked block or "+N til" chip: facts,
+  a group picker (radio list sourced from `groups.ts`) that calls
+  `store.setCourseGroups` immediately, and dropp/fjern/gå-til-emneside
+  actions. A multi-course overflow chip gets `kind: "info"` — facts only,
+  no group section, no course action.
+- **`addCourse.ts`** — `mountAddCourse(deps, signal) → AddCourseHandle`, a
+  search `<dialog>` over the whole catalog **replacing the inline
+  `planner-add-*` typeahead**: search field, result rows with a lazy
+  section-aware clash preview (the same path `planClash.ts` uses — kills
+  the S7 false-positive), "Legg til" that flips to "Lagt til ✓" + "Fjern",
+  dialog stays open for multiple adds.
 - **`plannerApp.ts`** — the only file that queries `document`. Wires
   everything above to the DOM ids declared in `planlegger/index.astro`
   (`#planner-title`, `#planner-context-line`, `#planner-direction*`,
   `#planner-grid-frame`, `#planner-exam-frame`, `#planner-course-rows`,
-  `#planner-add-*`, `#planner-semester*` — grep the page for the full
-  contract rather than duplicating it here, it drifts fast). Mounted via
-  `onPage()` per the ClientRouter rule (CLAUDE.md).
+  `#planner-semester*` — grep the page for the full contract rather than
+  duplicating it here, it drifts fast; the old `#planner-add-*` inline
+  typeahead ids are gone with the typeahead itself). Mounted via `onPage()`
+  per the ClientRouter rule (CLAUDE.md).
 - **`src/components/site/planClash.ts`** — the same lecture-conflict engine
   (`lib/planner/conflicts.ts`) reused as a plan-aware clash preview on
-  `/emner/` result rows and `/emne/[code]/`'s add CTA, computed lazily
-  (first hover/focus, not eagerly for every row).
+  `/emner/` result rows, `/emne/[code]/`'s add CTA, and (2026-07-25)
+  `addCourse.ts`'s result rows — all three now share one section-aware
+  path, computed lazily (first hover/focus, not eagerly for every row).
+
+**Deleted 2026-07-25, no replacement:** `examRibbon.ts` (→ `examList.ts` +
+`examSchedule.ts`), `src/components/site/studyPlan.ts` (→ `studieinfo.ts` +
+the planner's "Fra studieplanen" panel), `src/lib/planner/programUrl.ts`
+(→ moot, nothing links to `/studier/*` any more), the sitewide plan-strip
+component (→ the persistent nav's chip/count-link, `Layout.astro`), and
+every legacy/versioned hash-parsing branch in `store.ts`.
 
 ## Design-system usage (all UI work)
 
@@ -161,15 +236,20 @@ plannerApp.ts    orchestration: owns the DOM ids in planlegger/index.astro,
   suffix in `--muted`; favicon = the Ruteark mark (a 2×2 ruled square with
   one cell filled `--accent` green) as an inline SVG data URI from
   `src/lib/favicon.ts`.
-- Shell (`site.css` + `Layout.astro`): sticky topbar (wordmark left; **one**
-  `.np-navlink` — "Planlegger" — with `aria-current` computed from an
-  explicit per-item `sections` list, not `path.startsWith`; ThemeToggle
-  right), a sitewide `#plan-strip` (hidden on `/` and `/planlegger/`, shown
-  whenever the stored plan has active courses, "Se på ukeplanen →"), content
-  column (`--maxw` for data pages via Layout's `wide` prop, `--measure`
-  otherwise), and a footer link row ("Søk i emner · Studieprogram · Data
-  hentet {crawlDate} fra NTNU · uoffisiell") — `/emner/` and `/studier/` are
-  demoted to this row, not the nav (PRODUCT.md §4, REVIEW.md I1/I5).
+- Shell (`site.css` + `Layout.astro`): sticky topbar (wordmark left;
+  **persistent nav, rebuilt 2026-07-25** — `.np-navlink`s for "Planlegger"
+  and "Emner", both always present, `aria-current` computed from an
+  explicit per-item `sections` list, not `path.startsWith`; a studieinfo
+  chip showing `MTDT · 2024 · Høst 2026` (or "Velg studieprogram") that
+  opens the studieinfo modal on `/planlegger/` and navigates + opens it
+  elsewhere; ThemeToggle right), a `#plan-count-link` (hidden on `/` and
+  `/planlegger/`, shown whenever the stored plan has active courses, "N
+  emner · X sp → ukeplanen" — **replaces the deleted sitewide `#plan-strip`**),
+  content column (`--maxw` for data pages via Layout's `wide` prop,
+  `--measure` otherwise), and a footer link row ("Søk i emner · Data hentet
+  {crawlDate} fra NTNU · uoffisiell") — `/studier/` is gone outright, not
+  demoted (PRODUCT.md §4 addendum, §0 addendum point 6; supersedes REVIEW.md
+  I1/I5's "one pill, footer-demoted" description).
 
 ## Crawled data contracts (crawler writes, pages read)
 
@@ -282,19 +362,23 @@ relative `/api/...` URLs, mounted through `onPage()` (CLAUDE.md);
 `astro.config.mjs` proxies `/api` → `http://localhost:8787` during
 `astro dev`.
 
-- **`/`** — dispatcher. Autofocused programme typeahead (`studyLevel` +
-  `cities` on every row so e.g. MIDT and MTDT don't collide), kull chips
-  filtered to cohorts whose computed period actually exists, the
-  studieretning/campus question asked inline before navigating when one
-  exists, a resume line when a plan already exists, and one small
-  `.np-frame.np-ruled` proof fragment (a red-ink collision) below the fold.
+- **`/`** — **a landing page, rebuilt 2026-07-25** (§0 addendum point 11):
+  kicker, verb-first `<h1>`, one small `.np-frame.np-ruled` proof fragment
+  (a red-ink collision example) below the fold, one primary CTA ("Åpne
+  planleggeren" → `/planlegger/`), and a resume line ("Planen din: N emner →
+  gå til planleggeren") when a profile already exists. **The programme
+  typeahead, kull chips and direction panel are deleted** — the studieinfo
+  modal is now the only picker, opened from `/planlegger/`.
 - **`/planlegger/`** — **the app**; see the architecture section above.
   Context line as the page's real `<h1>`; the week at `minmax(0,1fr) 20rem`
   against the course rail; verdict lines computed from `GridRenderResult`/
   `ExamRenderResult` and never discarded; course rows with programme-course
-  drop/restore and manual-add delete; an add field scoped to the study plan
-  or all of NTNU, with a plan-aware clash preview on every candidate row
-  before commit; a "Bytt semester" disclosure rather than fold-weight chips.
+  drop/restore and manual-add delete; **an "Legg til emne" button opening
+  the add-course search modal** (`addCourse.ts`, replacing the old inline
+  add field) with a plan-aware clash preview on every candidate row before
+  commit; a "Bytt semester" disclosure rather than fold-weight chips; the
+  studieinfo chip/`?studieinfo` param opens `studieinfo.ts` for
+  programme/kull/retning/semester edits.
 - **`/emner/`** — search as a mode, not a nav destination. Hidden until the
   visitor types a query or picks a studienivå/city chip ("skriv for å søke i
   N emner" otherwise); city facets are ~4 multi-select `.np-toggle--text`
@@ -313,23 +397,18 @@ relative `/api/...` URLs, mounted through `onPage()` (CLAUDE.md);
   future decision cell, never a browsable chart); no year tabs (U14 — the
   worker doesn't actually vary by year for most courses, and three tabs
   implying a choice that isn't there was worse than one honest view).
-- **`/studier/[code]/`** — the browsable **template**, not a second plan
-  owner: current period expanded with a credit subtotal and DR-5's verbatim
-  group/waypoint prose, next period collapsed, "Bruk som planen min" (gated
-  off while the period is direction-gated — never commits courses the
-  student was never shown). No per-course "+" buttons (DR-10: adding into a
-  semester you are not planning is a bug factory). The context line on
-  `/planlegger/` links back here.
-- **`/studier/`** — the plain programme index. **Marked for removal
-  (REVIEW.md I3/§12, PRODUCT.md D11)**, but not yet deleted: it is currently
-  the only link to `/studier/[code]/` anywhere in the codebase, and the
-  entrances (`/planlegger/`'s context line, `/emne/[code]/` where relevant)
-  have to land and be verified live before this page can go without
-  orphaning ~400 static pages. Do not add new features here; do not delete
-  it in the same change that adds an entrance — sequence them.
-- **404** — recovers intent from the failed path (`/emne/TMA4100/` →
-  "Vi fant ikke emnet TMA4100" + the search field prefilled from the code),
-  falls back to the programme field otherwise, states the crawl date (DR-8).
+- **`/studier/[code]/` and `/studier/` — deleted outright, 2026-07-25, no
+  redirects** (§0 addendum point 3; supersedes REVIEW.md I3/§12/PRODUCT.md
+  D11's "sequence entrances before deletion" plan — the mandate deletes
+  regardless, pre-launch breakage is acceptable). The template's surviving
+  logic — current-period expansion, credit subtotal, DR-5's verbatim group
+  prose, "Bruk som planen min" — moved into the studieinfo modal (kull
+  relevance + plan fetch) and a collapsible "Fra studieplanen" panel in the
+  planner's course rail.
+- **404** — simplified 2026-07-25 (kills S9's stray `value="404"` search-box
+  bug outright rather than patching it): both search forms are gone; the
+  page states the reason, states the crawl date (DR-8), and offers exactly
+  two honest ways back — "Åpne planleggeren" and "Til forsiden".
 
 ## Quality bar
 

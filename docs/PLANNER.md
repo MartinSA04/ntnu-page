@@ -16,6 +16,14 @@ had drifted from what actually shipped once PRODUCT.md §0 landed — fixed in
 place rather than left stale, per the same docs-are-not-frozen instruction
 that corrected PRODUCT.md §7.
 
+**Corrected again, 2026-07-25**: a second user mandate (full spec:
+`docs/plan/REWORK-2026-07-25-design.md`, recorded as PRODUCT.md's §0
+addendum) rebuilt the grid, the exam view, the programme/kull/retning
+editor and the nav. Sections below are patched in place for the specifics
+that are now flatly wrong (the picker, the exam ribbon, `/studier/`, the
+v2 hash); SPEC.md's `/planlegger/` architecture section is the current
+source of truth for the full file-and-function detail, same as before.
+
 ## 1. Product shape
 
 - **The plan** is the central object: a chosen semester + a set of course
@@ -26,12 +34,15 @@ that corrected PRODUCT.md §7.
   timetable with conflicts, exam timeline with collision/gap warnings,
   selection list with credit total.
 - **Entry paths**: (a) search-and-add from `/emner/` or the planner's own
-  add field; (b) `/emne/[code]` "Legg til i planen"; (c) `/studier/[code]`'s
-  "Bruk som planen min" — a **whole-period** commit that records the
-  program/kull(/direction) context, not a per-course add. DR-10 killed
-  per-course "+" buttons on that page: adding a single course into a
-  semester you are not planning is a bug factory, and `/studier/[code]/` is
-  a browsable template, not a second plan owner (REVIEW.md §3).
+  add-course search modal (`addCourse.ts`, 2026-07-25 — replaces the old
+  inline add field); (b) `/emne/[code]` "Legg til i planen"; (c) the
+  studieinfo modal's Lagre (`studieinfo.ts`, 2026-07-25) — a **whole-period**
+  commit that records the program/kull(/direction) context, not a
+  per-course add. `/studier/[code]/` (which used to host "Bruk som planen
+  min") is deleted outright, no redirect — the modal absorbed that
+  semantics. DR-10's underlying rule is unchanged: adding a single course
+  into a semester you are not planning is a bug factory, so the modal
+  never exposes a per-course "+" either, only the whole-period commit.
 
 ## 2. Visual & interaction design
 
@@ -63,19 +74,26 @@ in DESIGN.md §8).
 **Layout of `/planlegger/`**: a real `<h1>` (the programme name/code or
 "Semesterplan"), a context line (kull · studieretning · resolved semester)
 behind a "Bytt semester" disclosure rather than fold-weight chips, then a
-two-column body — the week (grid + verdict line + exam ribbon) at
-`minmax(0,1fr)` against a fixed `20rem` course rail (course rows + credit
-line + add field), collapsing to one column below the tablet breakpoint.
+two-column body — the week (the calendar-engine grid + verdict line + the
+exam date list, 2026-07-25 — see below) at `minmax(0,1fr)` against a fixed
+`20rem` course rail (course rows + credit line + "Legg til emne" opening
+the add-course modal), collapsing to one column below the tablet breakpoint.
 See SPEC.md's `/planlegger/` architecture section for the exact DOM ids and
 the store → data → programPlan → renderers → plannerApp seam; it isn't
 restated here because a second copy of the DOM contract is exactly what
 goes stale first (which is what happened to the ASCII mockup this section
 used to have).
 
-**Empty state is the picker, not a sentence** (REVIEW.md B5): when the plan
-has no courses and no programme, the picker renders open as the page's only
-content and the add field stays mounted below it — there is no "velg et
-studieprogram over" pointing at something hidden.
+**Empty states, corrected 2026-07-25** (superseding REVIEW.md B5's "empty
+state is the picker" — the inline picker it describes is deleted): the
+planner has four honest empty/fallback states instead of one picker —
+no profile & no courses (a centered card: "Velg studieprogram" opens the
+studieinfo modal, plus a secondary "…eller legg til emner med emnekode"
+opening the add-course modal), profile set but the semester's timetable
+unpublished, profile set but none of the plan's courses run this term, and
+a fetch-failure state with its own copy and a retry button (never the
+"publiseres i august" message for a failure that has nothing to do with
+publishing — see design spec §3 for the fourth state's rationale).
 
 **States**: every async block renders a quiet "henter timeplan …" line
 while loading (or a skeleton grid, reserving the week's height, once
@@ -107,17 +125,23 @@ are the system's 2px accent outline; the whole page works keyboard-only.
 
 All pure TS, unit-tested, no framework. Files owned by the "lib" agent:
 
-- **`store.ts`** — plan state + persistence + the hash grammar. The shape
-  is `PRODUCT.md §7`'s `PlanState` (v2: `source`/`dropped`/`credits` per
-  course, optional `program.direction`) — not restated here, it's the one
-  place this interface is defined. localStorage key `ntnu:plan:v1` (the
-  key name predates the v2 hash grammar; don't read anything into the
-  "v1"). API: `loadPlan()`, `savePlan(p)`, `addCourse`, `dropCourse`,
-  `restoreCourse`, `removeCourse`, `hasCourse`, `setSemester`,
-  `setProgramPlan`, `onPlanChange(cb)` (storage + custom event
-  `ntnu:plan-change`, fires across components, tabs and the sitewide plan
-  strip). Storage injectable for tests. Hash sync: `parsePlanHash`/
-  `formatPlanHash`, `hashchange`-aware so a pasted link applies live.
+- **`store.ts`** — plan state + persistence + the hash grammar, **rebuilt
+  2026-07-25 (unversioned, no compat parse)** — see SPEC.md's
+  `/planlegger/` architecture section for the current, exact grammar and
+  storage-key layout (`np:profile`/`np:plans`/`np:lastSemester`); not
+  restated here to avoid the two drifting again. API: `loadPlan()`,
+  `savePlan(p)`, `addCourse`, `dropCourse`, `restoreCourse`, `removeCourse`,
+  `hasCourse`, `setSemester`, `setProgramPlan`, `setProgram`,
+  `removeProgram`, `setCourseGroups`, `onPlanChange(cb)` (storage + custom
+  event `ntnu:plan-change`, fires across components, tabs and the
+  persistent nav's studieinfo chip/count-link). Storage injectable for
+  tests. Hash sync: `parsePlanHash`/`formatPlanHash`, `hashchange`-aware so
+  a pasted link applies live.
+- **`layout.ts`**, **`groups.ts`**, **`examSchedule.ts`** — the
+  2026-07-25 rework's pure engines (day-column layout, group/parallel
+  selection, exam-list sort/gap math). Same "pure TS, unit-tested, no
+  framework" rule as everything else here; see SPEC.md for their exact
+  signatures rather than duplicating them in a second place.
 - **`schedule.ts`** — time math. `parseWeeks(["2-13","15"]) → number[]`,
   `toMinutes("10:15") → 615`, `semesterYear("26h") → 2026`,
   `entriesInSemester(entries, teachingWeeks)` (intersects entry weeks with
@@ -158,12 +182,13 @@ honestly).
 
 ## 5. Page work — status
 
-`/planlegger/` and its integrations across `/`, `/emne/[code]/`,
-`/emner/`, `/studier/[code]/` are built. What actually shipped, and where
-it diverged from this file's original plan, is tracked in
-`docs/ROADMAP.md`'s "Shipped" section and `docs/REVIEW.md` (the full-site
-review that fixed most of the divergences) — this section is intentionally
-not a duplicate task list.
+`/planlegger/` and its integrations across `/`, `/emne/[code]/`, `/emner/`
+are built (`/studier/[code]/` and `/studier/` were part of this list until
+2026-07-25, when both were deleted outright — PRODUCT.md §0 addendum point
+3). What actually shipped, and where it diverged from this file's original
+plan, is tracked in `docs/ROADMAP.md`'s "Shipped" sections and
+`docs/REVIEW.md` (the full-site review that fixed most of the divergences)
+— this section is intentionally not a duplicate task list.
 
 ## 6. Quality bar
 

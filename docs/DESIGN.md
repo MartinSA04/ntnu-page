@@ -127,7 +127,8 @@ the **content box** (`background-origin: content-box`) so it stays in
 register with whatever it's ruling instead of starting 16px early under the
 frame's padding — every ruled surface's own padding must therefore be a
 whole multiple of `--cell`. It appears on planning surfaces only: the weekly
-timetable spread and the exam ribbon. `.np-ruled--hours` (a modifier, used
+timetable spread and the exam date list (`examList.ts` — replaced the exam
+ribbon 2026-07-25, ruling carried over unchanged). `.np-ruled--hours` (a modifier, used
 *with* `.np-ruled`) draws a heavier line every 4th cell on the week — a real
 timetable sheet has an hour rule, and uniform 15-minute squares alone read
 as texture rather than an instrument.

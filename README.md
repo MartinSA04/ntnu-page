@@ -24,9 +24,10 @@ open: `docs/ROADMAP.md`.
 
 - **Crawled nightly** (`data/` + `public/data/` — gitignored build artifacts,
   never committed): course catalog (`searchAll`), study-program catalog,
-  semesters — ~10 upstream requests. Static pages (`/emne/[code]`,
-  `/studier/[code]`) and the client-side search index are built from these and
-  ship only as part of the deployed site. `npm run build` crawls automatically
+  semesters — ~10 upstream requests. Static pages (`/emne/[code]`) and the
+  client-side search index are built from these and ship only as part of the
+  deployed site (`/studier/[code]` was deleted 2026-07-25 — see PRODUCT.md
+  §0 addendum). `npm run build` crawls automatically
   if the files are missing (`prebuild` guard). The crawler is deliberately
   polite: identifying user agent, ~500 ms gaps between requests, stable
   `+ntnucoursecode` sort for dedup-friendly pagination, and retry/backoff left
