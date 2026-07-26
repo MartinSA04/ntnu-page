@@ -5,7 +5,7 @@
  * student has (NTNU auto-enrolls programme students — DR-7's pre-fill IS the
  * default plan, not a hedged suggestion).
  *
- * The page is **two regions**, not four tabs: *Uke* (grid + exam ribbon —
+ * The page is **two regions**, not four tabs: *Uke* (grid + exam list —
  * both answer "when") and *Emner* (what's in the plan + how to change it).
  * Side by side on wide screens, tab-switched below 60rem. They stay
  * co-visible where there is room because the product's core loop is
@@ -22,7 +22,7 @@
  *   not a list — it is a filter on search, so it lives inside the add field's
  *   "Fra studieplanen / Alle emner" scope toggle rather than on the surface.
  *
- * Render work is delegated to grid.ts/examRibbon.ts.
+ * Render work is delegated to grid.ts/examList.ts.
  */
 
 import { lecturesOnly } from "../../lib/planner/activity.js";
@@ -56,7 +56,7 @@ import {
 } from "../../lib/planner/store.js";
 import { programHref } from "../../lib/programUrl.js";
 import { el, fold, formatCreditNumber, formatCredits, formatShortDate } from "./dom.js";
-import { type ExamRenderResult, renderExamMessage, renderExamRibbon } from "./examRibbon.js";
+import { type ExamRenderResult, renderExamList, renderExamMessage } from "./examList.js";
 import { type BlockDetail, type GridRenderResult, renderGrid, renderGridMessage } from "./grid.js";
 import { type BlockPopoverContext, mountBlockPopover } from "./popover.js";
 import {
@@ -162,7 +162,6 @@ interface PlannerElements {
   examFrame: HTMLElement;
   examList: HTMLElement;
   examStatus: HTMLElement;
-  examWindow: HTMLElement;
   courseRows: HTMLElement;
   gapLine: HTMLElement;
   gapText: HTMLElement;
@@ -215,7 +214,6 @@ function getElements(): PlannerElements | null {
     examFrame: byId<HTMLElement>("planner-exam-frame"),
     examList: byId<HTMLElement>("planner-exam-list-host"),
     examStatus: byId<HTMLElement>("planner-exam-status"),
-    examWindow: byId<HTMLElement>("planner-exam-window"),
     courseRows: byId<HTMLElement>("planner-course-rows"),
     gapLine: byId<HTMLElement>("planner-gap-line"),
     gapText: byId<HTMLElement>("planner-gap-text"),
@@ -1494,8 +1492,8 @@ export async function mountPlannerApp(
    * The planner index with every row's exams narrowed to the planned
    * semester's own `fromDate`…`examFinalDate` window (C3). Memoised because
    * it is one pass over ~5 500 rows and the semester only changes when the
-   * student says so — but the ribbon reaches into the index itself, so the
-   * filter has to be baked in rather than passed per call.
+   * student says so — but the exam list reaches into the index itself, so
+   * the filter has to be baked in rather than passed per call.
    */
   let examIndexMemo: {
     semesterId: string;
@@ -1638,7 +1636,7 @@ export async function mountPlannerApp(
       host.textContent = "henter eksamensdatoer …";
       return;
     }
-    if (exam.state !== "ribbon" || exam.collisionCount === 0) return;
+    if (exam.state !== "list" || exam.collisionCount === 0) return;
     host.classList.add("np-note-clash");
     host.append(el("span", "np-data", String(exam.collisionCount)));
     host.append(exam.collisionCount === 1 ? " eksamen samme dag" : " eksamener samme dag");
@@ -1699,7 +1697,7 @@ export async function mountPlannerApp(
     const examLoading = anyLoading || (states.length > 0 && plannerIndex === null);
 
     // C3: the shipped index only carries this academic year's exam dates. For
-    // a semester beyond it the ribbon's own "Ingen eksamensdatoer funnet ennå"
+    // a semester beyond it the list's own "Ingen eksamensdatoer funnet ennå"
     // is a finding reported by something that never looked — say what is
     // actually true instead, in the frame where the student is looking.
     const examUncovered =
@@ -1714,17 +1712,18 @@ export async function mountPlannerApp(
           elements.examList,
           `Eksamensdatoer er ikke publisert for ${semesterLabel(currentSemester())} ennå.`,
         )
-      : renderExamRibbon(
+      : renderExamList(
           elements.examFrame,
           elements.examList,
           states,
           plan.semesterId,
           examIndex,
+          currentExamWindow(),
+          new Date().toISOString().slice(0, 10),
           {
             loading: examLoading,
           },
         );
-    elements.examWindow.textContent = examResult.windowLabel ?? "";
 
     renderVerdict(gridResult, anyLoading);
     renderExamVerdict(examResult, examLoading);
@@ -2018,12 +2017,12 @@ export async function mountPlannerApp(
       });
       if (changed) store.savePlan({ ...plan, courses: nextCourses });
       examIndexMemo = null;
-      renderGridAndExams(); // exam ribbon needed the index to render its catalog data
+      renderGridAndExams(); // exam list needed the index to render its catalog data
       renderAddOptions();
       renderProvenance();
     })
     .catch(() => {
-      // Typeahead search + exam ribbon will simply show no results; the rest of the page still works.
+      // Typeahead search + exam list will simply show no results; the rest of the page still works.
     });
 
   // First paint from the initial (hash-or-storage) plan, then kick off fetches.

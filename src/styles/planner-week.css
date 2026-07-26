@@ -16,7 +16,7 @@
    pixel grid.
 
    What is NOT here: the planner's own scroll-edge mask
-   (`.planner-grid-frame[data-scroll]`) and the exam ribbon. Those belong to
+   (`.planner-grid-frame[data-scroll]`) and the exam list. Those belong to
    /planlegger/ alone and stay in its scoped block. */
 
 /* Qualified with .np-frame deliberately. The frame primitive sets

@@ -3,7 +3,7 @@ import programsData from "../../../data/programs.json";
 import Layout from "../../layouts/Layout.astro";
 // The week's geometry and ink live in one stylesheet because two surfaces
 // render it through the same `renderGrid` (/planlegger/ and /emne/[code]/).
-// Only this page's scroll-edge mask and the exam ribbon stay scoped below.
+// Only this page's scroll-edge mask and the exam list stay scoped below.
 import "../../styles/planner-week.css";
 
 const description =
@@ -153,7 +153,6 @@ const programOptionsJson = JSON.stringify(programOptions).replaceAll("<", "\\u00
 
         <div class="planner-section-head">
           <h2 class="np-kicker" id="planner-exam-heading">Eksamener</h2>
-          <p class="np-data planner-section-sub" id="planner-exam-window"></p>
           <p class="planner-section-sub" id="planner-exam-status" aria-live="polite"></p>
         </div>
         <div class="np-frame np-ruled planner-exam-frame" id="planner-exam-frame"></div>
@@ -564,65 +563,32 @@ const programOptionsJson = JSON.stringify(programOptions).replaceAll("<", "\\u00
     margin-bottom: var(--space-2);
   }
 
-  /* --- Exam ribbon ----------------------------------------------------- */
+  /* --- Exam list ---------------------------------------------------------- */
 
+  /* No more axis/dots above the list, so the frame wants its ordinary
+     padding, not the extra headroom the ribbon's visual needed. */
   .planner-exam-frame {
-    padding: calc(var(--cell) * 2) var(--cell) var(--cell);
+    padding: var(--cell);
     margin-bottom: var(--space-2);
-    position: relative;
   }
 
-  /* The frame's own padding is the spacing; a message in it is not prose. */
-  :global(.planner-exam-empty) {
+  /* The frame's own padding is the spacing; a message or summary in it is
+     not prose. */
+  :global(.exam-empty),
+  :global(.exam-summary) {
     margin: 0;
-  }
-
-  :global(.planner-exam-axis) {
-    position: relative;
-    height: 1.2rem;
-    border-bottom: 1px solid var(--border);
-    margin-bottom: var(--space-4);
-  }
-
-  :global(.planner-exam-month) {
-    position: absolute;
-    left: var(--planner-pos);
-    font-size: var(--text-xs);
-    color: var(--muted);
-    transform: translateX(-50%);
-  }
-
-  :global(.planner-exam-dots) {
-    position: relative;
-    height: 1.5rem;
-  }
-
-  :global(.planner-exam-stack) {
-    position: absolute;
-    left: var(--planner-pos);
-    top: 0;
-    display: flex;
-    gap: 2px;
-    transform: translateX(-50%);
-    padding: 3px;
-    border-radius: var(--radius-xs);
-  }
-
-  :global(.planner-exam-stack.is-clash) {
-    outline: 2px solid var(--clash);
-    outline-offset: 1px;
   }
 
   .planner-exam-list {
     margin-bottom: var(--space-6);
   }
 
-  :global(.planner-exam-list ul) {
+  :global(.exam-list) {
     list-style: none;
     max-width: none;
   }
 
-  :global(.planner-exam-row) {
+  :global(.exam-row) {
     display: flex;
     align-items: center;
     gap: var(--gap-3);
@@ -631,22 +597,29 @@ const programOptionsJson = JSON.stringify(programOptions).replaceAll("<", "\\u00
     flex-wrap: wrap;
   }
 
-  /* 9em, not 6.5 — "dato ikke satt" is a real value and has to fit (D3). */
-  :global(.planner-exam-date) {
+  /* 9em, not 6.5 — "9. des" and a countdown hint both have to fit (D3). */
+  :global(.exam-date) {
     color: var(--muted);
     font-size: var(--text-sm);
     width: 9em;
     flex-shrink: 0;
   }
 
-  :global(.planner-exam-code) {
+  :global(.exam-code) {
     display: inline-flex;
     align-items: center;
     gap: var(--gap-2);
     font-size: var(--text-sm);
   }
 
-  :global(.planner-exam-gap.is-tight) {
+  /* The connector between two dated rows — indented under where a row's own
+     tag sits, so the timeline reads as one column rather than a new line. */
+  :global(.exam-gap) {
+    display: block;
+    padding: var(--space-1) 0 var(--space-1) calc(9em + var(--gap-3));
+  }
+
+  :global(.exam-gap.is-tight) {
     color: var(--clash);
   }
 
