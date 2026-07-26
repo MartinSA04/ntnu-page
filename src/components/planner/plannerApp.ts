@@ -495,9 +495,9 @@ export async function mountPlannerApp(
    * kull · studieretning · the resolved semester. The studieretning is there
    * because it is the *answer* the student gave to the one question the study
    * plan forced — if it isn't visible and re-openable, a wrong pick can never
-   * be corrected. The name was a link to /studier/[code]/; that page is deleted
-   * (Task 13), so it is now a button into the studieinfo modal — the surface
-   * that actually changes the programme — matching the "Endre" control.
+   * be corrected. The name used to link to the (now deleted) per-programme
+   * page, so it is now a button into the studieinfo modal — the surface that
+   * actually changes the programme — matching the "Endre" control.
    */
   function renderBanner(): void {
     const program = plan.program;

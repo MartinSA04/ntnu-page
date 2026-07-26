@@ -231,9 +231,10 @@ const programOptionsJson = JSON.stringify(programOptions).replaceAll("<", "\\u00
     color: var(--faint);
   }
 
-  /* The programme name in the title was a link to /studier/; it is now a
-     button into the studieinfo modal. Keep it reading as the title, not a
-     control: no chrome, inherit the headline ink, accent underline on hover. */
+  /* The programme name in the title used to link to the (now deleted)
+     programme-listing page; it is now a button into the studieinfo modal.
+     Keep it reading as the title, not a control: no chrome, inherit the
+     headline ink, accent underline on hover. */
   :global(button.planner-title-name) {
     font: inherit;
     color: inherit;

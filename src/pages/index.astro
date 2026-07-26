@@ -3,7 +3,7 @@ import semestersData from "../../data/semesters.json";
 import Layout from "../layouts/Layout.astro";
 
 const description =
-  "Velg studieprogram og kull, se ukeplanen med en gang: forelesninger, kollisjoner og eksamensdatoer.";
+  "Planlegg semesteret ved NTNU: velg studieprogram og kull i planleggeren, se ukeplanen med en gang.";
 
 const currentSemester = semestersData.current;
 const isAutumn = currentSemester ? /h$/i.test(currentSemester.id) : true;
@@ -14,50 +14,11 @@ const seasonWord = isAutumn ? "høsten" : "våren";
   <p class="np-kicker home-kicker">Semesterplan</p>
   <h1 class="home-title">Se timeplanen din for {seasonWord}.</h1>
   <p class="np-hint home-subcopy">
-    Skriv inn studieprogrammet og kullet ditt, så vises ukeplanen med en gang — en uoffisiell
+    Velg studieprogram og kull i planleggeren, så vises ukeplanen med en gang — en uoffisiell
     side, ikke laget av NTNU.
   </p>
 
-  <div class="np-field home-field" id="home-field">
-    <input
-      type="text"
-      id="home-input"
-      placeholder="Studieprogram, f.eks. datateknologi eller MTDT …"
-      aria-label="Søk etter studieprogram"
-      role="combobox"
-      aria-expanded="false"
-      aria-autocomplete="list"
-      aria-controls="home-listbox"
-      autocomplete="off"
-    />
-  </div>
-  <ul
-    class="home-listbox np-popover"
-    id="home-listbox"
-    role="listbox"
-    aria-label="Studieprogramforslag"
-    hidden
-  >
-  </ul>
-
-  <div class="home-kull" id="home-kull" hidden>
-    <p class="np-kicker home-kull-kicker" id="home-kull-name"></p>
-    <p class="np-note home-kull-caption">kull = året du startet</p>
-    <div class="home-kull-chips" id="home-kull-chips" role="group" aria-label="Velg kull"></div>
-  </div>
-
-  <div class="home-direction" id="home-direction" hidden>
-    <p class="np-hint home-direction-prompt" id="home-direction-prompt"></p>
-    <div
-      class="home-direction-chips"
-      id="home-direction-chips"
-      role="group"
-      aria-label="Velg studieretning"
-    >
-    </div>
-  </div>
-
-  <p class="np-hint home-status" id="home-status" aria-live="polite"></p>
+  <a class="np-btn home-cta" href="/planlegger/">Åpne planleggeren</a>
 
   <p class="home-resume np-hint" id="home-resume" hidden>
     <a href="/planlegger/" id="home-resume-link"></a>
@@ -96,72 +57,8 @@ const seasonWord = isAutumn ? "høsten" : "våren";
   .home-subcopy {
     margin-bottom: var(--space-5);
   }
-  .home-field {
-    max-width: var(--measure);
-    position: relative;
-  }
-  .home-listbox {
-    max-width: var(--measure);
-    margin-top: var(--space-1);
-    --popover-max: 18rem;
-  }
-  :global(.home-option) {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: baseline;
-    gap: var(--gap-1) var(--gap-3);
-  }
-  :global(.home-option-code) {
-    color: var(--muted);
-    flex-shrink: 0;
-    width: 6em;
-  }
-  :global(.home-option-name) {
-    font-size: var(--text-sm);
-    flex: 1;
-  }
-  :global(.home-option-level) {
-    flex-shrink: 0;
-  }
-  :global(.home-listbox-empty) {
-    display: block;
-    padding: var(--space-2);
-  }
-  .home-kull {
-    margin-top: var(--space-4);
-    max-width: var(--measure);
-  }
-  .home-kull-kicker {
-    margin-bottom: var(--space-1);
-  }
-  .home-kull-caption {
-    margin-bottom: var(--space-2);
-  }
-  .home-kull-chips {
-    display: flex;
-    flex-wrap: wrap;
-    gap: var(--gap-2);
-  }
-  .home-direction {
-    margin-top: var(--space-4);
-    max-width: var(--measure);
-  }
-  .home-direction-prompt {
-    margin-bottom: var(--space-2);
-  }
-  .home-direction-chips {
-    display: flex;
-    flex-wrap: wrap;
-    gap: var(--gap-2);
-  }
-  .home-status {
-    margin-top: var(--space-3);
-  }
-  .home-status :global(a) {
-    color: var(--accent-ink);
-  }
   .home-resume {
-    margin-top: var(--space-6);
+    margin-top: var(--space-5);
     font-size: var(--text-md);
   }
   .home-resume a {
@@ -203,392 +100,39 @@ const seasonWord = isAutumn ? "høsten" : "våren";
 </style>
 
 <script>
-  import programsData from "../../data/programs.json";
-  import semestersData from "../../data/semesters.json";
-  import { fold } from "../components/planner/dom.ts";
-  import {
-    type ClassifiedCourse,
-    type DirectionChoice,
-    findProgramPlan,
-    isSuspiciousPrefill,
-    resolvePeriodFor,
-    type StudyPlan,
-  } from "../components/planner/programPlan.ts";
   import { onPage } from "../lib/pageLifecycle.ts";
-  import { semesterYear } from "../lib/planner/schedule.ts";
-  import {
-    type AddCourseInput,
-    createPlanStore,
-    formatPlanHash,
-    type PlanDirection,
-    type PlanProgram,
-  } from "../lib/planner/store.ts";
-
-  /** code, name, studyLevel, cities — B6: MIDT and MTDT are both bare
-   * "Datateknologi" without this, and they lead to opposite outcomes. */
-  type ProgramOption = [code: string, name: string, studyLevel: string, cities: string[]];
-
-  const programOptions: ProgramOption[] = programsData.programs
-    .map((p): ProgramOption => [p.code, p.name, p.studyLevel ?? "", p.cities ?? []])
-    .sort((a, b) => a[1].localeCompare(b[1], "nb"));
+  import { createPlanStore } from "../lib/planner/store.ts";
+  import semestersData from "../../data/semesters.json";
 
   const defaultSemesterId = semestersData.current?.id ?? "";
 
-  function semesterLabel(): string {
-    const current = semestersData.current;
-    if (!current) return "dette semesteret";
-    const season = /h$/i.test(current.id) ? "Høst" : "Vår";
-    return `${season} ${current.year}`;
-  }
-
-  /** "Master 5 år" -> "master 5 år" — sentence-case fragment after the middle dot. */
-  function lowerFirst(text: string): string {
-    return text.length === 0 ? text : text.charAt(0).toLowerCase() + text.slice(1);
-  }
-
   // Per page-load, not per module: ClientRouter evaluates this module once,
-  // so wiring at top level left the programme picker dead after any in-site
-  // navigation back to the homepage.
+  // so wiring at top level left the resume line frozen at whatever it read
+  // on the very first visit.
   onPage((signal) => {
-  const store = createPlanStore(defaultSemesterId);
-
-  const input = document.getElementById("home-input") as HTMLInputElement | null;
-  const field = document.getElementById("home-field") as HTMLElement | null;
-  const listbox = document.getElementById("home-listbox") as HTMLUListElement | null;
-  const kullSection = document.getElementById("home-kull") as HTMLElement | null;
-  const kullName = document.getElementById("home-kull-name") as HTMLElement | null;
-  const kullChips = document.getElementById("home-kull-chips") as HTMLElement | null;
-  const directionSection = document.getElementById("home-direction") as HTMLElement | null;
-  const directionPrompt = document.getElementById("home-direction-prompt") as HTMLElement | null;
-  const directionChips = document.getElementById("home-direction-chips") as HTMLElement | null;
-  const statusEl = document.getElementById("home-status") as HTMLElement | null;
-  const resumeEl = document.getElementById("home-resume") as HTMLElement | null;
-  const resumeLink = document.getElementById("home-resume-link") as HTMLAnchorElement | null;
-
-  function el<K extends keyof HTMLElementTagNameMap>(
-    tag: K,
-    className?: string,
-    text?: string,
-  ): HTMLElementTagNameMap[K] {
-    const node = document.createElement(tag);
-    if (className) node.className = className;
-    if (text !== undefined) node.textContent = text;
-    return node;
-  }
-
-  // --- Resume line: quiet by default, prominent when a plan already exists ---
-
-  function renderResume(): void {
+    const store = createPlanStore(defaultSemesterId);
+    const resumeEl = document.getElementById("home-resume") as HTMLElement | null;
+    const resumeLink = document.getElementById("home-resume-link") as HTMLAnchorElement | null;
     if (!resumeEl || !resumeLink) return;
-    const plan = store.loadPlan();
-    const active = plan.courses.filter((c) => !c.dropped);
-    if (active.length === 0) {
-      resumeEl.hidden = true;
-      return;
-    }
-    resumeEl.hidden = false;
-    const programLabel = plan.program ? `${plan.program.code} · ` : "";
-    const count = active.length;
-    const noun = count === 1 ? "emne" : "emner";
-    resumeLink.textContent = `Planen din: ${programLabel}${count} ${noun} → gå til planleggeren`;
-  }
 
-  renderResume();
-  signal.addEventListener("abort", store.onPlanChange(renderResume));
-
-  if (
-    input &&
-    field &&
-    listbox &&
-    kullSection &&
-    kullName &&
-    kullChips &&
-    directionSection &&
-    directionPrompt &&
-    directionChips &&
-    statusEl
-  ) {
-    let matches: ProgramOption[] = [];
-    let activeIndex = -1;
-
-    function optionId(index: number): string {
-      return `home-option-${index}`;
-    }
-
-    function closeListbox(): void {
-      if (!listbox || !input) return;
-      listbox.replaceChildren();
-      listbox.hidden = true;
-      activeIndex = -1;
-      matches = [];
-      input.setAttribute("aria-expanded", "false");
-      input.removeAttribute("aria-activedescendant");
-    }
-
-    function setActive(index: number): void {
-      if (!listbox || !input) return;
-      activeIndex = index;
-      for (const [i, opt] of [...listbox.children].entries()) {
-        const isActive = i === index;
-        opt.classList.toggle("is-active", isActive);
-        opt.setAttribute("aria-selected", String(isActive));
-      }
-      const activeOption = listbox.children[index];
-      if (activeOption instanceof HTMLElement && activeOption.id) {
-        input.setAttribute("aria-activedescendant", activeOption.id);
-      } else {
-        input.removeAttribute("aria-activedescendant");
-      }
-    }
-
-    function resetKull(): void {
-      if (!kullSection || !kullChips || !statusEl) return;
-      kullSection.hidden = true;
-      kullChips.replaceChildren();
-      statusEl.replaceChildren();
-    }
-
-    function resetDirection(): void {
-      if (!directionSection || !directionChips || !directionPrompt) return;
-      directionSection.hidden = true;
-      directionChips.replaceChildren();
-      directionPrompt.textContent = "";
-    }
-
-    /** Builds a plan for one resolved period and navigates to /planlegger/. */
-    async function commitProgram(
-      code: string,
-      name: string,
-      cohort: number,
-      obligatory: ClassifiedCourse[],
-      direction: PlanDirection | undefined,
-    ): Promise<void> {
-      if (!statusEl) return;
-      let toClassify = obligatory;
-      if (isSuspiciousPrefill(toClassify)) toClassify = [];
-      const toAdd: AddCourseInput[] = toClassify.map((c) => ({
-        code: c.code,
-        name: c.name,
-        version: c.version,
-        source: "program",
-      }));
-
-      const program: PlanProgram = direction
-        ? { code, name, cohort, direction }
-        : { code, name, cohort };
-
-      store.setSemester(defaultSemesterId);
-      const next = store.setProgramPlan(program, toAdd);
-
-      statusEl.replaceChildren();
-      location.href = `/planlegger/${formatPlanHash(next)}`;
-    }
-
-    /**
-     * Ask the studieretning/campus question here, before navigating (B2) —
-     * the dispatcher's job is to dispatch to a *working* week. The waypoint
-     * name is quoted verbatim (DR-5); the question sentence is a friendly
-     * paraphrase that only needs to distinguish "which specialization" from
-     * "which campus", so it keys off the waypoint's own wording.
-     */
-    function renderDirectionChoice(
-      code: string,
-      name: string,
-      cohort: number,
-      plan: StudyPlan,
-      pending: DirectionChoice,
-    ): void {
-      if (!directionSection || !directionPrompt || !directionChips || !statusEl) return;
-      statusEl.replaceChildren();
-      const isCampus = /studiested|campus/i.test(pending.name);
-      directionPrompt.textContent = isCampus ? "Hvilket studiested?" : "Hvilken studieretning følger du?";
-      directionChips.replaceChildren();
-      for (const option of pending.directions) {
-        const chip = el("button", "np-toggle np-toggle--text", option.name);
-        chip.type = "button";
-        chip.setAttribute("aria-pressed", "false");
-        chip.addEventListener("click", () => {
-          const { courses } = resolvePeriodFor(plan, defaultSemesterId, cohort, option.code);
-          if (!courses) return;
-          resetDirection();
-          void commitProgram(code, name, cohort, courses.obligatory, {
-            code: option.code,
-            name: option.name,
-          });
-        });
-        directionChips.append(chip);
-      }
-      directionSection.hidden = false;
-    }
-
-    /** Builds the programme baseline for one cohort and navigates to /planlegger/. */
-    async function useCohort(code: string, name: string, cohort: number): Promise<void> {
-      if (!statusEl) return;
-      resetDirection();
-      statusEl.textContent = "henter studieplan …";
-      const result = await findProgramPlan(code, cohort);
-      if ("kind" in result) {
-        statusEl.textContent = "klarte ikke å hente studieplan";
+    // Quiet by default, prominent the moment a plan actually exists — the
+    // landing page's one piece of state, everything else here is static.
+    function renderResume(): void {
+      if (!resumeEl || !resumeLink) return;
+      const plan = store.loadPlan();
+      const active = plan.courses.filter((c) => !c.dropped);
+      if (active.length === 0) {
+        resumeEl.hidden = true;
         return;
       }
-
-      // One entry point, shared with the planner, so the picker and the page
-      // it navigates to cannot disagree about what this cohort's semester is.
-      const { courses, pendingChoice } = resolvePeriodFor(result.plan, defaultSemesterId, cohort);
-      if (!courses) {
-        statusEl.textContent = `studieplanen for kull ${cohort} dekker ikke ${semesterLabel()}`;
-        return;
-      }
-
-      if (pendingChoice) {
-        renderDirectionChoice(code, name, cohort, result.plan, pendingChoice);
-        return;
-      }
-
-      statusEl.textContent = "";
-      await commitProgram(code, name, cohort, courses.obligatory, undefined);
+      resumeEl.hidden = false;
+      const programLabel = plan.program ? `${plan.program.code} · ` : "";
+      const count = active.length;
+      const noun = count === 1 ? "emne" : "emner";
+      resumeLink.textContent = `Planen din: ${programLabel}${count} ${noun} → gå til planleggeren`;
     }
 
-    /** Whether `year`'s computed period exists at all in the fetched plan (B3). */
-    function periodExists(plan: StudyPlan, year: number): boolean {
-      return resolvePeriodFor(plan, defaultSemesterId, year).courses !== null;
-    }
-
-    /** Renders the "no plan yet" offer as a real link rather than a dead end (B8). */
-    function renderNoPlanOffer(name: string): void {
-      if (!statusEl) return;
-      statusEl.replaceChildren();
-      statusEl.append(
-        document.createTextNode(`Vi har ingen studieplan for ${name} ennå. Du kan legge til `),
-      );
-      const link = el("a", undefined, "emnekodene dine selv →");
-      link.href = `/planlegger/${formatPlanHash({ semesterId: defaultSemesterId, courses: [], program: undefined })}`;
-      statusEl.append(link);
-    }
-
-    async function pickProgram(option: ProgramOption): Promise<void> {
-      if (!input || !kullSection || !kullName || !kullChips || !statusEl) return;
-      const [code, name] = option;
-      input.value = name;
-      closeListbox();
-      resetKull();
-      resetDirection();
-      statusEl.textContent = "henter studieplan …";
-
-      const guessYear = semesterYear(defaultSemesterId) ?? new Date().getFullYear();
-      const result = await findProgramPlan(code, guessYear);
-      if ("kind" in result) {
-        if (result.kind === "not-found") renderNoPlanOffer(name);
-        else statusEl.textContent = "klarte ikke å hente studieplan";
-        return;
-      }
-
-      // B3: only cohorts whose computed period exists in the fetched plan —
-      // 88% of the un-filtered chips led nowhere.
-      const years = [...result.plan.publishedYears]
-        .sort((a, b) => b - a)
-        .filter((year) => periodExists(result.plan, year));
-      if (years.length === 0) {
-        statusEl.textContent = `studieplanen for ${name} dekker ikke ${semesterLabel()}`;
-        return;
-      }
-
-      statusEl.textContent = "";
-      kullName.textContent = name;
-      kullSection.hidden = false;
-      kullChips.replaceChildren();
-      const preferred = years[0];
-      for (const year of years) {
-        const chip = el("button", "np-toggle", `kull ${year}`);
-        chip.type = "button";
-        chip.setAttribute("aria-label", `Kull ${year}`);
-        chip.setAttribute("aria-pressed", String(year === preferred));
-        chip.addEventListener("click", () => {
-          void useCohort(code, name, year);
-        });
-        kullChips.append(chip);
-      }
-    }
-
-    function renderOptions(): void {
-      if (!input || !listbox) return;
-      const query = fold(input.value.trim());
-      if (query === "") {
-        closeListbox();
-        resetKull();
-        resetDirection();
-        return;
-      }
-      matches = programOptions
-        .filter(([code, name]) => fold(code).includes(query) || fold(name).includes(query))
-        .slice(0, 12);
-
-      listbox.replaceChildren();
-      if (matches.length === 0) {
-        listbox.append(el("li", "home-listbox-empty np-note", "Ingen treff."));
-        listbox.hidden = false;
-        activeIndex = -1;
-        input.setAttribute("aria-expanded", "true");
-        input.removeAttribute("aria-activedescendant");
-        return;
-      }
-      matches.forEach((option, index) => {
-        const [code, name, studyLevel, cities] = option;
-        const item = el("li", "home-option np-popover-option");
-        item.id = optionId(index);
-        item.setAttribute("role", "option");
-        item.setAttribute("aria-selected", "false");
-        item.append(el("span", "np-data home-option-code", code));
-        item.append(el("span", "home-option-name", name));
-        if (studyLevel) {
-          const level = cities.length > 0 ? `${lowerFirst(studyLevel)}, ${cities.join(", ")}` : lowerFirst(studyLevel);
-          item.append(el("span", "np-note home-option-level", level));
-        }
-        // mousedown only prevents the input from blurring before the click
-        // lands; selection itself happens on click so activation paths that
-        // dispatch click without a preceding mousedown (VoiceOver/TalkBack
-        // double-tap, some switch access) can select too (A2).
-        item.addEventListener("mousedown", (event) => {
-          event.preventDefault();
-        });
-        item.addEventListener("click", () => {
-          void pickProgram(option);
-        });
-        listbox?.append(item);
-      });
-      listbox.hidden = false;
-      input.setAttribute("aria-expanded", "true");
-      setActive(0);
-    }
-
-    input.addEventListener("input", renderOptions);
-    input.addEventListener("keydown", (event) => {
-      if (!listbox || listbox.hidden || matches.length === 0) return;
-      if (event.key === "ArrowDown") {
-        event.preventDefault();
-        setActive((activeIndex + 1) % matches.length);
-      } else if (event.key === "ArrowUp") {
-        event.preventDefault();
-        setActive((activeIndex - 1 + matches.length) % matches.length);
-      } else if (event.key === "Enter") {
-        event.preventDefault();
-        const picked = matches[activeIndex] ?? matches[0];
-        if (picked) void pickProgram(picked);
-      } else if (event.key === "Escape") {
-        closeListbox();
-      }
-    });
-    field.addEventListener("focusout", (event) => {
-      if (!field.contains(event.relatedTarget as Node | null)) closeListbox();
-    });
-
-    // Recover intent from a 404's "search etter studieprogram" redirect
-    // (U18): `/?q=<segment>` prefills and runs the search immediately.
-    const initialQuery = new URLSearchParams(location.search).get("q");
-    if (initialQuery) {
-      input.value = initialQuery;
-      renderOptions();
-    }
-  }
+    renderResume();
+    signal.addEventListener("abort", store.onPlanChange(renderResume));
   });
 </script>
