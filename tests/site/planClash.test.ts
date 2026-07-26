@@ -31,7 +31,6 @@ function entry(courseCode: string, overrides: Partial<TimetableEntry> = {}): Tim
 
 function plan(...codes: string[]): PlanState {
   return {
-    v: 1,
     semesterId: "26h",
     courses: codes.map((code) => ({ code, name: code, version: "1", source: "manual" as const })),
   };

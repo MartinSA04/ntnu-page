@@ -380,7 +380,6 @@ export async function mountPlannerApp(
       semesterId = fallback?.id ?? defaultSemesterId;
     }
     return {
-      v: 1,
       semesterId,
       courses: parsed.courses.map((c) => ({
         code: c.code,

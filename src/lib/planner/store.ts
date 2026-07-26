@@ -4,14 +4,21 @@
  * any non-DOM context) without touching `window`/`localStorage` at import
  * time.
  *
- * v2 (PRODUCT.md §0/§7, ROADMAP Phase §0): courses carry `source` (did this
- * come from the programme pre-fill or a manual add?) and, for programme
- * courses only, an optional `dropped` flag — "drop a programme course →
- * grays out, one tap restores, excluded from schedule/credits" (§0.3).
- * Manual adds have no drop state; removing one deletes it outright.
+ * Courses carry `source` (did this come from the programme pre-fill or a
+ * manual add?) and, for programme courses only, an optional `dropped` flag —
+ * "drop a programme course → grays out, one tap restores, excluded from
+ * schedule/credits" (§0.3). Manual adds have no drop state; removing one
+ * deletes it outright.
+ *
+ * Storage is split three ways instead of one blob: the programme choice is
+ * global (it survives a semester switch), while the course list is scoped
+ * per semester (a manual add in 26h has no business showing up in 27v) —
+ * see `PROFILE_STORAGE_KEY`/`PLANS_STORAGE_KEY`/`LAST_SEMESTER_KEY` below.
  */
 
-export const PLAN_STORAGE_KEY = "ntnu:plan:v1";
+export const PROFILE_STORAGE_KEY = "np:profile";
+export const PLANS_STORAGE_KEY = "np:plans";
+export const LAST_SEMESTER_KEY = "np:lastSemester";
 export const PLAN_CHANGE_EVENT = "ntnu:plan-change";
 
 /** Default course version when a caller doesn't have a real one yet. */
@@ -40,6 +47,11 @@ export interface PlanCourse {
    * `dropped` — removing one deletes it outright instead.
    */
   dropped?: boolean;
+  /**
+   * Selected group keys (e.g. which forelesningsparallell/øvingsgruppe the
+   * student is in) — Task 3 defines the key shape. Absent = the defaults.
+   */
+  groups?: string[];
 }
 
 /**
@@ -62,7 +74,6 @@ export interface PlanProgram {
 }
 
 export interface PlanState {
-  v: 1;
   semesterId: string;
   courses: PlanCourse[];
   program?: PlanProgram;
@@ -94,10 +105,6 @@ function defaultEvents(): EventTargetLike | undefined {
   return typeof window !== "undefined" ? window : undefined;
 }
 
-function emptyPlan(semesterId: string): PlanState {
-  return { v: 1, semesterId, courses: [] };
-}
-
 /** A no-op storage used when neither an injected nor a global storage is available. */
 const nullStorage: StorageLike = {
   getItem: () => null,
@@ -124,12 +131,9 @@ function asRecord(value: unknown): Record<string, unknown> | null {
 }
 
 /**
- * Type-guards one course entry out of untrusted JSON. Handles both the v2
- * shape and a bare v1 course (`{code, name}`, no `version`/`source`) by
- * migrating the latter in memory to `source: "manual"` (§7's "v1 courses →
- * source: manual" migration rule) — a stored v1 course was, definitionally,
- * something the student added themselves; there was no programme concept
- * yet to have pre-filled it.
+ * Type-guards one course entry out of untrusted JSON, defensively rebuilding
+ * it field-by-field and defaulting `version`/`source` when a record is only
+ * a bare `{code, name}` (e.g. a hand-edited or partially-written entry).
  */
 function coerceCourse(raw: unknown): PlanCourse | null {
   if (typeof raw !== "object" || raw === null) return null;
@@ -142,54 +146,61 @@ function coerceCourse(raw: unknown): PlanCourse | null {
   const course: PlanCourse = { code: obj.code, name: obj.name, version, source };
   if (typeof obj.credits === "number" && Number.isFinite(obj.credits)) course.credits = obj.credits;
   if (source === "program" && obj.dropped === true) course.dropped = true;
+  if (Array.isArray(obj.groups)) {
+    const groups = obj.groups.filter((g): g is string => typeof g === "string");
+    if (groups.length > 0) course.groups = groups;
+  }
   return course;
 }
 
-/**
- * Type-guards a parsed JSON value into a `PlanState`, defensively rebuilding
- * it field-by-field (upstream localStorage content is untrusted). Falls back
- * to an empty plan for the given semester when the shape is unusable.
- */
-function coercePlan(raw: unknown, fallbackSemesterId: string): PlanState {
-  if (typeof raw !== "object" || raw === null) return emptyPlan(fallbackSemesterId);
-  const obj = raw as Record<string, unknown>;
-  if (obj.v !== 1) return emptyPlan(fallbackSemesterId);
+/** The shape stored under `PROFILE_STORAGE_KEY`. */
+interface StoredProfile {
+  program?: PlanProgram;
+}
 
-  const semesterId = typeof obj.semesterId === "string" ? obj.semesterId : fallbackSemesterId;
+/** Type-guards a parsed JSON value into `{ program? }`, or `{}` when unusable. */
+function coerceProfile(raw: unknown): StoredProfile {
+  const obj = asRecord(raw);
+  if (!obj) return {};
+  const rawProgram = asRecord(obj.program);
+  if (
+    !rawProgram ||
+    typeof rawProgram.code !== "string" ||
+    typeof rawProgram.name !== "string" ||
+    typeof rawProgram.cohort !== "number"
+  ) {
+    return {};
+  }
+  const program: PlanProgram = {
+    code: rawProgram.code,
+    name: rawProgram.name,
+    cohort: rawProgram.cohort,
+  };
+  const rawDirection = asRecord(rawProgram.direction);
+  if (rawDirection && typeof rawDirection.code === "string") {
+    program.direction = {
+      code: rawDirection.code,
+      name: typeof rawDirection.name === "string" ? rawDirection.name : rawDirection.code,
+    };
+  }
+  return { program };
+}
 
-  const courses: PlanCourse[] = [];
-  if (Array.isArray(obj.courses)) {
-    for (const c of obj.courses) {
+/** Type-guards a parsed JSON value into `{ [semesterId]: PlanCourse[] }`, dropping unusable entries. */
+function coercePlansMap(raw: unknown): Record<string, PlanCourse[]> {
+  const obj = asRecord(raw);
+  if (!obj) return {};
+  const result: Record<string, PlanCourse[]> = {};
+  for (const [semesterId, coursesRaw] of Object.entries(obj)) {
+    if (!Array.isArray(coursesRaw)) continue;
+    const courses: PlanCourse[] = [];
+    for (const c of coursesRaw) {
       const course = coerceCourse(c);
       if (course) courses.push(course);
     }
+    result[semesterId] = courses;
   }
-
-  const plan: PlanState = { v: 1, semesterId, courses };
-
-  const rawProgram = asRecord(obj.program);
-  if (
-    rawProgram &&
-    typeof rawProgram.code === "string" &&
-    typeof rawProgram.name === "string" &&
-    typeof rawProgram.cohort === "number"
-  ) {
-    const program: PlanProgram = {
-      code: rawProgram.code,
-      name: rawProgram.name,
-      cohort: rawProgram.cohort,
-    };
-    const rawDirection = asRecord(rawProgram.direction);
-    if (rawDirection && typeof rawDirection.code === "string") {
-      program.direction = {
-        code: rawDirection.code,
-        name: typeof rawDirection.name === "string" ? rawDirection.name : rawDirection.code,
-      };
-    }
-    plan.program = program;
-  }
-
-  return plan;
+  return result;
 }
 
 /** The non-dropped courses of a plan — what actually counts toward the schedule/credits. */
@@ -218,6 +229,8 @@ export interface PlanStore {
   setProgramPlan(program: PlanProgram, courses: AddCourseInput[]): PlanState;
   setSemester(semesterId: string): PlanState;
   setProgram(program: PlanProgram): PlanState;
+  /** Replaces a course's selected group keys; `[]` clears back to defaults. */
+  setCourseGroups(code: string, groups: string[]): PlanState;
   onPlanChange(cb: (plan: PlanState) => void): () => void;
 }
 
@@ -235,18 +248,53 @@ export function createPlanStore(
   const storage = options.storage ?? defaultStorage() ?? nullStorage;
   const events = options.events ?? defaultEvents() ?? nullEvents;
 
-  function loadPlan(): PlanState {
-    const raw = storage.getItem(PLAN_STORAGE_KEY);
-    if (raw === null) return emptyPlan(defaultSemesterId);
+  function readProfile(): StoredProfile {
+    const raw = storage.getItem(PROFILE_STORAGE_KEY);
+    if (raw === null) return {};
     try {
-      return coercePlan(JSON.parse(raw), defaultSemesterId);
+      return coerceProfile(JSON.parse(raw));
     } catch {
-      return emptyPlan(defaultSemesterId);
+      return {};
     }
   }
 
+  function readPlans(): Record<string, PlanCourse[]> {
+    const raw = storage.getItem(PLANS_STORAGE_KEY);
+    if (raw === null) return {};
+    try {
+      return coercePlansMap(JSON.parse(raw));
+    } catch {
+      return {};
+    }
+  }
+
+  /** Writes one semester's course list into the plans map, returning the updated map. */
+  function writePlansEntry(
+    semesterId: string,
+    courses: PlanCourse[],
+  ): Record<string, PlanCourse[]> {
+    const plans = readPlans();
+    plans[semesterId] = courses;
+    storage.setItem(PLANS_STORAGE_KEY, JSON.stringify(plans));
+    return plans;
+  }
+
+  function loadPlan(): PlanState {
+    const rawLast = storage.getItem(LAST_SEMESTER_KEY);
+    const semesterId = rawLast !== null && rawLast !== "" ? rawLast : defaultSemesterId;
+    const plans = readPlans();
+    const profile = readProfile();
+    const plan: PlanState = { semesterId, courses: plans[semesterId] ?? [] };
+    if (profile.program) plan.program = profile.program;
+    return plan;
+  }
+
   function savePlan(plan: PlanState): void {
-    storage.setItem(PLAN_STORAGE_KEY, JSON.stringify(plan));
+    writePlansEntry(plan.semesterId, plan.courses);
+    if (plan.program !== undefined) {
+      storage.setItem(PROFILE_STORAGE_KEY, JSON.stringify({ program: plan.program }));
+    }
+    storage.setItem(LAST_SEMESTER_KEY, plan.semesterId);
     events.dispatchEvent(new CustomEvent(PLAN_CHANGE_EVENT, { detail: plan }));
   }
 
@@ -341,9 +389,19 @@ export function createPlanStore(
     return next;
   }
 
+  /**
+   * Switches the plan's active semester: the current courses are persisted
+   * under the semester they belong to first, then the target semester's own
+   * stored course list is loaded in their place. Manual adds therefore stay
+   * in the semester they were added to (user mandate 7) — they are never
+   * carried across a switch. The programme profile is global and is
+   * untouched by this.
+   */
   function setSemester(semesterId: string): PlanState {
     const plan = loadPlan();
-    const next: PlanState = { ...plan, semesterId };
+    const plans = writePlansEntry(plan.semesterId, plan.courses);
+    const next: PlanState = { semesterId, courses: plans[semesterId] ?? [] };
+    if (plan.program !== undefined) next.program = plan.program;
     savePlan(next);
     return next;
   }
@@ -355,18 +413,41 @@ export function createPlanStore(
     return next;
   }
 
+  /** Replaces one course's selected group keys; `[]` deletes the property (back to defaults). */
+  function setCourseGroups(code: string, groups: string[]): PlanState {
+    const plan = loadPlan();
+    const courses = plan.courses.map((c): PlanCourse => {
+      if (c.code !== code) return c;
+      if (groups.length === 0) {
+        const { groups: _groups, ...rest } = c;
+        return rest;
+      }
+      return { ...c, groups: [...groups] };
+    });
+    const next: PlanState = { ...plan, courses };
+    savePlan(next);
+    return next;
+  }
+
   /**
    * Subscribes to plan changes: same-tab saves (custom event) and
-   * cross-tab saves (native `storage` event on `PLAN_STORAGE_KEY`). Returns
-   * an unsubscribe function.
+   * cross-tab saves (native `storage` event on any of the three plan keys).
+   * Returns an unsubscribe function.
    */
   function onPlanChange(cb: (plan: PlanState) => void): () => void {
     const onCustom = (event: Event) => {
       cb((event as CustomEvent<PlanState>).detail ?? loadPlan());
     };
     const onStorage = (event: Event) => {
-      const storageEvent = event as StorageEvent;
-      if (storageEvent.key !== null && storageEvent.key !== PLAN_STORAGE_KEY) return;
+      const key = (event as StorageEvent).key;
+      if (
+        key !== null &&
+        key !== PROFILE_STORAGE_KEY &&
+        key !== PLANS_STORAGE_KEY &&
+        key !== LAST_SEMESTER_KEY
+      ) {
+        return;
+      }
       cb(loadPlan());
     };
     events.addEventListener(PLAN_CHANGE_EVENT, onCustom);
@@ -388,16 +469,10 @@ export function createPlanStore(
     setProgramPlan,
     setSemester,
     setProgram,
+    setCourseGroups,
     onPlanChange,
   };
 }
-
-/**
- * The hash version this build writes. Bump only for a grammar change that an
- * older parser would silently mis-read; a purely additive field does not
- * need one (an unknown trailing segment is ignored by design).
- */
-export const PLAN_HASH_VERSION = "v2";
 
 /** Cohort years outside this band are not a kull — they are a mis-parse (B10). */
 const MIN_COHORT_YEAR = 1990;
@@ -408,12 +483,15 @@ function cohortIsPlausible(cohort: number): boolean {
   return cohort >= MIN_COHORT_YEAR && cohort <= new Date().getFullYear() + COHORT_YEARS_AHEAD;
 }
 
+/** A hash's semester segment must look like this or the whole hash is rejected. */
+const SEMESTER_ID_PATTERN = /^\d{2}[hv]$/i;
+
 /**
  * Every field in the hash is percent-encoded on write and decoded on read.
  *
  * `encodeURIComponent` leaves `. - _ ~ ! * ' ( )` alone, which is what makes
- * this safe: `.` (field separator) and `-`/`+` (the token prefixes) keep
- * their grammatical meaning, while `;`, `,`, `/` and every non-ASCII byte
+ * this safe: `.` (field separator) and `-` (dropped-course prefix) keep
+ * their grammatical meaning, while `;`, `,`, `+` and every non-ASCII byte
  * become escapes. Without it a direction code like `BSPL26-V-GJØVIK` was
  * written raw, read back percent-encoded by the browser, and never matched
  * its own study plan again — the campus question re-opened on every load and
@@ -433,20 +511,31 @@ function decodeField(value: string): string {
 }
 
 /**
- * One course token in the v2 hash grammar: `code[.version]` with an
- * optional prefix — `-` = dropped programme course, `+` = manual add, no
- * prefix = active (non-dropped) programme course.
+ * One course token in the hash grammar: `[-|+]code[.version]` followed by
+ * zero or more `~<groupKey>` segments. `-` = dropped programme course,
+ * `+` = manual add, no prefix = active (non-dropped) programme course. The
+ * whole token (prefix + code/version + groups) is encoded/decoded as one
+ * unit — `~` and `.` both survive `encodeURIComponent` untouched, which is
+ * what makes them safe delimiters here; `+` does not survive (it becomes
+ * `%2B`), which only matters for round-tripping through this same parser,
+ * never for hand-typing.
  */
 interface HashToken {
   code: string;
   version: string;
   source: CourseSource;
   dropped: boolean;
+  groups: string[];
 }
 
 function parseHashToken(raw: string): HashToken | null {
-  let rest = raw.trim();
-  if (rest === "") return null;
+  const trimmed = raw.trim();
+  if (trimmed === "") return null;
+  const decoded = decodeField(trimmed);
+  const [head = "", ...groupParts] = decoded.split("~");
+  const groups = groupParts.filter((g) => g !== "");
+
+  let rest = head;
   let source: CourseSource = "program";
   let dropped = false;
   if (rest.startsWith("-")) {
@@ -458,35 +547,39 @@ function parseHashToken(raw: string): HashToken | null {
   }
   if (rest === "") return null;
   const [codeRaw = "", versionRaw = ""] = rest.split(".");
-  const code = decodeField(codeRaw);
-  if (code === "") return null;
-  const version = versionRaw === "" ? DEFAULT_VERSION : decodeField(versionRaw);
-  return { code, version, source, dropped };
+  if (codeRaw === "") return null;
+  const version = versionRaw === "" ? DEFAULT_VERSION : versionRaw;
+  return { code: codeRaw, version, source, dropped, groups };
 }
 
 function formatHashToken(course: PlanCourse): string {
-  const code = encodeField(course.code);
   const codeVersion =
-    course.version === DEFAULT_VERSION ? code : `${code}.${encodeField(course.version)}`;
-  if (course.source === "manual") return `+${codeVersion}`;
-  if (course.dropped) return `-${codeVersion}`;
-  return codeVersion;
+    course.version === DEFAULT_VERSION ? course.code : `${course.code}.${course.version}`;
+  let raw = codeVersion;
+  if (course.source === "manual") raw = `+${codeVersion}`;
+  else if (course.dropped) raw = `-${codeVersion}`;
+  for (const group of course.groups ?? []) {
+    raw += `~${group}`;
+  }
+  return encodeField(raw);
 }
 
-/** One course as recovered from a hash: names are unknown from the hash alone (D15/§7). */
+/** One course as recovered from a hash: names are unknown from the hash alone. */
 export interface HashCourse {
   code: string;
   version: string;
   source: CourseSource;
   dropped?: boolean;
+  /** Selected group keys — `[]` when the token carried none. */
+  groups: string[];
 }
 
 export interface ParsedPlanHash {
   semesterId: string;
   /**
-   * `null` when the hash carries no programme segment (`"-"`, or a legacy v1
-   * hash). `direction` is the studieretning code only — its display name is
-   * recovered from the study plan, exactly as the programme's own name is.
+   * `null` when the hash carries no programme segment (`"-"`). `direction`
+   * is the studieretning code only — its display name is recovered from the
+   * study plan, exactly as the programme's own name is.
    */
   program: { code: string; cohort: number; direction: string | null } | null;
   courses: HashCourse[];
@@ -495,97 +588,74 @@ export interface ParsedPlanHash {
 /**
  * Parse a plan hash into semester id + optional programme + courses.
  *
- * **The grammar** (four `;`-separated segments; every field percent-encoded,
+ * **The grammar** (three `;`-separated segments; every field percent-encoded,
  * see `encodeField`):
  *
- *     #v2;<semesterId>;<programme>;<courses>
+ *     #<semesterId>;<programme>;<courses>
  *
- * - `semesterId` — `26h` / `27v`. Syntactically validated here; whether the
- *   *site* can plan it is the caller's call (an id we don't ship data for
+ * - `semesterId` — `26h` / `27v`. Must match `/^\d{2}[hv]$/i` or the whole
+ *   hash is rejected — that also kills every old `#v2;…` link by
+ *   construction, with no separate version check needed. Whether the *site*
+ *   can plan the semester is the caller's call (an id we don't ship data for
  *   falls back to the current semester with a note — C4).
  * - `programme` — `-` (none) or `code[.cohort[.direction]]`. `cohort` must be
  *   a plausible 4-digit year or the whole segment is rejected: the grammar
  *   PRODUCT §7 used to document put *courses* in this slot, and feeding that
  *   form to this parser produced `{code: "TDT4100", cohort: 1}`, a 400 from
  *   `?year=1` and a banner reading "TDT4100 · kull 1" (B10.2).
- * - `courses` — comma list of `[-|+]code[.version]`. `-` = dropped programme
- *   course, `+` = manual add, bare = active programme course. A version equal
- *   to the default is omitted.
+ * - `courses` — comma list of `[-|+]code[.version][~groupKey…]`. `-` =
+ *   dropped programme course, `+` = manual add, bare = active programme
+ *   course. A version equal to the default is omitted. Malformed course
+ *   tokens are dropped rather than failing the whole parse — one bad token
+ *   should not cost the student the other five courses.
  *
- * Also accepts the legacy **v1** read-only form `#<semesterId>;<codes>` — no
- * `v` token, bare comma-separated codes, upgraded in memory to
- * `version: "1"`, `source: "manual"` (mirroring `coerceCourse`'s stored-state
- * migration: a v1 hash predates the programme concept), no programme.
- *
- * Returns `null` for an empty/absent hash, for a version token this build
- * does not know (a `v3` link must be ignored, never half-read), and for a v2
- * hash whose semester id is missing. Malformed *course* tokens are dropped
- * rather than failing the whole parse — one bad token should not cost the
- * student the other five courses.
+ * Returns `null` for an empty/absent hash and for a hash whose semester
+ * segment doesn't parse as one.
  */
 export function parsePlanHash(hash: string): ParsedPlanHash | null {
   const trimmed = hash.replace(/^#/, "").trim();
   if (trimmed === "") return null;
   const segments = trimmed.split(";");
-  const first = segments[0] ?? "";
 
-  // A future grammar is not a v1 hash — reading `#v3;…` with this parser
-  // would quietly produce a plan that link never described.
-  if (/^v\d+$/i.test(first) && first.toLowerCase() !== PLAN_HASH_VERSION) return null;
+  const semesterRaw = (segments[0] ?? "").trim();
+  if (!SEMESTER_ID_PATTERN.test(semesterRaw)) return null;
+  const semesterId = decodeField(semesterRaw);
 
-  if (first.toLowerCase() === PLAN_HASH_VERSION) {
-    const semesterId = decodeField((segments[1] ?? "").trim());
-    if (semesterId === "") return null;
-    const progRaw = (segments[2] ?? "").trim();
-    let program: ParsedPlanHash["program"] = null;
-    if (progRaw !== "" && progRaw !== "-") {
-      const [codeRaw = "", cohortRaw = "", directionRaw = ""] = progRaw.split(".");
-      const code = decodeField(codeRaw);
-      const cohort = Number(cohortRaw);
-      if (code !== "" && cohortRaw !== "" && cohortIsPlausible(cohort)) {
-        program = {
-          code,
-          cohort,
-          direction: directionRaw === "" ? null : decodeField(directionRaw),
-        };
-      }
-    }
-    const itemsRaw = segments[3] ?? "";
-    const courses: HashCourse[] = [];
-    for (const token of itemsRaw.split(",")) {
-      const parsed = parseHashToken(token);
-      if (!parsed) continue;
-      const course: HashCourse = {
-        code: parsed.code,
-        version: parsed.version,
-        source: parsed.source,
+  const progRaw = (segments[1] ?? "").trim();
+  let program: ParsedPlanHash["program"] = null;
+  if (progRaw !== "" && progRaw !== "-") {
+    const [codeRaw = "", cohortRaw = "", directionRaw = ""] = progRaw.split(".");
+    const code = decodeField(codeRaw);
+    const cohort = Number(cohortRaw);
+    if (code !== "" && cohortRaw !== "" && cohortIsPlausible(cohort)) {
+      program = {
+        code,
+        cohort,
+        direction: directionRaw === "" ? null : decodeField(directionRaw),
       };
-      if (parsed.source === "program" && parsed.dropped) course.dropped = true;
-      courses.push(course);
     }
-    return { semesterId, program, courses };
   }
 
-  // Legacy v1: "<semesterId>;<codes>" — no version token, bare codes, all manual.
-  const [semesterPart = "", coursesPart = ""] = segments;
-  const semesterId = semesterPart.trim();
-  if (semesterId === "") return null;
-  const courses: HashCourse[] = coursesPart
-    .split(",")
-    .map((c) => c.trim())
-    .filter((c) => c !== "")
-    .map((code) => ({
-      code: decodeField(code),
-      version: DEFAULT_VERSION,
-      source: "manual" as const,
-    }));
-  return { semesterId: decodeField(semesterId), program: null, courses };
+  const itemsRaw = segments[2] ?? "";
+  const courses: HashCourse[] = [];
+  for (const token of itemsRaw.split(",")) {
+    const parsed = parseHashToken(token);
+    if (!parsed) continue;
+    const course: HashCourse = {
+      code: parsed.code,
+      version: parsed.version,
+      source: parsed.source,
+      groups: parsed.groups,
+    };
+    if (parsed.source === "program" && parsed.dropped) course.dropped = true;
+    courses.push(course);
+  }
+  return { semesterId, program, courses };
 }
 
 /**
- * Format a plan into its shareable hash form — always the current version, so
- * no un-versioned segment is ever written again. Example:
- * `"#v2;26h;MTDT.2024.MTDTDS-24;TDT4100,TMA4100.2,-IT2805,+PSY1000"`.
+ * Format a plan into its shareable hash form. Example:
+ * `"#26h;MTDT.2024.MTDTDS-24;TDT4100,TMA4100.2,-IT2805,%2BPSY1000"`.
  *
  * The programme segment is `code.cohort[.direction]`; the direction part is
  * appended only when one was chosen, so hashes written before studieretning
@@ -603,5 +673,5 @@ export function formatPlanHash(
       }`
     : "-";
   const items = plan.courses.map(formatHashToken).join(",");
-  return `#${PLAN_HASH_VERSION};${encodeField(plan.semesterId)};${progSegment};${items}`;
+  return `#${encodeField(plan.semesterId)};${progSegment};${items}`;
 }
