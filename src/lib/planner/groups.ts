@@ -128,12 +128,16 @@ export function defaultLectureKeys(
 /**
  * Filters a course's entries down to the groups relevant to show. An
  * explicit non-empty `selected` wins outright — every entry whose key is in
- * it, plus every ungrouped entry, regardless of programme. With no
- * selection, ungrouped and non-lecture entries always stay (the øving/lab
- * layer stays "all groups" until the student picks — the grid's own
- * showOthers toggle governs whether it's even visible), and lecture entries
- * are kept when they belong to the programme's section and (there is no
- * narrower default, or their key is one of `defaultLectureKeys`).
+ * it, plus every ungrouped entry, regardless of programme (the student's pick
+ * beats the programme filter, so a cross-programme parallel/øving they chose
+ * still draws). With no selection, ungrouped entries always stay, and any
+ * *grouped* entry is first narrowed to the programme's own section
+ * (`entriesForProgram`): a non-lecture (øving/lab) group of the programme's own
+ * stays "all groups" until the student picks (the grid's showOthers toggle
+ * governs whether it's even visible), while a non-lecture group tagged for
+ * ANOTHER programme is dropped — a multi-programme service course must not
+ * flood every programme's øving groups (the EXPH0300 flood). Lecture entries
+ * additionally narrow to `defaultLectureKeys` (the programme's own parallel).
  */
 export function applyGroupSelection<T extends TimetableEntry>(
   entries: T[],
@@ -153,8 +157,12 @@ export function applyGroupSelection<T extends TimetableEntry>(
   return entries.filter((entry) => {
     const key = groupKey(rawGroupName(entry));
     if (key === null) return true;
-    if (classifyActivity(entry) !== "lecture") return true;
+    // Any grouped entry — lecture OR øving/lab — belonging to another
+    // programme's section is dropped by default. `entriesForProgram` is a
+    // no-op when the course doesn't name the programme (or none is set), so an
+    // ordinary course still shows all its groups.
     if (!inProgramme.has(entry)) return false;
+    if (classifyActivity(entry) !== "lecture") return true;
     return keys.length === 0 || keys.includes(key);
   });
 }

@@ -125,6 +125,33 @@ describe("applyGroupSelection", () => {
     expect(kept).not.toContain("Forelesningsparallell 1");
   });
 
+  test("default drops non-lecture groups tagged for another programme (no EXPH0300 flood)", () => {
+    // A multi-programme service course: the øving/lab layer is programme-tagged
+    // too. By default only the programme's own (and untagged) non-lecture groups
+    // survive — not every programme's, which was the flood F1's pre-narrow drop
+    // briefly re-opened.
+    const service = [
+      e("Forelesning", { studyProgramKeys: ["MTDT"] }),
+      e("Øvingsgruppe 5", { studyProgramKeys: ["MTDT"] }),
+      e("Øvingsgruppe 9", { studyProgramKeys: ["MTKJ"] }),
+      e("Øvingsgruppe 1"), // untagged — everyone's
+    ];
+    const kept = applyGroupSelection(service, undefined, "MTDT").map((x) => x.title);
+    expect(kept).toEqual(["Forelesning", "Øvingsgruppe 5", "Øvingsgruppe 1"]);
+  });
+
+  test("an explicit non-lecture pick tagged for another programme is still kept", () => {
+    // The explicit branch is unchanged: a student who deliberately selects a
+    // foreign-tagged øving group keeps it, programme filter notwithstanding.
+    const service = [
+      e("Forelesning", { studyProgramKeys: ["MTDT"] }),
+      e("Øvingsgruppe 9", { studyProgramKeys: ["MTKJ"] }),
+    ];
+    const kept = applyGroupSelection(service, ["øvingsgruppe-9"], "MTDT").map((x) => x.title);
+    expect(kept).toContain("Øvingsgruppe 9");
+    expect(kept).not.toContain("Forelesning");
+  });
+
   test("default keeps the lone lecture group when there is only one", () => {
     const solo = [e(null), e("Forelesning")];
     const kept = applyGroupSelection(solo, undefined, "MTDT").map((x) => x.title);
