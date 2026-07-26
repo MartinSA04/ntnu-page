@@ -207,6 +207,43 @@ export function periodNumberFor(semesterId: string, cohort: number): number | nu
   return isAutumn ? (semYear - cohort) * 2 + 1 : (semYear - 1 - cohort) * 2 + 2;
 }
 
+/** How many cohorts back of the current one a chip row considers (PLANNER.md). */
+const MAX_COHORTS_BACK = 7;
+
+/** The highest non-null `periods[].periodNumber` in the plan; `null` when none exists. */
+export function maxPeriodNumber(plan: Pick<StudyPlan, "periods">): number | null {
+  let max: number | null = null;
+  for (const period of plan.periods) {
+    if (period.periodNumber !== null && (max === null || period.periodNumber > max)) {
+      max = period.periodNumber;
+    }
+  }
+  return max;
+}
+
+/**
+ * Descending cohort years, most recent first, whose `periodNumberFor` falls
+ * within `[1, maxPeriodNumber]` for `semesterId` — i.e. the cohorts this plan
+ * actually has a period for at this point in the calendar. This is the whole
+ * relevance rule: a period RANGE test, never whether that period's own
+ * `courseGroups` happen to be non-empty (the S4 lockout bug — a
+ * direction-gated period like MTDT's has empty top-level groups by design
+ * and is exactly as relevant as any other).
+ */
+export function relevantCohorts(plan: Pick<StudyPlan, "periods">, semesterId: string): number[] {
+  const max = maxPeriodNumber(plan);
+  if (max === null) return [];
+  const semYear = semesterYear(semesterId);
+  if (semYear === null) return [];
+
+  const cohorts: number[] = [];
+  for (let cohort = semYear; cohort >= semYear - MAX_COHORTS_BACK; cohort--) {
+    const period = periodNumberFor(semesterId, cohort);
+    if (period !== null && period >= 1 && period <= max) cohorts.push(cohort);
+  }
+  return cohorts;
+}
+
 /** Above this an obligatory prefill is a bug signal, not a semester (see `isSuspiciousPrefill`). */
 const SUSPICIOUS_CREDIT_CEILING = 30;
 

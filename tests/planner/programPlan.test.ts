@@ -2,8 +2,10 @@ import { describe, expect, it } from "vitest";
 import {
   classifyPeriod,
   isSuspiciousPrefill,
+  maxPeriodNumber,
   periodNumberFor,
   prefillCredits,
+  relevantCohorts,
   resolvePeriodFor,
   type StudyPlan,
 } from "../../src/components/planner/programPlan.js";
@@ -371,5 +373,59 @@ describe("prefillCredits", () => {
     // with a note rather than being discarded into "0 av 30 sp" (B9.4).
     expect(prefillCredits(courses)).toBe(42.5);
     expect(isSuspiciousPrefill(courses)).toBe(true);
+  });
+});
+
+/** `n` bare periods numbered 1..n, direction empty — only `periodNumber` matters here. */
+function periodsCount(n: number): StudyPlan["periods"] {
+  return Array.from({ length: n }, (_, i) => ({
+    periodNumber: i + 1,
+    direction: direction(null, null, []),
+  }));
+}
+
+describe("maxPeriodNumber", () => {
+  it("returns the highest non-null period number", () => {
+    expect(maxPeriodNumber(planWith(periodsCount(10)))).toBe(10);
+    expect(maxPeriodNumber(planWith(periodsCount(4)))).toBe(4);
+    expect(maxPeriodNumber(planWith(periodsCount(2)))).toBe(2);
+  });
+
+  it("returns null when every period number is null", () => {
+    const plan = planWith([
+      { periodNumber: null, direction: direction(null, null, []) },
+      { periodNumber: null, direction: direction(null, null, []) },
+    ]);
+    expect(maxPeriodNumber(plan)).toBeNull();
+  });
+});
+
+describe("relevantCohorts", () => {
+  // This replaces the homepage's old periodExists() chip filter, which
+  // checked whether a period's courseGroups were non-empty and locked out
+  // most cohorts (the S4 bug). Relevance is purely the period-range test.
+  it("returns 5 descending cohorts for a 10-period (5-year) plan", () => {
+    const plan = planWith(periodsCount(10));
+    expect(relevantCohorts(plan, "26h")).toEqual([2026, 2025, 2024, 2023, 2022]);
+  });
+
+  it("returns 2 descending cohorts for a 4-period (2-year) plan", () => {
+    const plan = planWith(periodsCount(4));
+    expect(relevantCohorts(plan, "26h")).toEqual([2026, 2025]);
+  });
+
+  it("returns 1 cohort for a 2-period (årsstudium) plan", () => {
+    const plan = planWith(periodsCount(2));
+    expect(relevantCohorts(plan, "26h")).toEqual([2026]);
+  });
+
+  it("uses the spring branch of periodNumberFor for a spring semester", () => {
+    const plan = planWith(periodsCount(10));
+    expect(relevantCohorts(plan, "27v")).toEqual([2026, 2025, 2024, 2023, 2022]);
+  });
+
+  it("is empty when the plan has no period numbers at all", () => {
+    const plan = planWith([{ periodNumber: null, direction: direction(null, null, []) }]);
+    expect(relevantCohorts(plan, "26h")).toEqual([]);
   });
 });
