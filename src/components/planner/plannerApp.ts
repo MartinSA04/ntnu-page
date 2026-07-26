@@ -39,6 +39,7 @@ import {
   type PlannerIndexCourse,
   type TimetableEntry,
 } from "../../lib/planner/data.js";
+import { defaultLectureKeys, groupOptions } from "../../lib/planner/groups.js";
 import { hueForIndex } from "../../lib/planner/hues.js";
 import { entriesForProgram, entriesInSemester, semesterYear } from "../../lib/planner/schedule.js";
 import {
@@ -56,7 +57,8 @@ import {
 import { programHref } from "../../lib/programUrl.js";
 import { el, fold, formatCreditNumber, formatCredits, formatShortDate } from "./dom.js";
 import { type ExamRenderResult, renderExamMessage, renderExamRibbon } from "./examRibbon.js";
-import { type GridRenderResult, renderGrid, renderGridMessage } from "./grid.js";
+import { type BlockDetail, type GridRenderResult, renderGrid, renderGridMessage } from "./grid.js";
+import { type BlockPopoverContext, mountBlockPopover } from "./popover.js";
 import {
   type DirectionOption,
   findProgramPlan,
@@ -344,6 +346,29 @@ export async function mountPlannerApp(
   const defaultSemesterId = semestersFile.current?.id ?? "26h";
   const store: PlanStore = createPlanStore(defaultSemesterId);
   const semesters = candidateSemesters(semestersFile);
+
+  // TEMPORARY wiring (Task 8): mounts the block popover and hands it a
+  // context built from this render's own course states, just enough to
+  // browser-verify the component before Task 10 owns the real integration
+  // (which also needs to cover the "+N til" overflow chip's joined codes —
+  // out of scope here, so a chip click is silently skipped below).
+  const popover = mountBlockPopover(store, signal ?? new AbortController().signal);
+  function buildPopoverContext(
+    detail: BlockDetail,
+    states: PlanCourseState[],
+  ): BlockPopoverContext | null {
+    const state = states.find((s) => s.course.code === detail.code);
+    const timetable = state?.bundle?.timetable;
+    if (!state || !timetable) return null;
+    return {
+      detail,
+      groups: groupOptions(timetable),
+      selected: state.course.groups ?? [],
+      defaults: defaultLectureKeys(timetable, state.programCode),
+      source: state.course.source,
+      dropped: state.course.dropped === true,
+    };
+  }
 
   /** One line explaining what we did with a link we could not honour (C4). */
   let linkNote: string | null = null;
@@ -1654,6 +1679,11 @@ export async function mountPlannerApp(
       gridResult = renderGrid(elements.gridFrame, elements.gridNotes, filteredStates, showOthers, {
         loading: anyLoading,
         pendingChoiceMessage: question?.weekMessage ?? null,
+        // TEMPORARY (Task 8, see buildPopoverContext above).
+        onBlockClick: (detail, anchor) => {
+          const ctx = buildPopoverContext(detail, filteredStates);
+          if (ctx) popover.showFor(ctx, anchor);
+        },
       });
     }
 

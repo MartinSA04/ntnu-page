@@ -335,3 +335,86 @@
   background: color-mix(in srgb, var(--accent) 88%, var(--fg));
   color: var(--accent-contrast);
 }
+
+/* --- Block popover (Task 8) -------------------------------------------
+   Non-modal <dialog> (.show(), not .showModal()) so the grid stays
+   interactive behind it — there is no ::backdrop to style here. Desktop
+   pins it near the clicked block via inline top/left set in popover.ts;
+   below 60rem (plannerApp's own side-by-side/tab-switch cutoff) it becomes
+   a bottom sheet instead, since a floating card that size would either
+   clip against an edge or cover the whole phone viewport. */
+.planner-popover {
+  position: fixed;
+  z-index: 40;
+  margin: 0;
+  width: min(22rem, calc(100vw - 2 * var(--space-4)));
+  max-width: calc(100vw - 2 * var(--space-4));
+  max-height: min(70vh, 32rem);
+  overflow-y: auto;
+  padding: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  color: var(--fg);
+  box-shadow: var(--shadow-lg);
+}
+
+@media (max-width: 59.9375rem) {
+  .planner-popover {
+    inset-inline: 0;
+    bottom: 0;
+    top: auto;
+    left: 0;
+    width: auto;
+    max-width: none;
+    max-height: min(70vh, 32rem);
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  }
+}
+
+.planner-popover-groups {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.planner-popover-group-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.planner-popover-group-row {
+  display: flex;
+  align-items: center;
+  gap: var(--gap-2);
+  font-size: var(--text-sm);
+  cursor: pointer;
+}
+
+.planner-popover-group-row input {
+  accent-color: var(--accent);
+}
+
+.planner-popover-showall {
+  align-self: flex-start;
+}
+
+.planner-popover-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--gap-3);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--border);
+}
+
+.planner-popover-link {
+  font-size: var(--text-sm);
+  color: var(--muted);
+  text-decoration: none;
+}
+
+.planner-popover-link:hover {
+  color: var(--accent-ink);
+}
