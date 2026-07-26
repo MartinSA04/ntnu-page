@@ -109,6 +109,13 @@ export function mountStudieinfo(deps: StudieinfoDeps, signal: AbortSignal): Stud
   /** Guards against a slow fetch resolving after a newer pick (superseded). */
   let programToken = 0;
   let cohortToken = 0;
+  /**
+   * Guards `commit`'s awaited plan fetch: bumped on every open and close, so
+   * an Avbryt/Esc/reopen during the (rare) in-flight classify cancels the
+   * pending store write instead of committing a snapshot the student walked
+   * away from.
+   */
+  let commitToken = 0;
 
   function defaultSemesterOf(): string {
     return deps.semesters.some((s) => s.id === deps.defaultSemesterId)
@@ -559,6 +566,7 @@ export function mountStudieinfo(deps: StudieinfoDeps, signal: AbortSignal): Stud
 
   // --- Commit / open / close ----------------------------------------------
   async function commit(): Promise<void> {
+    const token = ++commitToken;
     // Snapshot the staging at click time — the awaited plan fetch below must
     // commit what was on screen when Lagre was pressed.
     const semesterId = stagedSemesterId;
@@ -594,6 +602,9 @@ export function mountStudieinfo(deps: StudieinfoDeps, signal: AbortSignal): Stud
       let plan = cohortPlan;
       if (!plan) {
         const res = await findProgramPlan(program.code, cohort);
+        // Avbryt/Esc/reopen during the fetch bumped the token — the student
+        // is no longer looking at this Lagre, so drop the write.
+        if (token !== commitToken) return;
         plan = "kind" in res ? cohortsPlan : res.plan;
       }
       let toAdd: AddCourseInput[] = [];
@@ -612,10 +623,12 @@ export function mountStudieinfo(deps: StudieinfoDeps, signal: AbortSignal): Stud
         }));
       }
       deps.store.setProgramPlan(planProgram, toAdd);
+    } else if (deps.store.loadPlan().program) {
+      // No programme staged but the profile still holds one → the student
+      // cleared it. `removeProgram` drops the program and its programme-sourced
+      // courses while keeping manual adds; the semester change above stands.
+      deps.store.removeProgram();
     }
-    // No programme staged → only the semester changed. Clearing an existing
-    // profile needs a store-level removal the current PlanStore does not
-    // expose (Task 2 owns it); manual courses are untouched either way.
 
     dialog.close();
   }
@@ -626,6 +639,8 @@ export function mountStudieinfo(deps: StudieinfoDeps, signal: AbortSignal): Stud
   }
 
   function open(): void {
+    // Invalidate any commit still awaiting its plan fetch from a prior open.
+    commitToken++;
     invoker = (document.activeElement as HTMLElement | null) ?? null;
 
     const plan = deps.store.loadPlan();
@@ -663,6 +678,8 @@ export function mountStudieinfo(deps: StudieinfoDeps, signal: AbortSignal): Stud
   saveBtn.addEventListener("click", () => void commit());
   cancelBtn.addEventListener("click", () => dialog.close());
   dialog.addEventListener("close", () => {
+    // Avbryt/Esc closes here: cancel any commit awaiting its plan fetch.
+    commitToken++;
     invoker?.focus?.();
     invoker = null;
   });

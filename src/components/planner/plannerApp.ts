@@ -29,6 +29,7 @@ import { lecturesOnly } from "../../lib/planner/activity.js";
 import { findConflicts } from "../../lib/planner/conflicts.js";
 import {
   type CourseBundle,
+  clearCourseBundleMemo,
   type ExamWindow,
   examsFromIndex,
   fetchCourseBundle,
@@ -54,20 +55,18 @@ import {
   type PlanStore,
   parsePlanHash,
 } from "../../lib/planner/store.js";
-import { programHref } from "../../lib/programUrl.js";
 import { el, fold, formatCreditNumber, formatCredits, formatShortDate } from "./dom.js";
 import { type ExamRenderResult, renderExamList, renderExamMessage } from "./examList.js";
 import { type BlockDetail, type GridRenderResult, renderGrid, renderGridMessage } from "./grid.js";
 import { type BlockPopoverContext, mountBlockPopover } from "./popover.js";
 import {
-  type DirectionOption,
   findProgramPlan,
   isSuspiciousPrefill,
   type PeriodCourses,
-  periodNumberFor,
   prefillCredits,
   resolvePeriodFor,
 } from "./programPlan.js";
+import { mountStudieinfo, publishMonthFor } from "./studieinfo.js";
 import type { PlanCourseState } from "./types.js";
 
 export interface SemesterSummary {
@@ -137,21 +136,12 @@ interface PlannerElements {
   toggleHost: HTMLElement;
   creditLine: HTMLElement;
   creditNote: HTMLElement;
-  picker: HTMLElement;
-  pickerField: HTMLElement;
-  pickerInput: HTMLInputElement;
-  pickerListbox: HTMLUListElement;
-  pickerKull: HTMLElement;
-  pickerKullChips: HTMLElement;
-  pickerStatus: HTMLElement;
-  main: HTMLElement;
   tabWeek: HTMLButtonElement;
   tabCourses: HTMLButtonElement;
   regions: HTMLElement;
   direction: HTMLElement;
   directionTitle: HTMLElement;
   directionNote: HTMLElement;
-  directionChips: HTMLElement;
   directionActions: HTMLElement;
   directionButton: HTMLButtonElement;
   othersToggle: HTMLButtonElement;
@@ -189,21 +179,12 @@ function getElements(): PlannerElements | null {
     toggleHost: byId<HTMLElement>("planner-semester-toggle"),
     creditLine: byId<HTMLElement>("planner-credit-line"),
     creditNote: byId<HTMLElement>("planner-credit-note"),
-    picker: byId<HTMLElement>("planner-picker"),
-    pickerField: byId<HTMLElement>("planner-picker-field"),
-    pickerInput: byId<HTMLInputElement>("planner-picker-input"),
-    pickerListbox: byId<HTMLUListElement>("planner-picker-listbox"),
-    pickerKull: byId<HTMLElement>("planner-picker-kull"),
-    pickerKullChips: byId<HTMLElement>("planner-picker-kull-chips"),
-    pickerStatus: byId<HTMLElement>("planner-picker-status"),
-    main: byId<HTMLElement>("planner-main"),
     tabWeek: byId<HTMLButtonElement>("planner-tab-week"),
     tabCourses: byId<HTMLButtonElement>("planner-tab-courses"),
     regions: byId<HTMLElement>("planner-regions"),
     direction: byId<HTMLElement>("planner-direction"),
     directionTitle: byId<HTMLElement>("planner-direction-title"),
     directionNote: byId<HTMLElement>("planner-direction-note"),
-    directionChips: byId<HTMLElement>("planner-direction-chips"),
     directionActions: byId<HTMLElement>("planner-direction-actions"),
     directionButton: byId<HTMLButtonElement>("planner-direction-btn"),
     othersToggle: byId<HTMLButtonElement>("planner-others-toggle"),
@@ -243,11 +224,6 @@ function candidateSemesters(file: SemestersFile): SemesterSummary[] {
     : teaching.findIndex((s) => (s.fromDate ?? "") >= new Date().toISOString().slice(0, 10));
   const start = currentIndex >= 0 ? currentIndex : 0;
   return teaching.slice(start, start + 3);
-}
-
-/** "publiseres vanligvis i <måned>" — desember for vår, august for høst. */
-function publishMonthFor(semesterId: string): string {
-  return /v$/i.test(semesterId.trim()) ? "desember" : "august";
 }
 
 function semesterLabel(semester: SemesterSummary | undefined): string {
@@ -344,13 +320,32 @@ export async function mountPlannerApp(
   const defaultSemesterId = semestersFile.current?.id ?? "26h";
   const store: PlanStore = createPlanStore(defaultSemesterId);
   const semesters = candidateSemesters(semestersFile);
+  // One AbortSignal for everything this page mounts (studieinfo + popover) and
+  // binds, so it all tears down together on the next `astro:before-swap`. In
+  // the no-signal path (some tests) it is a controller that never aborts.
+  const lifeSignal = signal ?? new AbortController().signal;
 
-  // TEMPORARY wiring (Task 8): mounts the block popover and hands it a
-  // context built from this render's own course states, just enough to
-  // browser-verify the component before Task 10 owns the real integration
-  // (which also needs to cover the "+N til" overflow chip's joined codes —
-  // out of scope here, so a chip click is silently skipped below).
-  const popover = mountBlockPopover(store, signal ?? new AbortController().signal);
+  // The studieinfo modal owns all four plan choices (programme/kull/retning/
+  // semester); the block popover owns per-block group selection. Both hang off
+  // the single store this app owns — one mount each. The modal opens from the
+  // banner "Endre" button, the week's studieretning question, every empty-state
+  // button, the OPEN_STUDIEINFO event (Layout chip) and the `?studieinfo` query
+  // param handled at the end of mount.
+  const studieinfo = mountStudieinfo(
+    { store, semesters, programOptions, defaultSemesterId },
+    lifeSignal,
+  );
+  const popover = mountBlockPopover(store, lifeSignal);
+
+  /**
+   * The material a clicked block hands the popover. Built from the *unfiltered*
+   * bundle timetable (not the semester/programme-narrowed `filteredStates`):
+   * the picker lists ALL of a course's groups — every lecture parallel and
+   * øving/lab group — so `groupOptions` runs over the whole timetable and
+   * `defaultLectureKeys` marks the programme's own parallel via `programCode`.
+   * A "+N til" overflow chip's joined codes match no single course and return
+   * null (no popover) — multi-course overflow is out of scope here.
+   */
   function buildPopoverContext(
     detail: BlockDetail,
     states: PlanCourseState[],
@@ -410,6 +405,9 @@ export async function mountPlannerApp(
         version: c.version,
         source: c.source,
         ...(c.dropped ? { dropped: true } : {}),
+        // A shared link's group picks (`~groupKey`) must survive the hash → plan
+        // hop, or the recipient loses the sender's parallel/øving selections.
+        ...(c.groups.length > 0 ? { groups: c.groups } : {}),
       })),
       ...(program ? { program } : {}),
     };
@@ -515,8 +513,9 @@ export async function mountPlannerApp(
    * kull · studieretning · the resolved semester. The studieretning is there
    * because it is the *answer* the student gave to the one question the study
    * plan forced — if it isn't visible and re-openable, a wrong pick can never
-   * be corrected. The name links to /studier/[code]/, which owns the
-   * browsable template the planner deliberately doesn't show.
+   * be corrected. The name was a link to /studier/[code]/; that page is deleted
+   * (Task 13), so it is now a button into the studieinfo modal — the surface
+   * that actually changes the programme — matching the "Endre" control.
    */
   function renderBanner(): void {
     const program = plan.program;
@@ -525,9 +524,10 @@ export async function mountPlannerApp(
     elements.title.replaceChildren();
     if (program) {
       const named = program.name !== "" && program.name !== program.code;
-      const link = el("a", "planner-title-name", named ? program.name : program.code);
-      link.href = programHref(program.code);
-      elements.title.append(link);
+      const nameBtn = el("button", "planner-title-name", named ? program.name : program.code);
+      nameBtn.type = "button";
+      nameBtn.addEventListener("click", () => studieinfo.open());
+      elements.title.append(nameBtn);
       if (named) elements.title.append(el("span", "np-data planner-title-code", program.code));
     } else {
       elements.title.textContent = "Semesterplan";
@@ -692,210 +692,14 @@ export async function mountPlannerApp(
   elements.tabWeek.addEventListener("click", () => setRegion("week"));
   elements.tabCourses.addEventListener("click", () => setRegion("courses"));
 
-  // --- Programme + kull picker -------------------------------------------
+  // --- Programme / kull / retning / semester: the studieinfo modal --------
 
-  let pickerActiveIndex = -1;
-  let pickerMatches: ProgramOption[] = [];
-
-  /** The picker is the empty planner's whole page (B5), so its state is explicit. */
-  function setPickerOpen(open: boolean): void {
-    elements.picker.hidden = !open;
-    elements.contextChange.setAttribute("aria-expanded", String(open));
-  }
-
-  function closePicker(): void {
-    elements.pickerListbox.replaceChildren();
-    elements.pickerListbox.hidden = true;
-    pickerActiveIndex = -1;
-    pickerMatches = [];
-    elements.pickerInput.setAttribute("aria-expanded", "false");
-    elements.pickerInput.removeAttribute("aria-activedescendant");
-  }
-
-  /**
-   * A2: the highlight has to be an accessible *state*, not a CSS class.
-   * Arrowing through twelve options was silent, because nothing carried an
-   * id, `aria-selected` or `aria-activedescendant`.
-   */
-  function setPickerActive(index: number): void {
-    pickerActiveIndex = index;
-    let activeId: string | null = null;
-    for (const [i, opt] of [...elements.pickerListbox.children].entries()) {
-      if (opt.getAttribute("role") !== "option") continue;
-      const isActive = i === index;
-      opt.classList.toggle("is-active", isActive);
-      opt.setAttribute("aria-selected", String(isActive));
-      if (isActive) activeId = opt.id;
-    }
-    if (activeId) elements.pickerInput.setAttribute("aria-activedescendant", activeId);
-    else elements.pickerInput.removeAttribute("aria-activedescendant");
-  }
-
-  async function pickProgram(option: ProgramOption): Promise<void> {
-    const [code, name] = option;
-    elements.pickerInput.value = "";
-    closePicker();
-    elements.pickerKull.hidden = true;
-    elements.pickerKullChips.replaceChildren();
-    elements.pickerStatus.textContent = "henter studieplan …";
-
-    const currentYear = semesterYear(plan.semesterId) ?? new Date().getFullYear();
-    const result = await findProgramPlan(code, currentYear);
-    if ("kind" in result) {
-      elements.pickerStatus.textContent =
-        result.kind === "not-found"
-          ? "Vi fant ingen studieplan for dette programmet. Du kan fortsatt legge til emnene dine selv."
-          : "Klarte ikke å hente studieplanen. Prøv igjen.";
-      return;
-    }
-
-    elements.pickerStatus.textContent = "";
-    const years = [...result.plan.publishedYears].sort((a, b) => b - a);
-    if (years.length === 0) {
-      elements.pickerStatus.textContent = "Ingen kull er publisert for dette programmet ennå.";
-      return;
-    }
-
-    // B3: `publishedYears` is every year the programme has a plan document
-    // for, not every year that has a period for the semester being planned —
-    // offering all of them made ~88% of the chips dead ends. One plan's
-    // `periods` is the same shape across cohorts, so it is enough to test
-    // each candidate cohort's computed period against it.
-    const periods = new Set(result.plan.periods.map((p) => p.periodNumber));
-    const plannable = years.filter((year) => {
-      const period = periodNumberFor(plan.semesterId, year);
-      return period !== null && periods.has(period);
-    });
-    // Never a dead end: if the filter leaves nothing, show every kull and say
-    // what the student is looking at.
-    const shown = plannable.length > 0 ? plannable : years;
-    if (plannable.length === 0) {
-      elements.pickerStatus.textContent = `Ingen av kullene har en periode i ${semesterLabel(currentSemester())}. Velg likevel, så viser vi det studieplanen har.`;
-    }
-
-    elements.pickerKull.hidden = false;
-    elements.pickerKullChips.replaceChildren();
-    for (const year of shown) {
-      const chip = el("button", "np-toggle", String(year));
-      chip.type = "button";
-      chip.setAttribute("aria-label", `Kull ${year}`);
-      chip.addEventListener("click", () => {
-        void applyProgramCohort(code, name, year);
-      });
-      elements.pickerKullChips.append(chip);
-    }
-  }
-
-  async function applyProgramCohort(code: string, name: string, cohort: number): Promise<void> {
-    elements.pickerStatus.textContent = "henter studieplan …";
-    const result = await findProgramPlan(code, cohort);
-    if ("kind" in result) {
-      elements.pickerStatus.textContent = "Klarte ikke å hente studieplanen. Prøv igjen.";
-      return;
-    }
-    // A fresh programme/kull answers no studieretning question yet — the
-    // period classifies without one, prefilling the intersection if gated.
-    const program: PlanProgram = { code, name, cohort };
-    const resolved = resolvePeriodFor(result.plan, plan.semesterId, cohort);
-
-    store.setProgramPlan(program, obligatoryToAdd(resolved.courses));
-    setPickerOpen(false);
-    elements.pickerStatus.textContent = "";
-  }
-
-  function renderPickerOptions(): void {
-    const query = fold(elements.pickerInput.value.trim());
-    if (query === "") {
-      closePicker();
-      return;
-    }
-    pickerMatches = programOptions
-      .filter(([code, name]) => fold(code).includes(query) || fold(name).includes(query))
-      .slice(0, 12);
-
-    elements.pickerListbox.replaceChildren();
-    if (pickerMatches.length === 0) {
-      elements.pickerListbox.append(el("li", "planner-typeahead-empty np-hint", "Ingen treff."));
-      elements.pickerListbox.hidden = false;
-      pickerActiveIndex = -1;
-      elements.pickerInput.setAttribute("aria-expanded", "true");
-      elements.pickerInput.removeAttribute("aria-activedescendant");
-      return;
-    }
-    pickerMatches.forEach((option, index) => {
-      const [code, name, studyLevel, cities] = option;
-      const item = el("li", "np-popover-option planner-picker-option");
-      item.id = `planner-picker-option-${index}`;
-      item.setAttribute("role", "option");
-      item.setAttribute("aria-selected", "false");
-      item.append(el("span", "np-data planner-picker-code", code));
-      item.append(el("span", "planner-picker-name", name));
-      // The field that tells MIDT from MTDT (B6).
-      if (studyLevel !== "") {
-        const detail = cities.length > 0 ? `${studyLevel}, ${cities.join(", ")}` : studyLevel;
-        item.append(el("span", "planner-picker-level", detail.toLowerCase()));
-      }
-      // `mousedown` only suppresses the blur that would close the list first;
-      // selection is on `click`, which is what VoiceOver/TalkBack double-tap
-      // and switch access actually dispatch (A2).
-      item.addEventListener("mousedown", (event) => event.preventDefault());
-      item.addEventListener("click", () => {
-        void pickProgram(option);
-      });
-      elements.pickerListbox.append(item);
-    });
-    elements.pickerListbox.hidden = false;
-    elements.pickerInput.setAttribute("aria-expanded", "true");
-    setPickerActive(0);
-  }
-
-  elements.pickerInput.addEventListener("input", renderPickerOptions);
-  elements.pickerInput.addEventListener("keydown", (event) => {
-    if (elements.pickerListbox.hidden || pickerMatches.length === 0) return;
-    if (event.key === "ArrowDown") {
-      event.preventDefault();
-      setPickerActive((pickerActiveIndex + 1) % pickerMatches.length);
-    } else if (event.key === "ArrowUp") {
-      event.preventDefault();
-      setPickerActive((pickerActiveIndex - 1 + pickerMatches.length) % pickerMatches.length);
-    } else if (event.key === "Enter") {
-      event.preventDefault();
-      const picked = pickerMatches[pickerActiveIndex] ?? pickerMatches[0];
-      if (picked) void pickProgram(picked);
-    } else if (event.key === "Escape") {
-      closePicker();
-    }
-  });
-  elements.pickerField.addEventListener("focusout", (event) => {
-    if (!elements.pickerField.contains(event.relatedTarget as Node | null)) closePicker();
-  });
-
-  elements.contextChange.addEventListener("click", () => {
-    const open = elements.picker.hidden;
-    setPickerOpen(open);
-    if (open) elements.pickerInput.focus();
-  });
+  // The inline programme+kull typeahead is gone (REWORK §2/§3): all four plan
+  // choices live in the one studieinfo modal now, so the banner's "Velg
+  // studieprogram" / "Endre" control simply opens it.
+  elements.contextChange.addEventListener("click", () => studieinfo.open());
 
   // --- Studieretning question --------------------------------------------
-
-  /**
-   * Applies a chosen studieretning: re-classifies the period *through* that
-   * direction and replaces the programme course set in one store write (so
-   * the grid never flashes an intermediate state). Manual adds and existing
-   * drop flags survive — see `setProgramPlan`.
-   */
-  async function applyDirection(option: DirectionOption): Promise<void> {
-    const program = plan.program;
-    if (!program) return;
-    elements.directionNote.textContent = "henter studieplan …";
-    const result = await findProgramPlan(program.code, program.cohort);
-    if ("kind" in result) {
-      elements.directionNote.textContent = "Klarte ikke å hente studieplanen. Prøv igjen.";
-      return;
-    }
-    const resolved = resolvePeriodFor(result.plan, plan.semesterId, program.cohort, option.code);
-    store.setProgramPlan({ ...program, direction: option }, obligatoryToAdd(resolved.courses));
-  }
 
   /**
    * The one open question the week is waiting on, whatever its shape.
@@ -905,12 +709,14 @@ export async function mountPlannerApp(
    * side panel while the grid renders as a failure is B2; an elective-only
    * period whose next step sits in the other column — behind a tab on mobile
    * — is U8, the identical shape with the opposite treatment; and a semester
-   * the study plan has no period for is B4's honest dead end.
+   * the study plan has no period for is B4's honest dead end. The
+   * studieretning is now *chosen in the studieinfo modal* (its select), so its
+   * question renders as a sentence + "Endre studieinfo" button, not inline
+   * chips.
    */
   interface WeekQuestion {
     title: string;
     note: string;
-    directions: DirectionOption[];
     action: { label: string; run: () => void } | null;
     /** What the week frame shows in place of a grid. */
     weekMessage: string;
@@ -925,7 +731,6 @@ export async function mountPlannerApp(
       return {
         title: "Ingen periode i studieplanen",
         note,
-        directions: [],
         action: { label: "Legg til emne", run: () => openAddFromQuestion() },
         weekMessage: note,
       };
@@ -936,12 +741,12 @@ export async function mountPlannerApp(
       const deadline = pending.deadlineDate
         ? `Studieplanen viser frist ${formatShortDate(pending.deadlineDate)}. `
         : "";
+      const prompt = "Velg studieretning i studieinfo — ukeplanen fylles ut med en gang.";
       return {
         title: pending.name,
-        note: `${deadline}Velg den du følger — ukeplanen fylles ut med en gang.`,
-        directions: pending.directions,
-        action: null,
-        weekMessage: "Svar på spørsmålet over — ukeplanen fylles ut med en gang.",
+        note: `${deadline}${prompt}`,
+        action: { label: "Endre studieinfo", run: () => studieinfo.open() },
+        weekMessage: prompt,
       };
     }
 
@@ -954,7 +759,6 @@ export async function mountPlannerApp(
       return {
         title: `Studieplanen din for ${label} er valgfri`,
         note: `${pool.length} ${pool.length === 1 ? "emne" : "emner"} å velge mellom.`,
-        directions: [],
         action: { label: "Velg emner", run: () => openAddFromQuestion() },
         weekMessage: "Velg emner fra studieplanen over — ukeplanen fylles ut med en gang.",
       };
@@ -976,19 +780,6 @@ export async function mountPlannerApp(
     elements.direction.hidden = false;
     elements.directionTitle.textContent = question.title;
     elements.directionNote.textContent = question.note;
-
-    elements.directionChips.replaceChildren();
-    for (const option of question.directions) {
-      // `.np-toggle--text`, not the bare uppercase tracked mono tag: these are
-      // multi-word Norwegian proper names ("Databaser og søk"), and at 11.5 px
-      // uppercase they wrapped to two rows and read as machine codes (D10).
-      const chip = el("button", "np-toggle np-toggle--text", option.name);
-      chip.type = "button";
-      chip.addEventListener("click", () => {
-        void applyDirection(option);
-      });
-      elements.directionChips.append(chip);
-    }
 
     questionAction = question.action?.run ?? null;
     elements.directionActions.hidden = question.action === null;
@@ -1380,20 +1171,25 @@ export async function mountPlannerApp(
     }
     const seen = new Set<string>();
     const active = activeCourses(plan);
+    const programCode = plan.program?.code ?? null;
     active.forEach((course, index) => {
       seen.add(course.code);
       const existing = courseStates.get(course.code);
       if (existing) {
         existing.hueVar = hueForIndex(index);
         existing.course = course;
+        // The programme can change under a persisted state (switch/clear), so
+        // its code is refreshed here too — grid group-narrowing depends on it.
+        existing.programCode = programCode;
       } else {
         courseStates.set(course.code, {
           course,
           hueVar: hueForIndex(index),
-          // A course previewed in the picker is already fetched — reuse it so
-          // adding it renders the grid without a second round trip.
+          // A course previewed in the add field is already fetched — reuse it
+          // so adding it renders the grid without a second round trip.
           bundle: previewBundles.get(course.code) ?? null,
           loading: false,
+          programCode,
         });
       }
     });
@@ -1529,26 +1325,12 @@ export async function mountPlannerApp(
     return window.matchMedia?.("(prefers-reduced-motion: reduce)").matches === true;
   }
 
-  /** Day names whose column is (partly) outside the frame's visible box. */
-  function clippedDayNames(): string[] {
-    const frame = elements.gridFrame;
-    const frameRect = frame.getBoundingClientRect();
-    const headers = [...frame.querySelectorAll<HTMLElement>(".planner-grid-day-header")];
-    return headers
-      .filter((header) => {
-        const rect = header.getBoundingClientRect();
-        return rect.right > frameRect.right + 1 || rect.left < frameRect.left - 1;
-      })
-      .map((header) => header.textContent ?? "")
-      .filter((name) => name !== "");
-  }
-
   /**
    * At 390 px the week frame is ~200 px narrower than its content and its own
    * rounded border closes right after ONS — no fade, no arrow, no visible
    * scrollbar, and the page itself does not scroll horizontally, so the clip
-   * reads as an edge and a student can conclude they have no Thursday
-   * lecture. `data-scroll` drives the edge mask; the hint names the days.
+   * reads as an edge and a student can conclude they have no Thursday lecture.
+   * `data-scroll` drives the edge mask; the hint is one fixed sentence (S15).
    */
   function syncGridScroll(): void {
     const frame = elements.gridFrame;
@@ -1560,16 +1342,8 @@ export async function mountPlannerApp(
     }
     const left = frame.scrollLeft;
     frame.dataset.scroll = left <= 1 ? "start" : left >= overflow - 1 ? "end" : "middle";
-
-    const clipped = clippedDayNames();
-    elements.scrollHint.hidden = clipped.length === 0;
-    if (clipped.length > 0) {
-      const names =
-        clipped.length === 1
-          ? clipped[0]
-          : `${clipped.slice(0, -1).join(", ")} og ${clipped[clipped.length - 1]}`;
-      elements.scrollHint.textContent = `dra sidelengs for ${names}`;
-    }
+    elements.scrollHint.hidden = false;
+    elements.scrollHint.textContent = "Dra sidelengs for å se hele uken.";
   }
 
   /** Once per mount: put today's column in view rather than always Monday's. */
@@ -1642,6 +1416,38 @@ export async function mountPlannerApp(
     host.append(exam.collisionCount === 1 ? " eksamen samme dag" : " eksamener samme dag");
   }
 
+  /**
+   * Reloads every course bundle from scratch. The module-level fetch memo is
+   * cleared first (so a real refetch happens, not a cached failure replayed)
+   * and each state reset to "not loaded" before `loadBundles` runs again.
+   * Wired to the "Prøv igjen" fallback — the honest recovery from a timetable
+   * fetch that came back `null`.
+   */
+  function retryBundles(): void {
+    clearCourseBundleMemo();
+    for (const state of courseStates.values()) {
+      state.bundle = null;
+      state.loading = false;
+    }
+    previewBundles.clear();
+    // loadBundles flips the reset states to loading and paints the skeleton
+    // itself, so there is no need to render the (momentarily empty) grid first.
+    void loadBundles();
+  }
+
+  /**
+   * A centered card where the week would be, for the empty/fallback states
+   * that carry an action button rather than just a sentence. Resets the frame
+   * the same way `renderGridMessage` does (unruled, cleared) so the ruling
+   * never frames an apology (D5), then mounts the card `build` fills.
+   */
+  function renderWeekCard(build: (card: HTMLElement) => void): void {
+    renderGridMessage(elements.gridFrame, elements.gridNotes, null);
+    const card = el("div", "planner-week-card");
+    build(card);
+    elements.gridFrame.append(card);
+  }
+
   function renderGridAndExams(): void {
     const semester = currentSemester();
     const states = orderedActiveStates();
@@ -1653,33 +1459,90 @@ export async function mountPlannerApp(
       return { ...s, bundle: { ...s.bundle, timetable: semesterEntries(s.bundle) } };
     });
 
-    // Pre-publish fallback (DR-2): timetable not published, or every loaded
-    // bundle came back with zero entries — never a blank grid, always the
-    // course list + exams + a graceful note naming when to come back.
+    // The four empty/fallback states (REWORK §3). Never a blank grid: always
+    // the course list + exams + a card that names the one next action.
     const published = semester?.timetablePublished ?? true;
     const anyBundlesLoaded = states.some((s) => s.bundle !== null);
-    const allEmpty =
+    // A *failed* timetable fetch leaves the raw bundle `timetable === null`;
+    // a successful-but-empty one leaves `[]`. The old `?? []` coalesce erased
+    // that difference and showed the "publiseres" copy over a network failure
+    // (S6/T10). Checked on the RAW states, before semester/programme narrowing.
+    const failed = states.some((s) => s.bundle !== null && s.bundle.timetable === null);
+    // Every loaded bundle has zero entries for this programme this semester —
+    // the grid would be blank. (`filteredStates` are already narrowed.)
+    const empty =
       anyBundlesLoaded && filteredStates.every((s) => (s.bundle?.timetable ?? []).length === 0);
-    const showFallback = states.length > 0 && !anyLoading && (!published || allEmpty);
+
+    const noProfile = plan.program === undefined && plan.courses.length === 0;
+    const showFallback = noProfile || (states.length > 0 && !anyLoading && (!published || empty));
 
     let gridResult: GridRenderResult | null = null;
-    if (showFallback && semester) {
-      // Through renderGridMessage, not replaceChildren: the ruling means "the
-      // plan lives here", and an empty ruled rectangle holding an apology is
-      // the opposite of what Ruling-Marks-The-Plan says (D5).
-      const prepublish = `Timeplan for ${semesterLabel(semester)} publiseres vanligvis i ${publishMonthFor(semester.id)} — kom tilbake da.`;
-      renderGridMessage(
-        elements.gridFrame,
-        elements.gridNotes,
-        question?.weekMessage ?? prepublish,
-      );
+    if (noProfile) {
+      // State 1: no plan at all. The onboarding card — the modal is the way in;
+      // the add field is the "I already know a code" escape hatch.
+      renderWeekCard((card) => {
+        card.append(el("p", "np-hint planner-week-card-hint", "Ingen plan ennå."));
+        const primary = el("button", "np-btn", "Velg studieprogram");
+        primary.type = "button";
+        primary.addEventListener("click", () => studieinfo.open());
+        card.append(primary);
+        // Task 12 re-points this at the add-course modal; for now it focuses
+        // the existing inline add field.
+        const secondary = el(
+          "button",
+          "np-navlink planner-week-card-secondary",
+          "…eller legg til emner med emnekode",
+        );
+        secondary.type = "button";
+        secondary.addEventListener("click", () => openAddFromQuestion());
+        card.append(secondary);
+      });
+    } else if (showFallback && semester) {
+      if (question) {
+        // A studieretning/elective/period question owns the empty week — its
+        // sentence, not a fallback card, is what the student acts on. Rendered
+        // through renderGridMessage (D5), same as the pre-publish note.
+        renderGridMessage(elements.gridFrame, elements.gridNotes, question.weekMessage);
+      } else if (!published) {
+        // State 2: timetable not published yet (unchanged copy).
+        renderGridMessage(
+          elements.gridFrame,
+          elements.gridNotes,
+          `Timeplan for ${semesterLabel(semester)} publiseres vanligvis i ${publishMonthFor(semester.id)} — kom tilbake da.`,
+        );
+      } else if (failed) {
+        // State 3: a fetch failed. NEVER the "publiseres" copy — offer a retry.
+        renderWeekCard((card) => {
+          card.append(el("p", "np-note planner-week-card-hint", "Fikk ikke hentet timeplanen."));
+          const retry = el("button", "np-btn", "Prøv igjen");
+          retry.type = "button";
+          retry.addEventListener("click", retryBundles);
+          card.append(retry);
+        });
+      } else {
+        // State 4: published, courses exist, none taught this term.
+        renderWeekCard((card) => {
+          card.append(
+            el(
+              "p",
+              "np-hint planner-week-card-hint",
+              `Ingen av emnene dine undervises i ${semesterLabel(semester)}.`,
+            ),
+          );
+          const change = el("button", "np-btn", "Endre studieinfo");
+          change.type = "button";
+          change.addEventListener("click", () => studieinfo.open());
+          card.append(change);
+        });
+      }
     } else {
       gridResult = renderGrid(elements.gridFrame, elements.gridNotes, filteredStates, showOthers, {
         loading: anyLoading,
         pendingChoiceMessage: question?.weekMessage ?? null,
-        // TEMPORARY (Task 8, see buildPopoverContext above).
         onBlockClick: (detail, anchor) => {
-          const ctx = buildPopoverContext(detail, filteredStates);
+          // Unfiltered `states` (not `filteredStates`): the popover lists ALL
+          // of a course's groups — see buildPopoverContext.
+          const ctx = buildPopoverContext(detail, states);
           if (ctx) popover.showFor(ctx, anchor);
         },
       });
@@ -1804,13 +1667,9 @@ export async function mountPlannerApp(
 
   function renderAll(): void {
     syncCourseStates();
-    // B5: an empty plan is not a dead end, it is the picker. The week has
-    // nothing to show yet, but the add field stays mounted — the copy used to
-    // point at a hidden picker and at an unmounted field, i.e. at two
-    // impossible actions.
-    const isEmpty = plan.courses.length === 0 && plan.program === undefined;
-    elements.main.classList.toggle("is-empty", isEmpty);
-    if (isEmpty) setPickerOpen(true);
+    // An empty plan (no programme, no courses) is not a dead end: the week
+    // frame shows the onboarding card (renderGridAndExams' state 1), and the
+    // Emner rail keeps the add field mounted for a student who knows a code.
     elements.linkNote.textContent = linkNote ?? "";
     elements.linkNote.hidden = linkNote === null;
     renderBanner();
@@ -2029,6 +1888,23 @@ export async function mountPlannerApp(
   syncHash();
   renderSemesterToggle();
   renderAll();
+
+  // `?studieinfo` (the Layout chip navigating in from another page): open the
+  // modal once, then strip the param via replaceState so a reload or Back does
+  // not re-open it. The fragment carries the plan grammar and must survive
+  // untouched — syncHash above already wrote it, and it is preserved here.
+  const params = new URLSearchParams(location.search);
+  if (params.has("studieinfo")) {
+    params.delete("studieinfo");
+    const query = params.toString();
+    history.replaceState(
+      null,
+      "",
+      `${location.pathname}${query ? `?${query}` : ""}${location.hash}`,
+    );
+    studieinfo.open();
+  }
+
   lastDerivationKey = derivationKey();
   await Promise.all([loadBundles(), loadPeriodCourses()]);
 }

@@ -357,6 +357,48 @@ describe("setProgramPlan", () => {
   });
 });
 
+describe("removeProgram", () => {
+  let storage: StorageLike;
+  let events: EventTargetLike;
+
+  beforeEach(() => {
+    storage = fakeStorage();
+    events = fakeEvents();
+  });
+
+  it("clears the programme profile and drops programme courses, keeping manual adds", () => {
+    const store = createPlanStore("26h", { storage, events });
+    store.setProgramPlan({ code: "MTDT", name: "Datateknologi", cohort: 2024 }, [
+      { code: "TDT4100", name: "A" },
+      { code: "TMA4100", name: "B" },
+    ]);
+    store.addCourse({ code: "PSY1000", name: "Manual", source: "manual" });
+    store.removeProgram();
+    const plan = store.loadPlan();
+    expect(plan.program).toBeUndefined();
+    expect(plan.courses.map((c) => c.code)).toEqual(["PSY1000"]);
+    expect(plan.courses[0]?.source).toBe("manual");
+  });
+
+  it("persists the cleared profile — a re-read store does not resurrect the program", () => {
+    const store = createPlanStore("26h", { storage, events });
+    store.setProgram({ code: "MTDT", name: "Datateknologi", cohort: 2024 });
+    store.removeProgram();
+    const reread = createPlanStore("26h", { storage, events: fakeEvents() });
+    expect(reread.loadPlan().program).toBeUndefined();
+  });
+
+  it("dispatches a plan-change event carrying the program-less plan", () => {
+    const store = createPlanStore("26h", { storage, events });
+    store.setProgram({ code: "MTDT", name: "Datateknologi", cohort: 2024 });
+    const cb = vi.fn();
+    store.onPlanChange(cb);
+    store.removeProgram();
+    expect(cb).toHaveBeenCalledTimes(1);
+    expect(cb.mock.calls[0]?.[0]?.program).toBeUndefined();
+  });
+});
+
 describe("semester-scoped plans", () => {
   it("a manual add in one semester does not leak into another", () => {
     const store = createPlanStore("26h", { storage: fakeStorage(), events: fakeEvents() });

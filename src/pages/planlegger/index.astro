@@ -39,19 +39,9 @@ const programOptionsJson = JSON.stringify(programOptions).replaceAll("<", "\\u00
       <p class="np-hint planner-context-line" id="planner-context-line"></p>
     </div>
     <div class="planner-banner-controls">
-      <button
-        type="button"
-        class="np-btn planner-context-change"
-        id="planner-context-change"
-        aria-expanded="false"
-        aria-controls="planner-picker"
-      >
+      <button type="button" class="np-btn planner-context-change" id="planner-context-change">
         Velg studieprogram
       </button>
-      <!-- TEMPORARY dev entry (Task 6). The inline picker above and this
-           button are both deleted in Task 10, which makes the studieinfo
-           modal the only way in. -->
-      <button type="button" class="np-btn" id="planner-dev-studieinfo">Endre studieinfo</button>
     </div>
   </div>
 
@@ -67,36 +57,6 @@ const programOptionsJson = JSON.stringify(programOptions).replaceAll("<", "\\u00
     >
     </div>
   </details>
-
-  <section class="np-panel planner-picker" id="planner-picker" hidden aria-labelledby="planner-picker-heading">
-    <h2 class="np-kicker planner-picker-kicker" id="planner-picker-heading">Studieprogram</h2>
-    <form class="np-field planner-picker-field" id="planner-picker-field" autocomplete="off">
-      <input
-        type="text"
-        id="planner-picker-input"
-        placeholder="Søk etter studieprogram …"
-        aria-label="Søk etter studieprogram"
-        role="combobox"
-        aria-expanded="false"
-        aria-autocomplete="list"
-        aria-controls="planner-picker-listbox"
-      />
-    </form>
-    <ul
-      class="np-popover planner-picker-listbox"
-      id="planner-picker-listbox"
-      role="listbox"
-      aria-label="Studieprogramforslag"
-      hidden
-    >
-    </ul>
-    <div class="planner-picker-kull" id="planner-picker-kull" hidden>
-      <p class="np-kicker">Kull</p>
-      <div class="planner-picker-kull-chips" id="planner-picker-kull-chips" role="group" aria-label="Velg kull"></div>
-      <p class="np-hint planner-picker-kull-hint">Kull = året du startet på studiet.</p>
-    </div>
-    <p class="np-hint" id="planner-picker-status" aria-live="polite"></p>
-  </section>
 
   <div id="planner-main">
     <div class="planner-tabs" id="planner-tabs" role="group" aria-label="Bytt mellom uke og emner">
@@ -123,13 +83,6 @@ const programOptionsJson = JSON.stringify(programOptions).replaceAll("<", "\\u00
         <div class="np-panel planner-direction" id="planner-direction" hidden>
           <h2 class="planner-direction-title" id="planner-direction-title"></h2>
           <p class="np-hint planner-direction-note" id="planner-direction-note"></p>
-          <div
-            class="planner-direction-chips"
-            id="planner-direction-chips"
-            role="group"
-            aria-label="Velg studieretning"
-          >
-          </div>
           <div class="planner-direction-actions" id="planner-direction-actions" hidden>
             <button type="button" class="np-btn" id="planner-direction-btn">Velg emner</button>
           </div>
@@ -306,59 +259,21 @@ const programOptionsJson = JSON.stringify(programOptions).replaceAll("<", "\\u00
     color: var(--faint);
   }
 
-  /* --- Programme/kull picker ------------------------------------------- */
-
-  .planner-picker:not([hidden]) {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-3);
-    max-width: var(--measure);
-    margin-bottom: var(--space-6);
+  /* The programme name in the title was a link to /studier/; it is now a
+     button into the studieinfo modal. Keep it reading as the title, not a
+     control: no chrome, inherit the headline ink, accent underline on hover. */
+  :global(button.planner-title-name) {
+    font: inherit;
+    color: inherit;
+    text-align: left;
+    text-decoration: underline;
+    text-decoration-color: color-mix(in srgb, var(--accent) 40%, transparent);
+    text-underline-offset: 2px;
+    cursor: pointer;
   }
 
-  .planner-picker-kicker {
-    margin-bottom: 0;
-  }
-
-  .planner-picker-field {
-    position: relative;
-  }
-
-  .planner-picker-listbox {
-    --popover-max: 16rem;
-  }
-
-  :global(.planner-picker-option) {
-    display: flex;
-    align-items: baseline;
-    gap: var(--gap-3);
-    flex-wrap: wrap;
-  }
-
-  :global(.planner-picker-code) {
-    color: var(--muted);
-    font-size: var(--text-xs);
-    flex-shrink: 0;
-    width: 6em;
-  }
-
-  :global(.planner-picker-name) {
-    font-size: var(--text-sm);
-  }
-
-  :global(.planner-picker-level) {
-    font-size: var(--text-xs);
-    color: var(--faint);
-  }
-
-  .planner-picker-kull-chips {
-    display: flex;
-    flex-wrap: wrap;
-    gap: var(--gap-2);
-  }
-
-  .planner-picker-kull-hint {
-    margin-top: var(--space-1);
+  :global(button.planner-title-name:hover) {
+    color: var(--accent-ink);
   }
 
   /* --- Two regions ------------------------------------------------------- */
@@ -387,26 +302,6 @@ const programOptionsJson = JSON.stringify(programOptions).replaceAll("<", "\\u00
 
   .planner-region {
     min-width: 0;
-  }
-
-  /* Empty plan (B5): the picker is the page. The week and the tabs have
-     nothing to say yet, but the add field stays mounted — a student who
-     already knows a course code should not have to pick a programme first. */
-  #planner-main.is-empty .planner-tabs,
-  #planner-main.is-empty .planner-region-week {
-    display: none;
-  }
-
-  #planner-main.is-empty .planner-regions {
-    display: block;
-  }
-
-  /* A credit total and a course list with nothing in them are not an
-     invitation; the field is. */
-  #planner-main.is-empty .planner-credit-line,
-  #planner-main.is-empty .planner-course-rows,
-  #planner-main.is-empty .planner-scope {
-    display: none;
   }
 
   @media (min-width: 60rem) {
@@ -463,17 +358,6 @@ const programOptionsJson = JSON.stringify(programOptions).replaceAll("<", "\\u00
   .planner-direction-note {
     margin: 0;
     max-width: none;
-  }
-
-  .planner-direction-chips {
-    display: flex;
-    flex-wrap: wrap;
-    gap: var(--gap-2);
-    margin-top: var(--space-1);
-  }
-
-  .planner-direction-chips:empty {
-    display: none;
   }
 
   .planner-direction-actions:not([hidden]) {
@@ -561,6 +445,30 @@ const programOptionsJson = JSON.stringify(programOptions).replaceAll("<", "\\u00
 
   .planner-scroll-hint:not([hidden]) {
     margin-bottom: var(--space-2);
+  }
+
+  /* --- Empty / fallback week card ---------------------------------------- */
+
+  /* The four empty states (no plan, unpublished, fetch failure, nothing this
+     term) that carry an action. Centered in the (now unruled) week frame so
+     the one next step is where the plan would be, not tucked under it. */
+  :global(.planner-week-card) {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-3);
+    padding: var(--space-6) var(--space-3);
+    text-align: center;
+  }
+
+  :global(.planner-week-card-hint) {
+    margin: 0;
+    max-width: var(--measure);
+  }
+
+  :global(.planner-week-card-secondary) {
+    /* A quiet text action under the primary button, not a second button. */
+    font-size: var(--text-sm);
   }
 
   /* --- Exam list ---------------------------------------------------------- */
@@ -798,49 +706,19 @@ const programOptionsJson = JSON.stringify(programOptions).replaceAll("<", "\\u00
   set:html={programOptionsJson}
 />
 <script>
-  import { mountPlannerApp, type SemesterSummary } from "../../components/planner/plannerApp.js";
-  import {
-    mountStudieinfo,
-    OPEN_STUDIEINFO_EVENT,
-  } from "../../components/planner/studieinfo.js";
-  import { createPlanStore } from "../../lib/planner/store.js";
+  import { mountPlannerApp } from "../../components/planner/plannerApp.js";
   import { onPage } from "../../lib/pageLifecycle.ts";
   import semestersData from "../../../data/semesters.json";
 
   // Must run per page-load, not once per module: under ClientRouter this
   // module is evaluated only the first time it is fetched, so mounting at
   // top level left the planner an empty shell after any in-site navigation
-  // back to it ("the plan is gone").
+  // back to it ("the plan is gone"). `mountPlannerApp` owns the single store
+  // and mounts the studieinfo modal + block popover itself.
   onPage((signal) => {
     const optionsEl = document.getElementById("planner-program-options");
     if (!optionsEl) return;
     const programOptions = optionsEl.textContent ? JSON.parse(optionsEl.textContent) : [];
     mountPlannerApp(semestersData, programOptions, signal);
-
-    // TEMPORARY dev wiring (Task 6). Task 10 unifies this with plannerApp's
-    // own candidate-semester slice; for now compute the same "current + next
-    // two" list inline (teaching ids, sorted by fromDate, from current).
-    const defaultSemesterId = semestersData.current?.id ?? "26h";
-    const teaching = (semestersData.semesters as SemesterSummary[]).filter((s) =>
-      /^\d{2}[hv]$/i.test(s.id),
-    );
-    teaching.sort((a, b) => (a.fromDate ?? "").localeCompare(b.fromDate ?? ""));
-    const today = new Date().toISOString().slice(0, 10);
-    const currentIndex = semestersData.current
-      ? teaching.findIndex((s) => s.id === semestersData.current?.id)
-      : teaching.findIndex((s) => (s.fromDate ?? "") >= today);
-    const start = currentIndex >= 0 ? currentIndex : 0;
-    const candidateSemesters = teaching.slice(start, start + 3);
-
-    const store = createPlanStore(defaultSemesterId);
-    mountStudieinfo(
-      { store, semesters: candidateSemesters, programOptions, defaultSemesterId },
-      signal,
-    );
-    document
-      .getElementById("planner-dev-studieinfo")
-      ?.addEventListener("click", () => {
-        window.dispatchEvent(new CustomEvent(OPEN_STUDIEINFO_EVENT));
-      });
   });
 </script>

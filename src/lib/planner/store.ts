@@ -229,6 +229,8 @@ export interface PlanStore {
   setProgramPlan(program: PlanProgram, courses: AddCourseInput[]): PlanState;
   setSemester(semesterId: string): PlanState;
   setProgram(program: PlanProgram): PlanState;
+  /** Clears the programme profile: drops the program and every programme-sourced course, keeps manual adds. */
+  removeProgram(): PlanState;
   /** Replaces a course's selected group keys; `[]` clears back to defaults. */
   setCourseGroups(code: string, groups: string[]): PlanState;
   onPlanChange(cb: (plan: PlanState) => void): () => void;
@@ -413,6 +415,27 @@ export function createPlanStore(
     return next;
   }
 
+  /**
+   * Clears the programme profile and re-derives: the stored program is
+   * removed and every `source: "program"` course dropped from the active
+   * semester, while manual adds survive. `savePlan` can only ever *write* a
+   * profile — it skips the `np:profile` key when `program` is undefined, so
+   * it cannot clear one — hence the key is reset to an empty record directly
+   * here, then the pruned course list is persisted through the normal save
+   * path (which writes the plans/last-semester keys and dispatches the
+   * change event). Used by the studieinfo modal's "no programme" commit.
+   */
+  function removeProgram(): PlanState {
+    const plan = loadPlan();
+    storage.setItem(PROFILE_STORAGE_KEY, JSON.stringify({}));
+    const next: PlanState = {
+      semesterId: plan.semesterId,
+      courses: plan.courses.filter((c) => c.source !== "program"),
+    };
+    savePlan(next);
+    return next;
+  }
+
   /** Replaces one course's selected group keys; `[]` deletes the property (back to defaults). */
   function setCourseGroups(code: string, groups: string[]): PlanState {
     const plan = loadPlan();
@@ -469,6 +492,7 @@ export function createPlanStore(
     setProgramPlan,
     setSemester,
     setProgram,
+    removeProgram,
     setCourseGroups,
     onPlanChange,
   };
