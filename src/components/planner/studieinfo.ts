@@ -8,9 +8,11 @@
  * only surface that picks programme/kull/retning/semester — the homepage
  * picker and the planner's inline picker are deleted in later tasks — so it
  * absorbs the old "Bruk som planen min" import semantics from
- * `studyPlan.ts`: obligatory-classified courses (cleared when the prefill is
- * suspiciously over a semester's load) replace the plan's `source: "program"`
- * set via `setProgramPlan`, preserving manual adds/drops.
+ * `studyPlan.ts`: obligatory-classified courses replace the plan's
+ * `source: "program"` set via `setProgramPlan`, preserving manual adds/drops.
+ * A >30 sp prefill is **kept**, not zeroed — CMEDFORSK period 1 legitimately
+ * sums to 42,5 sp, and the planner's credit-line note (B9) does the
+ * surfacing; clearing it would reproduce the "0 av 30 sp, no rows" bug.
  *
  * **Why two study-plan fetches on a programme pick.** The NTNU plan API
  * returns a document whose `periods` are truncated to how far the *fetched
@@ -30,7 +32,6 @@ import type { ProgramOption, SemesterSummary } from "./plannerApp.js";
 import {
   type DirectionOption,
   findProgramPlan,
-  isSuspiciousPrefill,
   maxPeriodNumber,
   relevantCohorts,
   resolvePeriodFor,
@@ -557,40 +558,51 @@ export function mountStudieinfo(deps: StudieinfoDeps, signal: AbortSignal): Stud
   });
 
   // --- Commit / open / close ----------------------------------------------
-  function commit(): void {
-    // A staged programme needs a kull before it can classify a period.
-    if (stagedProgram && stagedCohort === null) {
+  async function commit(): Promise<void> {
+    // Snapshot the staging at click time — the awaited plan fetch below must
+    // commit what was on screen when Lagre was pressed.
+    const semesterId = stagedSemesterId;
+    const program = stagedProgram;
+    const cohort = stagedCohort;
+    const direction = stagedDirection;
+
+    // Semester commits *unconditionally* and first, so a semester-only edit is
+    // never dropped by an incomplete programme half, and the programme set
+    // re-derives against the semester the student is actually planning
+    // (setProgramPlan reads the freshly-switched plan).
+    deps.store.setSemester(semesterId);
+
+    // A staged programme still needs a kull before it can classify a period —
+    // only the programme part waits; the semester above already committed.
+    if (program && cohort === null) {
       hintText = "Velg kull for å lagre studieprogrammet.";
       renderHint();
       return;
     }
 
-    // Semester commits first, so the programme set re-derives against the
-    // semester the student is actually planning (setProgramPlan reads the
-    // freshly-switched plan). Then the programme, with the old useAsMyPlan
-    // import semantics — obligatory-classified courses, cleared when the
-    // prefill exceeds a semester, replacing the source:"program" set while
-    // manual adds/drops survive.
-    deps.store.setSemester(stagedSemesterId);
-
-    if (stagedProgram && stagedCohort !== null) {
-      const program: PlanProgram = {
-        code: stagedProgram.code,
-        name: stagedProgram.name,
-        cohort: stagedCohort,
-        ...(stagedDirection ? { direction: stagedDirection } : {}),
+    if (program && cohort !== null) {
+      const planProgram: PlanProgram = {
+        code: program.code,
+        name: program.name,
+        cohort,
+        ...(direction ? { direction } : {}),
       };
-      const plan = cohortPlan ?? cohortsPlan;
+      // Classify against the *kull-specific* plan. If its fetch is still in
+      // flight `cohortPlan` is null; await the (memoised, near-instant) fetch
+      // rather than falling back to a different cohort's curriculum. The
+      // not-found/error fallback to the fuller cohortsPlan is preserved.
+      let plan = cohortPlan;
+      if (!plan) {
+        const res = await findProgramPlan(program.code, cohort);
+        plan = "kind" in res ? cohortsPlan : res.plan;
+      }
       let toAdd: AddCourseInput[] = [];
       if (plan) {
-        const resolved = resolvePeriodFor(
-          plan,
-          stagedSemesterId,
-          stagedCohort,
-          stagedDirection?.code ?? null,
-        );
-        let obligatory = resolved.courses?.obligatory ?? [];
-        if (isSuspiciousPrefill(obligatory)) obligatory = [];
+        const resolved = resolvePeriodFor(plan, semesterId, cohort, direction?.code ?? null);
+        // The prefill is kept even when it exceeds a semester (B9): the
+        // planner's credit-line note surfaces it; zeroing it here would leave
+        // a legitimately-heavy programme with no rows and no explanation.
+        const obligatory = resolved.courses?.obligatory ?? [];
         toAdd = obligatory.map((c) => ({
           code: c.code,
           name: c.name,
@@ -599,7 +611,7 @@ export function mountStudieinfo(deps: StudieinfoDeps, signal: AbortSignal): Stud
           source: "program" as const,
         }));
       }
-      deps.store.setProgramPlan(program, toAdd);
+      deps.store.setProgramPlan(planProgram, toAdd);
     }
     // No programme staged → only the semester changed. Clearing an existing
     // profile needs a store-level removal the current PlanStore does not
@@ -648,7 +660,7 @@ export function mountStudieinfo(deps: StudieinfoDeps, signal: AbortSignal): Stud
     if (stagedProgram) void loadProgram(true);
   }
 
-  saveBtn.addEventListener("click", commit);
+  saveBtn.addEventListener("click", () => void commit());
   cancelBtn.addEventListener("click", () => dialog.close());
   dialog.addEventListener("close", () => {
     invoker?.focus?.();
