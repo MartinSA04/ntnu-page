@@ -48,6 +48,10 @@ const programOptionsJson = JSON.stringify(programOptions).replaceAll("<", "\\u00
       >
         Velg studieprogram
       </button>
+      <!-- TEMPORARY dev entry (Task 6). The inline picker above and this
+           button are both deleted in Task 10, which makes the studieinfo
+           modal the only way in. -->
+      <button type="button" class="np-btn" id="planner-dev-studieinfo">Endre studieinfo</button>
     </div>
   </div>
 
@@ -821,7 +825,12 @@ const programOptionsJson = JSON.stringify(programOptions).replaceAll("<", "\\u00
   set:html={programOptionsJson}
 />
 <script>
-  import { mountPlannerApp } from "../../components/planner/plannerApp.js";
+  import { mountPlannerApp, type SemesterSummary } from "../../components/planner/plannerApp.js";
+  import {
+    mountStudieinfo,
+    OPEN_STUDIEINFO_EVENT,
+  } from "../../components/planner/studieinfo.js";
+  import { createPlanStore } from "../../lib/planner/store.js";
   import { onPage } from "../../lib/pageLifecycle.ts";
   import semestersData from "../../../data/semesters.json";
 
@@ -834,5 +843,31 @@ const programOptionsJson = JSON.stringify(programOptions).replaceAll("<", "\\u00
     if (!optionsEl) return;
     const programOptions = optionsEl.textContent ? JSON.parse(optionsEl.textContent) : [];
     mountPlannerApp(semestersData, programOptions, signal);
+
+    // TEMPORARY dev wiring (Task 6). Task 10 unifies this with plannerApp's
+    // own candidate-semester slice; for now compute the same "current + next
+    // two" list inline (teaching ids, sorted by fromDate, from current).
+    const defaultSemesterId = semestersData.current?.id ?? "26h";
+    const teaching = (semestersData.semesters as SemesterSummary[]).filter((s) =>
+      /^\d{2}[hv]$/i.test(s.id),
+    );
+    teaching.sort((a, b) => (a.fromDate ?? "").localeCompare(b.fromDate ?? ""));
+    const today = new Date().toISOString().slice(0, 10);
+    const currentIndex = semestersData.current
+      ? teaching.findIndex((s) => s.id === semestersData.current?.id)
+      : teaching.findIndex((s) => (s.fromDate ?? "") >= today);
+    const start = currentIndex >= 0 ? currentIndex : 0;
+    const candidateSemesters = teaching.slice(start, start + 3);
+
+    const store = createPlanStore(defaultSemesterId);
+    mountStudieinfo(
+      { store, semesters: candidateSemesters, programOptions, defaultSemesterId },
+      signal,
+    );
+    document
+      .getElementById("planner-dev-studieinfo")
+      ?.addEventListener("click", () => {
+        window.dispatchEvent(new CustomEvent(OPEN_STUDIEINFO_EVENT));
+      });
   });
 </script>
