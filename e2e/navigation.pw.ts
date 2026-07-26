@@ -17,10 +17,23 @@ import { expect, type Page, test } from "@playwright/test";
  *
  * The fixes are the `astro:after-swap` re-apply in `Layout.astro` and the
  * `onPage()` wrapper on every page script. These tests fail without them.
+ *
+ * The rework (2026-07-25) deleted `/studier/` and the plan strip: the site's
+ * chrome now offers exactly two nav destinations (`/planlegger/`, `/emner/`),
+ * plus a persistent `#studieinfo-chip` naming whose plan this is on every
+ * page. The nav circuits below only ever hop between the two real chrome
+ * links; `/studier/`'s own test is now a 404 check, not a positive case.
  */
 
 const THEME_KEY = "np:theme";
-const PLAN_KEY = "ntnu:plan:v1";
+// Mirror src/lib/planner/store.ts's exported storage keys — duplicated as
+// literals rather than imported so this spec has no dependency on Playwright
+// resolving a `.js`-suffixed import back to its `.ts` source.
+const PROFILE_KEY = "np:profile";
+const PLANS_KEY = "np:plans";
+const LAST_SEMESTER_KEY = "np:lastSemester";
+
+const courseRows = (page: Page) => page.locator("#planner-course-rows .planner-course-row");
 
 /**
  * Clicks a real in-site link to `href` and waits for the swap to settle.
@@ -29,11 +42,9 @@ const PLAN_KEY = "ntnu:plan:v1";
  * load, which is precisely the case these tests do not care about and would
  * make the whole file pass against a broken ClientRouter.
  *
- * The topbar is no longer the only place links live: I1 cut the nav to a
- * single "Planlegger" pill and I5 demoted `/emner/` and `/studier/` to the
- * footer link row. Both rows are sitewide chrome rendered by `Layout.astro`,
- * so either one is reachable from every page; the selector spans both rather
- * than hardcoding which chrome a given route currently sits in.
+ * The topbar nav and the footer are both sitewide chrome rendered by
+ * `Layout.astro`; the selector spans both rather than hardcoding which one a
+ * given route currently sits in.
  */
 async function navTo(page: Page, href: string): Promise<void> {
   const link = page.locator(`.site-nav a[href="${href}"], .site-footer a[href="${href}"]`).first();
@@ -51,11 +62,12 @@ async function seed(page: Page, entries: Record<string, string>): Promise<void> 
   }, entries);
 }
 
-const BIT_PLAN = JSON.stringify({
-  v: 1,
-  semesterId: "26h",
-  courses: [],
-  program: { code: "BIT", cohort: 2025, name: "Informatikk - bachelor" },
+// BIT kull 2025, period 3 (26h — a 2nd-year autumn): obligatory IT1901 +
+// TDT4120 + TDT4160, 7,5 sp each = 22,5 sp (verified live against the worker).
+// No manual courses stored — `np:plans` is left empty and the programme
+// prefill derives them itself, same as a real studieinfo Lagre would.
+const BIT_PROFILE = JSON.stringify({
+  program: { code: "BIT", name: "Informatikk - bachelor", cohort: 2025 },
 });
 
 test.describe("theme survives client-side navigation", () => {
@@ -64,7 +76,7 @@ test.describe("theme survives client-side navigation", () => {
     await page.reload();
     await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
 
-    for (const href of ["/emner/", "/studier/", "/planlegger/", "/emner/"]) {
+    for (const href of ["/emner/", "/planlegger/", "/emner/"]) {
       await navTo(page, href);
       await expect(page.locator("html"), `theme lost navigating to ${href}`).toHaveAttribute(
         "data-theme",
@@ -87,16 +99,16 @@ test.describe("theme survives client-side navigation", () => {
     await navTo(page, "/emner/");
     await page.click(".theme-toggle");
     await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
-    await navTo(page, "/studier/");
+    await navTo(page, "/planlegger/");
     await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
   });
 });
 
 test.describe("the plan survives client-side navigation", () => {
   test("re-renders the planner after navigating away and back", async ({ page }) => {
-    await seed(page, { [PLAN_KEY]: BIT_PLAN });
+    await seed(page, { [PROFILE_KEY]: BIT_PROFILE, [LAST_SEMESTER_KEY]: "26h" });
     await page.goto("/planlegger/");
-    const rows = page.locator("#planner-course-rows .planner-course-row");
+    const rows = courseRows(page);
     await expect(rows).toHaveCount(3, { timeout: 30_000 });
     // Wait for the settled figure: credits arrive with the course bundles, a
     // beat after the rows themselves, so reading the line the moment the rows
@@ -111,27 +123,28 @@ test.describe("the plan survives client-side navigation", () => {
   });
 
   test("stays correct across repeated round trips", async ({ page }) => {
-    await seed(page, { [PLAN_KEY]: BIT_PLAN });
+    await seed(page, { [PROFILE_KEY]: BIT_PROFILE, [LAST_SEMESTER_KEY]: "26h" });
     await page.goto("/planlegger/");
-    await expect(page.locator("#planner-course-rows .planner-course-row")).toHaveCount(3, {
-      timeout: 30_000,
-    });
+    await expect(courseRows(page)).toHaveCount(3, { timeout: 30_000 });
 
     for (let i = 0; i < 3; i++) {
       await navTo(page, "/emner/");
       await navTo(page, "/planlegger/");
     }
-    await expect(page.locator("#planner-course-rows .planner-course-row")).toHaveCount(3, {
-      timeout: 30_000,
-    });
+    await expect(courseRows(page)).toHaveCount(3, { timeout: 30_000 });
 
     // Re-mounting must not duplicate the stored plan (a stacked subscription
     // re-running the programme prefill would show up here as extra courses).
-    const stored = await page.evaluate((key) => {
-      const raw = localStorage.getItem(key);
-      return raw ? (JSON.parse(raw) as { courses: { code: string }[] }) : null;
-    }, PLAN_KEY);
-    const codes = stored?.courses.map((c) => c.code) ?? [];
+    const stored = await page.evaluate(
+      ({ plansKey, semesterId }) => {
+        const raw = localStorage.getItem(plansKey);
+        if (!raw) return null;
+        const plans = JSON.parse(raw) as Record<string, { code: string }[]>;
+        return plans[semesterId] ?? null;
+      },
+      { plansKey: PLANS_KEY, semesterId: "26h" },
+    );
+    const codes = stored?.map((c) => c.code) ?? [];
     expect(codes).toHaveLength(new Set(codes).size);
   });
 });
@@ -142,41 +155,6 @@ test.describe("other pages keep working after navigation", () => {
     await navTo(page, "/emner/");
     await page.fill("#emner-search", "algoritmer");
     await expect(page.locator("#emner-results li").first()).toBeVisible({ timeout: 15_000 });
-  });
-
-  test("programme filter still responds", async ({ page }) => {
-    await page.goto("/");
-    await navTo(page, "/studier/");
-
-    // I3 made this page search-first: the 403-row wall stays hidden until the
-    // visitor types, so "the filter responded" is a change of state, not a
-    // change of one status string (the status keeps its last text while
-    // hidden).
-    const results = page.locator("#studier-results");
-    const hint = page.locator("#studier-hint");
-    const shownRows = page.locator(".studier-row:not([hidden])");
-    const allRows = page.locator(".studier-row");
-    await expect(results).toBeHidden();
-    const total = await allRows.count();
-    expect(total).toBeGreaterThan(100);
-
-    await page.fill("#studier-search", "datateknologi");
-    await expect(results).toBeVisible({ timeout: 15_000 });
-    await expect(hint).toBeHidden();
-    await expect(page.locator("#studier-status")).toHaveText(/^[1-9]\d* studieprogram$/, {
-      timeout: 15_000,
-    });
-    // Narrowed, not merely revealed — a dead handler leaves every row shown.
-    const matched = await shownRows.count();
-    expect(matched).toBeGreaterThan(0);
-    expect(matched).toBeLessThan(total);
-
-    // Clearing runs the same listener back to the empty state, which is the
-    // part that proves the binding survived the swap rather than one keystroke
-    // having happened to land.
-    await page.fill("#studier-search", "");
-    await expect(results).toBeHidden({ timeout: 15_000 });
-    await expect(hint).toBeVisible();
   });
 
   test("a course page fetches its own course, not the previous one", async ({ page }) => {
@@ -209,6 +187,32 @@ test.describe("other pages keep working after navigation", () => {
   });
 });
 
+test.describe("the studieinfo chip", () => {
+  test("present and identically labeled on every page", async ({ page }) => {
+    await seed(page, { [PROFILE_KEY]: BIT_PROFILE, [LAST_SEMESTER_KEY]: "26h" });
+    const expectedLabel = "BIT · 2025 · Høst 2026";
+
+    await page.goto("/");
+    await expect(page.locator("#studieinfo-chip")).toHaveText(expectedLabel);
+
+    await navTo(page, "/emner/");
+    await expect(page.locator("#studieinfo-chip")).toHaveText(expectedLabel);
+
+    await navTo(page, "/planlegger/");
+    await expect(page.locator("#studieinfo-chip")).toHaveText(expectedLabel);
+
+    // /emne/[code]/ isn't reachable from the persistent chrome (only via a
+    // search result), so this leg is a direct load rather than a swap.
+    await page.goto("/emne/TDT4100/");
+    await expect(page.locator("#studieinfo-chip")).toHaveText(expectedLabel);
+  });
+});
+
+test("/studier/ is gone", async ({ page }) => {
+  const response = await page.goto("/studier/");
+  expect(response?.status()).toBe(404);
+});
+
 test("no console or page errors during a full navigation circuit", async ({ page }) => {
   const problems: string[] = [];
   page.on("pageerror", (e) => problems.push(`pageerror: ${e.message}`));
@@ -216,9 +220,9 @@ test("no console or page errors during a full navigation circuit", async ({ page
     if (m.type() === "error") problems.push(`console.error: ${m.text()}`);
   });
 
-  await seed(page, { [THEME_KEY]: "dark", [PLAN_KEY]: BIT_PLAN });
+  await seed(page, { [THEME_KEY]: "dark", [PROFILE_KEY]: BIT_PROFILE, [LAST_SEMESTER_KEY]: "26h" });
   await page.reload();
-  for (const href of ["/planlegger/", "/emner/", "/studier/", "/planlegger/"]) {
+  for (const href of ["/planlegger/", "/emner/", "/planlegger/", "/emner/"]) {
     await navTo(page, href);
   }
   expect(problems).toEqual([]);
