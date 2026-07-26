@@ -63,6 +63,24 @@ describe("buildExamList", () => {
     expect(model.rows[0]?.tight).toBe(true);
   });
 
+  it("flags sameDay on all three rows of a 3-way same-day clash", () => {
+    const model = buildExamList(
+      [
+        { code: "A", date: "2026-11-26" },
+        { code: "B", date: "2026-11-26" },
+        { code: "C", date: "2026-11-26" },
+      ],
+      "2026-01-01",
+    );
+    expect(model.rows.map((r) => r.sameDay)).toEqual([true, true, true]);
+    // Only the earlier row of each adjacent pair carries gapToNext 0, so the old
+    // `gapToNext === 0` count read 2 for this 3-way. examList.ts's verdict counts
+    // rows sharing a day (`sameDay`), so it reads "3 eksamener samme dag" — the
+    // actual same-day row count.
+    expect(model.rows.map((r) => r.gapToNext)).toEqual([0, 0, null]);
+    expect(model.rows.filter((r) => r.sameDay).length).toBe(3);
+  });
+
   it("does not flag sameDay on rows with distinct dates", () => {
     const model = buildExamList(
       [

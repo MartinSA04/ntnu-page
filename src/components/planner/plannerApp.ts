@@ -60,6 +60,7 @@ import { type ExamRenderResult, renderExamList, renderExamMessage } from "./exam
 import { type BlockDetail, type GridRenderResult, renderGrid, renderGridMessage } from "./grid.js";
 import { type BlockPopoverContext, mountBlockPopover } from "./popover.js";
 import {
+  type ClassifiedCourse,
   findProgramPlan,
   isSuspiciousPrefill,
   type PeriodCourses,
@@ -142,6 +143,8 @@ interface PlannerElements {
   gapText: HTMLElement;
   gapButton: HTMLButtonElement;
   addCourseBtn: HTMLButtonElement;
+  planPanel: HTMLDetailsElement;
+  planPanelBody: HTMLElement;
   provenance: HTMLElement;
 }
 
@@ -179,6 +182,8 @@ function getElements(): PlannerElements | null {
     gapText: byId<HTMLElement>("planner-gap-text"),
     gapButton: byId<HTMLButtonElement>("planner-gap-btn"),
     addCourseBtn: byId<HTMLButtonElement>("planner-add-course-btn"),
+    planPanel: byId<HTMLDetailsElement>("planner-plan-panel"),
+    planPanelBody: byId<HTMLElement>("planner-plan-body"),
     provenance: byId<HTMLElement>("planner-provenance"),
   };
 
@@ -406,6 +411,12 @@ export async function mountPlannerApp(
   let plan: PlanState = store.loadPlan();
   if (hashPlan && hashHasPlan) {
     plan = planFromHash(hashPlan);
+    // A program-less link (`#…;-;…courses`) must clear any stored profile, not
+    // just omit one: `savePlan` can only ever *write* `np:profile`, never clear
+    // it (store.ts), so the header chip would keep naming the old programme
+    // while the planner shows none (finding 2). `removeProgram` clears it first;
+    // `savePlan` then writes exactly the hash's own courses.
+    if (hashPlan.program === null) store.removeProgram();
     store.savePlan(plan);
   } else if (!knownSemester(plan.semesterId)) {
     // Stored state can outlive a semester too — silently, since no link lied.
@@ -448,6 +459,23 @@ export async function mountPlannerApp(
       entriesForProgram(bundle.timetable, plan.program?.code),
       semester.teachingWeeks,
     );
+  }
+
+  /**
+   * A bundle's timetable narrowed to this semester's teaching weeks ONLY — not
+   * to the programme's own sections. This is what the grid draws, because the
+   * grid's `applyGroupSelection` (groups.ts) is the single owner of programme
+   * narrowing: its default branch runs `entriesForProgram` for the programme's
+   * parallel, but an *explicit* group pick wins over the programme filter.
+   * Pre-narrowing by programme here too stripped a cross-programme parallel the
+   * student had explicitly selected before the grid ever saw it — the course's
+   * lecture block vanished silently (finding 1). `semesterEntries` keeps the
+   * programme narrowing where it belongs: the off-semester/credit accounting.
+   */
+  function semesterWeekEntries(bundle: CourseBundle | null): TimetableEntry[] {
+    const semester = currentSemester();
+    if (!bundle?.timetable || !semester) return [];
+    return entriesInSemester(bundle.timetable, semester.teachingWeeks);
   }
 
   // --- Semester toggle + banner ------------------------------------------
@@ -965,6 +993,99 @@ export async function mountPlannerApp(
     }
   }
 
+  // --- Render: "Fra studieplanen" panel (design §8) -----------------------
+
+  interface PlanPanelGroup {
+    name: string | null;
+    /** Verbatim study-plan prose (DR-5) — never paraphrased. */
+    description: string | null;
+    courses: ClassifiedCourse[];
+  }
+
+  /**
+   * The study plan's choice courses (`periodCourses.choice`) grouped by their
+   * verbatim group title, preserving order. Obligatory courses are prefilled
+   * into the plan already and never surface here — this panel is the *offered*
+   * pool with the group prose that says how to choose (DR-5), nothing more.
+   */
+  function planPanelGroups(): PlanPanelGroup[] {
+    const groups: PlanPanelGroup[] = [];
+    const byKey = new Map<string, PlanPanelGroup>();
+    for (const course of periodCourses?.choice ?? []) {
+      const key = course.groupName ?? "";
+      let group = byKey.get(key);
+      if (!group) {
+        group = { name: course.groupName, description: course.groupDescription, courses: [] };
+        byKey.set(key, group);
+        groups.push(group);
+      }
+      group.courses.push(course);
+    }
+    return groups;
+  }
+
+  /** One offered course row: code · name · credits + a "Legg til"/"I planen ✓"
+   *  affordance (the add-dialog's row pattern, simplified — reuses the store). */
+  function buildPlanPanelRow(course: ClassifiedCourse): HTMLElement {
+    const row = el("div", "planner-plan-row");
+
+    const head = el("span", "planner-plan-row-head");
+    head.append(el("span", "np-data", course.code));
+    head.append(el("span", "planner-plan-row-name", course.name));
+    row.append(head);
+
+    const inPlan = store.hasCourse(course.code);
+    const action = el("button", "np-btn planner-plan-add", inPlan ? "I planen ✓" : "Legg til");
+    action.type = "button";
+    action.disabled = inPlan;
+    if (!inPlan) {
+      action.setAttribute("aria-label", `Legg til ${course.code} i planen`);
+      action.addEventListener("click", () =>
+        store.addCourse({
+          code: course.code,
+          name: course.name,
+          version: course.version,
+          credits: course.credits,
+        }),
+      );
+    }
+    row.append(action);
+
+    const meta = el("span", "planner-plan-row-meta");
+    if (course.credits != null) {
+      meta.append(el("span", "np-data", `${formatCreditNumber(course.credits)} sp`));
+    }
+    row.append(meta);
+
+    return row;
+  }
+
+  /**
+   * The collapsible "Fra studieplanen" panel: the study plan's choice groups,
+   * each with its verbatim prose (DR-5) and its courses. Shown only when a
+   * programme is set AND the resolved period actually has choice groups —
+   * otherwise there is nothing to offer and the panel stays hidden.
+   */
+  function renderPlanPanel(): void {
+    const groups = plan.program ? planPanelGroups() : [];
+    if (groups.length === 0) {
+      elements.planPanel.hidden = true;
+      elements.planPanelBody.replaceChildren();
+      return;
+    }
+    elements.planPanel.hidden = false;
+    elements.planPanelBody.replaceChildren();
+    for (const group of groups) {
+      const groupEl = el("div", "planner-plan-group");
+      if (group.name) groupEl.append(el("p", "np-kicker planner-plan-group-name", group.name));
+      if (group.description) {
+        groupEl.append(el("p", "np-note planner-plan-group-desc", group.description));
+      }
+      for (const course of group.courses) groupEl.append(buildPlanPanelRow(course));
+      elements.planPanelBody.append(groupEl);
+    }
+  }
+
   // --- Render: grid + exams + pre-publish fallback ------------------------
 
   /**
@@ -1136,9 +1257,13 @@ export async function mountPlannerApp(
     const anyLoading = states.some((s) => s.loading);
     const question = weekQuestion();
 
+    // Week-only narrowing (NOT programme-narrowed): the grid's own
+    // `applyGroupSelection` owns programme narrowing so an explicit
+    // cross-programme parallel pick still draws (finding 1). See
+    // `semesterWeekEntries`.
     const filteredStates: PlanCourseState[] = states.map((s) => {
       if (!s.bundle?.timetable) return s;
-      return { ...s, bundle: { ...s.bundle, timetable: semesterEntries(s.bundle) } };
+      return { ...s, bundle: { ...s.bundle, timetable: semesterWeekEntries(s.bundle) } };
     });
 
     // The four empty/fallback states (REWORK §3). Never a blank grid: always
@@ -1151,9 +1276,13 @@ export async function mountPlannerApp(
     // (S6/T10). Checked on the RAW states, before semester/programme narrowing.
     const failed = states.some((s) => s.bundle !== null && s.bundle.timetable === null);
     // Every loaded bundle has zero entries for this programme this semester —
-    // the grid would be blank. (`filteredStates` are already narrowed.)
+    // the grid would be blank. Computed from the programme-narrowed
+    // `semesterEntries` (NOT the grid's week-only `filteredStates`), so the
+    // fallback-card decision is unchanged by the grid path no longer
+    // pre-narrowing by programme (finding 1).
     const empty =
-      anyBundlesLoaded && filteredStates.every((s) => (s.bundle?.timetable ?? []).length === 0);
+      anyBundlesLoaded &&
+      states.every((s) => s.bundle === null || semesterEntries(s.bundle).length === 0);
 
     const noProfile = plan.program === undefined && plan.courses.length === 0;
     const showFallback = noProfile || (states.length > 0 && !anyLoading && (!published || empty));
@@ -1360,6 +1489,7 @@ export async function mountPlannerApp(
     renderCreditLine();
     renderDirectionQuestion();
     renderCourseRows();
+    renderPlanPanel();
     renderGapLine();
     renderGridAndExams();
     renderProvenance();
@@ -1404,6 +1534,7 @@ export async function mountPlannerApp(
   /** Re-renders everything that depends on the study plan but not on the grid. */
   function renderPlanDependents(): void {
     renderDirectionQuestion();
+    renderPlanPanel();
     renderGapLine();
     renderCreditLine();
     renderGridAndExams();
@@ -1543,6 +1674,9 @@ export async function mountPlannerApp(
       if (!parsed) return;
       if (parsed.program === null && parsed.courses.length === 0) return;
       linkNote = null;
+      // Same as the initial load: a program-less link clears the stored profile
+      // (savePlan cannot), so the chip stops naming the old programme (finding 2).
+      if (parsed.program === null) store.removeProgram();
       store.savePlan(planFromHash(parsed));
     },
     { signal },

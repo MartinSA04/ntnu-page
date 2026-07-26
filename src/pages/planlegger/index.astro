@@ -131,6 +131,11 @@ const programOptionsJson = JSON.stringify(programOptions).replaceAll("<", "\\u00
         <button type="button" class="np-btn planner-add-course-btn" id="planner-add-course-btn">
           Legg til emne
         </button>
+
+        <details class="planner-plan-panel" id="planner-plan-panel" hidden>
+          <summary class="np-summary planner-plan-summary">Fra studieplanen</summary>
+          <div class="planner-plan-body" id="planner-plan-body"></div>
+        </details>
       </section>
     </div>
 
@@ -590,6 +595,64 @@ const programOptionsJson = JSON.stringify(programOptions).replaceAll("<", "\\u00
 
   .planner-add-course-btn {
     align-self: flex-start;
+  }
+
+  /* --- "Fra studieplanen" panel -----------------------------------------
+     Design §8: the study plan's choice groups with their VERBATIM prose
+     (DR-5 — never assert "group satisfied"), collapsed by default so it never
+     buries the plan itself. Only shown when a programme is set and the period
+     has choice groups. Rows reuse the add-dialog's code · name · credits +
+     add-affordance pattern, simplified. */
+  .planner-plan-panel {
+    margin-top: var(--space-4);
+  }
+
+  :global(.planner-plan-group) {
+    margin-top: var(--space-3);
+  }
+
+  :global(.planner-plan-group-name) {
+    margin-bottom: var(--space-1);
+  }
+
+  :global(.planner-plan-group-desc) {
+    max-width: none;
+    margin-bottom: var(--space-2);
+  }
+
+  :global(.planner-plan-row) {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: baseline;
+    column-gap: var(--gap-3);
+    row-gap: var(--space-1);
+    padding: var(--space-2) 0;
+    border-bottom: 1px solid var(--border);
+  }
+
+  :global(.planner-plan-row-head) {
+    grid-column: 1;
+    display: inline-flex;
+    align-items: baseline;
+    gap: var(--gap-2);
+    flex-wrap: wrap;
+  }
+
+  :global(.planner-plan-row-name) {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+
+  :global(.planner-plan-row-meta) {
+    grid-column: 1 / -1;
+    color: var(--muted);
+    font-size: var(--text-xs);
+  }
+
+  :global(.planner-plan-add) {
+    grid-column: 2;
+    grid-row: 1;
+    justify-self: end;
   }
 
   .planner-provenance {

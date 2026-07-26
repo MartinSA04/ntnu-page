@@ -96,6 +96,13 @@ export interface ClassifiedCourse {
   credits: number | null;
   /** Verbatim study-plan group title — never paraphrased (DR-5). */
   groupName: string | null;
+  /**
+   * Verbatim study-plan group description prose — never paraphrased or
+   * summarized (DR-5). This is where "velg 2 av 5" is actually written down;
+   * the planner's "Fra studieplanen" panel quotes it unmodified. `null` when
+   * the group carried none.
+   */
+  groupDescription: string | null;
 }
 
 /** One selectable studieretning under a waypoint. */
@@ -247,13 +254,17 @@ export function relevantCohorts(plan: Pick<StudyPlan, "periods">, semesterId: st
 /** Above this an obligatory prefill is a bug signal, not a semester (see `isSuspiciousPrefill`). */
 const SUSPICIOUS_CREDIT_CEILING = 30;
 
-function toClassified(course: PlannedCourse, groupName: string | null): ClassifiedCourse {
+function toClassified(
+  course: PlannedCourse,
+  group: Pick<PlanCourseGroup, "name" | "description">,
+): ClassifiedCourse {
   return {
     code: course.code,
     name: course.name ?? course.code,
     version: course.version ?? "1",
     credits: course.credits,
-    groupName,
+    groupName: group.name,
+    groupDescription: group.description ?? null,
   };
 }
 
@@ -278,7 +289,7 @@ function collectGroups(
       if (!isRealCourse(course)) continue;
       if (seen.has(course.code)) continue;
       seen.add(course.code);
-      const classified = toClassified(course, group.name);
+      const classified = toClassified(course, group);
       if (isObligatory(course)) obligatory.push(classified);
       else choice.push(classified);
     }
@@ -304,7 +315,7 @@ function collectPool(
       if (!isRealCourse(course)) continue;
       if (seen.has(course.code)) continue;
       seen.add(course.code);
-      choice.push(toClassified(course, group.name));
+      choice.push(toClassified(course, group));
     }
   }
 }
@@ -318,7 +329,7 @@ function obligatoryIntersection(directions: PlanDirection[]): ClassifiedCourse[]
     for (const group of direction.courseGroups ?? []) {
       for (const course of group.courses ?? []) {
         if (!isRealCourse(course) || !isObligatory(course)) continue;
-        if (!byCode.has(course.code)) byCode.set(course.code, toClassified(course, group.name));
+        if (!byCode.has(course.code)) byCode.set(course.code, toClassified(course, group));
       }
     }
     return byCode;

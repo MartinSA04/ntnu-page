@@ -111,6 +111,20 @@ describe("applyGroupSelection", () => {
     expect(kept).toEqual([null, "Forelesningsparallell 2", "Øvingsgruppe 7"]);
   });
 
+  test("an explicit pick of a parallel tagged for ANOTHER programme is kept (finding 1)", () => {
+    // Programme MTDT is set, but the student explicitly picked
+    // Forelesningsparallell 2 — tagged only for MTKJ. The explicit selection
+    // must win over programme narrowing here, because this module is the single
+    // owner of that narrowing: the caller no longer pre-narrows by programme, so
+    // if this dropped the foreign-tagged pick the block the caller wrote to the
+    // hash could never draw (the silent-vanish bug).
+    const kept = applyGroupSelection(entries, ["forelesningsparallell-2"], "MTDT").map(
+      (x) => x.title,
+    );
+    expect(kept).toContain("Forelesningsparallell 2");
+    expect(kept).not.toContain("Forelesningsparallell 1");
+  });
+
   test("default keeps the lone lecture group when there is only one", () => {
     const solo = [e(null), e("Forelesning")];
     const kept = applyGroupSelection(solo, undefined, "MTDT").map((x) => x.title);

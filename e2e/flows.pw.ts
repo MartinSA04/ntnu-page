@@ -27,6 +27,10 @@ import { expect, type Page, test } from "@playwright/test";
  *   suffix ("Forelesningsparallell 1/2/3"): parallel 1 is Friday 08:15–10:00,
  *   parallel 2 is Wednesday 08:15–10:00. With no programme to narrow by, the
  *   numbered-parallel fallback in groups.ts defaults to parallel 1.
+ * - TMA4400 partitions its lectures by programme cluster (studyProgramKeys):
+ *   MTDT's own parallels are "Forelesning 1 MTDT …" (Tue 10:15) and "Forelesning
+ *   2 … MTDT" (Thu 10:15); "Forelesning 2 MTBYGG" (Wed 08:15–10:00) is tagged
+ *   for MTBYGG only — a cross-programme parallel an MTDT student can still pick.
  * - MTDT kull 2024 at 26h (a 3rd-year autumn) is gated behind "Valg av
  *   studieretning" — the same waypoint the pre-rework suite exercised.
  * - BSPL kull 2026 period 1 is gated behind a campus choice whose own code
@@ -103,6 +107,27 @@ test("share: the hash reproduces the plan in a fresh context", async ({ page, br
   }
 });
 
+test("share: a program-less link clears the profile chip", async ({ page }) => {
+  // Finding 2: an MTDT plan writes np:profile. A program-less shared link opened
+  // in the SAME context (localStorage persists that profile) must clear it —
+  // savePlan can only ever WRITE np:profile, never clear it, so without
+  // removeProgram the header chip kept naming MTDT while the planner showed none.
+  await page.goto("/planlegger/#26h;MTDT.2026;");
+  await expect(courseRows(page)).toHaveCount(5, { timeout: 30_000 });
+  await expect(page.locator("#studieinfo-chip")).toContainText("MTDT", { timeout: 30_000 });
+
+  // A different-path hop first guarantees a real document load (so the initial
+  // hash-load path runs), and proves the profile is genuinely stored: the chip
+  // still reads MTDT on /emner/.
+  await page.goto("/emner/");
+  await expect(page.locator("#studieinfo-chip")).toContainText("MTDT");
+
+  await page.goto("/planlegger/#26h;-;%2BTDT4100");
+  await expect(courseRows(page)).toHaveCount(1, { timeout: 30_000 });
+  await expect(page.locator("#studieinfo-chip")).toContainText("Velg studieprogram");
+  await expect(page.locator("#studieinfo-chip")).not.toContainText("MTDT");
+});
+
 test("overlap: two colliding courses render side by side, both readable", async ({ page }) => {
   // MTDT 2026's obligatory TDT4109 collides with a manually added TDT4120 —
   // the exact clash the old suite's clash-preview (ekstraemne) test verified.
@@ -110,7 +135,9 @@ test("overlap: two colliding courses render side by side, both readable", async 
   await expect(courseRows(page)).toHaveCount(6, { timeout: 30_000 });
   await expect(gridBlocks(page).first()).toBeVisible({ timeout: 30_000 });
 
-  await expect(page.locator("#planner-grid-status")).toContainText(/kollisjon/, {
+  // `\d+ kollisjon` (never a bare /kollisjon/, which "ingen kollisjoner" also
+  // matches): assert the verdict actually counts a clash, not its clean state.
+  await expect(page.locator("#planner-grid-status")).toContainText(/\d+ kollisjon/, {
     timeout: 30_000,
   });
 
@@ -159,6 +186,40 @@ test("groups: switching parallel updates the grid and survives the URL", async (
   await expect(gridBlocks(page)).toHaveCount(1, { timeout: 30_000 });
   await expect(gridBlocks(page).first()).toHaveAttribute("aria-label", /onsdag/i);
   expect(page.url()).toMatch(/~forelesningsparallell-2/);
+});
+
+test("groups: a non-default parallel renders with a programme set", async ({ page }) => {
+  // Finding 1: with a programme set, the grid used to pre-narrow every course's
+  // timetable to that programme's own sections BEFORE the group filter ran, so
+  // an explicit pick of a parallel tagged for ANOTHER programme was stripped and
+  // the course's block vanished silently. TMA4400 partitions its lectures by
+  // programme cluster: MTDT sees "Forelesning 1 MTDT …" (Tue) and "Forelesning 2
+  // … MTDT" (Thu); "Forelesning 2 MTBYGG" (Wed 08:15) is tagged for MTBYGG only —
+  // exactly the cross-programme parallel the pre-narrow used to drop.
+  const tmaBlocks = () => page.locator("#planner-grid-frame .planner-block").filter({ hasText: "TMA4400" });
+
+  await page.goto("/planlegger/#26h;MTDT.2026;");
+  await expect(courseRows(page)).toHaveCount(5, { timeout: 30_000 });
+  await expect(tmaBlocks().first()).toBeVisible({ timeout: 45_000 });
+
+  await tmaBlocks().first().click();
+  const popover = page.locator("#planner-popover");
+  await expect(popover).toBeVisible();
+  const foreignRow = popover.locator(".planner-popover-group-row", {
+    hasText: "Forelesning 2 MTBYGG",
+  });
+  await expect(foreignRow).toBeVisible();
+  await foreignRow.locator("input").check();
+
+  // The picked MTBYGG parallel (Wednesday) must now draw — pre-fix it drew
+  // nothing at all for TMA4400.
+  await expect(tmaBlocks().first()).toBeVisible();
+  await expect(tmaBlocks().first()).toHaveAttribute("aria-label", /onsdag/i);
+  expect(page.url()).toMatch(/TMA4400~forelesning-2-mtbygg/i);
+
+  await page.reload();
+  await expect(tmaBlocks().first()).toBeVisible({ timeout: 45_000 });
+  await expect(tmaBlocks().first()).toHaveAttribute("aria-label", /onsdag/i);
 });
 
 test("manual adds stay in their semester", async ({ page }) => {

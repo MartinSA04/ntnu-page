@@ -211,9 +211,11 @@ export function renderExamList(
   }
   listHost.replaceChildren(list);
 
-  // One connector per adjacent same-date pair — `gapToNext` is set only on
-  // the earlier row of each pair, so this can't double-count a 3+-way clash.
-  const collisionCount = model.rows.filter((row) => row.gapToNext === 0).length;
+  // How many exam rows actually share their day with another (`sameDay` is set
+  // on EVERY row of a same-date cluster) — so the caller's verdict reads "3
+  // eksamener samme dag" for a 3-way clash, not the 2 adjacent-pair connectors
+  // that `gapToNext === 0` would have counted.
+  const collisionCount = model.rows.filter((row) => row.sameDay).length;
 
   return { collisionCount, state: "list" };
 }

@@ -419,6 +419,23 @@ describe("removeProgram", () => {
     expect(cb).toHaveBeenCalledTimes(1);
     expect(cb.mock.calls[0]?.[0]?.program).toBeUndefined();
   });
+
+  it("is why the program-less hash-load needs it: savePlan alone cannot clear a stale profile", () => {
+    const store = createPlanStore("26h", { storage, events });
+    store.setProgram({ code: "MTDT", name: "Datateknologi", cohort: 2024 });
+    // A program-less `savePlan` (what a program-less shared hash writes) leaves
+    // the stored profile untouched — `savePlan` only ever *writes* `np:profile`,
+    // never clears it — so the header chip kept naming MTDT (finding 2).
+    store.savePlan({
+      semesterId: "26h",
+      courses: [{ code: "TDT4100", name: "A", version: "1", source: "manual" }],
+    });
+    expect(store.loadPlan().program?.code).toBe("MTDT");
+    // `removeProgram` is what actually clears it — the fix calls it in both
+    // hash-load paths before writing the hash's own courses.
+    store.removeProgram();
+    expect(store.loadPlan().program).toBeUndefined();
+  });
 });
 
 describe("semester-scoped plans", () => {

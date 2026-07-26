@@ -276,6 +276,7 @@ describe("isSuspiciousPrefill", () => {
       version: "1",
       credits: 7.5,
       groupName: null,
+      groupDescription: null,
     }));
     expect(isSuspiciousPrefill(many)).toBe(true);
     expect(isSuspiciousPrefill(many.slice(0, 4))).toBe(false);
@@ -283,7 +284,16 @@ describe("isSuspiciousPrefill", () => {
 
   it("treats null credits as zero rather than throwing", () => {
     expect(
-      isSuspiciousPrefill([{ code: "A", name: "x", version: "1", credits: null, groupName: null }]),
+      isSuspiciousPrefill([
+        {
+          code: "A",
+          name: "x",
+          version: "1",
+          credits: null,
+          groupName: null,
+          groupDescription: null,
+        },
+      ]),
     ).toBe(false);
   });
 });
@@ -365,9 +375,30 @@ describe("resolvePeriodFor", () => {
 describe("prefillCredits", () => {
   it("sums the study plan's own figures, treating null as zero", () => {
     const courses = [
-      { code: "MD4071", name: "", version: "1", credits: 30, groupName: null },
-      { code: "SMED8008", name: "", version: "1", credits: 7.5, groupName: null },
-      { code: "SMED8004", name: "", version: "1", credits: 5, groupName: null },
+      {
+        code: "MD4071",
+        name: "",
+        version: "1",
+        credits: 30,
+        groupName: null,
+        groupDescription: null,
+      },
+      {
+        code: "SMED8008",
+        name: "",
+        version: "1",
+        credits: 7.5,
+        groupName: null,
+        groupDescription: null,
+      },
+      {
+        code: "SMED8004",
+        name: "",
+        version: "1",
+        credits: 5,
+        groupName: null,
+        groupDescription: null,
+      },
     ];
     // CMEDFORSK period 1: legitimately 42,5 sp, and it must reach the page
     // with a note rather than being discarded into "0 av 30 sp" (B9.4).
