@@ -80,25 +80,44 @@ export function mountBlockPopover(store: PlanStore, signal: AbortSignal): BlockP
     return new Set(ctx.groups.filter((g) => g.kind === "lecture").map((g) => g.key));
   }
 
-  /** Applies a new explicit selection: store first (live grid update), then this dialog's own display. */
-  function setSelection(next: string[]): void {
+  /**
+   * Applies a new explicit selection: store first (live grid update), then
+   * this dialog's own display. `focusKey` re-focuses the input for that
+   * group key after the rebuild, so toggling a checkbox/radio with the
+   * keyboard doesn't drop focus back to the document.
+   */
+  function setSelection(next: string[], focusKey?: string): void {
     if (!current) return;
     selection = next;
     store.setCourseGroups(current.detail.code, next);
     renderContent(current);
     if (invoker) position(invoker);
+    if (focusKey) {
+      dialog.querySelector<HTMLInputElement>(`input[value="${CSS.escape(focusKey)}"]`)?.focus();
+    }
   }
 
   /** Radio pick: the parallel replaces any previous one, øving/lab picks carry over untouched. */
   function pickLecture(ctx: BlockPopoverContext, key: string): void {
     const lectureKeys = lectureKeysOf(ctx);
-    setSelection([key, ...selection.filter((k) => !lectureKeys.has(k))]);
+    setSelection([key, ...selection.filter((k) => !lectureKeys.has(k))], key);
   }
 
-  /** Checkbox toggle: add/remove one øving/lab key, everything else untouched. */
+  /**
+   * Checkbox toggle: add/remove one øving/lab key against the *effective*
+   * base, not the raw explicit selection. With no explicit pick yet,
+   * `selection` is `[]` — starting from `[]` here would write an explicit
+   * selection containing only the øving key, and `applyGroupSelection`
+   * would then filter out every named lecture entry (nothing in the
+   * selection names them), vanishing the course's lectures from the grid.
+   * Seeding from `ctx.defaults` (the same fallback the display already
+   * uses) keeps the student's default lecture parallel in the selection.
+   */
   function toggleOther(key: string, checked: boolean): void {
+    const base = selection.length > 0 ? selection : (current?.defaults ?? []);
     setSelection(
-      checked ? [...selection.filter((k) => k !== key), key] : selection.filter((k) => k !== key),
+      checked ? [...base.filter((k) => k !== key), key] : base.filter((k) => k !== key),
+      key,
     );
   }
 
@@ -111,22 +130,27 @@ export function mountBlockPopover(store: PlanStore, signal: AbortSignal): BlockP
   /**
    * Radio per lecture-kind option, checkbox per øving/lab option — in
    * `ctx.groups`'s own order (lecture-kind first, then label). A lecture
-   * option is checked when its key is in the explicit selection, or — no
-   * explicit selection yet — when it is one of `ctx.defaults`; either way,
-   * any option that came from `ctx.defaults` is labeled "(din parallell)"
-   * regardless of what is currently picked, so the student's assigned
-   * default stays identifiable even after they switch away from it.
+   * option is checked when the explicit selection contains a lecture key
+   * (whichever one), or — no lecture key in the selection, whether because
+   * there is no explicit selection at all or because it only names øving/lab
+   * groups so far — when it is one of `ctx.defaults`; either way, any option
+   * that came from `ctx.defaults` is labeled "(din parallell)" regardless of
+   * what is currently picked, so the student's assigned default stays
+   * identifiable even after they switch away from it.
    */
   function renderGroupsSection(ctx: BlockPopoverContext): HTMLElement {
     const section = el("div", "planner-popover-groups");
     section.append(el("p", "np-kicker", "Grupper"));
 
     const list = el("div", "planner-popover-group-list");
-    const checkedLectureKeys = selection.length > 0 ? selection : ctx.defaults;
+    const lectureKeys = lectureKeysOf(ctx);
+    const hasExplicitLecture = selection.some((k) => lectureKeys.has(k));
+    const checkedLectureKeys = hasExplicitLecture ? selection : ctx.defaults;
 
     for (const option of ctx.groups) {
       const row = el("label", "planner-popover-group-row");
       const input = el("input");
+      input.value = option.key;
       if (option.kind === "lecture") {
         input.type = "radio";
         input.name = "planner-popover-lecture";
