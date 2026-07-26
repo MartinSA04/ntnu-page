@@ -113,6 +113,17 @@ export interface GridRenderOptions {
    * one-course `/emne/` reuse passes none, so its blocks are inert.
    */
   onBlockClick?: (detail: BlockDetail, anchor: HTMLElement) => void;
+  /**
+   * Bypasses `applyGroupSelection` entirely — every entry (every lecture
+   * parallel, every øving/lab group) draws, not just the programme's own
+   * default or the student's explicit pick. `/emne/[code]/` is a reference
+   * page for the course itself, not for one student's plan (Task 7 ruling):
+   * a visitor deciding *which* parallel to register for needs to see all of
+   * them, not the one `entriesForProgram`/`defaultLectureKeys` happens to
+   * guess is theirs (`/emne/` has no programme context to guess from at
+   * all). `/planlegger/`'s own render never sets this.
+   */
+  showAllGroups?: boolean;
 }
 
 export interface GridRenderResult {
@@ -168,13 +179,18 @@ function blockAriaLabel(entry: GridEntry, conflictPartners: string[]): string {
  * parallel the student did not select — the programme's own lecture parallel
  * is the default, unpicked øving/lab groups stay all-muted until chosen. The
  * programme code and any explicit selection ride on the course state.
+ *
+ * `showAllGroups` bypasses that narrowing entirely (Task 7 ruling) — see
+ * `GridRenderOptions.showAllGroups`.
  */
-function collectEntries(courses: PlanCourseState[]): GridEntry[] {
+function collectEntries(courses: PlanCourseState[], showAllGroups: boolean): GridEntry[] {
   const entries: GridEntry[] = [];
   for (const state of courses) {
     const timetable = state.bundle?.timetable;
     if (!timetable) continue;
-    const selected = applyGroupSelection(timetable, state.course.groups, state.programCode);
+    const selected = showAllGroups
+      ? timetable
+      : applyGroupSelection(timetable, state.course.groups, state.programCode);
     for (const raw of selected) {
       const weeksNumbers = parseWeeks(raw.weeks);
       entries.push({
@@ -622,7 +638,7 @@ export function renderGrid(
   options: GridRenderOptions = {},
 ): GridRenderResult {
   const loading = options.loading ?? false;
-  const rawEntries = collectEntries(courses);
+  const rawEntries = collectEntries(courses, options.showAllGroups ?? false);
 
   const empty = (state: GridRenderResult["state"], message?: string): GridRenderResult => {
     renderGridMessage(frame, notesHost, message);

@@ -365,14 +365,23 @@ export function createPlanStore(
    * Replaces the plan's `source: "program"` course set with `courses`,
    * preserving: (a) the `dropped` flag on any code that persists across the
    * replacement (re-picking the same programme+kull, or a plan refresh,
-   * must not silently un-drop something the student already removed), and
-   * (b) every `source: "manual"` course untouched. Used when the
-   * programme/kull selection changes (or the study plan is (re)fetched).
+   * must not silently un-drop something the student already removed), (b)
+   * the `groups` selection on any code that persists (a shared link's group
+   * pick, or the student's own parallel/øving choice, must survive a study
+   * plan re-derive — it used to show on first paint and then vanish the
+   * moment `onPlanChange` re-ran this with the same codes), and (c) every
+   * `source: "manual"` course untouched. Used when the programme/kull
+   * selection changes (or the study plan is (re)fetched).
    */
   function setProgramPlan(program: PlanProgram, courses: AddCourseInput[]): PlanState {
     const plan = loadPlan();
     const previousDrops = new Map(
       plan.courses.filter((c) => c.source === "program" && c.dropped).map((c) => [c.code, true]),
+    );
+    const previousGroups = new Map(
+      plan.courses
+        .filter((c) => c.source === "program" && c.groups && c.groups.length > 0)
+        .map((c) => [c.code, c.groups as string[]]),
     );
     const manual = plan.courses.filter((c) => c.source === "manual");
     const program_: PlanCourse[] = courses.map((c) => {
@@ -384,6 +393,8 @@ export function createPlanStore(
       };
       if (c.credits != null) course.credits = c.credits;
       if (previousDrops.has(c.code)) course.dropped = true;
+      const groups = previousGroups.get(c.code);
+      if (groups) course.groups = groups;
       return course;
     });
     const next: PlanState = { ...plan, program, courses: [...program_, ...manual] };

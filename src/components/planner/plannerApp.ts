@@ -19,14 +19,13 @@
  *   Uke region* — an empty grid with "velg studieretning" is a complete
  *   screen; the same question hidden behind a tab is a dead end.
  * - **The choice pool.** A 4th/5th-year period offers 30–60+ courses. That is
- *   not a list — it is a filter on search, so it lives inside the add field's
- *   "Fra studieplanen / Alle emner" scope toggle rather than on the surface.
+ *   not a list — its count/copy surfaces in the gap line and the "period is
+ *   elective" question, and the actual picking happens in the add-course
+ *   dialog's flat catalog search (`addCourse.ts`, Task 12), not on the surface.
  *
  * Render work is delegated to grid.ts/examList.ts.
  */
 
-import { lecturesOnly } from "../../lib/planner/activity.js";
-import { findConflicts } from "../../lib/planner/conflicts.js";
 import {
   type CourseBundle,
   clearCourseBundleMemo,
@@ -55,7 +54,8 @@ import {
   type PlanStore,
   parsePlanHash,
 } from "../../lib/planner/store.js";
-import { el, fold, formatCreditNumber, formatCredits, formatShortDate } from "./dom.js";
+import { type AddCourseDeps, type AddCourseHandle, mountAddCourse } from "./addCourse.js";
+import { el, formatCreditNumber, formatCredits, formatShortDate } from "./dom.js";
 import { type ExamRenderResult, renderExamList, renderExamMessage } from "./examList.js";
 import { type BlockDetail, type GridRenderResult, renderGrid, renderGridMessage } from "./grid.js";
 import { type BlockPopoverContext, mountBlockPopover } from "./popover.js";
@@ -93,10 +93,11 @@ export interface SemestersFile {
  */
 export type ProgramOption = [code: string, name: string, studyLevel: string, cities: string[]];
 
-/** Which corpus the add field searches. */
-type PickerScope = "plan" | "all";
-
-/** One selectable row in the add field's listbox. */
+/**
+ * One row of the study plan's own choice pool (`availablePool` below) — used
+ * only for the gap line's/question's counts and copy now. The actual add
+ * surface is the add-course dialog's flat catalog search (Task 12).
+ */
 interface PickerRow {
   code: string;
   name: string;
@@ -104,22 +105,6 @@ interface PickerRow {
   credits: number | null;
   groupName: string | null;
 }
-
-/**
- * Rows rendered at once. Bounds both the visual list and the number of
- * candidate timetables fetched for clash previews — a period's pool can run
- * to 60+ courses, and previewing all of them would be dozens of requests for
- * rows the student never looks at.
- */
-const MAX_PICKER_ROWS = 12;
-
-/**
- * Above this, "Fra studieplanen" stops being a recommendation. MTDT period 8
- * offers ~330 course entries coded `V` — effectively "any course at NTNU",
- * which is what "Alle emner" already is. Presenting that as a curated pool
- * would be a fabricated signal, so the scope flips and says so.
- */
-const UNCURATED_POOL_SIZE = 60;
 
 /** Full credit load for one semester — the denominator in "X av 30 sp". */
 const FULL_LOAD_CREDITS = 30;
@@ -156,13 +141,7 @@ interface PlannerElements {
   gapLine: HTMLElement;
   gapText: HTMLElement;
   gapButton: HTMLButtonElement;
-  addBlock: HTMLElement;
-  addField: HTMLElement;
-  addInput: HTMLInputElement;
-  addListbox: HTMLUListElement;
-  scopePlan: HTMLButtonElement;
-  scopeAll: HTMLButtonElement;
-  scopeNote: HTMLElement;
+  addCourseBtn: HTMLButtonElement;
   provenance: HTMLElement;
 }
 
@@ -199,13 +178,7 @@ function getElements(): PlannerElements | null {
     gapLine: byId<HTMLElement>("planner-gap-line"),
     gapText: byId<HTMLElement>("planner-gap-text"),
     gapButton: byId<HTMLButtonElement>("planner-gap-btn"),
-    addBlock: byId<HTMLElement>("planner-add-block"),
-    addField: byId<HTMLElement>("planner-add-field"),
-    addInput: byId<HTMLInputElement>("planner-add-input"),
-    addListbox: byId<HTMLUListElement>("planner-add-listbox"),
-    scopePlan: byId<HTMLButtonElement>("planner-scope-plan"),
-    scopeAll: byId<HTMLButtonElement>("planner-scope-all"),
-    scopeNote: byId<HTMLElement>("planner-scope-note"),
+    addCourseBtn: byId<HTMLButtonElement>("planner-add-course-btn"),
     provenance: byId<HTMLElement>("planner-provenance"),
   };
 
@@ -343,8 +316,14 @@ export async function mountPlannerApp(
    * the picker lists ALL of a course's groups — every lecture parallel and
    * øving/lab group — so `groupOptions` runs over the whole timetable and
    * `defaultLectureKeys` marks the programme's own parallel via `programCode`.
-   * A "+N til" overflow chip's joined codes match no single course and return
-   * null (no popover) — multi-course overflow is out of scope here.
+   *
+   * A "+N til" overflow chip's joined codes (`"TDT4100 · TMA4100"`, real
+   * course codes never contain " · ") match no single course — that gets the
+   * `kind: "info"` context instead (Task 12): the popover still opens with
+   * the chip's own facts, just without a group section or dropp/fjern
+   * actions, neither of which means anything for a joint pile of courses.
+   * A `null` timetable (bundle not loaded yet) still returns `null` — no
+   * popover — same as before.
    */
   function buildPopoverContext(
     detail: BlockDetail,
@@ -352,8 +331,11 @@ export async function mountPlannerApp(
   ): BlockPopoverContext | null {
     const state = states.find((s) => s.course.code === detail.code);
     const timetable = state?.bundle?.timetable;
-    if (!state || !timetable) return null;
+    if (!state || !timetable) {
+      return detail.code.includes(" · ") ? { kind: "info", detail } : null;
+    }
     return {
+      kind: "course",
       detail,
       groups: groupOptions(timetable),
       selected: state.course.groups ?? [],
@@ -788,21 +770,39 @@ export async function mountPlannerApp(
 
   elements.directionButton.addEventListener("click", () => questionAction?.());
 
-  // --- Add field: the scoped course picker --------------------------------
-
-  let pickerScope: PickerScope = "plan";
-  let scopeChosenByUser = false;
-  let addOpen = false;
-  let addActiveIndex = -1;
-  let addRows: PickerRow[] = [];
-
-  /** Candidate bundles fetched purely to preview a clash before adding. */
-  const previewBundles = new Map<string, CourseBundle>();
-  const previewPending = new Set<string>();
+  // --- Add-course dialog ---------------------------------------------------
+  //
+  // The inline add field + typeahead is gone (Task 12): one button opens
+  // `addCourse.ts`'s dialog, which searches the whole catalog (not just the
+  // study plan's own choice pool below) and stays open for multiple adds.
+  //
+  // `addCourseDeps` is mutated in place rather than re-passed whenever the
+  // semester, the programme, or the catalog index (still loading at mount)
+  // change — see addCourse.ts's own header for why that's safe without
+  // re-mounting the dialog.
+  const addCourseDeps: AddCourseDeps = {
+    store,
+    index: null,
+    semester: currentSemester() ??
+      semesters[0] ?? {
+        id: defaultSemesterId,
+        name: "",
+        teachingWeeks: [],
+        timetablePublished: false,
+        fromDate: null,
+        toDate: null,
+        examLastDate: null,
+        examFinalDate: null,
+      },
+    programCode: plan.program?.code ?? null,
+  };
+  const addCourseDialog: AddCourseHandle = mountAddCourse(addCourseDeps, lifeSignal);
 
   /**
-   * The study plan's choice pool for this period, minus what's already in the
-   * plan. Memoised on (period, plan courses) because half a dozen callers ask
+   * The study plan's own choice pool for this period, minus what's already
+   * in the plan — feeds only the gap line's/question's counts and copy now
+   * (Task 12 moved the actual add surface to the dialog's flat catalog
+   * search). Memoised on (period, plan courses): half a dozen callers ask
    * for it per render and a late-year period's pool runs to 300+ entries.
    */
   let poolMemo: { period: PeriodCourses | null; codes: string; rows: PickerRow[] } | null = null;
@@ -826,329 +826,12 @@ export async function mountPlannerApp(
     return rows;
   }
 
-  function poolIsUncurated(): boolean {
-    return availablePool().length > UNCURATED_POOL_SIZE;
-  }
-
-  /** Scope falls back to "Alle emner" whenever the study plan offers nothing usable. */
-  function effectiveScope(): PickerScope {
-    if (scopeChosenByUser) return pickerScope;
-    if (availablePool().length === 0 || poolIsUncurated()) return "all";
-    return "plan";
-  }
-
-  function openAdd(scope?: PickerScope): void {
-    if (scope) {
-      pickerScope = scope;
-      scopeChosenByUser = true;
-    }
-    addOpen = true;
-    renderAddOptions();
-  }
-
-  /** The question panel's button: open the pool and put the cursor in it. */
+  /** The gap line's/question's button: opens the add-course dialog. */
   function openAddFromQuestion(): void {
-    openAdd(availablePool().length > 0 ? "plan" : "all");
-    setRegion("courses");
-    elements.addInput.focus();
+    addCourseDialog.open();
   }
 
-  function closeAddListbox(): void {
-    addOpen = false;
-    elements.addListbox.replaceChildren();
-    elements.addListbox.hidden = true;
-    addActiveIndex = -1;
-    addRows = [];
-    elements.addInput.setAttribute("aria-expanded", "false");
-    elements.addInput.removeAttribute("aria-activedescendant");
-  }
-
-  function setAddActive(index: number): void {
-    addActiveIndex = index;
-    const options = [...elements.addListbox.querySelectorAll(".planner-typeahead-option")];
-    let activeId: string | null = null;
-    for (const [i, opt] of options.entries()) {
-      const isActive = i === index;
-      opt.classList.toggle("is-active", isActive);
-      opt.setAttribute("aria-selected", String(isActive));
-      if (isActive) activeId = opt.id;
-    }
-    if (activeId) elements.addInput.setAttribute("aria-activedescendant", activeId);
-    else elements.addInput.removeAttribute("aria-activedescendant");
-  }
-
-  function addRow(row: PickerRow): void {
-    store.addCourse({
-      code: row.code,
-      name: row.name,
-      version: row.version,
-      source: "manual",
-      // The study plan's own figure, so a course the catalog has no entry for
-      // still contributes to the total instead of "uten oppgitt sp" (B9.1).
-      credits: row.credits,
-    });
-    elements.addInput.value = "";
-    closeAddListbox();
-  }
-
-  /** Kicks off a candidate's bundle fetch so its clash verdict can fill in. */
-  function ensurePreview(row: PickerRow): void {
-    if (previewBundles.has(row.code) || previewPending.has(row.code)) return;
-    const year = semesterYear(plan.semesterId);
-    if (year === null) return;
-    previewPending.add(row.code);
-    void fetchCourseBundle(row.code, year, row.version).then((bundle) => {
-      previewPending.delete(row.code);
-      previewBundles.set(row.code, bundle);
-      // Only the facts line changes; re-render if the list is still open.
-      if (addOpen) renderAddOptions();
-    });
-  }
-
-  /** Exam dates already committed in the plan, for the same-day check. */
-  function plannedExamDates(): Set<string> {
-    const dates = new Set<string>();
-    for (const state of orderedActiveStates()) {
-      const row = examRowFor(state.course.code);
-      if (!row) continue;
-      for (const exam of examsFromIndex(row, plan.semesterId)) {
-        if (exam.date) dates.add(exam.date);
-      }
-    }
-    return dates;
-  }
-
-  /**
-   * The facts a decision actually turns on, for one candidate row: does it
-   * clash with what's already committed, and when is its exam. The clash
-   * verdict is lecture-only (DR-1) and appears once the candidate's timetable
-   * has loaded; the exam date is free (it's already in the search index).
-   */
-  function candidateFacts(row: PickerRow, examDates: Set<string>): HTMLElement | null {
-    const facts = el("span", "planner-typeahead-facts");
-    let any = false;
-
-    const bundle = previewBundles.get(row.code);
-    if (bundle) {
-      const candidate = semesterEntries(bundle);
-      const mine = orderedActiveStates().flatMap((s) => semesterEntries(s.bundle));
-      const conflicts = findConflicts(lecturesOnly([...mine, ...candidate]));
-      const others = [
-        ...new Set(
-          conflicts
-            .filter((c) => c.a.courseCode === row.code || c.b.courseCode === row.code)
-            .map((c) => (c.a.courseCode === row.code ? c.b.courseCode : c.a.courseCode)),
-        ),
-      ];
-      if (others.length > 0) {
-        facts.append(el("span", "is-clash", `kolliderer med ${others.join(", ")}`));
-      } else if (candidate.length === 0) {
-        facts.append(el("span", undefined, "ingen timeplan i dette semesteret"));
-      } else {
-        facts.append(el("span", undefined, "ingen kollisjon"));
-      }
-      any = true;
-    }
-
-    const indexRow = examRowFor(row.code);
-    if (indexRow) {
-      const exam = examsFromIndex(indexRow, plan.semesterId).find((e) => e.date);
-      if (exam?.date) {
-        const sameDay = examDates.has(exam.date);
-        facts.append(
-          el(
-            "span",
-            sameDay ? "is-clash" : undefined,
-            sameDay
-              ? `eksamen ${formatShortDate(exam.date)} — samme dag som en annen`
-              : `eksamen ${formatShortDate(exam.date)}`,
-          ),
-        );
-        any = true;
-      }
-    }
-
-    return any ? facts : null;
-  }
-
-  function renderScopeControls(): void {
-    const scope = effectiveScope();
-    const pool = availablePool();
-    elements.scopePlan.setAttribute("aria-pressed", String(scope === "plan"));
-    elements.scopeAll.setAttribute("aria-pressed", String(scope === "all"));
-    elements.scopePlan.textContent =
-      pool.length > 0 ? `Fra studieplanen (${pool.length})` : "Fra studieplanen";
-    elements.scopePlan.disabled = pool.length === 0;
-
-    if (poolIsUncurated()) {
-      elements.scopeNote.hidden = false;
-      elements.scopeNote.textContent = `Studieplanen åpner for ${pool.length} emner dette semesteret — det er i praksis hele katalogen, så søk heller i alle emner.`;
-    } else {
-      elements.scopeNote.hidden = true;
-      elements.scopeNote.textContent = "";
-    }
-  }
-
-  function renderAddOptions(): void {
-    renderScopeControls();
-    if (!addOpen) {
-      elements.addListbox.replaceChildren();
-      elements.addListbox.hidden = true;
-      elements.addInput.setAttribute("aria-expanded", "false");
-      return;
-    }
-
-    const query = fold(elements.addInput.value.trim());
-    const scope = effectiveScope();
-    const inPlan = new Set(plan.courses.map((c) => c.code));
-
-    let matched: PickerRow[];
-    if (scope === "plan") {
-      matched = availablePool().filter(
-        (row) => query === "" || fold(row.code).includes(query) || fold(row.name).includes(query),
-      );
-    } else if (query === "") {
-      matched = [];
-    } else {
-      matched = (plannerIndex?.courses ?? [])
-        .filter(
-          ([code, name]) =>
-            !inPlan.has(code) && (fold(code).includes(query) || fold(name).includes(query)),
-        )
-        // Element 4 is the catalog version (C2/DR-4). 293 of 5 470 rows are
-        // not "1", and the default-version timetable for those is a different
-        // payload for the same slot — hardcoding "1" showed the wrong grid.
-        .map(([code, name, , , version]) => ({
-          code,
-          name,
-          version: version && version !== "" ? version : DEFAULT_VERSION,
-          credits: null,
-          groupName: null,
-        }));
-    }
-
-    const total = matched.length;
-    const shown = matched.slice(0, MAX_PICKER_ROWS);
-    addRows = shown;
-
-    const previousActive = addActiveIndex;
-    elements.addListbox.replaceChildren();
-
-    if (shown.length === 0) {
-      const message =
-        scope === "all" && query === ""
-          ? "Skriv for å søke i alle emner ved NTNU."
-          : "Ingen treff.";
-      elements.addListbox.append(el("li", "planner-typeahead-empty np-hint", message));
-      elements.addListbox.hidden = false;
-      addActiveIndex = -1;
-      elements.addInput.setAttribute("aria-expanded", "true");
-      elements.addInput.removeAttribute("aria-activedescendant");
-      return;
-    }
-
-    const examDates = plannedExamDates();
-    let lastGroup: string | null | undefined;
-    let optionIndex = 0;
-    for (const row of shown) {
-      // Group headers quote the study plan verbatim — that free text is the
-      // only place a "velg 2 av 5" rule is ever written down (DR-5).
-      if (scope === "plan" && row.groupName !== lastGroup) {
-        lastGroup = row.groupName;
-        if (row.groupName) {
-          const header = el("li", "np-kicker planner-pool-group", row.groupName);
-          header.setAttribute("role", "presentation");
-          elements.addListbox.append(header);
-        }
-      }
-
-      ensurePreview(row);
-
-      const item = el("li", "np-popover-option planner-typeahead-option");
-      item.id = `planner-add-option-${optionIndex}`;
-      optionIndex += 1;
-      item.setAttribute("role", "option");
-      item.setAttribute("aria-selected", "false");
-      const head = el("span", "planner-typeahead-head");
-      head.append(el("span", "np-data planner-typeahead-code", row.code));
-      head.append(el("span", "planner-typeahead-name", row.name));
-      item.append(head);
-      if (row.credits != null) {
-        item.append(
-          el("span", "np-data planner-typeahead-credits", `${formatCreditNumber(row.credits)} sp`),
-        );
-      }
-      const facts = candidateFacts(row, examDates);
-      if (facts) item.append(facts);
-
-      // See the picker: mousedown only holds focus, click selects (A2).
-      item.addEventListener("mousedown", (event) => event.preventDefault());
-      item.addEventListener("click", () => addRow(row));
-      elements.addListbox.append(item);
-    }
-
-    if (total > shown.length) {
-      elements.addListbox.append(
-        el(
-          "li",
-          "planner-typeahead-empty np-hint",
-          `… og ${total - shown.length} til — skriv for å filtrere.`,
-        ),
-      );
-    }
-
-    elements.addListbox.hidden = false;
-    elements.addInput.setAttribute("aria-expanded", "true");
-    setAddActive(previousActive >= 0 && previousActive < shown.length ? previousActive : 0);
-  }
-
-  elements.addInput.addEventListener("focus", () => {
-    addOpen = true;
-    renderAddOptions();
-  });
-  elements.addInput.addEventListener("input", () => {
-    addOpen = true;
-    addActiveIndex = -1;
-    renderAddOptions();
-  });
-  elements.addInput.addEventListener("keydown", (event) => {
-    if (event.key === "Escape") {
-      closeAddListbox();
-      return;
-    }
-    if (!addOpen || addRows.length === 0) return;
-    if (event.key === "ArrowDown") {
-      event.preventDefault();
-      setAddActive((addActiveIndex + 1) % addRows.length);
-    } else if (event.key === "ArrowUp") {
-      event.preventDefault();
-      setAddActive((addActiveIndex - 1 + addRows.length) % addRows.length);
-    } else if (event.key === "Enter") {
-      event.preventDefault();
-      const picked = addRows[addActiveIndex] ?? addRows[0];
-      if (picked) addRow(picked);
-    }
-  });
-  elements.addField.addEventListener("submit", (event) => event.preventDefault());
-  // The whole block (field + scope toggle + listbox) is one focus scope, so
-  // clicking "Alle emner" or scrolling the list doesn't dismiss the picker.
-  elements.addBlock.addEventListener("focusout", (event) => {
-    if (!elements.addBlock.contains(event.relatedTarget as Node | null)) closeAddListbox();
-  });
-
-  elements.scopePlan.addEventListener("click", () => {
-    pickerScope = "plan";
-    scopeChosenByUser = true;
-    openAdd();
-    elements.addInput.focus();
-  });
-  elements.scopeAll.addEventListener("click", () => {
-    pickerScope = "all";
-    scopeChosenByUser = true;
-    openAdd();
-    elements.addInput.focus();
-  });
-
+  elements.addCourseBtn.addEventListener("click", () => addCourseDialog.open());
   elements.gapButton.addEventListener("click", openAddFromQuestion);
 
   // --- Course bundle state (timetable + details per active course) -------
@@ -1167,7 +850,6 @@ export async function mountPlannerApp(
         state.bundle = null;
         state.loading = false;
       }
-      previewBundles.clear();
     }
     const seen = new Set<string>();
     const active = activeCourses(plan);
@@ -1185,9 +867,10 @@ export async function mountPlannerApp(
         courseStates.set(course.code, {
           course,
           hueVar: hueForIndex(index),
-          // A course previewed in the add field is already fetched — reuse it
-          // so adding it renders the grid without a second round trip.
-          bundle: previewBundles.get(course.code) ?? null,
+          // A course previewed in the add-course dialog already has its
+          // bundle in `fetchCourseBundle`'s own module-level memo (data.ts) —
+          // this fetch (loadBundles, below) is free, not a second round trip.
+          bundle: null,
           loading: false,
           programCode,
         });
@@ -1429,7 +1112,6 @@ export async function mountPlannerApp(
       state.bundle = null;
       state.loading = false;
     }
-    previewBundles.clear();
     // loadBundles flips the reset states to loading and paints the skeleton
     // itself, so there is no need to render the (momentarily empty) grid first.
     void loadBundles();
@@ -1486,8 +1168,8 @@ export async function mountPlannerApp(
         primary.type = "button";
         primary.addEventListener("click", () => studieinfo.open());
         card.append(primary);
-        // Task 12 re-points this at the add-course modal; for now it focuses
-        // the existing inline add field.
+        // The modal is the way in; the add-course dialog is the "I already
+        // know a code" escape hatch (Task 12).
         const secondary = el(
           "button",
           "np-navlink planner-week-card-secondary",
@@ -1669,7 +1351,8 @@ export async function mountPlannerApp(
     syncCourseStates();
     // An empty plan (no programme, no courses) is not a dead end: the week
     // frame shows the onboarding card (renderGridAndExams' state 1), and the
-    // Emner rail keeps the add field mounted for a student who knows a code.
+    // Emner rail keeps its "Legg til emne" button mounted for a student who
+    // knows a code.
     elements.linkNote.textContent = linkNote ?? "";
     elements.linkNote.hidden = linkNote === null;
     renderBanner();
@@ -1678,7 +1361,6 @@ export async function mountPlannerApp(
     renderDirectionQuestion();
     renderCourseRows();
     renderGapLine();
-    renderAddOptions();
     renderGridAndExams();
     renderProvenance();
   }
@@ -1722,7 +1404,6 @@ export async function mountPlannerApp(
   /** Re-renders everything that depends on the study plan but not on the grid. */
   function renderPlanDependents(): void {
     renderDirectionQuestion();
-    renderAddOptions();
     renderGapLine();
     renderCreditLine();
     renderGridAndExams();
@@ -1828,6 +1509,12 @@ export async function mountPlannerApp(
 
   const unsubscribe = store.onPlanChange((next) => {
     plan = next;
+    // The add-course dialog's deps are mutated in place (not re-passed) —
+    // see its mount call above — so a semester switch or a programme
+    // change/clear is picked up on the dialog's very next open or lazy
+    // clash check, with no re-mount.
+    addCourseDeps.semester = currentSemester() ?? addCourseDeps.semester;
+    addCourseDeps.programCode = plan.program?.code ?? null;
     syncHash();
     renderSemesterToggle();
     renderAll();
@@ -1864,6 +1551,9 @@ export async function mountPlannerApp(
   loadPlannerIndex()
     .then((index) => {
       plannerIndex = index;
+      // The add-course dialog searches this same index (mutated in place —
+      // see its mount call above); it renders "henter emner …" until it's set.
+      addCourseDeps.index = index;
       const indexByCode = new Map(index.courses.map((c) => [c[0], c]));
       // Backfill real course names for any hash-sourced courses that only had their code.
       let changed = false;
@@ -1877,7 +1567,6 @@ export async function mountPlannerApp(
       if (changed) store.savePlan({ ...plan, courses: nextCourses });
       examIndexMemo = null;
       renderGridAndExams(); // exam list needed the index to render its catalog data
-      renderAddOptions();
       renderProvenance();
     })
     .catch(() => {

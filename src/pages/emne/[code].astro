@@ -352,7 +352,14 @@ const description = `${course.code} ${course.name} — timeplan, eksamen og nøk
       // that with `[]` beats fetching last year's grid and matching on it.
       const sameYear = isOffered && sourceYear === semester.year;
       const own = sameYear ? await timetable : [];
-      const verdict = await planClash({ code, version }, store.loadPlan(), clashSemester, own);
+      const currentPlan = store.loadPlan();
+      const verdict = await planClash(
+        { code, version },
+        currentPlan,
+        clashSemester,
+        own,
+        currentPlan.program?.code ?? null,
+      );
       if (token !== clashToken) return;
       clashSlot.replaceChildren(clashNode(verdict, clashSemester));
     }

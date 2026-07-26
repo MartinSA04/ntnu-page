@@ -153,7 +153,10 @@ export async function mountCourseTimetable(
   function draw(showOthers: boolean): void {
     // renderGrid owns the ruling (D5) — it strips `np-ruled` itself when
     // there is no week to rule, so this must not second-guess the class list.
-    const result = renderGrid(frame, notes, [state], showOthers);
+    // showAllGroups: this is the course's own reference page, not one
+    // student's plan — every parallel/group draws (Task 7 ruling), not just
+    // whichever one a programme-less context would default to.
+    const result = renderGrid(frame, notes, [state], showOthers, { showAllGroups: true });
     // B7a: when nothing in the course classifies as a lecture the grid
     // reveals the muted layer unasked. The toggle has to describe what is
     // actually on screen.

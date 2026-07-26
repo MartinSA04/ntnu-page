@@ -130,6 +130,54 @@ describe("planClash", () => {
     expect(verdict).toEqual({ kind: "clear" });
   });
 
+  it("ignores a candidate's non-programme section once scoped to the plan's programme (S7)", async () => {
+    // TDT4100 publishes two sections: a Tuesday MTDT-tagged one (the plan's
+    // own programme, no overlap with anything) and a Thursday one tagged for
+    // an unrelated programme (MTGEORT) that happens to overlap the plan's
+    // TMA4100. Unscoped, both sections count and the Thursday one reds a
+    // collision the MTDT student was never actually going to have — the
+    // false positive study S7 documented (the grid, which already narrows to
+    // the plan's programme, disagreed with this preview).
+    const candidateEntries: TimetableEntry[] = [
+      entry("TDT4100", {
+        dayNumber: 2,
+        startTime: "10:15",
+        endTime: "12:00",
+        studyProgramKeys: ["MTDT"],
+      }),
+      entry("TDT4100", {
+        dayNumber: 4,
+        startTime: "12:15",
+        endTime: "14:00",
+        studyProgramKeys: ["MTGEORT"],
+      }),
+    ];
+    stubFetch({
+      TMA4100: [entry("TMA4100", { dayNumber: 4, startTime: "12:15", endTime: "14:00" })],
+    });
+    const withProgram: PlanState = {
+      ...plan("TMA4100"),
+      program: { code: "MTDT", name: "Datateknologi", cohort: 2024 },
+    };
+
+    const unscoped = await planClash(
+      { code: "TDT4100", version: "1" },
+      withProgram,
+      SEMESTER,
+      candidateEntries,
+    );
+    expect(unscoped.kind).toBe("clash");
+
+    const scoped = await planClash(
+      { code: "TDT4100", version: "1" },
+      withProgram,
+      SEMESTER,
+      candidateEntries,
+      "MTDT",
+    );
+    expect(scoped).toEqual({ kind: "clear" });
+  });
+
   it("counts extra collisions rather than listing them all", () => {
     expect(
       clashSentence(

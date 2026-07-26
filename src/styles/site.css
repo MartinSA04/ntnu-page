@@ -345,6 +345,102 @@
   color: var(--accent-contrast);
 }
 
+/* --- Add-course dialog (Task 12) ---------------------------------------
+   A native <dialog> on the same .np-frame bones as the studieinfo modal:
+   built once in addCourse.ts, appended to <body>. Unlike studieinfo there
+   is nothing staged — every add/remove writes straight to the store, and
+   the dialog stays open so several courses can be added in one visit. */
+.add-course-dialog {
+  width: min(30rem, calc(100vw - 2rem));
+  max-width: calc(100vw - 2rem);
+  margin: auto;
+  padding: 0;
+  color: var(--fg);
+}
+
+.add-course-dialog::backdrop {
+  background: color-mix(in srgb, var(--fg) 45%, transparent);
+}
+
+.add-course-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-5);
+  max-height: min(85vh, 40rem);
+  overflow-y: auto;
+}
+
+.add-course-title {
+  font-family: var(--font-sans);
+  font-size: var(--text-lg);
+  font-weight: var(--weight-medium);
+}
+
+.add-course-status {
+  margin: 0;
+}
+
+.add-course-results {
+  list-style: none;
+  max-width: none;
+  display: flex;
+  flex-direction: column;
+}
+
+.add-course-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--gap-3);
+  padding: var(--space-2) 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.add-course-row-head {
+  display: flex;
+  align-items: baseline;
+  gap: var(--gap-3);
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.add-course-row-code {
+  flex-shrink: 0;
+}
+
+.add-course-row-name {
+  font-size: var(--text-sm);
+  min-width: 0;
+}
+
+/* The lazy clash/credits line (or the not-taught note) — always its own
+   row so it never fights the head/actions line for space. */
+.add-course-row-note {
+  flex-basis: 100%;
+  margin: 0;
+}
+
+.add-course-row-note.is-clash {
+  color: var(--clash);
+}
+
+.add-course-row-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--gap-2);
+  flex-shrink: 0;
+  margin-left: auto;
+}
+
+.add-course-added {
+  color: var(--accent-ink);
+}
+
+.add-course-close {
+  align-self: flex-start;
+}
+
 /* --- Block popover (Task 8) -------------------------------------------
    Non-modal <dialog> (.show(), not .showModal()) so the grid stays
    interactive behind it — there is no ::backdrop to style here. Desktop

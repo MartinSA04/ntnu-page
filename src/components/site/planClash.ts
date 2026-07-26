@@ -13,7 +13,7 @@
 import { lecturesOnly } from "../../lib/planner/activity.js";
 import { findConflicts } from "../../lib/planner/conflicts.js";
 import { fetchCourseBundle, type TimetableEntry } from "../../lib/planner/data.js";
-import { entriesInSemester, semesterYear } from "../../lib/planner/schedule.js";
+import { entriesForProgram, entriesInSemester, semesterYear } from "../../lib/planner/schedule.js";
 import { activeCourses, type PlanState } from "../../lib/planner/store.js";
 import { dayName, el } from "../planner/dom.js";
 
@@ -82,12 +82,22 @@ function bySlot(a: ClashPartner, b: ClashPartner): number {
  * Diffs one course against the plan's other active courses for `semester`.
  * Never throws — an unreachable timetable is reported as `error`, which the
  * caller renders as a gap rather than as "no collision" (DR-6's honest gap).
+ *
+ * `programCode` (the plan's programme, when it has one) narrows BOTH the
+ * candidate's own entries and every partner course's entries through
+ * `entriesForProgram` before either side is diffed — the same section-aware
+ * filter the grid (`groups.ts`/`grid.ts`) already applies. Without it, a
+ * multi-section service course's parallel for an *unrelated* programme
+ * (e.g. TMA4400's MTGEORT stream) could still red a collision against a
+ * plan's own MTDT sections that never actually overlap — the false positive
+ * study S7 documented, where this preview disagreed with the planner grid.
  */
 export async function planClash(
   course: { code: string; version: string },
   plan: PlanState,
   semester: ClashSemester,
   ownEntries?: TimetableEntry[] | null,
+  programCode?: string | null,
 ): Promise<ClashVerdict> {
   const year = semesterYear(semester.id);
   if (year === null) return { kind: "error" };
@@ -99,9 +109,13 @@ export async function planClash(
     const own = await semesterLectures(course.code, course.version, year, semester, ownEntries);
     if (own === null) return { kind: "error" };
     if (own.length === 0) return { kind: "off-semester" };
+    const ownForProgram = entriesForProgram(own, programCode);
 
     const otherLists = await Promise.all(
-      others.map((c) => semesterLectures(c.code, c.version, year, semester)),
+      others.map(async (c) => {
+        const list = await semesterLectures(c.code, c.version, year, semester);
+        return list === null ? null : entriesForProgram(list, programCode);
+      }),
     );
     const otherEntries = otherLists.flatMap((list) => list ?? []);
     if (otherEntries.length === 0) return { kind: "clear" };
@@ -110,7 +124,7 @@ export async function planClash(
     // *other* plan courses — those are the planner's business, not this
     // course's verdict.
     const partners = new Map<string, ClashPartner>();
-    for (const conflict of findConflicts([...own, ...otherEntries])) {
+    for (const conflict of findConflicts([...ownForProgram, ...otherEntries])) {
       const mineIsA = conflict.a.courseCode === course.code;
       const mineIsB = conflict.b.courseCode === course.code;
       if (!mineIsA && !mineIsB) continue;

@@ -285,7 +285,14 @@ const description = "Søk i NTNUs emnekatalog etter emnekode, emnenavn eller stu
       const check = async (): Promise<void> => {
         if (checked) return;
         checked = true;
-        const verdict = await planClash({ code, version }, store.loadPlan(), clashSemester);
+        const currentPlan = store.loadPlan();
+        const verdict = await planClash(
+          { code, version },
+          currentPlan,
+          clashSemester,
+          undefined,
+          currentPlan.program?.code ?? null,
+        );
         const sentence = clashSentence(verdict, clashSemester);
         button.title = sentence;
         const inPlan = store.hasCourse(code);

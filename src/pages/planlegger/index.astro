@@ -128,37 +128,9 @@ const programOptionsJson = JSON.stringify(programOptions).replaceAll("<", "\\u00
           </button>
         </p>
 
-        <div class="planner-add-block" id="planner-add-block">
-          <form class="np-field planner-add-field" id="planner-add-field" autocomplete="off">
-            <input
-              type="text"
-              id="planner-add-input"
-              placeholder="+ legg til emne …"
-              aria-label="Legg til emne i planen"
-              role="combobox"
-              aria-expanded="false"
-              aria-autocomplete="list"
-              aria-controls="planner-add-listbox"
-            />
-          </form>
-          <div class="planner-scope" id="planner-scope" role="group" aria-label="Hvor det søkes">
-            <button type="button" class="np-toggle" id="planner-scope-plan" aria-pressed="true">
-              Fra studieplanen
-            </button>
-            <button type="button" class="np-toggle" id="planner-scope-all" aria-pressed="false">
-              Alle emner
-            </button>
-          </div>
-          <p class="np-hint planner-scope-note" id="planner-scope-note" hidden></p>
-          <ul
-            class="np-popover planner-add-listbox"
-            id="planner-add-listbox"
-            role="listbox"
-            aria-label="Emneforslag"
-            hidden
-          >
-          </ul>
-        </div>
+        <button type="button" class="np-btn planner-add-course-btn" id="planner-add-course-btn">
+          Legg til emne
+        </button>
       </section>
     </div>
 
@@ -610,87 +582,13 @@ const programOptionsJson = JSON.stringify(programOptions).replaceAll("<", "\\u00
     margin-bottom: var(--space-4);
   }
 
-  /* --- Add / picker block ------------------------------------------------ */
+  /* --- Add-course button --------------------------------------------------
+     The inline typeahead is gone (Task 12) — one button opens the dialog
+     addCourse.ts builds itself (its CSS lives in site.css, alongside the
+     studieinfo modal it's modeled on). */
 
-  .planner-add-block {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-2);
-  }
-
-  .planner-add-field {
-    position: relative;
-  }
-
-  .planner-scope {
-    display: flex;
-    gap: var(--gap-2);
-    flex-wrap: wrap;
-  }
-
-  .planner-scope-note {
-    margin: 0;
-    max-width: none;
-  }
-
-  .planner-add-listbox {
-    --popover-max: 24rem;
-  }
-
-  :global(.planner-pool-group) {
-    padding: var(--space-3) var(--space-2) var(--space-1);
-    color: var(--faint);
-  }
-
-  :global(.planner-typeahead-option) {
-    display: grid;
-    grid-template-columns: 1fr auto;
-    column-gap: var(--gap-3);
-    row-gap: 2px;
-  }
-
-  :global(.planner-typeahead-head) {
-    display: flex;
-    align-items: baseline;
-    gap: var(--gap-2);
-    min-width: 0;
-  }
-
-  :global(.planner-typeahead-code) {
-    color: var(--muted);
-    font-size: var(--text-xs);
-    flex-shrink: 0;
-  }
-
-  :global(.planner-typeahead-name) {
-    font-size: var(--text-sm);
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  :global(.planner-typeahead-credits) {
-    color: var(--muted);
-    font-size: var(--text-xs);
-  }
-
-  :global(.planner-typeahead-facts) {
-    grid-column: 1 / -1;
-    display: flex;
-    flex-wrap: wrap;
-    gap: var(--gap-3);
-    font-size: var(--text-xs);
-    color: var(--muted);
-  }
-
-  :global(.planner-typeahead-facts .is-clash) {
-    color: var(--clash);
-  }
-
-  :global(.planner-typeahead-empty) {
-    display: block;
-    padding: var(--space-2);
-    max-width: none;
+  .planner-add-course-btn {
+    align-self: flex-start;
   }
 
   .planner-provenance {

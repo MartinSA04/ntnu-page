@@ -318,6 +318,28 @@ describe("setProgramPlan", () => {
     expect(plan.courses.find((c) => c.code === "TMA4100")?.dropped).toBeUndefined();
   });
 
+  it("preserves a course's group selection across a re-fetch of the same programme set", () => {
+    // A shared link's group pick on a programme course (or a student's own
+    // parallel/øving choice) used to be dropped the moment the study plan
+    // re-derived (B4/onPlanChange re-runs setProgramPlan with the same
+    // codes) — the group showed on first paint, then vanished.
+    const store = createPlanStore("26h", { storage, events });
+    store.setProgramPlan({ code: "MTDT", name: "Datateknologi", cohort: 2024 }, [
+      { code: "TDT4100", name: "A" },
+      { code: "TMA4100", name: "B" },
+    ]);
+    store.setCourseGroups("TDT4100", ["forelesningsparallell-2"]);
+    store.setProgramPlan({ code: "MTDT", name: "Datateknologi", cohort: 2024 }, [
+      { code: "TDT4100", name: "A" },
+      { code: "TMA4100", name: "B" },
+    ]);
+    const plan = store.loadPlan();
+    expect(plan.courses.find((c) => c.code === "TDT4100")?.groups).toEqual([
+      "forelesningsparallell-2",
+    ]);
+    expect(plan.courses.find((c) => c.code === "TMA4100")?.groups).toBeUndefined();
+  });
+
   it("drops a code that no longer appears in the new programme set (silently, since it's gone)", () => {
     const store = createPlanStore("26h", { storage, events });
     store.setProgramPlan({ code: "MTDT", name: "Datateknologi", cohort: 2024 }, [

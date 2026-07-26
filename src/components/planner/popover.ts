@@ -19,6 +19,12 @@
  * The dialog's own radio/checkbox display is kept in sync the same way —
  * `renderContent` is a full, idempotent rebuild driven by the local
  * `selection`, called again after every edit.
+ *
+ * A "+N til" overflow chip whose hidden entries span more than one course
+ * has no single course to key group/action state off (`detail.code` is the
+ * codes joined `" · "`) — that context is `kind: "info"` (Task 12): the
+ * dialog still opens with the detail's facts, just with no group section
+ * and no dropp/fjern action, since neither means anything for a joint pile.
  */
 import type { GroupOption } from "../../lib/planner/groups.js";
 import type { CourseSource, PlanStore } from "../../lib/planner/store.js";
@@ -34,21 +40,31 @@ const ANCHOR_MARGIN = 8;
  * The material a clicked block (or overflow chip) hands the popover — built
  * by the caller from `BlockDetail` plus the course's plan/group state.
  */
-export interface BlockPopoverContext {
-  detail: BlockDetail;
-  /** ALL of this course's group options (every lecture parallel + øving/lab group), from the unfiltered bundle timetable. */
-  groups: GroupOption[];
-  /** `course.groups ?? []` — empty means "no explicit pick, defaults apply". */
-  selected: string[];
-  /** `defaultLectureKeys(...)` for this course — which lecture option is "din parallell". */
-  defaults: string[];
-  source: CourseSource;
-  dropped: boolean;
-}
+export type BlockPopoverContext =
+  | {
+      kind: "course";
+      detail: BlockDetail;
+      /** ALL of this course's group options (every lecture parallel + øving/lab group), from the unfiltered bundle timetable. */
+      groups: GroupOption[];
+      /** `course.groups ?? []` — empty means "no explicit pick, defaults apply". */
+      selected: string[];
+      /** `defaultLectureKeys(...)` for this course — which lecture option is "din parallell". */
+      defaults: string[];
+      source: CourseSource;
+      dropped: boolean;
+    }
+  | {
+      /** A multi-course "+N til" overflow chip — informational only, no groups/actions. */
+      kind: "info";
+      detail: BlockDetail;
+    };
 
 export interface BlockPopoverHandle {
   showFor(ctx: BlockPopoverContext, anchor: HTMLElement): void;
 }
+
+/** The narrowed `kind: "course"` half of the context — what the group picker/actions need. */
+type CoursePopoverContext = Extract<BlockPopoverContext, { kind: "course" }>;
 
 /**
  * Mounts the shared popover once. Idempotent against a stale dialog left by
@@ -76,7 +92,7 @@ export function mountBlockPopover(store: PlanStore, signal: AbortSignal): BlockP
     if (dialog.open) dialog.close();
   }
 
-  function lectureKeysOf(ctx: BlockPopoverContext): Set<string> {
+  function lectureKeysOf(ctx: CoursePopoverContext): Set<string> {
     return new Set(ctx.groups.filter((g) => g.kind === "lecture").map((g) => g.key));
   }
 
@@ -98,7 +114,7 @@ export function mountBlockPopover(store: PlanStore, signal: AbortSignal): BlockP
   }
 
   /** Radio pick: the parallel replaces any previous one, øving/lab picks carry over untouched. */
-  function pickLecture(ctx: BlockPopoverContext, key: string): void {
+  function pickLecture(ctx: CoursePopoverContext, key: string): void {
     const lectureKeys = lectureKeysOf(ctx);
     setSelection([key, ...selection.filter((k) => !lectureKeys.has(k))], key);
   }
@@ -114,7 +130,8 @@ export function mountBlockPopover(store: PlanStore, signal: AbortSignal): BlockP
    * uses) keeps the student's default lecture parallel in the selection.
    */
   function toggleOther(key: string, checked: boolean): void {
-    const base = selection.length > 0 ? selection : (current?.defaults ?? []);
+    const base: string[] =
+      selection.length > 0 ? selection : current?.kind === "course" ? current.defaults : [];
     setSelection(
       checked ? [...base.filter((k) => k !== key), key] : base.filter((k) => k !== key),
       key,
@@ -138,7 +155,7 @@ export function mountBlockPopover(store: PlanStore, signal: AbortSignal): BlockP
    * what is currently picked, so the student's assigned default stays
    * identifiable even after they switch away from it.
    */
-  function renderGroupsSection(ctx: BlockPopoverContext): HTMLElement {
+  function renderGroupsSection(ctx: CoursePopoverContext): HTMLElement {
     const section = el("div", "planner-popover-groups");
     section.append(el("p", "np-kicker", "Grupper"));
 
@@ -181,7 +198,7 @@ export function mountBlockPopover(store: PlanStore, signal: AbortSignal): BlockP
   }
 
   /** Dropp/Legg tilbake mirrors the course row's own toggle (§0.3); a manual add's is "Fjern fra planen". */
-  function renderActions(ctx: BlockPopoverContext): HTMLElement {
+  function renderActions(ctx: CoursePopoverContext): HTMLElement {
     const row = el("div", "planner-popover-actions");
     const { detail, source, dropped } = ctx;
     const isProgram = source === "program";
@@ -222,6 +239,7 @@ export function mountBlockPopover(store: PlanStore, signal: AbortSignal): BlockP
       .join(" · ");
     dialog.append(el("p", "np-note", noteText));
 
+    if (ctx.kind !== "course") return;
     if (ctx.groups.length > 1) dialog.append(renderGroupsSection(ctx));
     dialog.append(renderActions(ctx));
   }
@@ -261,7 +279,7 @@ export function mountBlockPopover(store: PlanStore, signal: AbortSignal): BlockP
   function showFor(ctx: BlockPopoverContext, anchor: HTMLElement): void {
     invoker = anchor;
     current = ctx;
-    selection = [...ctx.selected];
+    selection = ctx.kind === "course" ? [...ctx.selected] : [];
     renderContent(ctx);
     dialog.scrollTop = 0;
     if (!dialog.open) dialog.show();
