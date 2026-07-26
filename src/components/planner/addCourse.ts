@@ -38,7 +38,7 @@
 
 import { fetchCourseBundle, type PlannerIndex } from "../../lib/planner/data.js";
 import { semesterYear } from "../../lib/planner/schedule.js";
-import type { PlanStore } from "../../lib/planner/store.js";
+import { DEFAULT_VERSION, type PlanStore } from "../../lib/planner/store.js";
 import { clashSentence, planClash } from "../site/planClash.js";
 import { el, fold, formatCreditNumber } from "./dom.js";
 import type { SemesterSummary } from "./plannerApp.js";
@@ -112,9 +112,15 @@ export function mountAddCourse(deps: AddCourseDeps, signal: AbortSignal): AddCou
    */
   const rows: { sync: () => void; invalidate: () => void }[] = [];
 
-  function setAddState(button: HTMLButtonElement, added: HTMLElement, inPlan: boolean): void {
+  function setAddState(
+    button: HTMLButtonElement,
+    added: HTMLElement,
+    removeBtn: HTMLButtonElement,
+    inPlan: boolean,
+  ): void {
     button.hidden = inPlan;
     added.hidden = !inPlan;
+    removeBtn.hidden = !inPlan;
   }
 
   /**
@@ -168,7 +174,7 @@ export function mountAddCourse(deps: AddCourseDeps, signal: AbortSignal): AddCou
 
   function buildRow(course: PlannerIndex["courses"][number]): HTMLLIElement {
     const [code, name, , , versionRaw, offeredYears] = course;
-    const version = versionRaw && versionRaw !== "" ? versionRaw : "1";
+    const version = versionRaw && versionRaw !== "" ? versionRaw : DEFAULT_VERSION;
     const currentYear = deps.index?.year ?? null;
     const notTaught = currentYear !== null && !offeredYears.includes(currentYear);
 
@@ -201,7 +207,7 @@ export function mountAddCourse(deps: AddCourseDeps, signal: AbortSignal): AddCou
     removeBtn.setAttribute("aria-label", `Fjern ${code} fra planen`);
     actions.append(addBtn, added, removeBtn);
 
-    const sync = (): void => setAddState(addBtn, added, deps.store.hasCourse(code));
+    const sync = (): void => setAddState(addBtn, added, removeBtn, deps.store.hasCourse(code));
     sync();
 
     addBtn.addEventListener("click", () => {
