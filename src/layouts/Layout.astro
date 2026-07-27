@@ -161,7 +161,6 @@ const crawlDate = formatCrawlDate(semestersData.crawledAt);
         </a>
         <ThemeToggle storageKey={THEME_KEY} />
       </header>
-      <a class="np-hint" id="plan-count-link" href="/planlegger/" hidden></a>
       <main id="main-content" class:list={["site-content", { wide }]}>
         <slot />
       </main>
@@ -177,7 +176,7 @@ const crawlDate = formatCrawlDate(semestersData.crawledAt);
       import { OPEN_STUDIEINFO_EVENT } from "../components/planner/studieinfo.ts";
       import { onPage } from "../lib/pageLifecycle.ts";
       import { semesterYear } from "../lib/planner/schedule.ts";
-      import { activeCourses, createPlanStore } from "../lib/planner/store.ts";
+      import { createPlanStore } from "../lib/planner/store.ts";
 
       /** `"26h"` → `"Høst 2026"` (rework Task 11's Facts). `null` for a malformed id. */
       function semesterLabel(semesterId: string): string | null {
@@ -187,26 +186,25 @@ const crawlDate = formatCrawlDate(semestersData.crawledAt);
       }
 
       /**
-       * The persistent studieinfo chip (always visible — "who is this plan
-       * for") and, on every OTHER page with a real plan, the count-link back
-       * to the week (I2). Three surfaces write to the plan (course page,
-       * catalog search, the planner itself) and none of them led back to it,
-       * which is exactly what this sitewide chrome fixes: it renders once
-       * here, subscribes to the store's change event, and every page gets it
-       * for free.
+       * The persistent studieinfo chip — "who is this plan for", and the one
+       * control that changes it. It renders once here, subscribes to the
+       * store's change event, and every page gets it for free.
+       *
+       * It used to have a companion: a "N emner · X sp → ukeplanen" bar under
+       * the topbar on every page but `/` and `/planlegger/`. It is gone. The
+       * chip beside it already names the plan and already links to the week,
+       * and `/emner/` and `/emne/[code]/` each carry their own "se ukeplanen →"
+       * next to the course they just added — so the bar was a third route to
+       * the same place, spending a full-width rule and a border on it.
        */
       onPage((signal) => {
         const chip = document.getElementById("studieinfo-chip") as HTMLAnchorElement | null;
-        const countLink = document.getElementById("plan-count-link") as HTMLAnchorElement | null;
-        if (!chip && !countLink) return;
-
-        const path = location.pathname;
-        const onPlanner = path.startsWith("/planlegger/");
+        if (!chip) return;
 
         // On the planner itself the chip opens the same studieinfo dialog
         // `mountStudieinfo` already wires there — no navigation needed, so
         // the click is intercepted instead of following the href.
-        if (chip && onPlanner) {
+        if (location.pathname.startsWith("/planlegger/")) {
           chip.addEventListener(
             "click",
             (event) => {
@@ -217,58 +215,14 @@ const crawlDate = formatCrawlDate(semestersData.crawledAt);
           );
         }
 
-        // The homepage has its own resume line for the same plan (I2's
-        // original affordance); showing the count-link there too would be
-        // the same sentence twice one scroll apart.
-        const countLinkEligible = countLink && !onPlanner && path !== "/";
-
         const store = createPlanStore("");
 
         function render(): void {
           const plan = store.loadPlan();
-
-          if (chip) {
-            chip.textContent = plan.program
-              ? `${plan.program.code} · ${plan.program.cohort} · ${semesterLabel(plan.semesterId) ?? plan.semesterId}`
-              : "Velg studieprogram";
-          }
-
-          if (!countLinkEligible || !countLink) return;
-          const active = activeCourses(plan);
-          if (active.length === 0) {
-            countLink.hidden = true;
-            return;
-          }
-
-          // Stored credits only (B9.1's study-plan fallback) — no bundle
-          // fetch here, unlike the strip this replaces: the count-link is a
-          // glance, not a place the live-fetched total needs to be exact.
-          let credits = 0;
-          let unknown = 0;
-          for (const course of active) {
-            if (typeof course.credits === "number") credits += course.credits;
-            else unknown++;
-          }
-          const rounded = Math.round(credits * 10) / 10;
-          const creditsText = Number.isInteger(rounded)
-            ? `${rounded}`
-            : rounded.toFixed(1).replace(".", ",");
-
-          countLink.replaceChildren();
-          const countEl = document.createElement("span");
-          countEl.className = "np-data";
-          countEl.textContent = `${active.length} ${active.length === 1 ? "emne" : "emner"}`;
-          countLink.append(countEl);
-          countLink.append(document.createTextNode(" · "));
-          const creditsEl = document.createElement("span");
-          creditsEl.className = "np-data";
-          creditsEl.textContent = `${creditsText} sp`;
-          countLink.append(creditsEl);
-          if (unknown > 0) {
-            countLink.append(document.createTextNode(` + ${unknown} uten oppgitt sp`));
-          }
-          countLink.append(document.createTextNode(" → ukeplanen"));
-          countLink.hidden = false;
+          if (!chip) return;
+          chip.textContent = plan.program
+            ? `${plan.program.code} · ${plan.program.cohort} · ${semesterLabel(plan.semesterId) ?? plan.semesterId}`
+            : "Velg studieprogram";
         }
 
         render();

@@ -105,27 +105,6 @@
   }
 }
 
-/* --- Plan count-link: the continuation affordance (I2) ---
-   Non-empty plans only, suppressed on `/` (its own resume line already
-   covers this) and `/planlegger/` (already showing the plan) by the script
-   in Layout.astro. A quiet line between the topbar and the content column —
-   visible on every other page a plan can be built from. */
-#plan-count-link:not([hidden]) {
-  display: block;
-  /* .np-hint (the sentence voice this line is set in) caps width at
-     --measure; override to the data column's width instead. */
-  max-width: var(--maxw);
-  margin-inline: auto;
-  padding: var(--space-2) var(--gutter);
-  border-bottom: 1px solid var(--border);
-  text-decoration: none;
-  transition: color var(--dur-fast) var(--ease);
-}
-
-#plan-count-link:hover {
-  color: var(--accent-ink);
-}
-
 /* --- Content column ---
    Default: the reading measure. `.wide` (data pages: catalog tables, study
    plans, the planner) widens to the `--maxw` column instead. */
