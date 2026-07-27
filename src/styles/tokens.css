@@ -135,7 +135,11 @@
   --gap-12: 48px;
 
   /* Layout. */
-  --maxw: 72rem;
+  /* The data column. 84rem fills a 1440px laptop without stretching the
+     week's blocks into slabs; --measure stays where it is, because prose does
+     not get more readable as it gets wider (DESIGN.md scopes the measure to
+     prose, and base.css applies it to unclassed prose only). */
+  --maxw: 84rem;
   --measure: 38rem;
   --topbar-h: 64px;
   --gutter: clamp(16px, 4vw, 32px);

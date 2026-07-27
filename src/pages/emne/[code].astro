@@ -75,7 +75,6 @@ const description = `${course.code} ${course.name} — timeplan, eksamen og nøk
     >
       Legg til i planen
     </button>
-    <a class="emne-plan-link" id="emne-plan-link" href="/planlegger/" hidden>se ukeplanen →</a>
   </div>
   <div class="emne-clash-slot" id="emne-clash" aria-live="polite">
     <p class="np-hint">Sjekker planen din for {semesterLabel} …</p>
@@ -129,6 +128,14 @@ const description = `${course.code} ${course.name} — timeplan, eksamen og nøk
       </details>
     </section>
 
+    <section class="emne-section" id="grades-section">
+      <h2 class="np-kicker emne-section-head">Karakterer</h2>
+      <p class="emne-loading np-hint" data-role="status" aria-live="polite">
+        Henter karakterstatistikk …
+      </p>
+      <div data-role="body" hidden></div>
+    </section>
+
     <section class="emne-section" id="details-section">
       <h2 class="np-kicker emne-section-head">Nøkkeltall</h2>
       <p class="emne-loading np-hint" data-role="status" aria-live="polite">
@@ -172,10 +179,6 @@ const description = `${course.code} ${course.name} — timeplan, eksamen og nøk
     align-items: center;
     gap: var(--space-4);
     margin-bottom: var(--space-2);
-  }
-  .emne-plan-link {
-    font-size: var(--text-sm);
-    color: var(--accent-ink);
   }
   .emne-clash-slot {
     /* Reserved so the verdict landing does not shove the week down the page. */
@@ -259,14 +262,131 @@ const description = `${course.code} ${course.name} — timeplan, eksamen og nøk
     white-space: pre-line;
   }
   /* D6: data lists are not prose and must not inherit base.css's 38rem cap. */
-  :global(.details-activities-list),
-  :global(.details-reductions-list) {
+  :global(.details-activities-list) {
     font-size: var(--text-base);
     max-width: none;
     display: flex;
     flex-direction: column;
     gap: var(--space-1);
     padding-left: var(--space-5);
+  }
+
+  /* Studiepoengreduksjon: three values a student compares down the column,
+     so it is a table, not a bullet list of run-together sentences. */
+  :global(.details-reductions-table) {
+    border-collapse: collapse;
+    font-size: var(--text-sm);
+    text-align: left;
+  }
+  :global(.details-reductions-table th) {
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    font-weight: var(--weight-medium);
+    text-transform: uppercase;
+    letter-spacing: var(--tracking);
+    color: var(--muted);
+    padding: 0 var(--space-5) var(--space-1) 0;
+    border-bottom: 1px solid var(--border);
+  }
+  :global(.details-reductions-table td) {
+    padding: var(--space-2) var(--space-5) var(--space-2) 0;
+    border-bottom: 1px solid var(--border);
+    vertical-align: baseline;
+  }
+  :global(.details-reductions-table tr:last-child td) {
+    border-bottom: none;
+  }
+
+  /* --- Karakterer ---------------------------------------------------------
+
+     Small multiples: one bar chart per semester, all sharing a y-scale so the
+     six are comparable to each other. ONE hue for every bar (--hue-blue, the
+     token, so it re-steps itself in dark) — the stacked-bar alternative needs
+     six mutually distinguishable colours and the palette validator failed
+     every such ramp this system can build. Red is not used for F: DESIGN.md's
+     Red-Is-Collision reserves it for coexistence failures. */
+
+  /* Explicit column counts, not auto-fit: six semesters under auto-fit landed
+     4 + 2 at this width, and a ragged last row reads as "these two are
+     different" rather than "this is the older half". Three per row splits six
+     evenly and keeps each chart wide enough for six labelled bars. */
+  :global(.grades-grid) {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--space-5) var(--space-6);
+  }
+  @media (min-width: 40rem) {
+    :global(.grades-grid) {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+  @media (min-width: 60rem) {
+    :global(.grades-grid) {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+  }
+
+  :global(.grades-chart-head) {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--gap-3);
+    flex-wrap: wrap;
+    margin-bottom: var(--space-2);
+  }
+  :global(.grades-chart-term) {
+    font-size: var(--text-md);
+  }
+  :global(.grades-chart-count) {
+    font-size: var(--text-xs);
+    color: var(--muted);
+  }
+
+  /* The bars share one baseline; the track holds the full plot height so
+     every column's baseline lands on the same pixel row. */
+  :global(.grades-plot) {
+    display: flex;
+    align-items: flex-end;
+    gap: var(--gap-2);
+  }
+  :global(.grades-bar-col) {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-1);
+  }
+  :global(.grades-bar-value) {
+    font-size: var(--text-xs);
+    color: var(--muted);
+  }
+  :global(.grades-bar-track) {
+    width: 100%;
+    height: var(--grades-plot-h, 96px);
+    display: flex;
+    align-items: flex-end;
+  }
+  /* Rounded data-end only: the bar is anchored to its baseline, so the
+     bottom corners stay square. */
+  :global(.grades-bar) {
+    width: 100%;
+    min-height: 1px;
+    background: var(--hue-blue);
+    border-radius: var(--radius-xs) var(--radius-xs) 0 0;
+  }
+  :global(.grades-bar-grade) {
+    font-size: var(--text-xs);
+    color: var(--fg);
+  }
+
+  :global(.grades-masked) {
+    margin-top: var(--space-2);
+    color: var(--faint);
+  }
+  :global(.grades-source) {
+    margin-top: var(--space-4);
+    max-width: none;
   }
   :global(.details-exam-list) {
     list-style: none;
@@ -293,6 +413,7 @@ const description = `${course.code} ${course.name} — timeplan, eksamen og nøk
 <script>
   import { mountCourseDetails } from "../../components/site/courseDetails";
   import { mountCourseTimetable } from "../../components/site/courseTimetable";
+  import { mountGradeChart } from "../../components/site/gradeChart";
   import { clashNode, planClash, semesterLabel } from "../../components/site/planClash";
   import { onPage } from "../../lib/pageLifecycle.ts";
   import { createPlanStore } from "../../lib/planner/store.ts";
@@ -314,6 +435,7 @@ const description = `${course.code} ${course.name} — timeplan, eksamen og nøk
     const term = semesterLabel(semester.name);
 
     mountCourseDetails(code);
+    void mountGradeChart(code, signal);
     const timetable = mountCourseTimetable({
       code,
       name,
@@ -323,7 +445,6 @@ const description = `${course.code} ${course.name} — timeplan, eksamen og nøk
     });
 
     const planBtn = document.getElementById("emne-plan-btn") as HTMLButtonElement | null;
-    const planLink = document.getElementById("emne-plan-link") as HTMLAnchorElement | null;
     const clashSlot = document.getElementById("emne-clash");
     if (!planBtn) return;
     const store = createPlanStore(semester.id);
@@ -338,7 +459,6 @@ const description = `${course.code} ${course.name} — timeplan, eksamen og nøk
       const inPlan = store.hasCourse(code);
       planBtn.setAttribute("aria-pressed", String(inPlan));
       planBtn.textContent = inPlan ? "Fjern fra planen" : "Legg til i planen";
-      if (planLink) planLink.hidden = !inPlan;
     }
 
     // U11: the verdict is recomputed on every plan change, and a stale

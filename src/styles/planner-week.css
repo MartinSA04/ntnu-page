@@ -273,35 +273,52 @@
   color: var(--muted);
 }
 
-/* --- Overflow chip (a cluster deeper than MAX_COLUMNS) ------------------- */
+/* --- Pile block (a cluster deeper than MAX_COLUMNS) ---------------------- */
 
-/* One "+N til" chip per over-full pile, pinned to the pile's inline-end at
-   the hidden window's top so it never paints over a visible block's code.
-   Clicking it opens the block popover listing the hidden entries. */
-.planner-block-overflow {
-  position: absolute;
-  z-index: 3;
-  inset-inline-end: 2px;
-  top: calc((var(--planner-row-start) - 1) * var(--cell) + 2px);
-  padding: 1px var(--space-1);
-  background: color-mix(in srgb, var(--fg) 10%, var(--card));
-  color: var(--fg);
-  font-size: var(--text-xs);
-  line-height: var(--leading-tight);
-  border-radius: var(--radius-xs);
-  box-shadow: var(--shadow-sm);
-  cursor: pointer;
-  white-space: nowrap;
+/* When three or more sessions overlap, the cluster draws as ONE full-width
+   block listing its courses instead of splitting into ~35 px slivers where
+   `.planner-block-code`'s `overflow-wrap: anywhere` broke a course code one
+   character per line. It has no single course, so no --dot: a neutral surface
+   carries it and each row wears its own hue dot. */
+.planner-block-pile {
+  background: color-mix(in srgb, var(--fg) 7%, var(--card));
+  gap: var(--space-1);
 }
 
-.planner-block-overflow:hover {
-  background: color-mix(in srgb, var(--fg) 18%, var(--card));
+.planner-block-pile:hover {
+  background: color-mix(in srgb, var(--fg) 12%, var(--card));
+}
+
+.planner-pile-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.planner-pile-row {
+  display: flex;
+  align-items: center;
+  gap: var(--gap-2);
+  min-width: 0;
+}
+
+/* The codes are the point of the pile, so they stay whole: a pile that has
+   more courses than it has room for clips the LIST, never a code mid-stroke. */
+.planner-pile-row .planner-block-code {
+  overflow-wrap: normal;
+  white-space: nowrap;
 }
 
 /* --- Margin notes -------------------------------------------------------- */
 
 .planner-grid-notes {
-  margin-bottom: var(--space-2);
+  margin-bottom: var(--space-5);
+}
+
+.planner-grid-notes:empty {
+  margin-bottom: 0;
 }
 
 .planner-grid-note {
@@ -326,4 +343,14 @@
 
 .planner-note-link:hover {
   text-decoration-color: currentColor;
+}
+
+/* The "velg din gruppe" notes: same affordance as a conflict note, but they
+   are an invitation rather than a warning, so they carry neither the clash
+   ink nor its underline colour. */
+.planner-note-groups {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--gap-2);
+  text-decoration-color: color-mix(in srgb, var(--accent) 40%, transparent);
 }

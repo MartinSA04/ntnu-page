@@ -125,20 +125,59 @@ function renderExamDetails(exams: CourseExam[]): HTMLElement | null {
   return list;
 }
 
+/**
+ * Studiepoengreduksjon as a three-column table — emne · reduksjon · gjelder
+ * fra. It was a bullet list of run-together sentences ("TDT4102 — 3,7 sp
+ * (Høst 2008)"), which put the three values a student compares across rows
+ * into one string, and TDT4100 renders eleven of them.
+ *
+ * De-duplicated on the whole (code, reduction, fromTerm) triple: upstream
+ * carries one row per course *version*, so TDT4100 shipped the identical
+ * "SIF8005 — 7,5 sp" three times with nothing to tell the copies apart. Rows
+ * that differ in any field are kept — a course whose reduction changed with a
+ * later term is two real facts, not a duplicate.
+ */
 function renderCreditReductions(reductions: CreditReduction[]): HTMLElement | null {
   if (reductions.length === 0) return null;
+
+  const seen = new Set<string>();
+  const rows = reductions.filter((r) => {
+    const key = `${r.courseCode}|${r.reduction ?? ""}|${r.fromTerm ?? ""}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+  rows.sort((a, b) => a.courseCode.localeCompare(b.courseCode, "nb"));
+
   const wrap = el("div", "details-reductions");
   wrap.append(el("h3", "np-kicker details-prose-heading", "Studiepoengreduksjon"));
-  const list = el("ul", "details-reductions-list");
-  for (const r of reductions) {
-    const item = el("li");
-    item.append(
-      el("span", "np-data", r.courseCode),
-      el("span", undefined, ` — ${r.reduction ?? "?"}${r.fromTerm ? ` (${r.fromTerm})` : ""}`),
-    );
-    list.append(item);
+
+  const table = el("table", "details-reductions-table");
+  const headRow = el("tr");
+  for (const label of ["Emne", "Reduksjon", "Gjelder fra"]) {
+    const th = el("th", undefined, label);
+    th.setAttribute("scope", "col");
+    headRow.append(th);
   }
-  wrap.append(list);
+  const thead = el("thead");
+  thead.append(headRow);
+  table.append(thead);
+
+  const tbody = el("tbody");
+  for (const r of rows) {
+    const tr = el("tr");
+    const code = el("td", "np-data", r.courseCode);
+    // An em dash, not "?" and not an empty cell: the catalog genuinely does
+    // not date the older reductions, and a blank cell reads as a render bug.
+    tr.append(
+      code,
+      el("td", "np-data", r.reduction ?? "—"),
+      el("td", undefined, r.fromTerm ?? "—"),
+    );
+    tbody.append(tr);
+  }
+  table.append(tbody);
+  wrap.append(table);
   return wrap;
 }
 

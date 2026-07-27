@@ -111,19 +111,6 @@ const description = "Søk i NTNUs emnekatalog etter emnekode, emnenavn eller stu
     gap: var(--space-2);
     flex-shrink: 0;
   }
-  :global(.emner-row-planlink) {
-    font-size: var(--text-sm);
-    color: var(--accent-ink);
-    white-space: nowrap;
-  }
-  /* I2's copy is "Lagt til · se ukeplanen →" — one statement across a button
-     and a link. The separator is decoration, so it stays out of the link's
-     accessible name. */
-  :global(.emner-row-planlink::before) {
-    content: "· ";
-    color: var(--faint);
-  }
-
   /* A3: at 390px the exam note used to overflow into the location, and the
      name collapsed to zero width. Wrap the link instead: code + notes on the
      first line, the full name on its own. */
@@ -386,16 +373,12 @@ const description = "Søk i NTNUs emnekatalog etter emnekode, emnenavn eller stu
         addBtn.className = "np-btn emner-row-add";
 
         // I2: the row was write-only — the "+" mutated localStorage and said
-        // nothing. The button now reports the state and names the destination.
-        const planLink = document.createElement("a");
-        planLink.className = "emner-row-planlink";
-        planLink.href = "/planlegger/";
-        planLink.textContent = "se ukeplanen →";
+        // nothing. The button reports the state now. It used to be followed by
+        // a "se ukeplanen →" link; the topbar chip already goes there.
 
         const sync = (): void => {
           const inPlan = store.hasCourse(code);
           setAddState(addBtn, inPlan, code);
-          planLink.hidden = !inPlan;
         };
         sync();
 
@@ -415,7 +398,7 @@ const description = "Søk i NTNUs emnekatalog etter emnekode, emnenavn eller stu
         else addBtn.title = `Undervises ikke i ${term} — ingen kollisjon å sjekke.`;
         rows.push({ sync, invalidate });
 
-        actions.append(addBtn, planLink);
+        actions.append(addBtn);
         row.append(link, actions);
         resultsEl.append(row);
       }

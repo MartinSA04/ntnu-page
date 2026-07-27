@@ -275,10 +275,13 @@ export function mountBlockPopover(store: PlanStore, signal: AbortSignal): BlockP
     head.append(title, renderClose());
     dialog.append(head);
 
+    // Empty for a "velg din gruppe" note, which opens this dialog for a whole
+    // course rather than one session — there is no single slot to describe,
+    // and an empty <p> is a gap in the layout that reads as a missing fact.
     const noteText = [ctx.detail.timeLabel, ctx.detail.rooms, ctx.detail.weeksLabel]
       .filter(Boolean)
       .join(" · ");
-    dialog.append(el("p", "np-note", noteText));
+    if (noteText) dialog.append(el("p", "np-note", noteText));
 
     if (ctx.kind !== "course") return;
     const { lectures, others } = pickableGroups(ctx);

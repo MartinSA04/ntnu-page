@@ -61,6 +61,16 @@ function rawGroupName(entry: Pick<TimetableEntry, "name" | "title">): string | n
   return entry.title?.trim() || entry.name?.trim() || null;
 }
 
+/**
+ * The group key an entry belongs to, or `null` for an ungrouped stream. This
+ * is the same derivation `applyGroupSelection` matches a selection against —
+ * exported so the grid can ask "did the student pick THIS entry's group?"
+ * without re-deriving the slug and drifting out of step with the filter.
+ */
+export function entryGroupKey(entry: Pick<TimetableEntry, "name" | "title">): string | null {
+  return groupKey(rawGroupName(entry));
+}
+
 function distinctLectureKeys(entries: TimetableEntry[]): string[] {
   const keys = new Set<string>();
   for (const entry of entries) {

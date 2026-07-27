@@ -12,10 +12,14 @@
  * chain like A-B-C (A and C disjoint) reuses A's column for C instead of
  * spreading everything out.
  *
- * A cluster that needs more columns than `MAX_COLUMNS` doesn't grow the grid;
- * columns `>= MAX_COLUMNS` are marked `overflow: true` and dropped from the
- * rendered grid. The renderer lists them behind a "+N til" chip instead of
- * drawing an ever-narrower block.
+ * A cluster that would need MORE than `MAX_COLUMNS` columns is not split at
+ * all: every member is marked `piled`, and the renderer draws the whole
+ * cluster as ONE block listing its course codes (grid.ts). Three columns in a
+ * ~106 px weekday is ~35 px per block, at which width `.planner-block-code`'s
+ * `overflow-wrap: anywhere` broke course codes one character per line —
+ * "T D T 4 1 0 9" stacked down a sliver. Two readable blocks, or one readable
+ * pile, beats three unreadable slivers; the pile names its courses, which the
+ * old "+N til" overflow chip did not.
  */
 
 export interface LayoutInput {
@@ -28,10 +32,14 @@ export interface LayoutSlot {
   id: string;
   col: number; // 0-based visible column, < cols
   cols: number; // total visible columns in this slot's cluster (1..MAX_COLUMNS)
-  overflow: boolean; // true = not rendered as a block; listed behind the "+N til" chip
+  /** Index of the cluster this slot belongs to — piled members share one. */
+  cluster: number;
+  /** True = this cluster draws as a single pile block, not as columns. */
+  piled: boolean;
 }
 
-export const MAX_COLUMNS = 3;
+/** Side-by-side columns a cluster may use before it collapses into a pile. */
+export const MAX_COLUMNS = 2;
 
 /** Lays out one day's items into clusters, columns and overflow flags. */
 export function layoutDay(items: LayoutInput[]): LayoutSlot[] {
@@ -42,9 +50,13 @@ export function layoutDay(items: LayoutInput[]): LayoutSlot[] {
   const slots: LayoutSlot[] = [];
   let cluster: LayoutInput[] = [];
   let clusterMaxEnd = -Infinity;
+  let clusterIndex = 0;
 
   const flush = () => {
-    if (cluster.length > 0) slots.push(...layoutCluster(cluster));
+    if (cluster.length > 0) {
+      slots.push(...layoutCluster(cluster, clusterIndex));
+      clusterIndex += 1;
+    }
     cluster = [];
     clusterMaxEnd = -Infinity;
   };
@@ -59,8 +71,14 @@ export function layoutDay(items: LayoutInput[]): LayoutSlot[] {
   return slots;
 }
 
-/** Column-packs one cluster (already sorted) and applies the overflow cutoff. */
-function layoutCluster(cluster: LayoutInput[]): LayoutSlot[] {
+/**
+ * Column-packs one cluster (already sorted). A cluster needing more than
+ * `MAX_COLUMNS` columns collapses whole: every member comes back `piled`, at
+ * `col: 0, cols: 1`, so the renderer can draw one full-width block for it.
+ * Partial collapse is deliberately NOT offered — showing two of five and
+ * hiding three is how the "+N til" chip lost the courses it was counting.
+ */
+function layoutCluster(cluster: LayoutInput[], clusterIndex: number): LayoutSlot[] {
   const columnEnds: number[] = []; // last occupant's end time, per column
   const colByItem: number[] = []; // parallel to `cluster`
 
@@ -72,10 +90,21 @@ function layoutCluster(cluster: LayoutInput[]): LayoutSlot[] {
   }
 
   const rawCols = columnEnds.length;
-  const cols = Math.min(rawCols, MAX_COLUMNS);
+  if (rawCols > MAX_COLUMNS) {
+    return cluster.map((item) => ({
+      id: item.id,
+      col: 0,
+      cols: 1,
+      cluster: clusterIndex,
+      piled: true,
+    }));
+  }
 
-  return cluster.map((item, i) => {
-    const col = colByItem[i] ?? 0;
-    return { id: item.id, col, cols, overflow: col >= MAX_COLUMNS };
-  });
+  return cluster.map((item, i) => ({
+    id: item.id,
+    col: colByItem[i] ?? 0,
+    cols: rawCols,
+    cluster: clusterIndex,
+    piled: false,
+  }));
 }

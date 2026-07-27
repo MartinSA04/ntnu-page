@@ -300,6 +300,95 @@ test("one control opens studieinfo, and semester lives only inside it", async ({
   await expect(page.locator("#studieinfo-semester-select")).toBeVisible();
 });
 
+test("week: three overlapping lectures draw one pile, not three slivers", async ({
+  page,
+  context,
+}) => {
+  // Stubbed, not seeded from live data: whether any real MTDT-style plan
+  // happens to triple-book a slot this term is not something a regression
+  // test should depend on. The three courses below overlap exactly.
+  const entry = (code: string, room: string) => ({
+    courseCode: code,
+    courseName: { nob: `${code} emne`, nno: null, eng: null },
+    dayNumber: 1,
+    startTime: "08:15",
+    endTime: "10:00",
+    weeks: ["34-47"],
+    rooms: [{ building: room, room, url: null }],
+    title: "Forelesning",
+    name: "Forelesning",
+  });
+  const codes = ["TDT4109", "TDT4120", "TDT4110"];
+  for (const code of codes) {
+    await context.route(`**/api/course/${code}/timetable*`, (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify([entry(code, `R${code.slice(-1)}`)]),
+      }),
+    );
+  }
+
+  await page.goto(`/planlegger/#26h;-;${codes.map((c) => `%2B${c}`).join(",")}`);
+
+  const pile = page.locator(".planner-block-pile");
+  await expect(pile).toHaveCount(1, { timeout: 30_000 });
+  // Every course is NAMED in the pile — the retired "+N til" chip reduced the
+  // ones it hid to a bare count, which is the one thing you cannot act on.
+  for (const code of codes) await expect(pile).toContainText(code);
+  await expect(pile).toContainText("3 emner");
+
+  // And no sliver: the three are not split into ~35px columns.
+  await expect(page.locator("#planner-grid-frame .planner-block")).toHaveCount(1);
+
+  // The pile opens the popover, so its contents stay reachable.
+  await pile.click();
+  await expect(page.locator("#planner-popover")).toBeVisible();
+});
+
+test("week: the øving layer shows picked groups, not the whole cohort's", async ({ page }) => {
+  // EXPH0300 publishes 14 seminar groups. Before this, turning the toggle on
+  // drew every one of them — 41 blocks in an MTDT week.
+  await page.goto("/planlegger/#26h;MTDT.2026;");
+  await expect(page.locator("#planner-grid-frame .planner-block").first()).toBeVisible({
+    timeout: 45_000,
+  });
+  const before = await page.locator("#planner-grid-frame .planner-block").count();
+
+  await page.click("#planner-others-toggle");
+  await expect(page.locator(".planner-note-groups").first()).toBeVisible({ timeout: 15_000 });
+
+  const after = await page.locator("#planner-grid-frame .planner-block").count();
+  // A handful of ungrouped/sole-group activities may appear; a flood may not.
+  expect(after).toBeLessThan(before + 12);
+
+  // Nothing is hidden silently — each withheld course gets a note that opens
+  // its picker, and a note never asks you to choose between fewer than two.
+  const notes = page.locator(".planner-note-groups");
+  expect(await notes.count()).toBeGreaterThan(0);
+  for (const text of await notes.allTextContents()) {
+    expect(text).not.toContain("har 1 gruppe");
+  }
+
+  await notes.first().click();
+  await expect(page.locator("#planner-popover")).toBeVisible();
+  await expect(page.locator("#planner-popover .planner-popover-group-row").first()).toBeVisible();
+});
+
+test("course page: the grade figure renders from DBH", async ({ page }) => {
+  await page.goto("/emne/TDT4100/");
+  const grid = page.locator("#grades-section .grades-grid");
+  await expect(grid).toBeVisible({ timeout: 45_000 });
+
+  // Small multiples, newest first, one bar per grade with its own label.
+  const charts = grid.locator(".grades-chart");
+  expect(await charts.count()).toBeGreaterThan(0);
+  const first = charts.first();
+  await expect(first.locator(".grades-bar-grade").first()).toHaveText("A");
+  await expect(first).toContainText("kandidater");
+  expect(await first.locator(".grades-bar").count()).toBeGreaterThan(1);
+});
+
 test("manual adds stay in their semester", async ({ page }) => {
   await page.goto("/planlegger/");
 
