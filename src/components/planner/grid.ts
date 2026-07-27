@@ -1,6 +1,6 @@
 /**
- * UKEPLAN — the weekly spread (PRODUCT.md §0/DR-1). `.np-frame.np-ruled`
- * surface, CSS grid Mon–Fri (+Sat only if data demands), 15-min rows clamped
+ * UKEPLAN — the weekly spread (PRODUCT.md §0/DR-1). An unboxed surface ruled
+ * only at the hour, CSS grid Mon–Fri (+Sat only if data demands), 15-min rows clamped
  * to the data's actual time range. Lectures render by default; the caller
  * passes `showOthers` (driven by the page's "Vis øvinger og labber" toggle)
  * to additionally render øving/lab/seminar blocks — muted (reduced ink, hue
@@ -266,22 +266,22 @@ function isBandEntry(entry: GridEntry): boolean {
 
 // --- Frame state ----------------------------------------------------------
 
-/**
- * The ruling belongs to a drawn week, not to the frame (D5). `np-ruled--hours`
- * goes with it: it overrides `background-image` but inherits
- * `background-origin`/`-attachment` from `.np-ruled`, so the two are one unit.
+/*
+ * There is no `setFrameRuled` any more. The ruling used to be a spreadsheet
+ * tiling on the FRAME (`np-ruled`/`np-ruled--hours`), which every branch here
+ * had to remember to strip so the ruling never framed an apology (D5). It is
+ * now a single hour hairline on `.planner-grid-rail`/`.planner-grid-day`
+ * (planner-week.css) — children only a drawn week has — so
+ * Ruling-Marks-The-Plan holds by construction: a message branch builds no
+ * grid, so there is nothing to strip. The skeleton is the one case that
+ * builds a shell without a plan, and `.planner-grid.is-skeleton` drops its
+ * lines in CSS.
  */
-function setFrameRuled(frame: HTMLElement, ruled: boolean): void {
-  frame.classList.toggle("np-ruled", ruled);
-  frame.classList.toggle("np-ruled--hours", ruled);
-  frame.classList.toggle("is-empty", !ruled);
-}
 
 /**
- * Renders a message where the week would be — unruled, in `.np-hint` (a
- * sentence, so grotesk). Exported so the page's pre-publish branch (DR-2) can
- * clear the frame through the same door instead of leaving a ruled rectangle
- * with nothing in it.
+ * Renders a message where the week would be, in `.np-hint` (a sentence, so
+ * grotesk). Exported so the page's pre-publish branch (DR-2) can clear the
+ * frame through the same door.
  */
 export function renderGridMessage(
   frame: HTMLElement,
@@ -290,7 +290,6 @@ export function renderGridMessage(
 ): void {
   notesHost.replaceChildren();
   frame.removeAttribute("aria-busy");
-  setFrameRuled(frame, false);
   frame.replaceChildren(...(message ? [el("p", "planner-grid-empty np-hint", message)] : []));
 }
 
@@ -301,7 +300,6 @@ export function renderGridMessage(
  */
 function renderSkeleton(frame: HTMLElement, notesHost: HTMLElement): void {
   notesHost.replaceChildren();
-  setFrameRuled(frame, true);
   frame.setAttribute("aria-busy", "true");
 
   const minMinutes = DEFAULT_START_HOUR * 60;
@@ -737,7 +735,6 @@ export function renderGrid(
   const hasSaturday = entries.some((e) => e.dayNumber === 6);
   const dayCount = hasSaturday ? 6 : 5;
 
-  setFrameRuled(frame, true);
   frame.removeAttribute("aria-busy");
   const shell = buildGridShell(
     minMinutes,

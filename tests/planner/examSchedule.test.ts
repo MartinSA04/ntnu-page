@@ -127,7 +127,7 @@ describe("buildExamList", () => {
     expect(model.rows.every((r) => r.daysFromToday === null)).toBe(true);
   });
 
-  it("keeps dateless codes in input order, apart from rows and out of summary math", () => {
+  it("keeps dateless codes in input order, apart from rows", () => {
     const model = buildExamList(
       [
         { code: "Z", date: null },
@@ -138,43 +138,22 @@ describe("buildExamList", () => {
     );
     expect(model.dateless).toEqual(["Z", "Y"]);
     expect(model.rows.map((r) => r.code)).toEqual(["A"]);
-    expect(model.summary).toBe("1 eksamen");
-  });
-
-  it("summary is singular for one dated exam, with no 'over' clause", () => {
-    const model = buildExamList([{ code: "A", date: "2026-11-26" }], "2026-01-01");
-    expect(model.summary).toBe("1 eksamen");
-  });
-
-  it("summary is plural 'N eksamener over M dager' spanning first to last dated row", () => {
-    const model = buildExamList(
-      [
-        { code: "A", date: "2026-11-26" },
-        { code: "B", date: "2026-12-01" },
-        { code: "C", date: "2026-12-10" },
-        { code: "D", date: "2026-12-10" },
-      ],
-      "2026-01-01",
-    );
-    expect(model.summary).toBe("4 eksamener over 14 dager");
-  });
-
-  it("a same-day pair summarizes as spanning 0 days", () => {
-    const model = buildExamList(
-      [
-        { code: "A", date: "2026-11-26" },
-        { code: "B", date: "2026-11-26" },
-      ],
-      "2026-01-01",
-    );
-    expect(model.summary).toBe("2 eksamener over 0 dager");
   });
 
   it("returns the empty model for no exams", () => {
-    expect(buildExamList([], "2026-01-01")).toEqual({ summary: null, rows: [], dateless: [] });
+    expect(buildExamList([], "2026-01-01")).toEqual({ rows: [], dateless: [] });
   });
 
-  it("summary is null when every input is dateless", () => {
+  // The model used to carry a `summary` string ("4 eksamener over 14 dager")
+  // that the page rendered in a ruled box above the list. It restated what
+  // the dated rows underneath already showed, so both are gone — the model
+  // is rows + dateless and nothing else.
+  it("carries no summary field", () => {
+    const model = buildExamList([{ code: "A", date: "2026-11-26" }], "2026-01-01");
+    expect(model).not.toHaveProperty("summary");
+  });
+
+  it("keeps every dateless input when none is dated", () => {
     const model = buildExamList(
       [
         { code: "A", date: null },
@@ -182,7 +161,7 @@ describe("buildExamList", () => {
       ],
       "2026-01-01",
     );
-    expect(model.summary).toBeNull();
+    expect(model.rows).toEqual([]);
     expect(model.dateless).toEqual(["A", "B"]);
   });
 

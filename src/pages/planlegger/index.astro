@@ -33,30 +33,12 @@ const programOptionsJson = JSON.stringify(programOptions).replaceAll("<", "\\u00
 
 <Layout title="Planlegger — Semesterplan" description={description} wide>
   <div class="planner-banner">
-    <div class="planner-banner-main">
-      <p class="np-kicker planner-kicker">Planlegger</p>
-      <h1 class="planner-title" id="planner-title">Semesterplan</h1>
-      <p class="np-hint planner-context-line" id="planner-context-line"></p>
-    </div>
-    <div class="planner-banner-controls">
-      <button type="button" class="np-btn planner-context-change" id="planner-context-change">
-        Velg studieprogram
-      </button>
-    </div>
+    <p class="np-kicker planner-kicker">Planlegger</p>
+    <h1 class="planner-title" id="planner-title">Semesterplan</h1>
+    <p class="np-hint planner-context-line" id="planner-context-line"></p>
   </div>
 
   <p class="np-hint planner-link-note" id="planner-link-note" hidden></p>
-
-  <details class="planner-semester" id="planner-semester">
-    <summary class="np-summary planner-semester-summary">Bytt semester</summary>
-    <div
-      class="planner-semester-toggle"
-      id="planner-semester-toggle"
-      role="group"
-      aria-label="Velg semester"
-    >
-    </div>
-  </details>
 
   <div id="planner-main">
     <div class="planner-tabs" id="planner-tabs" role="group" aria-label="Bytt mellom uke og emner">
@@ -101,14 +83,13 @@ const programOptionsJson = JSON.stringify(programOptions).replaceAll("<", "\\u00
           </button>
         </div>
         <p class="np-hint planner-scroll-hint" id="planner-scroll-hint" hidden></p>
-        <div class="np-frame np-ruled np-ruled--hours planner-grid-frame" id="planner-grid-frame"></div>
+        <div class="planner-grid-frame" id="planner-grid-frame"></div>
         <div class="planner-grid-notes" id="planner-grid-notes"></div>
 
         <div class="planner-section-head">
           <h2 class="np-kicker" id="planner-exam-heading">Eksamener</h2>
           <p class="planner-section-sub" id="planner-exam-status" aria-live="polite"></p>
         </div>
-        <div class="np-frame np-ruled planner-exam-frame" id="planner-exam-frame"></div>
         <div class="planner-exam-list" id="planner-exam-list-host"></div>
       </section>
 
@@ -146,12 +127,11 @@ const programOptionsJson = JSON.stringify(programOptions).replaceAll("<", "\\u00
 <style>
   /* --- Banner ------------------------------------------------------------ */
 
+  /* Facts only. The one control that changes any of them is the topbar
+     studieinfo chip (Layout.astro) — the banner used to carry a second
+     "Endre" button and the title itself was a third, all three opening the
+     same modal. */
   .planner-banner {
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: var(--gap-4);
-    flex-wrap: wrap;
     margin-bottom: var(--space-4);
   }
 
@@ -174,15 +154,6 @@ const programOptionsJson = JSON.stringify(programOptions).replaceAll("<", "\\u00
     color: var(--muted);
   }
 
-  :global(.planner-title a) {
-    color: inherit;
-    text-decoration-color: color-mix(in srgb, var(--accent) 40%, transparent);
-  }
-
-  :global(.planner-title a:hover) {
-    color: var(--accent-ink);
-  }
-
   .planner-context-line {
     max-width: none;
     margin-top: var(--space-1);
@@ -192,66 +163,9 @@ const programOptionsJson = JSON.stringify(programOptions).replaceAll("<", "\\u00
     color: var(--accent-ink);
   }
 
-  .planner-banner-controls {
-    display: flex;
-    align-items: center;
-    gap: var(--gap-3);
-    flex-wrap: wrap;
-  }
-
   .planner-link-note:not([hidden]) {
     max-width: none;
     margin-bottom: var(--space-4);
-  }
-
-  /* --- Semester disclosure ---------------------------------------------- */
-
-  /* DR-9/U6: the tool resolves the plannable term itself and states it in the
-     context line. Switching is still available, but it is a disclosure rather
-     than the fold's loudest control — two of the three terms it offers have
-     no published timetable, and each says so on its own chip. */
-  .planner-semester {
-    margin-bottom: var(--space-5);
-  }
-
-  .planner-semester-summary {
-    display: inline-flex;
-  }
-
-  .planner-semester-toggle {
-    display: flex;
-    gap: var(--gap-3);
-    flex-wrap: wrap;
-    margin-top: var(--space-2);
-  }
-
-  :global(.planner-semester-choice) {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    gap: var(--space-1);
-  }
-
-  :global(.planner-semester-note) {
-    color: var(--faint);
-  }
-
-  /* The programme name in the title used to link to the (now deleted)
-     programme-listing page; it is now a button into the studieinfo modal.
-     Keep it reading as the title, not a control: no chrome, inherit the
-     headline ink, accent underline on hover. */
-  :global(button.planner-title-name) {
-    font: inherit;
-    color: inherit;
-    text-align: left;
-    text-decoration: underline;
-    text-decoration-color: color-mix(in srgb, var(--accent) 40%, transparent);
-    text-underline-offset: 2px;
-    cursor: pointer;
-  }
-
-  :global(button.planner-title-name:hover) {
-    color: var(--accent-ink);
   }
 
   /* --- Two regions ------------------------------------------------------- */
@@ -451,18 +365,11 @@ const programOptionsJson = JSON.stringify(programOptions).replaceAll("<", "\\u00
 
   /* --- Exam list ---------------------------------------------------------- */
 
-  /* No more axis/dots above the list, so the frame wants its ordinary
-     padding, not the extra headroom the ribbon's visual needed. */
-  .planner-exam-frame {
-    padding: var(--cell);
-    margin-bottom: var(--space-2);
-  }
-
-  /* The frame's own padding is the spacing; a message or summary in it is
-     not prose. */
-  :global(.exam-empty),
-  :global(.exam-summary) {
-    margin: 0;
+  /* The dated list and nothing above it: the "5 eksamener over 26 dager"
+     summary and the ruled frame it sat in are gone. The dates already say
+     how many exams there are and how far apart they fall. */
+  :global(.exam-empty) {
+    margin: 0 0 var(--space-2);
   }
 
   .planner-exam-list {

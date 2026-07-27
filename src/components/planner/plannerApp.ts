@@ -116,10 +116,7 @@ const RAIL_WIDTH_PX = 48;
 interface PlannerElements {
   title: HTMLElement;
   contextLine: HTMLElement;
-  contextChange: HTMLButtonElement;
   linkNote: HTMLElement;
-  semesterDisclosure: HTMLDetailsElement;
-  toggleHost: HTMLElement;
   creditLine: HTMLElement;
   creditNote: HTMLElement;
   tabWeek: HTMLButtonElement;
@@ -135,7 +132,6 @@ interface PlannerElements {
   gridFrame: HTMLElement;
   gridNotes: HTMLElement;
   gridStatus: HTMLElement;
-  examFrame: HTMLElement;
   examList: HTMLElement;
   examStatus: HTMLElement;
   courseRows: HTMLElement;
@@ -155,10 +151,7 @@ function getElements(): PlannerElements | null {
   const found = {
     title: byId<HTMLElement>("planner-title"),
     contextLine: byId<HTMLElement>("planner-context-line"),
-    contextChange: byId<HTMLButtonElement>("planner-context-change"),
     linkNote: byId<HTMLElement>("planner-link-note"),
-    semesterDisclosure: byId<HTMLDetailsElement>("planner-semester"),
-    toggleHost: byId<HTMLElement>("planner-semester-toggle"),
     creditLine: byId<HTMLElement>("planner-credit-line"),
     creditNote: byId<HTMLElement>("planner-credit-note"),
     tabWeek: byId<HTMLButtonElement>("planner-tab-week"),
@@ -174,7 +167,6 @@ function getElements(): PlannerElements | null {
     gridFrame: byId<HTMLElement>("planner-grid-frame"),
     gridNotes: byId<HTMLElement>("planner-grid-notes"),
     gridStatus: byId<HTMLElement>("planner-grid-status"),
-    examFrame: byId<HTMLElement>("planner-exam-frame"),
     examList: byId<HTMLElement>("planner-exam-list-host"),
     examStatus: byId<HTMLElement>("planner-exam-status"),
     courseRows: byId<HTMLElement>("planner-course-rows"),
@@ -478,54 +470,26 @@ export async function mountPlannerApp(
     return entriesInSemester(bundle.timetable, semester.teachingWeeks);
   }
 
-  // --- Semester toggle + banner ------------------------------------------
+  // --- Banner ------------------------------------------------------------
+
+  // The on-page "Bytt semester" disclosure is gone. It was the second surface
+  // offering the same choice as the studieinfo modal's own semester select,
+  // which already commits unconditionally and first (studieinfo.ts's
+  // `commit`). The resolved term is still *stated* in the context line below
+  // — DR-9/U6's point was that the tool resolves the term itself and says so;
+  // it never required a switcher on the fold.
 
   /**
-   * DR-9/U6: switching semester lives inside a disclosure, not on the fold.
-   * Two of the three terms offered have no published timetable, so each chip
-   * carries that fact inline — choosing one is then informed rather than a
-   * way to break the primary surface.
-   */
-  function renderSemesterToggle(): void {
-    elements.toggleHost.replaceChildren();
-    for (const semester of semesters) {
-      const choice = el("span", "planner-semester-choice");
-      // `semesterLabel`, not the raw upstream `name`: NTNU ships "2027 Vår"
-      // and every other surface here (the context line right above these
-      // chips, /emne/, /emner/) says "Vår 2027". Two spellings of the same
-      // term within one viewport read as two different things.
-      const chip = el("button", "np-toggle", semesterLabel(semester));
-      chip.type = "button";
-      chip.setAttribute("aria-pressed", String(semester.id === plan.semesterId));
-      chip.addEventListener("click", () => {
-        if (semester.id === plan.semesterId) return;
-        store.setSemester(semester.id);
-        elements.semesterDisclosure.open = false;
-      });
-      choice.append(chip);
-      if (!semester.timetablePublished) {
-        choice.append(
-          el(
-            "span",
-            "np-note planner-semester-note",
-            `timeplan publiseres ~${publishMonthFor(semester.id)}`,
-          ),
-        );
-      }
-      elements.toggleHost.append(choice);
-    }
-  }
-
-  /**
-   * The banner. The programme is a *title* with its code beside it in mono
-   * (D2/D10) — it is the only thing that tells MIDT from MTDT, and it was set
-   * as a 0.72 rem muted kicker, i.e. as chrome. Below it the supporting line:
-   * kull · studieretning · the resolved semester. The studieretning is there
-   * because it is the *answer* the student gave to the one question the study
-   * plan forced — if it isn't visible and re-openable, a wrong pick can never
-   * be corrected. The name used to link to the (now deleted) per-programme
-   * page, so it is now a button into the studieinfo modal — the surface that
-   * actually changes the programme — matching the "Endre" control.
+   * The banner — facts, no controls. The programme is a *title* with its code
+   * beside it in mono (D2/D10): it is the only thing that tells MIDT from
+   * MTDT. Below it the supporting line: kull · studieretning · the resolved
+   * semester. The studieretning is there because it is the *answer* the
+   * student gave to the one question the study plan forced.
+   *
+   * Nothing here opens the studieinfo modal any more. The title was a button
+   * and the banner carried an "Endre" button beside it, which together with
+   * Layout's topbar chip made three permanent controls for one modal. The
+   * chip is the single opener now.
    */
   function renderBanner(): void {
     const program = plan.program;
@@ -534,10 +498,7 @@ export async function mountPlannerApp(
     elements.title.replaceChildren();
     if (program) {
       const named = program.name !== "" && program.name !== program.code;
-      const nameBtn = el("button", "planner-title-name", named ? program.name : program.code);
-      nameBtn.type = "button";
-      nameBtn.addEventListener("click", () => studieinfo.open());
-      elements.title.append(nameBtn);
+      elements.title.append(el("span", undefined, named ? program.name : program.code));
       if (named) elements.title.append(el("span", "np-data planner-title-code", program.code));
     } else {
       elements.title.textContent = "Semesterplan";
@@ -559,8 +520,6 @@ export async function mountPlannerApp(
     if (semester && !semester.timetablePublished) {
       append(`timeplan publiseres ~${publishMonthFor(semester.id)}`);
     }
-
-    elements.contextChange.textContent = program ? "Endre" : "Velg studieprogram";
   }
 
   /**
@@ -644,13 +603,13 @@ export async function mountPlannerApp(
         `${summary.offSemester} ${emner} undervises ikke i ${semesterLabel(currentSemester())} og teller ikke med.`,
       );
     }
+    // No "X sp over normal semesterbelastning" line: "37,5 av 30 sp" sits
+    // directly above it and already says exactly that. The two notes that
+    // remain both carry something the numbers cannot — a row excluded from
+    // the arithmetic, and a defect in the study plan itself.
     if (suspiciousPrefillCredits !== null) {
       notes.push(
         `Studieplanen oppgir ${formatCreditNumber(suspiciousPrefillCredits)} sp dette semesteret — mer enn et normalt semester. Fjern det du ikke tar.`,
-      );
-    } else if (summary.total > FULL_LOAD_CREDITS + 0.05) {
-      notes.push(
-        `${formatCreditNumber(summary.total - FULL_LOAD_CREDITS)} sp over normal semesterbelastning.`,
       );
     }
     elements.creditNote.textContent = notes.join(" ");
@@ -677,9 +636,14 @@ export async function mountPlannerApp(
     }
     elements.gapLine.hidden = false;
     elements.gapText.textContent = `Mangler ${formatCreditNumber(gap)} sp`;
+    // The button is only worth showing when it goes somewhere the standing
+    // "Legg til emne" button (right below it) does not. With an empty study
+    // plan pool it fell back to that same label and opened that same dialog,
+    // so the rail carried two identical buttons a line apart — the sentence
+    // alone is what's left in that case.
     const pool = availablePool();
-    elements.gapButton.textContent =
-      pool.length > 0 ? `Velg fra studieplanen (${pool.length})` : "Legg til emne";
+    elements.gapButton.hidden = pool.length === 0;
+    if (pool.length > 0) elements.gapButton.textContent = `Velg fra studieplanen (${pool.length})`;
   }
 
   // --- Region tabs (narrow screens only) ---------------------------------
@@ -703,11 +667,14 @@ export async function mountPlannerApp(
   elements.tabCourses.addEventListener("click", () => setRegion("courses"));
 
   // --- Programme / kull / retning / semester: the studieinfo modal --------
-
-  // The inline programme+kull typeahead is gone (REWORK §2/§3): all four plan
-  // choices live in the one studieinfo modal now, so the banner's "Velg
-  // studieprogram" / "Endre" control simply opens it.
-  elements.contextChange.addEventListener("click", () => studieinfo.open());
+  //
+  // All four plan choices live in the one studieinfo modal, and exactly one
+  // persistent control opens it: Layout's topbar `#studieinfo-chip`, via the
+  // OPEN_STUDIEINFO event `mountStudieinfo` listens for. The banner's own
+  // "Endre" button and the clickable page title were two more doors to the
+  // same room and are gone. What remains below are the *contextual* openers —
+  // the week's studieretning question and the empty-state cards — which only
+  // ever appear when the week has nothing else in it.
 
   // --- Studieretning question --------------------------------------------
 
@@ -1382,12 +1349,10 @@ export async function mountPlannerApp(
     const examIndex = examIndexForSemester();
     const examResult = examUncovered
       ? renderExamMessage(
-          elements.examFrame,
           elements.examList,
           `Eksamensdatoer er ikke publisert for ${semesterLabel(currentSemester())} ennå.`,
         )
       : renderExamList(
-          elements.examFrame,
           elements.examList,
           states,
           plan.semesterId,
@@ -1647,7 +1612,6 @@ export async function mountPlannerApp(
     addCourseDeps.semester = currentSemester() ?? addCourseDeps.semester;
     addCourseDeps.programCode = plan.program?.code ?? null;
     syncHash();
-    renderSemesterToggle();
     renderAll();
     void loadBundles();
     const key = derivationKey();
@@ -1709,7 +1673,6 @@ export async function mountPlannerApp(
 
   // First paint from the initial (hash-or-storage) plan, then kick off fetches.
   syncHash();
-  renderSemesterToggle();
   renderAll();
 
   // `?studieinfo` (the Layout chip navigating in from another page): open the

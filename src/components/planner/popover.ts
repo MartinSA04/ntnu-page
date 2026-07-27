@@ -10,6 +10,11 @@
  * the same dialog (a fresh `showFor` call) rather than requiring a
  * close-then-reopen dance.
  *
+ * A non-modal dialog gets NO free dismissal: no Esc, no backdrop. Both are
+ * wired by hand at the bottom of this file, and — because neither is visible,
+ * least of all in the sub-60rem bottom-sheet layout where "outside" is a
+ * sliver of screen — a `×` close button is always rendered (`renderClose`).
+ *
  * A multi-section course (EXPH0300's three campus lecture streams,
  * TDT4110's three parallels…) needs exactly one lecture parallel plus
  * whichever øving/lab group the student was assigned — this is where they
@@ -138,15 +143,32 @@ export function mountBlockPopover(store: PlanStore, signal: AbortSignal): BlockP
     );
   }
 
-  function showAllGroups(): void {
-    setSelection([]);
-  }
-
   // --- Content ---------------------------------------------------------
 
   /**
+   * Which options are worth offering. A control the student cannot use to
+   * make a different choice is noise: one lecture parallel does not need a
+   * radio to select it, and one øving group does not need a checkbox.
+   * The two kinds are counted SEPARATELY — the old gate was
+   * `ctx.groups.length > 1` across both, so a course with a single parallel
+   * and two øving groups drew a lone dead radio above the useful checkboxes.
+   */
+  function pickableGroups(ctx: CoursePopoverContext): {
+    lectures: GroupOption[];
+    others: GroupOption[];
+  } {
+    const lectures = ctx.groups.filter((g) => g.kind === "lecture");
+    const others = ctx.groups.filter((g) => g.kind !== "lecture");
+    return {
+      lectures: lectures.length > 1 ? lectures : [],
+      others: others.length > 1 ? others : [],
+    };
+  }
+
+  /**
    * Radio per lecture-kind option, checkbox per øving/lab option — in
-   * `ctx.groups`'s own order (lecture-kind first, then label). A lecture
+   * `ctx.groups`'s own order (lecture-kind first, then label), minus whichever
+   * kind has nothing to choose between (`pickableGroups`). A lecture
    * option is checked when the explicit selection contains a lecture key
    * (whichever one), or — no lecture key in the selection, whether because
    * there is no explicit selection at all or because it only names øving/lab
@@ -154,8 +176,15 @@ export function mountBlockPopover(store: PlanStore, signal: AbortSignal): BlockP
    * that came from `ctx.defaults` is labeled "(din parallell)" regardless of
    * what is currently picked, so the student's assigned default stays
    * identifiable even after they switch away from it.
+   *
+   * There is no "Vis alle grupper" button. It called `setSelection([])`, and
+   * `[]` is `applyGroupSelection`'s encoding for "no explicit pick, apply the
+   * programme default" (groups.ts) — so the button NARROWED the week to one
+   * parallel, the exact opposite of its label. The radios and checkboxes
+   * already express every selection there is.
    */
   function renderGroupsSection(ctx: CoursePopoverContext): HTMLElement {
+    const { lectures, others } = pickableGroups(ctx);
     const section = el("div", "planner-popover-groups");
     section.append(el("p", "np-kicker", "Grupper"));
 
@@ -164,7 +193,7 @@ export function mountBlockPopover(store: PlanStore, signal: AbortSignal): BlockP
     const hasExplicitLecture = selection.some((k) => lectureKeys.has(k));
     const checkedLectureKeys = hasExplicitLecture ? selection : ctx.defaults;
 
-    for (const option of ctx.groups) {
+    for (const option of [...lectures, ...others]) {
       const row = el("label", "planner-popover-group-row");
       const input = el("input");
       input.value = option.key;
@@ -188,11 +217,6 @@ export function mountBlockPopover(store: PlanStore, signal: AbortSignal): BlockP
       list.append(row);
     }
     section.append(list);
-
-    const showAll = el("button", "np-btn planner-popover-showall", "Vis alle grupper");
-    showAll.type = "button";
-    showAll.addEventListener("click", showAllGroups);
-    section.append(showAll);
 
     return section;
   }
@@ -227,12 +251,29 @@ export function mountBlockPopover(store: PlanStore, signal: AbortSignal): BlockP
     return row;
   }
 
+  /**
+   * The close button. Esc and an outside pointerdown (wired below) are the
+   * only two ways out a non-modal `<dialog>` gets by hand, and neither is
+   * visible: below 60rem this is a full-bleed bottom sheet, so "outside" is a
+   * strip of screen a student has no reason to suspect is a dismiss target,
+   * and on touch there is no Esc at all. So there is always a real control.
+   */
+  function renderClose(): HTMLElement {
+    const button = el("button", "np-icon-btn planner-popover-close", "×") as HTMLButtonElement;
+    button.type = "button";
+    button.setAttribute("aria-label", "Lukk");
+    button.addEventListener("click", close);
+    return button;
+  }
+
   function renderContent(ctx: BlockPopoverContext): void {
     dialog.replaceChildren();
 
-    const title = el("h3", undefined, `${ctx.detail.code} · ${ctx.detail.name}`);
+    const head = el("div", "planner-popover-head");
+    const title = el("h3", "planner-popover-title", `${ctx.detail.code} · ${ctx.detail.name}`);
     title.id = "planner-popover-title";
-    dialog.append(title);
+    head.append(title, renderClose());
+    dialog.append(head);
 
     const noteText = [ctx.detail.timeLabel, ctx.detail.rooms, ctx.detail.weeksLabel]
       .filter(Boolean)
@@ -240,7 +281,8 @@ export function mountBlockPopover(store: PlanStore, signal: AbortSignal): BlockP
     dialog.append(el("p", "np-note", noteText));
 
     if (ctx.kind !== "course") return;
-    if (ctx.groups.length > 1) dialog.append(renderGroupsSection(ctx));
+    const { lectures, others } = pickableGroups(ctx);
+    if (lectures.length > 0 || others.length > 0) dialog.append(renderGroupsSection(ctx));
     dialog.append(renderActions(ctx));
   }
 

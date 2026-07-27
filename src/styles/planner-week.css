@@ -19,16 +19,20 @@
    (`.planner-grid-frame[data-scroll]`) and the exam list. Those belong to
    /planlegger/ alone and stay in its scoped block. */
 
-/* Qualified with .np-frame deliberately. The frame primitive sets
-   `overflow: hidden` at the same specificity as a bare .planner-grid-frame,
-   so which one wins would come down to the order Vite happens to emit two
-   stylesheets in — and losing means the week silently stops scrolling
-   sideways, which is the exact clip A4 exists to prevent. Both call sites
-   author the two classes together. */
-.np-frame.planner-grid-frame {
-  /* D4: .np-ruled tiles from the CONTENT box, so a ruled surface's padding
-     must be a whole multiple of --cell or the ruling meets the frame
-     mid-square. */
+/* No .np-frame, and no .np-ruled: the week is not a spreadsheet. It used to
+   be a bordered, rounded box tiled with a 1px line every 15 minutes in BOTH
+   axes plus a heavier one per hour — a field of ~600 squares behind five
+   columns of blocks. What a student reads a time off is the hour, so the
+   hour is the only line left (below), drawn on this element directly.
+
+   That also retires the old `.np-frame.planner-grid-frame` qualification.
+   It existed because np-frame's `overflow: hidden` would otherwise beat a
+   bare `.planner-grid-frame` on whichever order Vite emitted the two
+   stylesheets in, silently killing the week's sideways scroll (A4). With
+   np-frame off the element there is no competing declaration left, so the
+   selector is unqualified now — do NOT re-add np-frame here without
+   restoring the qualification with it. */
+.planner-grid-frame {
   padding: var(--cell);
   margin-bottom: var(--space-2);
   overflow-x: auto;
@@ -85,6 +89,34 @@
   grid-column: calc(var(--planner-day) + 1);
   text-align: center;
   padding-bottom: var(--space-1);
+}
+
+/* The hour ruling — the ONLY ruling left, and the thing a student reads a
+   time off. It hangs on the rail and the day columns rather than on the
+   frame, because those are the two boxes whose top edge IS the slot grid's
+   origin (`grid-row: 2`, i.e. the first 15-minute row).
+
+   The frame is not. Its content box starts at the day-NAME header row, which
+   is `auto`-height, so a background tiled from there landed ~22 px — nearly a
+   quarter hour — above the hour it claimed to mark, drifting the labels out
+   of step with their own lines. (The old np-ruled tiling had the same origin
+   and the same error; a 15-minute grid just hid it better than a lone hour
+   line does.) Anchoring here means the line is at the hour by construction,
+   with no offset to keep in sync. Rail + day columns are adjacent, so the
+   hairlines read as one line across the week. */
+.planner-grid-rail,
+.planner-grid-day {
+  /* --cell is a 15-minute slot, so an hour is four of them. */
+  background-image: linear-gradient(var(--ruling-hour) 1px, transparent 1px);
+  background-size: 100% calc(var(--cell) * 4);
+}
+
+/* Ruling-Marks-The-Plan (D5): a loading shell is not a plan, so it gets the
+   geometry without the ruling. Message/empty branches never build a grid at
+   all, so they have no lines to strip. */
+.planner-grid.is-skeleton .planner-grid-rail,
+.planner-grid.is-skeleton .planner-grid-day {
+  background-image: none;
 }
 
 .planner-grid-rail {

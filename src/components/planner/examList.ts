@@ -1,13 +1,20 @@
 /**
  * EKSAMENER — the exam list (PRODUCT.md DR-3, rework Task 9). Replaces the
  * ribbon's horizontal date axis + hue dots with a chronological list: one
- * `.exam-row` per dated exam, a `.exam-gap` connector between consecutive
+ * `.exam-row` per dated exam and a `.exam-gap` connector between consecutive
  * rows naming the whole-day gap ("5 dager mellomrom", tight ink under two
- * days, a same-day pair collapsing to "samme dag"), and a summary kicker
- * line ("4 eksamener over 14 dager"). Dateless exams stay listed, never
- * dropped, as `.exam-dateless` rows. Sourced from catalog `ExamDate` via the
- * planner index (`examsFromIndex`), not scraped `CourseExam` text — kont
- * exams are already excluded upstream by the crawler (see data.ts).
+ * days, a same-day pair collapsing to "samme dag"). Dateless exams stay
+ * listed, never dropped, as `.exam-dateless` rows. Sourced from catalog
+ * `ExamDate` via the planner index (`examsFromIndex`), not scraped
+ * `CourseExam` text — kont exams are already excluded upstream by the
+ * crawler (see data.ts).
+ *
+ * The list is ALL there is. It used to be preceded by its own ruled frame
+ * holding a summary kicker ("5 eksamener over 26 dager"), which restated in
+ * prose what four dated rows underneath it already showed. Both are gone —
+ * this module now writes into one host element, and a message (nothing
+ * found, nothing published) renders in that same host rather than in a box
+ * of its own.
  *
  * The sort/gap/tight/sameDay/countdown math itself lives in the pure,
  * unit-tested `buildExamList` (examSchedule.ts) — this module is DOM-only.
@@ -61,24 +68,8 @@ export interface ExamRenderResult {
   state: "list" | "empty" | "loading";
 }
 
-/**
- * The ruling belongs to a frame with a real summary in it, not to an empty
- * box (Ruling-Marks-The-Plan / D5) — an empty ruled rectangle holding an
- * apology is the opposite of what the rule says the ruling means.
- */
-function setFrameRuled(frame: HTMLElement, ruled: boolean): void {
-  frame.classList.toggle("np-ruled", ruled);
-  frame.classList.toggle("is-empty", !ruled);
-}
-
-function renderEmpty(
-  frame: HTMLElement,
-  listHost: HTMLElement,
-  message: string | null,
-): ExamRenderResult {
-  setFrameRuled(frame, false);
-  frame.replaceChildren(...(message ? [el("p", "exam-empty np-hint", message)] : []));
-  listHost.replaceChildren();
+function renderEmpty(listHost: HTMLElement, message: string | null): ExamRenderResult {
+  listHost.replaceChildren(...(message ? [el("p", "exam-empty np-hint", message)] : []));
   return {
     collisionCount: 0,
     state: message === null ? "loading" : "empty",
@@ -91,14 +82,13 @@ function renderEmpty(
  * cannot work out for itself: C3's case is a semester the shipped index does
  * not cover at all, where "Ingen eksamensdatoer funnet ennå" would be a
  * finding reported by something that never looked. Pass no message to just
- * empty the frame.
+ * empty the host.
  */
 export function renderExamMessage(
-  frame: HTMLElement,
   listHost: HTMLElement,
   message?: string | null,
 ): ExamRenderResult {
-  return renderEmpty(frame, listHost, message ?? null);
+  return renderEmpty(listHost, message ?? null);
 }
 
 /** The course chip a row wears — DESIGN §5's `.np-tag`, hue dot + mono code. */
@@ -154,9 +144,8 @@ function datelessRow(code: string, hueVar: string): HTMLLIElement {
   return item;
 }
 
-/** Renders the exam summary + chronological list into `frame` / `listHost`. */
+/** Renders the chronological exam list into `listHost`. */
 export function renderExamList(
-  frame: HTMLElement,
   listHost: HTMLElement,
   courses: PlanCourseState[],
   semesterId: string,
@@ -167,7 +156,7 @@ export function renderExamList(
 ): ExamRenderResult {
   const loading = options.loading ?? false;
   if (courses.length === 0) {
-    return renderEmpty(frame, listHost, "Legg til emner for å se eksamensdatoer.");
+    return renderEmpty(listHost, "Legg til emner for å se eksamensdatoer.");
   }
 
   const hueByCode = new Map(courses.map((c) => [c.course.code, c.hueVar]));
@@ -175,7 +164,6 @@ export function renderExamList(
 
   if (inputs.length === 0) {
     return renderEmpty(
-      frame,
       listHost,
       loading ? null : "Ingen eksamensdatoer funnet ennå for emnene i planen.",
     );
@@ -184,22 +172,18 @@ export function renderExamList(
   const model = buildExamList(inputs, todayIso);
 
   if (model.rows.length === 0) {
-    // Dated rows are empty, but dateless exams exist: still list them, just
-    // no summary line to print (there is nothing dated to summarize).
-    setFrameRuled(frame, false);
-    frame.replaceChildren(
-      el("p", "exam-empty np-hint", "Ingen eksamensdatoer satt ennå for emnene i planen."),
-    );
+    // Dated rows are empty, but dateless exams exist: still list them, under
+    // one line saying no date is set rather than dropping them silently.
     const list = el("ul", "exam-list");
     for (const code of model.dateless) {
       list.append(datelessRow(code, hueByCode.get(code) ?? "--hue-blue"));
     }
-    listHost.replaceChildren(list);
+    listHost.replaceChildren(
+      el("p", "exam-empty np-hint", "Ingen eksamensdatoer satt ennå for emnene i planen."),
+      list,
+    );
     return { collisionCount: 0, state: "empty" };
   }
-
-  setFrameRuled(frame, true);
-  frame.replaceChildren(el("p", "np-kicker exam-summary", model.summary ?? ""));
 
   const list = el("ul", "exam-list");
   model.rows.forEach((row, i) => {

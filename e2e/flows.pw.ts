@@ -48,9 +48,9 @@ function courseCodesOf(page: Page): Promise<string[]> {
 test("onboarding: modal → programme + kull + retning → a full week", async ({ page }) => {
   await page.goto("/planlegger/");
 
-  // The empty state is a card in the week frame, not a dead end (§0/B5) —
-  // its own "Velg studieprogram" button is the one this scenario starts from,
-  // distinct from the banner's identically-labeled control.
+  // The empty state is a card in the week frame, not a dead end (§0/B5).
+  // Its button is now the only "Velg studieprogram" on the page besides the
+  // topbar chip — the banner's identically-labeled control is gone.
   const card = page.locator("#planner-grid-frame .planner-week-card");
   await expect(card).toBeVisible({ timeout: 15_000 });
   await card.locator("button", { hasText: "Velg studieprogram" }).click();
@@ -220,6 +220,84 @@ test("groups: a non-default parallel renders with a programme set", async ({ pag
   await page.reload();
   await expect(tmaBlocks().first()).toBeVisible({ timeout: 45_000 });
   await expect(tmaBlocks().first()).toHaveAttribute("aria-label", /onsdag/i);
+});
+
+test("popover: closes from its own button, not just Esc", async ({ page }) => {
+  // A non-modal <dialog> gets no free dismissal, and below 60rem the popover
+  // is a full-bleed bottom sheet where the outside-click target is a sliver
+  // of screen. Before the × existed there was no visible way out at all.
+  await page.goto("/planlegger/#26h;-;%2BTDT4110");
+
+  await expect(gridBlocks(page)).toHaveCount(1, { timeout: 30_000 });
+  const popover = page.locator("#planner-popover");
+
+  await gridBlocks(page).first().click();
+  await expect(popover).toBeVisible();
+
+  const close = popover.locator(".planner-popover-close");
+  await expect(close).toBeVisible();
+  await close.click();
+  await expect(popover).toBeHidden();
+
+  // And it reopens afterwards — closing must not leave the dialog wedged.
+  await gridBlocks(page).first().click();
+  await expect(popover).toBeVisible();
+});
+
+test("popover: never offers a picker with only one option", async ({ page }) => {
+  // The group section used to be gated on `groups.length > 1` across BOTH
+  // kinds, so a course with one lecture parallel and two øving groups drew a
+  // lone dead radio. The invariant is per-kind and data-independent: a
+  // control the student cannot use to choose differently is never rendered.
+  const popover = page.locator("#planner-popover");
+  const radios = popover.locator('.planner-popover-group-row input[type="radio"]');
+  const checkboxes = popover.locator('.planner-popover-group-row input[type="checkbox"]');
+
+  // TDT4110 (3 numbered parallels) and TDT4109 (a single lecture entry) —
+  // opposite ends of the gate, both loaded at once.
+  await page.goto("/planlegger/#26h;-;%2BTDT4110,%2BTDT4109");
+  await expect(gridBlocks(page).first()).toBeVisible({ timeout: 30_000 });
+
+  const blocks = await gridBlocks(page).count();
+  expect(blocks).toBeGreaterThan(0);
+  for (let i = 0; i < blocks; i++) {
+    await gridBlocks(page).nth(i).click();
+    await expect(popover).toBeVisible();
+    // Zero (nothing to choose) or two-plus (a real choice) — never one.
+    expect(await radios.count()).not.toBe(1);
+    expect(await checkboxes.count()).not.toBe(1);
+  }
+
+  // The retired "Vis alle grupper" button called setSelection([]), which is
+  // groups.ts's encoding for "apply the programme default" — it narrowed the
+  // week instead of widening it, exactly contradicting its label.
+  await expect(popover.locator("button", { hasText: "Vis alle grupper" })).toHaveCount(0);
+});
+
+test("one control opens studieinfo, and semester lives only inside it", async ({ page }) => {
+  // The page used to carry three permanent openers for one modal — the
+  // topbar chip, a banner "Endre" button, and the page title (silently a
+  // button) — plus a "Bytt semester" disclosure duplicating the modal's own
+  // semester select.
+  await page.goto("/planlegger/#26h;MTDT.2026;");
+  await expect(courseRows(page).first()).toBeVisible({ timeout: 30_000 });
+
+  await expect(page.locator("#planner-context-change")).toHaveCount(0);
+  await expect(page.locator("#planner-semester")).toHaveCount(0);
+  await expect(page.locator("#planner-title button")).toHaveCount(0);
+
+  // The banner still STATES the term; it just no longer switches it.
+  await expect(page.locator("#planner-context-line")).toContainText("Høst 2026");
+
+  // With a plan set, the week is a real grid — so no empty-state card is on
+  // screen and the topbar chip is the only thing left that opens the modal.
+  await expect(page.locator("#planner-grid-frame .planner-week-card")).toHaveCount(0);
+
+  const dialog = page.locator("#studieinfo-dialog");
+  await expect(dialog).toBeHidden();
+  await page.click("#studieinfo-chip");
+  await expect(dialog).toBeVisible();
+  await expect(page.locator("#studieinfo-semester-select")).toBeVisible();
 });
 
 test("manual adds stay in their semester", async ({ page }) => {

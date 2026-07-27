@@ -457,11 +457,22 @@
   max-height: min(70vh, 32rem);
   overflow-y: auto;
   padding: var(--space-4);
+  color: var(--fg);
+  box-shadow: var(--shadow-lg);
+}
+
+/* MUST stay qualified on [open]. The UA stylesheet hides a closed dialog with
+   `dialog:not([open]) { display: none }`, but an author `display` declaration
+   beats a UA one regardless of specificity — so an unqualified `display: flex`
+   here pinned the popover on screen permanently. Esc, outside-click and the ×
+   all really did call `dialog.close()`; the box just never went away, which is
+   what made the popover read as impossible to close. Below 60rem it was worse
+   still: an empty bottom sheet parked across the foot of the viewport from
+   first paint, before any block had been clicked. */
+.planner-popover[open] {
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
-  color: var(--fg);
-  box-shadow: var(--shadow-lg);
 }
 
 @media (max-width: 59.9375rem) {
@@ -475,6 +486,28 @@
     max-height: min(70vh, 32rem);
     border-radius: var(--radius-lg) var(--radius-lg) 0 0;
   }
+}
+
+/* Title and its close button on one line — the button never wraps below the
+   title, and a long "TDT4100 · Objektorientert programmering" never pushes it
+   off the edge. */
+.planner-popover-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--gap-3);
+}
+
+.planner-popover-title {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.planner-popover-close {
+  flex-shrink: 0;
+  /* Nudged into the frame's own padding so the × sits on the corner rather
+     than indented from it. */
+  margin: calc(-1 * var(--space-1)) calc(-1 * var(--space-1)) 0 0;
 }
 
 .planner-popover-groups {
@@ -499,10 +532,6 @@
 
 .planner-popover-group-row input {
   accent-color: var(--accent);
-}
-
-.planner-popover-showall {
-  align-self: flex-start;
 }
 
 .planner-popover-actions {

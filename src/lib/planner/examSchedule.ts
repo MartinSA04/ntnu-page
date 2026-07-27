@@ -4,7 +4,7 @@
  * with the whole-day gap to the next dated row, a "tight" flag for close
  * spacing, a `sameDay` flag for date collisions, and a days-until-today
  * countdown on the first upcoming exam. Exams without a confirmed date are
- * kept separately, in input order, and never enter the gap/summary math.
+ * kept separately, in input order, and never enter the gap math.
  *
  * No DOM, no dependencies. Date math is done entirely with `Date.UTC`
  * day-differencing over hand-parsed "YYYY-MM-DD" ISO strings, so behaviour
@@ -38,8 +38,6 @@ export interface ExamListRow {
 
 /** The full exam-list model for a course selection. */
 export interface ExamListModel {
-  /** "4 eksamener over 14 dager" / "1 eksamen" / `null` when there are no dated rows. */
-  summary: string | null;
   /** Date-ascending. */
   rows: ExamListRow[];
   /** Codes with a `null` date, in input order. */
@@ -63,8 +61,8 @@ function dayDiff(fromIso: string, toIso: string): number {
 /**
  * Builds the exam-list model: sorts dated exams by date, annotates each row
  * with its gap to the next, tight/sameDay flags and (on the first upcoming
- * row only) a countdown from `todayIso`, and reports dateless codes and a
- * human-readable summary separately.
+ * row only) a countdown from `todayIso`, and reports dateless codes
+ * separately.
  */
 export function buildExamList(exams: ExamListInput[], todayIso: string): ExamListModel {
   const dateless: string[] = [];
@@ -110,15 +108,5 @@ export function buildExamList(exams: ExamListInput[], todayIso: string): ExamLis
     }
   }
 
-  let summary: string | null = null;
-  if (rows.length === 1) {
-    summary = "1 eksamen";
-  } else if (rows.length > 1) {
-    const first = rows[0];
-    const last = rows[rows.length - 1];
-    const span = first && last ? dayDiff(first.date, last.date) : 0;
-    summary = `${rows.length} eksamener over ${span} dager`;
-  }
-
-  return { summary, rows, dateless };
+  return { rows, dateless };
 }

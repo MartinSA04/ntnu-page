@@ -137,7 +137,7 @@ export async function mountCourseTimetable(
 
   // Same class names as /planlegger/'s week: the geometry lives in
   // src/styles/planner-week.css, which both surfaces import.
-  const frame = el("div", "np-frame np-ruled np-ruled--hours planner-grid-frame");
+  const frame = el("div", "planner-grid-frame");
   const notes = el("div", "planner-grid-notes");
   body.append(frame, notes);
 
@@ -151,8 +151,8 @@ export async function mountCourseTimetable(
   };
 
   function draw(showOthers: boolean): void {
-    // renderGrid owns the ruling (D5) — it strips `np-ruled` itself when
-    // there is no week to rule, so this must not second-guess the class list.
+    // The ruling rides on the grid's own rail/day columns now, so a branch
+    // that draws no grid draws no lines — nothing to strip here.
     // showAllGroups: this is the course's own reference page, not one
     // student's plan — every parallel/group draws (Task 7 ruling), not just
     // whichever one a programme-less context would default to.
