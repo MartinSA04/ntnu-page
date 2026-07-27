@@ -98,20 +98,58 @@ export interface PlanStoreOptions {
 }
 
 function defaultStorage(): StorageLike | undefined {
-  return typeof window !== "undefined" ? window.localStorage : undefined;
+  if (typeof window === "undefined") return undefined;
+  try {
+    return window.localStorage;
+  } catch {
+    // With Chrome's "block all cookies", inside a sandboxed/partitioned embed
+    // or in a webview with DOM storage off, the *property access itself*
+    // throws (SecurityError) — which is why the fallback below never used to
+    // engage and the planner and every course page died to a blank shell with
+    // no message (store-1/sec-2).
+    return undefined;
+  }
 }
 
 function defaultEvents(): EventTargetLike | undefined {
   return typeof window !== "undefined" ? window : undefined;
 }
 
-/** A no-op storage used when neither an injected nor a global storage is available. */
-const nullStorage: StorageLike = {
-  getItem: () => null,
-  setItem: () => {
-    // discard: no persistence available (e.g. non-DOM context)
-  },
-};
+/**
+ * Wraps a backing storage so a denied or failing one degrades to an in-memory
+ * plan for the session instead of throwing out of `createPlanStore`/`savePlan`.
+ * Every write is mirrored into the map, and the backing store is abandoned the
+ * first time it throws (SecurityError, QuotaExceededError), so the plan still
+ * loads, adds, drops and shares for as long as the tab lives — it just stops
+ * surviving a reload. `undefined` (no storage at all — a non-DOM context) is
+ * the same path with nothing behind it.
+ */
+function resilientStorage(backing: StorageLike | undefined): StorageLike {
+  const memory = new Map<string, string>();
+  let live = backing;
+  return {
+    getItem(key) {
+      if (live) {
+        try {
+          const value = live.getItem(key);
+          if (value !== null) return value;
+        } catch {
+          live = undefined;
+        }
+      }
+      return memory.get(key) ?? null;
+    },
+    setItem(key, value) {
+      memory.set(key, value);
+      if (!live) return;
+      try {
+        live.setItem(key, value);
+      } catch {
+        live = undefined;
+      }
+    },
+  };
+}
 
 /** A no-op event target used when neither an injected nor a global target is available. */
 const nullEvents: EventTargetLike = {
@@ -123,6 +161,22 @@ const nullEvents: EventTargetLike = {
     // no-op
   },
 };
+
+/**
+ * What a course or programme code may look like. Real NTNU codes are short
+ * and punctuation-poor: all 5 470 crawled course codes and all 403 programme
+ * codes fit this class within 16 characters (`EMNE/HF`, `MSECT+OH` and
+ * `MSØK/5` are why `/` and `+` are in it). Studieretning codes run longer —
+ * `SIVING-ARBERFARING24` is 20 — hence the separate bound below.
+ *
+ * Untrusted input reaches both: a shared plan hash used to write any text at
+ * all into `np:profile` as a programme "code", and the topbar chip and the
+ * homepage "Planen din" line then repeated that text on every page, on every
+ * visit, with no hash left in the URL (sec-1). The same guard runs on read, so
+ * an already-poisoned profile is dropped rather than rendered forever.
+ */
+const CODE_PATTERN = /^[A-ZÆØÅ0-9_+/-]{2,16}$/i;
+const DIRECTION_PATTERN = /^[A-ZÆØÅ0-9_+/-]{2,32}$/i;
 
 /** Narrows an untrusted JSON value to a plain object, or `null`. */
 function asRecord(value: unknown): Record<string, unknown> | null {
@@ -139,6 +193,7 @@ function coerceCourse(raw: unknown): PlanCourse | null {
   if (typeof raw !== "object" || raw === null) return null;
   const obj = raw as Record<string, unknown>;
   if (typeof obj.code !== "string" || typeof obj.name !== "string") return null;
+  if (!CODE_PATTERN.test(obj.code)) return null;
 
   const version =
     typeof obj.version === "string" && obj.version !== "" ? obj.version : DEFAULT_VERSION;
@@ -166,6 +221,7 @@ function coerceProfile(raw: unknown): StoredProfile {
   if (
     !rawProgram ||
     typeof rawProgram.code !== "string" ||
+    !CODE_PATTERN.test(rawProgram.code) ||
     typeof rawProgram.name !== "string" ||
     typeof rawProgram.cohort !== "number"
   ) {
@@ -177,13 +233,49 @@ function coerceProfile(raw: unknown): StoredProfile {
     cohort: rawProgram.cohort,
   };
   const rawDirection = asRecord(rawProgram.direction);
-  if (rawDirection && typeof rawDirection.code === "string") {
+  if (
+    rawDirection &&
+    typeof rawDirection.code === "string" &&
+    DIRECTION_PATTERN.test(rawDirection.code)
+  ) {
     program.direction = {
       code: rawDirection.code,
       name: typeof rawDirection.name === "string" ? rawDirection.name : rawDirection.code,
     };
   }
   return { program };
+}
+
+/**
+ * Enforces the plan's one-entry-per-code invariant: a course is in the plan
+ * once or not at all. When the same code appears twice the `source: "program"`
+ * entry wins — it is the one carrying the study plan's credits and the
+ * Dropp/Legg tilbake semantics — and it inherits the loser's group selection
+ * when it has none of its own, so a student's parallel/øving pick survives the
+ * merge. Otherwise the first entry wins, as `addCourse` has always done.
+ *
+ * Two ordinary clicks used to break this (add a course from its page, then
+ * pick your programme): the plan held the course twice, the credit line read
+ * "22,5 av 30 sp" for 15 sp, the exam list drew a red same-day collision of
+ * the course with itself, and Dropp left the manual twin feeding the week
+ * (edit-1/store-6). It is enforced here, on read and on every write, rather
+ * than in the callers that kept forgetting it.
+ */
+function dedupeByCode(courses: PlanCourse[]): PlanCourse[] {
+  const byCode = new Map<string, PlanCourse>();
+  for (const course of courses) {
+    const existing = byCode.get(course.code);
+    if (!existing) {
+      byCode.set(course.code, course);
+      continue;
+    }
+    const winner = existing.source === "program" ? existing : course;
+    const loser = winner === existing ? course : existing;
+    const merged: PlanCourse = { ...winner };
+    if (!merged.groups?.length && loser.groups?.length) merged.groups = loser.groups;
+    byCode.set(course.code, merged);
+  }
+  return [...byCode.values()];
 }
 
 /** Type-guards a parsed JSON value into `{ [semesterId]: PlanCourse[] }`, dropping unusable entries. */
@@ -198,7 +290,8 @@ function coercePlansMap(raw: unknown): Record<string, PlanCourse[]> {
       const course = coerceCourse(c);
       if (course) courses.push(course);
     }
-    result[semesterId] = courses;
+    // Repairs a plan already written twice by an older build, too.
+    result[semesterId] = dedupeByCode(courses);
   }
   return result;
 }
@@ -240,14 +333,15 @@ export interface PlanStore {
  * Builds a plan store bound to injected (or default global) storage/events.
  * Reads are always fresh from storage (no in-memory cache) so multiple
  * store instances / tabs stay consistent. Safe to call at module load in a
- * non-DOM context: falls back to inert no-op storage/events rather than
- * touching `window`.
+ * non-DOM context, and safe where DOM storage is denied or full: both
+ * degrade to an in-memory plan for the session (`resilientStorage`) plus
+ * inert no-op events rather than throwing.
  */
 export function createPlanStore(
   defaultSemesterId: string,
   options: PlanStoreOptions = {},
 ): PlanStore {
-  const storage = options.storage ?? defaultStorage() ?? nullStorage;
+  const storage = resilientStorage(options.storage ?? defaultStorage());
   const events = options.events ?? defaultEvents() ?? nullEvents;
 
   function readProfile(): StoredProfile {
@@ -315,8 +409,20 @@ export function createPlanStore(
     return next;
   }
 
+  /**
+   * "Fjern fra planen". A manual add is spliced out; a `source: "program"`
+   * course is *dropped* instead — a programme course is never deleted, it
+   * grays out and one tap restores it (§0.3). Hard-deleting one looked like
+   * it worked and was then silently undone: the next study-plan derive
+   * re-added it with no `dropped` flag. The planner and the popover picked
+   * the verb themselves, the three off-planner call sites did not (store-3),
+   * so the store decides it now and they all agree by construction.
+   */
   function removeCourse(code: string): PlanState {
     const plan = loadPlan();
+    const target = plan.courses.find((c) => c.code === code);
+    if (!target) return plan;
+    if (target.source === "program") return dropCourse(code);
     const next: PlanState = { ...plan, courses: plan.courses.filter((c) => c.code !== code) };
     savePlan(next);
     return next;
@@ -370,8 +476,10 @@ export function createPlanStore(
    * pick, or the student's own parallel/øving choice, must survive a study
    * plan re-derive — it used to show on first paint and then vanish the
    * moment `onPlanChange` re-ran this with the same codes), and (c) every
-   * `source: "manual"` course untouched. Used when the programme/kull
-   * selection changes (or the study plan is (re)fetched).
+   * `source: "manual"` course *the programme prefill does not itself contain*
+   * — a code in both is one course, and `dedupeByCode` collapses it onto the
+   * programme entry (edit-1/store-6). Used when the programme/kull selection
+   * changes (or the study plan is (re)fetched).
    */
   function setProgramPlan(program: PlanProgram, courses: AddCourseInput[]): PlanState {
     const plan = loadPlan();
@@ -397,7 +505,7 @@ export function createPlanStore(
       if (groups) course.groups = groups;
       return course;
     });
-    const next: PlanState = { ...plan, program, courses: [...program_, ...manual] };
+    const next: PlanState = { ...plan, program, courses: dedupeByCode([...program_, ...manual]) };
     savePlan(next);
     return next;
   }
@@ -582,7 +690,7 @@ function parseHashToken(raw: string): HashToken | null {
   }
   if (rest === "") return null;
   const [codeRaw = "", versionRaw = ""] = rest.split(".");
-  if (codeRaw === "") return null;
+  if (!CODE_PATTERN.test(codeRaw)) return null;
   const version = versionRaw === "" ? DEFAULT_VERSION : versionRaw;
   return { code: codeRaw, version, source, dropped, groups };
 }
@@ -654,7 +762,12 @@ export function parsePlanHash(hash: string): ParsedPlanHash | null {
 
   const semesterRaw = (segments[0] ?? "").trim();
   if (!SEMESTER_ID_PATTERN.test(semesterRaw)) return null;
-  const semesterId = decodeField(semesterRaw);
+  // Lower-cased because the pattern above accepts either case while every id
+  // we ship (and every id `formatPlanHash` writes) is lowercase: an
+  // autocapitalised "#26H" parsed fine and then failed the caller's
+  // known-semester lookup, so the link note apologised for not being able to
+  // plan the very semester it was showing (store-7).
+  const semesterId = decodeField(semesterRaw).toLowerCase();
 
   const progRaw = (segments[1] ?? "").trim();
   let program: ParsedPlanHash["program"] = null;
@@ -662,20 +775,29 @@ export function parsePlanHash(hash: string): ParsedPlanHash | null {
     const [codeRaw = "", cohortRaw = "", directionRaw = ""] = progRaw.split(".");
     const code = decodeField(codeRaw);
     const cohort = Number(cohortRaw);
-    if (code !== "" && cohortRaw !== "" && cohortIsPlausible(cohort)) {
+    const direction = directionRaw === "" ? null : decodeField(directionRaw);
+    if (CODE_PATTERN.test(code) && cohortRaw !== "" && cohortIsPlausible(cohort)) {
       program = {
         code,
         cohort,
-        direction: directionRaw === "" ? null : decodeField(directionRaw),
+        // An unusable direction costs the studieretning answer (the question
+        // re-opens), not the whole programme.
+        direction: direction !== null && DIRECTION_PATTERN.test(direction) ? direction : null,
       };
     }
   }
 
   const itemsRaw = segments[2] ?? "";
   const courses: HashCourse[] = [];
+  const seen = new Set<string>();
   for (const token of itemsRaw.split(",")) {
     const parsed = parseHashToken(token);
     if (!parsed) continue;
+    // One entry per code, as everywhere else in the store: a link repeating a
+    // code used to render the course twice and double-count its credits.
+    // First token wins, so its `-`/`+` prefix is the one honoured.
+    if (seen.has(parsed.code)) continue;
+    seen.add(parsed.code);
     const course: HashCourse = {
       code: parsed.code,
       version: parsed.version,

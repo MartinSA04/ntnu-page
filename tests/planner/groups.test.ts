@@ -5,6 +5,7 @@ import {
   defaultLectureKeys,
   groupKey,
   groupOptions,
+  resolveLectureDefaults,
 } from "../../src/lib/planner/groups.js";
 
 /**
@@ -66,6 +67,23 @@ describe("groupOptions", () => {
       },
     ]);
   });
+
+  test("numbered groups sort numerically, not lexically (groups-7/edit-6)", () => {
+    // EXPH0300 publishes 39 seminar groups; string order put "Seminargruppe 2"
+    // at position 12, behind 1, 10, 11 … 19.
+    const opts = groupOptions([
+      e("Seminargruppe 10 Trondheim"),
+      e("Seminargruppe 2 Trondheim"),
+      e("Seminargruppe 1 Trondheim"),
+      e("Seminargruppe 20 Trondheim"),
+    ]);
+    expect(opts.map((o) => o.label)).toEqual([
+      "Seminargruppe 1 Trondheim",
+      "Seminargruppe 2 Trondheim",
+      "Seminargruppe 10 Trondheim",
+      "Seminargruppe 20 Trondheim",
+    ]);
+  });
 });
 
 describe("defaultLectureKeys", () => {
@@ -87,6 +105,124 @@ describe("defaultLectureKeys", () => {
     const streams = [e("Hovedforelesning"), e("Ekstraforelesning")];
     expect(defaultLectureKeys(streams, null)).toEqual([]);
     expect(defaultLectureKeys(streams, "MTDT")).toEqual([]);
+  });
+
+  test("the programme's own parallel is reported as resolved, a guess is not (groups-5)", () => {
+    expect(resolveLectureDefaults(parallels, "MTKJ")).toEqual({
+      keys: ["forelesningsparallell-2"],
+      resolved: true,
+      alternatives: [],
+    });
+    // Same data, no programme: the first parallel is drawn, but the caller is
+    // told it is a guess so the surface can say "velg din".
+    expect(resolveLectureDefaults(parallels, null)).toEqual({
+      keys: ["forelesningsparallell-1"],
+      resolved: false,
+      alternatives: [
+        "forelesningsparallell-1",
+        "forelesningsparallell-2",
+        "forelesningsparallell-3",
+      ],
+    });
+  });
+
+  test("campus parallels the programme is listed on both of stay unresolved (groups-5)", () => {
+    // Live EXPH0300: BDIGSEC is on the Trondheim AND the Gjøvik parallel, so
+    // entriesForProgram cannot narrow. Before, this returned [] and the week
+    // silently drew two campuses' lectures with nothing marked.
+    const exph = [
+      e("Forelesningsparallell 1 Trondheim", { studyProgramKeys: ["BDIGSEC", "BPROG"] }),
+      e("Forelesningsparallell 3 Gjøvik", { studyProgramKeys: ["BDIGSEC", "BPROG"] }),
+    ];
+    const resolution = resolveLectureDefaults(exph, "BDIGSEC");
+    expect(resolution.resolved).toBe(false);
+    expect(resolution.keys).toEqual(["forelesningsparallell-1-trondheim"]);
+    expect(resolution.alternatives).toEqual([
+      "forelesningsparallell-1-trondheim",
+      "forelesningsparallell-3-gjøvik",
+    ]);
+  });
+});
+
+/**
+ * A course's lecture entries are not all alternatives: some are different
+ * weekly sessions the student attends all of. Fixtures are the real 2026
+ * titles from `/api/course/<code>/timetable`.
+ */
+describe("defaultLectureKeys — sessions vs parallels", () => {
+  test("two complementary weekly slots are both kept (week-2, IT2805)", () => {
+    // "Forelesning 1" (Tuesday, A1) and "Forelesning 2" (Monday, R7) carry the
+    // same programme keys — the digit heuristic used to drop the Monday one.
+    const it2805 = [
+      e("Forelesning 2", { dayNumber: 1, studyProgramKeys: ["MLREAL", "BIT", "MTDESIG"] }),
+      e("Forelesning 1", { dayNumber: 2, studyProgramKeys: ["MLREAL", "BIT", "MTDESIG"] }),
+    ];
+    expect(resolveLectureDefaults(it2805, "BIT")).toEqual({
+      keys: [],
+      resolved: true,
+      alternatives: [],
+    });
+    expect(applyGroupSelection(it2805, undefined, "BIT").map((x) => x.title)).toEqual([
+      "Forelesning 2",
+      "Forelesning 1",
+    ]);
+  });
+
+  test("clock times in a title are not session numbers (week-2, TMR4106)", () => {
+    const tmr4106 = [
+      e("Forelesning introuke tirsdag kl. 08:15- 11:00", { weeks: ["34"] }),
+      e("Forelesning morgen tirsdager kl. 08:15-10:00", { weeks: ["35-48"] }),
+      e("Forelesning/prosjektbasert tirsdager kl.12:15-14:00", { weeks: ["35-47"] }),
+    ];
+    expect(defaultLectureKeys(tmr4106, "MTIØT")).toEqual([]);
+    expect(applyGroupSelection(tmr4106, undefined, "MTIØT")).toHaveLength(3);
+  });
+
+  test("one session split across programme clusters is an alternative set (week-5, TMA4400)", () => {
+    // MTIØT is named on three "Forelesning 1" and two "Forelesning 2" entries,
+    // so the programme filter cannot narrow: the week drew all of them.
+    const tma4400 = [
+      e("Forelesning 1 MTELSYS & MTTK", { dayNumber: 1, studyProgramKeys: ["MTELSYS", "MTTK"] }),
+      e("Forelesning 1 MTBYGG, MTING, MTIØT", {
+        dayNumber: 1,
+        startTime: "10:15",
+        studyProgramKeys: ["MTBYGG", "MTING", "MTIØT"],
+      }),
+      e("Forelesning 1 MTDT, MTIØT, MTKOM", {
+        dayNumber: 2,
+        startTime: "10:15",
+        studyProgramKeys: ["MTDT", "MTIØT", "MTKOM"],
+      }),
+      e("Forelesning 2 MTING, MTIØT, MTMART", {
+        dayNumber: 3,
+        startTime: "10:15",
+        studyProgramKeys: ["MTING", "MTIØT", "MTMART"],
+      }),
+      e("Forelesning 2 MTIØT og MTMASKIN", {
+        dayNumber: 3,
+        startTime: "12:15",
+        studyProgramKeys: ["MTIØT", "MTMASKIN"],
+      }),
+      e("Plenumsregning", { dayNumber: 3, startTime: "14:15" }),
+      e("Mattelab 1", { dayNumber: 3, startTime: "12:15" }),
+    ];
+    const resolution = resolveLectureDefaults(tma4400, "MTIØT");
+    expect(resolution.resolved).toBe(false);
+    // One "Forelesning 1", one "Forelesning 2", plus the plenary session that
+    // is nobody's alternative.
+    expect(resolution.keys).toEqual([
+      "forelesning-1-mtbygg-mting-mtiøt",
+      "forelesning-2-mting-mtiøt-mtmart",
+      "plenumsregning",
+    ]);
+    expect(resolution.alternatives).not.toContain("plenumsregning");
+    expect(resolution.alternatives).toHaveLength(4);
+    expect(applyGroupSelection(tma4400, undefined, "MTIØT").map((x) => x.title)).toEqual([
+      "Forelesning 1 MTBYGG, MTING, MTIØT",
+      "Forelesning 2 MTING, MTIØT, MTMART",
+      "Plenumsregning",
+      "Mattelab 1",
+    ]);
   });
 });
 
@@ -141,15 +277,71 @@ describe("applyGroupSelection", () => {
   });
 
   test("an explicit non-lecture pick tagged for another programme is still kept", () => {
-    // The explicit branch is unchanged: a student who deliberately selects a
-    // foreign-tagged øving group keeps it, programme filter notwithstanding.
+    // A student who deliberately selects a foreign-tagged øving group keeps it,
+    // programme filter notwithstanding — and the lecture layer, which has no
+    // pick of its own, keeps its default (groups-1: this assertion used to
+    // demand the lecture be dropped, which was the bug).
     const service = [
       e("Forelesning", { studyProgramKeys: ["MTDT"] }),
       e("Øvingsgruppe 9", { studyProgramKeys: ["MTKJ"] }),
     ];
     const kept = applyGroupSelection(service, ["øvingsgruppe-9"], "MTDT").map((x) => x.title);
-    expect(kept).toContain("Øvingsgruppe 9");
-    expect(kept).not.toContain("Forelesning");
+    expect(kept).toEqual(["Forelesning", "Øvingsgruppe 9"]);
+  });
+
+  test("ticking an øving group does not delete the course's lectures (groups-1)", () => {
+    // Live TDT4120: one lecture group, two øving-kind groups. Ticking the first
+    // checkbox wrote ["øvingsforelesning"] and the flat allow-list then filtered
+    // the Friday lecture out of the week — while the verdict still read
+    // "ingen kollisjoner".
+    const tdt4120 = [
+      e("Forelesning", { dayNumber: 5, startTime: "12:15" }),
+      e("Øvingsforelesning", { dayNumber: 3 }),
+      e("Øvingsveiledning", { dayNumber: 4 }),
+    ];
+    const kept = applyGroupSelection(tdt4120, ["øvingsforelesning"], "MTDT").map((x) => x.title);
+    expect(kept).toEqual(["Forelesning", "Øvingsforelesning"]);
+  });
+
+  test("picking a lecture parallel does not delete the øving layer (groups-1, mirror)", () => {
+    const tma4412 = [
+      e("Forelesningsparallell 1", { studyProgramKeys: ["MTDT"] }),
+      e("Forelesningsparallell 2", { studyProgramKeys: ["MTKJ"] }),
+      e("Mattelab 1"),
+      e("Mattelab 2"),
+    ];
+    const kept = applyGroupSelection(tma4412, ["forelesningsparallell-2"], "MTDT").map(
+      (x) => x.title,
+    );
+    expect(kept).toEqual(["Forelesningsparallell 2", "Mattelab 1", "Mattelab 2"]);
+  });
+
+  test("a stored key that matches no entry degrades to the default, not to nothing (store-5)", () => {
+    // #26h;-;+TDT4136~forelesning-3 — NTNU retitled the groups (they are English
+    // now), so the shared key matches nothing. The week drew zero blocks and the
+    // page then claimed NTNU had no timetable data.
+    const tdt4136 = [
+      e("Main lecture", { dayNumber: 1 }),
+      e("Assignment lecture", { dayNumber: 2 }),
+      e("Lab hour for assignments 1-4", { dayNumber: 3 }),
+    ];
+    const kept = applyGroupSelection(tdt4136, ["forelesning-3"], null).map((x) => x.title);
+    expect(kept).toEqual(["Main lecture", "Assignment lecture", "Lab hour for assignments 1-4"]);
+  });
+
+  test("a stale key alongside a live one only narrows the kind it matches (store-5)", () => {
+    const entries = [
+      e("Forelesningsparallell 1", { studyProgramKeys: ["MTDT"] }),
+      e("Forelesningsparallell 2", { studyProgramKeys: ["MTKJ"] }),
+      e("Øvingsgruppe 5"),
+      e("Øvingsgruppe 7"),
+    ];
+    const kept = applyGroupSelection(entries, ["forelesningsparallell-9", "øvingsgruppe-7"], "MTDT")
+      .map((x) => x.title)
+      .sort();
+    // The unknown lecture key falls back to the programme default; the live
+    // øving key still narrows its own layer.
+    expect(kept).toEqual(["Forelesningsparallell 1", "Øvingsgruppe 7"]);
   });
 
   test("default keeps the lone lecture group when there is only one", () => {

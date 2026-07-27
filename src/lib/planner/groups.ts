@@ -2,16 +2,28 @@
  * Group-selection engine for multi-section courses (Task 3; grid rewrite +
  * popover consume this). Big service courses publish several parallel
  * sections under the same course code — lecture parallels split by
- * programme cluster ("Forelesningsparallell 2"), øving/lab groups split by
- * student ("Øvingsgruppe 5") — and the student needs exactly one lecture
- * parallel plus whichever øving group they were assigned, not every section
- * overlaid on top of each other.
+ * programme cluster ("Forelesningsparallell 2", "Forelesning 1 MTDT, MTIØT,
+ * MTKOM"), øving/lab groups split by student ("Øvingsgruppe 5") — and the
+ * student needs exactly one lecture parallel plus whichever øving group they
+ * were assigned, not every section overlaid on top of each other.
  *
- * `defaultLectureKeys` picks the programme's own lecture parallel so the
- * grid opens on a sane default; øving/lab ("other") entries are never
- * defaulted away — the grid's own "vis øvinger og labber" toggle governs
- * their visibility, this module only ever narrows *which* group of them is
- * shown once the student picks one via `applyGroupSelection`.
+ * The hard part is that a course's lecture entries are NOT all alternatives.
+ * IT2805 teaches "Forelesning 1" on Tuesday and "Forelesning 2" on Monday —
+ * two complementary weekly sessions the student attends both of — while
+ * TMA4400 publishes four "Forelesning 1 <programmes>" entries that are one
+ * session offered four times. Treating the first shape as the second is how
+ * real teaching went missing from the week (audit week-2/week-5), so the
+ * narrowing runs per *session family* (`sessionFamily`): only groups inside
+ * one family are mutually exclusive, and a family we cannot resolve is
+ * reported as unresolved (`LectureDefaults.resolved`) rather than silently
+ * guessed at.
+ *
+ * `resolveLectureDefaults`/`defaultLectureKeys` pick the programme's own
+ * lecture parallel so the grid opens on a sane default; øving/lab ("other")
+ * entries are never defaulted away — the grid's own "vis øvinger og labber"
+ * toggle governs their visibility, this module only ever narrows *which*
+ * group of them is shown once the student picks one via
+ * `applyGroupSelection`.
  */
 
 import type { ActivityKind } from "./activity.js";
@@ -56,6 +68,11 @@ export function groupKey(name: string | null | undefined): string | null {
  * distinct groups (see activity.ts's classifier docs). Matches the priority
  * `classifyActivity` (activity.ts) and the grid's block label (grid.ts)
  * already use.
+ *
+ * The text arrives already entity-decoded from data.ts's timetable mapping
+ * (audit edit-7/groups-8) — do not decode again here, or a title that really
+ * contains "&#38;" would be mangled and its key would drift from grid.ts's
+ * label.
  */
 function rawGroupName(entry: Pick<TimetableEntry, "name" | "title">): string | null {
   return entry.title?.trim() || entry.name?.trim() || null;
@@ -71,6 +88,15 @@ export function entryGroupKey(entry: Pick<TimetableEntry, "name" | "title">): st
   return groupKey(rawGroupName(entry));
 }
 
+/**
+ * Label order the way a student reads it: locale-aware and digit-aware, so
+ * "Seminargruppe 2" sorts before "Seminargruppe 10" instead of after
+ * "Seminargruppe 19" (audit groups-7/edit-6).
+ */
+function compareLabels(a: string, b: string): number {
+  return a.localeCompare(b, "nb", { numeric: true });
+}
+
 function distinctLectureKeys(entries: TimetableEntry[]): string[] {
   const keys = new Set<string>();
   for (const entry of entries) {
@@ -81,9 +107,39 @@ function distinctLectureKeys(entries: TimetableEntry[]): string[] {
   return [...keys];
 }
 
-/** True when every option's label ends in a number — "Forelesningsparallell 2", not e.g. "Ekstraforelesning". */
-function looksLikeNumberedParallels(options: GroupOption[]): boolean {
-  return options.length > 1 && options.every((o) => /\d+\s*$/.test(o.label));
+/** A label's leading activity word, its session number and whatever follows it. */
+const SESSION_LABEL = /^(.*?[^\s\d])\s*(\d+)\s*(.*)$/;
+
+/**
+ * Which weekly *session* a lecture group belongs to. Groups that share a
+ * family are alternatives — the student attends exactly one. Groups in
+ * different families are complementary slots the student attends all of, and
+ * narrowing those away deletes real teaching from the week (week-2/week-5).
+ *
+ * The tell is in the label, checked against real 2026 data:
+ *  - "…parallell N (Trondheim)" says "alternative" by name — TDT4110's three
+ *    parallels, EXPH0300's five campus parallels. One family per stem.
+ *  - "<ord> N <qualifier>" is one session split across programme clusters or
+ *    campuses — TMA4400's four "Forelesning 1 <programmes>" and seven
+ *    "Forelesning 2 <programmes>". Family is the word plus the number, so
+ *    "Forelesning 1 …" and "Forelesning 2 …" stay two families.
+ *  - anything else is its own family, which is the fail-open direction: an
+ *    unrecognized label keeps its teaching in the week. That covers IT2805's
+ *    bare "Forelesning 1"/"Forelesning 2" (nothing after the number, so the
+ *    number names the session itself) and TMR4106's clock-time titles
+ *    ("Forelesning morgen tirsdager kl. 08:15-10:00" — the number is an
+ *    hour, not a session number, hence the single-digit guard).
+ */
+function sessionFamily(label: string): string {
+  const trimmed = label.trim().toLowerCase();
+  const match = SESSION_LABEL.exec(trimmed);
+  if (!match) return trimmed;
+  const word = match[1] ?? "";
+  const number = match[2] ?? "";
+  const rest = (match[3] ?? "").trim();
+  if (word.endsWith("parallell")) return word;
+  if (rest !== "" && /^[1-9]$/.test(number)) return `${word} ${number}`;
+  return trimmed;
 }
 
 /** Distinct entry group names, sorted lecture-first then by label. Ungrouped (null-key) entries produce no option. */
@@ -103,76 +159,148 @@ export function groupOptions(entries: TimetableEntry[]): GroupOption[] {
   }
   return [...byKey.values()].sort((a, b) => {
     if (a.kind !== b.kind) return a.kind === "lecture" ? -1 : 1;
-    return a.label.localeCompare(b.label);
+    return compareLabels(a.label, b.label);
   });
 }
 
+/** What the grid should draw for a course's lecture layer, and how sure we are of it. */
+export interface LectureDefaults {
+  /**
+   * The lecture group keys to draw before the student picks. `[]` means "no
+   * narrowing at all" — every lecture group the programme filter leaves is
+   * the student's own.
+   */
+  keys: string[];
+  /**
+   * `true` when `keys` is an answer: there was nothing to choose between, or
+   * the programme's own section chose it. `false` when at least one session
+   * family had several alternatives we could not choose between — `keys`
+   * then holds a provisional pick per family and the surface MUST invite the
+   * student to pick ("velg din"), not present it as theirs.
+   */
+  resolved: boolean;
+  /**
+   * Every key in the families we could not resolve, provisional picks
+   * included. Empty when `resolved`.
+   */
+  alternatives: string[];
+}
+
+const NOTHING_TO_NARROW: LectureDefaults = { keys: [], resolved: true, alternatives: [] };
+
 /**
- * The lecture parallel(s) the grid should show before the student picks one.
- * A course with only one lecture group overall (or none — ungrouped
- * lectures) needs no default narrowing: `[]`. Otherwise, if the programme's
- * own section (`entriesForProgram`) narrows it to exactly one, that one key
- * is the default; if it's still ambiguous (several survive, or there's no
- * programme to narrow by) and the survivors look like numbered parallels,
- * the first by label wins. An ambiguous, non-numbered set is left
- * unresolved (`[]`) rather than guessing.
+ * The lecture parallel(s) the grid should show before the student picks one,
+ * with the honest signal about how we got there (audit groups-5: the caller
+ * must be able to tell "resolved to this" from "could not resolve").
+ *
+ * A course with one lecture group overall (or none — ungrouped lectures)
+ * needs no narrowing. Otherwise the programme's own section
+ * (`entriesForProgram`) narrows first; if that leaves one lecture group we
+ * are done and `resolved`. If several survive they are split into session
+ * families (`sessionFamily`): a family with one member is a session of its
+ * own and always kept, a family with several members is an alternative set
+ * where the first by label is drawn provisionally and every member is
+ * reported in `alternatives` with `resolved: false`.
  */
+export function resolveLectureDefaults(
+  entries: TimetableEntry[],
+  programCode: string | null | undefined,
+): LectureDefaults {
+  if (distinctLectureKeys(entries).length <= 1) return NOTHING_TO_NARROW;
+
+  const survivors = entriesForProgram(entries, programCode);
+  const lectures = groupOptions(survivors).filter((o) => o.kind === "lecture");
+  // The programme's own section answered it (or left no named lecture at all,
+  // which `applyGroupSelection`'s programme filter handles on its own).
+  if (lectures.length <= 1) {
+    return { keys: lectures.map((o) => o.key), resolved: true, alternatives: [] };
+  }
+
+  const families = new Map<string, GroupOption[]>();
+  for (const option of lectures) {
+    const family = sessionFamily(option.label);
+    const members = families.get(family);
+    if (members) members.push(option);
+    else families.set(family, [option]);
+  }
+
+  const keys: string[] = [];
+  const alternatives: string[] = [];
+  for (const members of families.values()) {
+    const [first, ...rest] = [...members].sort((a, b) => compareLabels(a.label, b.label));
+    if (!first) continue;
+    keys.push(first.key);
+    if (rest.length > 0) alternatives.push(first.key, ...rest.map((o) => o.key));
+  }
+  // Every family was a session of its own: nothing is an alternative to
+  // anything, so nothing is narrowed away and nothing is unresolved.
+  if (alternatives.length === 0) return NOTHING_TO_NARROW;
+  return { keys, resolved: false, alternatives };
+}
+
+/** `resolveLectureDefaults(...).keys` — the narrowing without the resolution signal. */
 export function defaultLectureKeys(
   entries: TimetableEntry[],
   programCode: string | null | undefined,
 ): string[] {
-  if (distinctLectureKeys(entries).length <= 1) return [];
-
-  const survivors = entriesForProgram(entries, programCode);
-  const survivorKeys = distinctLectureKeys(survivors);
-  if (survivorKeys.length === 1) return survivorKeys;
-
-  const candidates = groupOptions(survivors).filter(
-    (o) => o.kind === "lecture" && survivorKeys.includes(o.key),
-  );
-  if (!looksLikeNumberedParallels(candidates)) return [];
-  const [first] = [...candidates].sort((a, b) => a.label.localeCompare(b.label));
-  return first ? [first.key] : [];
+  return resolveLectureDefaults(entries, programCode).keys;
 }
 
 /**
- * Filters a course's entries down to the groups relevant to show. An
- * explicit non-empty `selected` wins outright — every entry whose key is in
- * it, plus every ungrouped entry, regardless of programme (the student's pick
- * beats the programme filter, so a cross-programme parallel/øving they chose
- * still draws). With no selection, ungrouped entries always stay, and any
+ * Filters a course's entries down to the groups relevant to show.
+ *
+ * `selected` is applied PER ACTIVITY KIND (audit groups-1): ticking an
+ * øving group narrows the øving/lab layer only, and the lecture layer keeps
+ * its default — a flat allow-list deleted every lecture of every course
+ * whose lecture group the student had not also named, which is the common
+ * case. A selected key matching no entry of a kind is likewise no selection
+ * for that kind, so a stale key out of an old hash or an upstream retitling
+ * degrades to the default instead of blanking the course (audit store-5).
+ *
+ * An explicit pick for a kind wins outright — the student's pick beats the
+ * programme filter, so a cross-programme parallel/øving they chose still
+ * draws. With no pick for a kind, ungrouped entries always stay, and any
  * *grouped* entry is first narrowed to the programme's own section
  * (`entriesForProgram`): a non-lecture (øving/lab) group of the programme's own
  * stays "all groups" until the student picks (the grid's showOthers toggle
  * governs whether it's even visible), while a non-lecture group tagged for
  * ANOTHER programme is dropped — a multi-programme service course must not
  * flood every programme's øving groups (the EXPH0300 flood). Lecture entries
- * additionally narrow to `defaultLectureKeys` (the programme's own parallel).
+ * additionally narrow to `resolveLectureDefaults` (the programme's own
+ * parallel, or one provisional pick per ambiguous session family).
  */
 export function applyGroupSelection<T extends TimetableEntry>(
   entries: T[],
   selected: string[] | undefined,
   programCode: string | null | undefined,
 ): T[] {
-  if (selected && selected.length > 0) {
-    const set = new Set(selected);
-    return entries.filter((entry) => {
-      const key = groupKey(rawGroupName(entry));
-      return key === null || set.has(key);
-    });
+  // Which kind each group key actually belongs to, from the data itself — a
+  // key naming no entry belongs to neither and is ignored.
+  const lectureKeys = new Set<string>();
+  const otherKeys = new Set<string>();
+  for (const entry of entries) {
+    const key = groupKey(rawGroupName(entry));
+    if (key === null) continue;
+    (classifyActivity(entry) === "lecture" ? lectureKeys : otherKeys).add(key);
   }
+  const pickedLectures = (selected ?? []).filter((key) => lectureKeys.has(key));
+  const pickedOthers = (selected ?? []).filter((key) => otherKeys.has(key));
 
-  const keys = defaultLectureKeys(entries, programCode);
+  const defaults = resolveLectureDefaults(entries, programCode).keys;
   const inProgramme = new Set(entriesForProgram(entries, programCode));
   return entries.filter((entry) => {
     const key = groupKey(rawGroupName(entry));
     if (key === null) return true;
-    // Any grouped entry — lecture OR øving/lab — belonging to another
-    // programme's section is dropped by default. `entriesForProgram` is a
-    // no-op when the course doesn't name the programme (or none is set), so an
-    // ordinary course still shows all its groups.
+    const isLecture = classifyActivity(entry) === "lecture";
+    const picked = isLecture ? pickedLectures : pickedOthers;
+    if (picked.length > 0) return picked.includes(key);
+    // No explicit pick for this kind — the default rule. Any grouped entry —
+    // lecture OR øving/lab — belonging to another programme's section is
+    // dropped. `entriesForProgram` is a no-op when the course doesn't name the
+    // programme (or none is set), so an ordinary course still shows all its
+    // groups.
     if (!inProgramme.has(entry)) return false;
-    if (classifyActivity(entry) !== "lecture") return true;
-    return keys.length === 0 || keys.includes(key);
+    if (!isLecture) return true;
+    return defaults.length === 0 || defaults.includes(key);
   });
 }

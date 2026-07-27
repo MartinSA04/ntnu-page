@@ -62,11 +62,13 @@ describe("semesterLabel", () => {
 });
 
 describe("planClash", () => {
-  it("reports an empty plan without fetching anything", async () => {
+  it("reports an empty plan without fetching any partner timetable", async () => {
     globalThis.fetch = (() => {
       throw new Error("should not fetch");
     }) as unknown as typeof fetch;
-    const verdict = await planClash({ code: "TDT4100", version: "1" }, plan(), SEMESTER);
+    const verdict = await planClash({ code: "TDT4100", version: "1" }, plan(), SEMESTER, [
+      entry("TDT4100"),
+    ]);
     expect(verdict).toEqual({ kind: "empty" });
   });
 
@@ -74,7 +76,9 @@ describe("planClash", () => {
     globalThis.fetch = (() => {
       throw new Error("should not fetch");
     }) as unknown as typeof fetch;
-    const verdict = await planClash({ code: "TDT4100", version: "1" }, plan("TDT4100"), SEMESTER);
+    const verdict = await planClash({ code: "TDT4100", version: "1" }, plan("TDT4100"), SEMESTER, [
+      entry("TDT4100"),
+    ]);
     expect(verdict).toEqual({ kind: "empty" });
   });
 
@@ -83,6 +87,44 @@ describe("planClash", () => {
     // Spring weeks against an autumn semester: nothing to collide with.
     const verdict = await planClash({ code: "TDT4100", version: "1" }, plan("TDT4110"), SEMESTER, [
       entry("TDT4100", { weeks: ["2-13"] }),
+    ]);
+    expect(verdict).toEqual({ kind: "off-semester" });
+  });
+
+  // course-2 / modals-6: the off-semester notice used to be pre-empted by the
+  // empty-plan short-circuit, so a cold visitor's very first add — the one
+  // that most needs it — never got it.
+  it("still says off-semester when the plan is empty (cold visitor's first add)", async () => {
+    stubFetch({ TDT4100: [entry("TDT4100", { weeks: ["2-13"] })] });
+    const verdict = await planClash({ code: "TDT4100", version: "1" }, plan(), SEMESTER);
+    expect(verdict).toEqual({ kind: "off-semester" });
+    expect(clashSentence(verdict, SEMESTER)).toBe(
+      "Undervises ikke i Høst 2026 — ingen kollisjon å sjekke.",
+    );
+  });
+
+  // conf-1: "no entries this semester" and "entries we cannot classify" are
+  // different states. IIK4100 is the live instance — its autumn entries are
+  // titled "Lecture and Lab exercise", which DR-1's asymmetric classifier
+  // sends to "other", and the page used to print "Undervises ikke i Høst
+  // 2026" directly above its own autumn grid.
+  it("says unclassified, not off-semester, when in-semester entries exist but none is a lecture", async () => {
+    stubFetch({ TDT4110: [entry("TDT4110")] });
+    const verdict = await planClash({ code: "IIK4100", version: "1" }, plan("TDT4110"), SEMESTER, [
+      entry("IIK4100", { title: "Lecture and Lab exercise", weeks: ["34-46"] }),
+    ]);
+    expect(verdict).toEqual({ kind: "unclassified" });
+    expect(clashSentence(verdict, SEMESTER)).toBe(
+      "Kan ikke sjekke kollisjon i Høst 2026 — ingen aktiviteter er merket som forelesning.",
+    );
+  });
+
+  it("keeps off-semester for a course with no in-semester entries at all", async () => {
+    // Same shape as the unclassified case above, but the entries are spring —
+    // the two must not collapse back into one verdict.
+    stubFetch({ TDT4110: [entry("TDT4110")] });
+    const verdict = await planClash({ code: "IIK4100", version: "1" }, plan("TDT4110"), SEMESTER, [
+      entry("IIK4100", { title: "Lecture and Lab exercise", weeks: ["2-13"] }),
     ]);
     expect(verdict).toEqual({ kind: "off-semester" });
   });
@@ -176,6 +218,118 @@ describe("planClash", () => {
       "MTDT",
     );
     expect(scoped).toEqual({ kind: "clear" });
+  });
+
+  /**
+   * cpc-1. TDT4110's three lecture parallels carry `studyProgramKeys` that
+   * never mention MTDT, so `entriesForProgram` is a documented no-op and only
+   * `applyGroupSelection`'s numbered-parallel default (the grid's own rule)
+   * narrows them. Parallel 2 sits on top of the plan's TMA4412; the grid draws
+   * parallel 1 and shows no conflict, so a red here is the false red DR-1
+   * exists to prevent.
+   */
+  const PARALLELS: TimetableEntry[] = [
+    entry("TDT4110", {
+      title: "Forelesningsparallell 1",
+      dayNumber: 5,
+      startTime: "08:15",
+      endTime: "10:00",
+      studyProgramKeys: ["BMAT", "MTINGGEO", "MTELSYS", "MTBYGG"],
+    }),
+    entry("TDT4110", {
+      title: "Forelesningsparallell 2",
+      dayNumber: 3,
+      startTime: "08:15",
+      endTime: "10:00",
+      studyProgramKeys: ["BMAT", "MTNANO"],
+    }),
+    entry("TDT4110", {
+      title: "Forelesningsparallell 3",
+      dayNumber: 1,
+      startTime: "14:15",
+      endTime: "16:00",
+      studyProgramKeys: ["MBIOT5"],
+    }),
+  ];
+  const TMA4412 = entry("TMA4412", { dayNumber: 3, startTime: "08:15", endTime: "10:00" });
+
+  it("ignores a lecture parallel the grid's default discards (cpc-1)", async () => {
+    stubFetch({ TMA4412: [TMA4412] });
+    const verdict = await planClash(
+      { code: "TDT4110", version: "1" },
+      { ...plan("TMA4412"), program: { code: "MTDT", name: "Datateknologi", cohort: 2026 } },
+      SEMESTER,
+      PARALLELS,
+      "MTDT",
+    );
+    expect(verdict).toEqual({ kind: "clear" });
+  });
+
+  it("reds the parallel the student actually picked for the candidate", async () => {
+    stubFetch({ TMA4412: [TMA4412] });
+    const withPick: PlanState = {
+      semesterId: "26h",
+      courses: [
+        { code: "TMA4412", name: "TMA4412", version: "1", source: "manual" },
+        {
+          code: "TDT4110",
+          name: "TDT4110",
+          version: "1",
+          source: "manual",
+          groups: ["forelesningsparallell-2"],
+        },
+      ],
+    };
+    const verdict = await planClash(
+      { code: "TDT4110", version: "1" },
+      withPick,
+      SEMESTER,
+      PARALLELS,
+      "MTDT",
+    );
+    expect(verdict).toEqual({
+      kind: "clash",
+      partners: [{ code: "TMA4412", dayNumber: 3, start: 8 * 60 + 15 }],
+    });
+  });
+
+  it("honours a PARTNER course's group pick when diffing against it", async () => {
+    stubFetch({ TDT4110: PARALLELS });
+    const partnerPicked: PlanState = {
+      semesterId: "26h",
+      courses: [
+        {
+          code: "TDT4110",
+          name: "TDT4110",
+          version: "1",
+          source: "manual",
+          groups: ["forelesningsparallell-2"],
+        },
+      ],
+    };
+    const picked = await planClash(
+      { code: "TMA4412", version: "1" },
+      partnerPicked,
+      SEMESTER,
+      [TMA4412],
+      "MTDT",
+    );
+    expect(picked).toEqual({
+      kind: "clash",
+      partners: [{ code: "TDT4110", dayNumber: 3, start: 8 * 60 + 15 }],
+    });
+
+    // Same plan without the pick: the default parallel 1 is on Friday.
+    clearCourseBundleMemo();
+    stubFetch({ TDT4110: PARALLELS });
+    const defaulted = await planClash(
+      { code: "TMA4412", version: "1" },
+      plan("TDT4110"),
+      SEMESTER,
+      [TMA4412],
+      "MTDT",
+    );
+    expect(defaulted).toEqual({ kind: "clear" });
   });
 
   it("counts extra collisions rather than listing them all", () => {

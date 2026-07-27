@@ -704,8 +704,298 @@ describe("parsePlanHash / formatPlanHash — encoding and validation (B10)", () 
   });
 
   it("survives a hand-mangled percent escape instead of losing the whole plan", () => {
+    // The mangled token itself is now dropped by the code-shape guard (sec-1)
+    // — "B%ZZA1100" is not a course code and could only ever 404 — but the
+    // point of the case stands: one bad token must not cost the other five.
     const parsed = parsePlanHash("#26h;-;+TDT4100,+B%ZZA1100");
-    expect(parsed?.courses.map((c) => c.code)).toEqual(["TDT4100", "B%ZZA1100"]);
+    expect(parsed?.courses.map((c) => c.code)).toEqual(["TDT4100"]);
+  });
+});
+
+describe("one entry per code (edit-1 / store-6)", () => {
+  let storage: StorageLike;
+  let events: EventTargetLike;
+
+  beforeEach(() => {
+    storage = fakeStorage();
+    events = fakeEvents();
+  });
+
+  const MTDT = { code: "MTDT", name: "Datateknologi", cohort: 2026 };
+
+  it("setProgramPlan does not store a manual add a second time as a programme course", () => {
+    // Two ordinary clicks: add TDT4109 from its own page, then pick your
+    // programme in studieinfo. The plan used to hold TDT4109 twice — "22,5 av
+    // 30 sp" for 15 sp of courses and a red "samme dag" exam collision of the
+    // course with itself.
+    const store = createPlanStore("26h", { storage, events });
+    store.addCourse({ code: "TDT4109", name: "IT grunnkurs" });
+    const plan = store.setProgramPlan(MTDT, [
+      { code: "TDT4109", name: "IT grunnkurs", credits: 7.5 },
+      { code: "TMA4100", name: "Matematikk 1", credits: 7.5 },
+    ]);
+    expect(plan.courses.map((c) => c.code)).toEqual(["TDT4109", "TMA4100"]);
+    const codes = activeCourses(plan).map((c) => c.code);
+    expect(new Set(codes).size).toBe(codes.length);
+  });
+
+  it("the programme entry wins the merge — it carries the study plan's credits and the drop semantics", () => {
+    const store = createPlanStore("26h", { storage, events });
+    store.addCourse({ code: "TDT4109", name: "IT grunnkurs" });
+    store.setProgramPlan(MTDT, [{ code: "TDT4109", name: "IT grunnkurs", credits: 7.5 }]);
+    const course = store.loadPlan().courses[0];
+    expect(course).toMatchObject({ source: "program", credits: 7.5 });
+    // …and Dropp therefore works on it, with no manual twin left to keep
+    // feeding the week and the exam list.
+    store.dropCourse("TDT4109");
+    expect(activeCourses(store.loadPlan())).toEqual([]);
+  });
+
+  it("the merge keeps the manual entry's group selection", () => {
+    const store = createPlanStore("26h", { storage, events });
+    store.addCourse({ code: "TDT4109", name: "IT grunnkurs" });
+    store.setCourseGroups("TDT4109", ["forelesningsparallell-2"]);
+    store.setProgramPlan(MTDT, [{ code: "TDT4109", name: "IT grunnkurs", credits: 7.5 }]);
+    expect(store.loadPlan().courses[0]).toMatchObject({
+      source: "program",
+      groups: ["forelesningsparallell-2"],
+    });
+  });
+
+  it("repairs an already-duplicated stored plan on read (the programme entry wins)", () => {
+    storage.setItem(
+      PLANS_STORAGE_KEY,
+      JSON.stringify({
+        "26h": [
+          { code: "TDT4109", name: "A", version: "1", source: "program", credits: 7.5 },
+          { code: "TMA4100", name: "B", version: "1", source: "program" },
+          { code: "TDT4109", name: "A", version: "1", source: "manual" },
+        ],
+      }),
+    );
+    const store = createPlanStore("26h", { storage, events });
+    const courses = store.loadPlan().courses;
+    expect(courses.map((c) => c.code)).toEqual(["TDT4109", "TMA4100"]);
+    expect(courses[0]).toMatchObject({ source: "program", credits: 7.5 });
+  });
+
+  it("a hash repeating a code yields one course, first token wins", () => {
+    const parsed = parsePlanHash("#26h;-;+TDT4136,+TDT4136,TMA4100");
+    expect(parsed?.courses.map((c) => c.code)).toEqual(["TDT4136", "TMA4100"]);
+    expect(parsed?.courses[0]?.source).toBe("manual");
+  });
+});
+
+describe("removeCourse is source-aware (store-3)", () => {
+  let storage: StorageLike;
+  let events: EventTargetLike;
+
+  beforeEach(() => {
+    storage = fakeStorage();
+    events = fakeEvents();
+  });
+
+  it('"Fjern fra planen" on a programme course drops it instead of deleting it', () => {
+    const store = createPlanStore("26h", { storage, events });
+    store.setProgramPlan({ code: "MTDT", name: "Datateknologi", cohort: 2024 }, [
+      { code: "TDT4136", name: "A" },
+      { code: "TMA4135", name: "B" },
+    ]);
+    store.removeCourse("TDT4136");
+    const plan = store.loadPlan();
+    expect(plan.courses.map((c) => c.code)).toEqual(["TDT4136", "TMA4135"]);
+    expect(plan.courses[0]?.dropped).toBe(true);
+    expect(activeCourses(plan).map((c) => c.code)).toEqual(["TMA4135"]);
+  });
+
+  it("the removal survives the next study-plan derive instead of being resurrected un-dropped", () => {
+    const program = { code: "MTDT", name: "Datateknologi", cohort: 2024 };
+    const store = createPlanStore("26h", { storage, events });
+    store.setProgramPlan(program, [
+      { code: "TDT4136", name: "A" },
+      { code: "TMA4135", name: "B" },
+    ]);
+    store.removeCourse("TDT4136");
+    // What the planner does on its next mount (programDerivedFor starts null).
+    store.setProgramPlan(program, [
+      { code: "TDT4136", name: "A" },
+      { code: "TMA4135", name: "B" },
+    ]);
+    expect(store.loadPlan().courses.find((c) => c.code === "TDT4136")?.dropped).toBe(true);
+  });
+
+  it("still deletes a manual add outright", () => {
+    const store = createPlanStore("26h", { storage, events });
+    store.addCourse({ code: "PSY1000", name: "A" });
+    store.removeCourse("PSY1000");
+    expect(store.loadPlan().courses).toEqual([]);
+  });
+
+  it("does not persist/dispatch for an absent code", () => {
+    const store = createPlanStore("26h", { storage, events });
+    const cb = vi.fn();
+    store.onPlanChange(cb);
+    store.removeCourse("NOPE0000");
+    expect(cb).not.toHaveBeenCalled();
+  });
+});
+
+describe("blocked or failing storage (store-1 / sec-2)", () => {
+  /** A `StorageLike` whose reads and/or writes throw, like a denied `localStorage`. */
+  function throwingStorage(mode: "read" | "write" | "both"): StorageLike {
+    const map = new Map<string, string>();
+    return {
+      getItem: (key) => {
+        if (mode !== "write") throw new Error("Access is denied for this document.");
+        return map.get(key) ?? null;
+      },
+      setItem: (key, value) => {
+        if (mode === "read") {
+          map.set(key, value);
+          return;
+        }
+        throw new Error("QuotaExceededError");
+      },
+    };
+  }
+
+  it("does not throw when window.localStorage access itself throws", () => {
+    // Chrome "block all cookies" / a sandboxed embed: the *property access*
+    // throws, which is why the nullStorage fallback never engaged and the
+    // planner and every course page died to a blank shell.
+    const deniedWindow = {
+      get localStorage(): StorageLike {
+        throw new Error("Access is denied for this document.");
+      },
+      addEventListener: () => {},
+      removeEventListener: () => {},
+      dispatchEvent: () => true,
+    };
+    vi.stubGlobal("window", deniedWindow);
+    try {
+      const store = createPlanStore("26h");
+      expect(store.loadPlan()).toEqual({ semesterId: "26h", courses: [] });
+      // …and the session still works, in memory.
+      store.addCourse({ code: "TDT4100", name: "A" });
+      expect(store.loadPlan().courses.map((c) => c.code)).toEqual(["TDT4100"]);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it.each(["read", "write", "both"] as const)(
+    "degrades to an in-memory plan when storage throws on %s",
+    (mode) => {
+      const store = createPlanStore("26h", {
+        storage: throwingStorage(mode),
+        events: fakeEvents(),
+      });
+      expect(() => store.loadPlan()).not.toThrow();
+      store.addCourse({ code: "TDT4100", name: "A", source: "program" });
+      store.addCourse({ code: "TMA4100", name: "B" });
+      store.dropCourse("TDT4100");
+      const plan = store.loadPlan();
+      expect(plan.courses.map((c) => c.code)).toEqual(["TDT4100", "TMA4100"]);
+      expect(activeCourses(plan).map((c) => c.code)).toEqual(["TMA4100"]);
+      expect(formatPlanHash(plan)).toBe("#26h;-;-TDT4100,%2BTMA4100");
+    },
+  );
+
+  it("savePlan does not throw when the write fails", () => {
+    const store = createPlanStore("26h", {
+      storage: throwingStorage("write"),
+      events: fakeEvents(),
+    });
+    expect(() =>
+      store.savePlan({
+        semesterId: "26h",
+        courses: [{ code: "TDT4100", name: "A", version: "1", source: "manual" }],
+      }),
+    ).not.toThrow();
+  });
+});
+
+describe("code-shape validation (sec-1)", () => {
+  it("rejects a programme segment whose code is not a code", () => {
+    const parsed = parsePlanHash(
+      "#26h;ADVARSEL%3A%20kontoen%20er%20sperret%20-%20ring%20800%2012%20345.2024;TDT4100",
+    );
+    expect(parsed?.program).toBeNull();
+    expect(parsed?.courses.map((c) => c.code)).toEqual(["TDT4100"]);
+  });
+
+  it("drops a course token whose code is not a code", () => {
+    const parsed = parsePlanHash("#26h;-;+Ring%20800%2012%20345,+TDT4100");
+    expect(parsed?.courses.map((c) => c.code)).toEqual(["TDT4100"]);
+  });
+
+  it("drops a direction that is not a code, keeping the programme", () => {
+    const parsed = parsePlanHash("#26h;MTDT.2024.kontoen%20din%20er%20sperret;TDT4100");
+    expect(parsed?.program).toEqual({ code: "MTDT", cohort: 2024, direction: null });
+  });
+
+  it("still accepts every real code shape (punctuation and Æ/Ø/Å included)", () => {
+    // From the crawled data: EMNE/HF, MSECT+OH and MSØK/5 are real programme
+    // codes; SIVING-ARBERFARING24 (20 chars) is a real studieretning code.
+    expect(parsePlanHash("#26h;EMNE%2FHF.2024;")?.program?.code).toBe("EMNE/HF");
+    expect(parsePlanHash("#26h;MSECT%2BOH.2024;")?.program?.code).toBe("MSECT+OH");
+    expect(parsePlanHash("#26h;MS%C3%98K%2F5.2024;")?.program?.code).toBe("MSØK/5");
+    expect(parsePlanHash("#26h;MTDT.2024.SIVING-ARBERFARING24;")?.program?.direction).toBe(
+      "SIVING-ARBERFARING24",
+    );
+    expect(parsePlanHash("#26h;-;%2BB%C3%98A1100")?.courses.map((c) => c.code)).toEqual([
+      "BØA1100",
+    ]);
+  });
+
+  it("drops an already-poisoned profile and course list on read", () => {
+    const storage = fakeStorage();
+    storage.setItem(
+      PROFILE_STORAGE_KEY,
+      JSON.stringify({
+        program: { code: "Ring 800 12 345", name: "Ring 800 12 345", cohort: 2024 },
+      }),
+    );
+    storage.setItem(
+      PLANS_STORAGE_KEY,
+      JSON.stringify({
+        "26h": [
+          { code: "Ring 800 12 345", name: "x", version: "1", source: "manual" },
+          { code: "TDT4100", name: "A", version: "1", source: "manual" },
+        ],
+      }),
+    );
+    const store = createPlanStore("26h", { storage, events: fakeEvents() });
+    const plan = store.loadPlan();
+    expect(plan.program).toBeUndefined();
+    expect(plan.courses.map((c) => c.code)).toEqual(["TDT4100"]);
+  });
+
+  it("keeps a stored direction that is a real code", () => {
+    const storage = fakeStorage();
+    storage.setItem(
+      PROFILE_STORAGE_KEY,
+      JSON.stringify({
+        program: {
+          code: "BSPL",
+          name: "Sykepleie",
+          cohort: 2026,
+          direction: { code: "BSPL26-V-GJØVIK", name: "Gjøvik" },
+        },
+      }),
+    );
+    const store = createPlanStore("26h", { storage, events: fakeEvents() });
+    expect(store.loadPlan().program?.direction?.code).toBe("BSPL26-V-GJØVIK");
+  });
+});
+
+describe("semester id casing (store-7)", () => {
+  it("normalises an uppercased semester id to the stored lowercase form", () => {
+    // A hand-typed or autocapitalised "#26H" passed the case-insensitive
+    // grammar check and then failed `knownSemester`, so the link note
+    // apologised for not being able to plan the semester it was showing.
+    expect(parsePlanHash("#26H;MTDT.2024;TDT4136")?.semesterId).toBe("26h");
+    expect(parsePlanHash("#27V;-;")?.semesterId).toBe("27v");
   });
 });
 
