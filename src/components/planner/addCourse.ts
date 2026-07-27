@@ -5,10 +5,10 @@
  * One native `<dialog>`, built and mounted once (same idiom as
  * `studieinfo.ts`/`popover.ts`): a flat search over the *whole* catalog
  * (`index.courses`, the same `search-index.json` `/emner/` searches), a row
- * per match with a `Legg til` button that flips to `Lagt til ✓` + `Fjern`,
- * and the dialog stays open afterwards so several courses can be added in
- * one visit. Esc/backdrop-adjacent dismissal is the native `showModal()`
- * behaviour — nothing extra to wire.
+ * per match with **one persistent action button** whose verb follows the
+ * plan entry (`addCourseRowControl`), and the dialog stays open afterwards
+ * so several courses can be added in one visit. Esc/backdrop-adjacent
+ * dismissal is the native `showModal()` behaviour — nothing extra to wire.
  *
  * **The clash line is lazy**, reusing `/emner/`'s exact pattern
  * (`attachClashPreview`): computed on a row's first hover/focus, cached
@@ -21,9 +21,15 @@
  * second round trip.
  *
  * **Not-taught rows** (`offeredYears` missing the index's own year) get no
- * add control at all — just the friendly `kun eksamen · ikke undervist i
- * {year}` note (S13/`/emne/`'s own copy) — instead of an add whose later
- * bundle fetch for a year the course was never offered in would error.
+ * add control at all — just the `ikke undervist i {year}` note (`/emner/`'s
+ * and `/emne/`'s own wording) — instead of an add whose later bundle fetch
+ * for a year the course was never offered in would error. The note used to
+ * lead with "kun eksamen", which the search-index tuple has no field to
+ * support: of the 703 rows that exclude the catalog year, 203 record
+ * `examOnly: false` and 107 have neither the flag nor a single exam
+ * occasion, so `/emne/AAR4923/` deliberately declines to say it
+ * (copy-3/crawler-4). Saying it here needs `examOnly` appended to the
+ * tuple first (append-only, per docs/SPEC.md's crawled-data contracts).
  *
  * `deps` is a plain object the caller (plannerApp.ts) is expected to *mutate
  * in place* as its own state changes (semester switch, programme change,
@@ -38,7 +44,7 @@
 
 import { fetchCourseBundle, type PlannerIndex } from "../../lib/planner/data.js";
 import { semesterYear } from "../../lib/planner/schedule.js";
-import { DEFAULT_VERSION, type PlanStore } from "../../lib/planner/store.js";
+import { type AddCourseInput, DEFAULT_VERSION, type PlanStore } from "../../lib/planner/store.js";
 import { clashSentence, planClash } from "../site/planClash.js";
 import { el, fold, formatCreditNumber } from "./dom.js";
 import type { SemesterSummary } from "./plannerApp.js";
@@ -57,6 +63,87 @@ export interface AddCourseHandle {
 
 /** Rows shown at once — matches the deleted typeahead's own cap. */
 const MAX_ROWS = 12;
+
+/** What a row's single button says, and what pressing it does. */
+export interface AddCourseRowControl {
+  /** Visible label — the verb for what the press will do. */
+  label: string;
+  /** Accessible name; contains `label`, so voice control matches it (2.5.3). */
+  ariaLabel: string;
+  /** The state beside the button; `""` when the course is not in the plan. */
+  state: string;
+  /** Performs the action and returns the sentence to announce afterwards. */
+  run: () => string;
+}
+
+/**
+ * Derives a row's control from the plan *entry*, not from `hasCourse`.
+ *
+ * Four states, because §0.3/D3 say a programme course is never deleted:
+ * absent → "Legg til", a manual add → "Fjern", a programme course →
+ * "Dropp", a dropped programme course → "Legg tilbake". The rail picks the
+ * same verbs the same way (plannerApp.ts:923-935); this surface used to
+ * pick neither. It called `removeCourse` unconditionally, which hard-
+ * deleted a programme course — and since a deletion leaves no `dropped`
+ * marker, the next study-plan derive silently put the course back
+ * (edit-3/modals-3; the store is source-aware since store-3, so "Fjern"
+ * would now drop, but it would still be the wrong verb on the wrong
+ * button). And it read `hasCourse`, which reports a *dropped* course as
+ * present, so the modal asserted "Lagt til ✓" over a course the week, the
+ * credit total and the exam list all exclude, with an inert add control as
+ * the only way back (modals-4).
+ *
+ * `run()` returns its own confirmation because the control stays on screen
+ * and keeps focus: hiding the pressed button dropped focus to `<body>` and
+ * left the add unannounced (a11y-2), so the dialog's live region is the
+ * only thing that reports the change.
+ */
+export function addCourseRowControl(store: PlanStore, course: AddCourseInput): AddCourseRowControl {
+  const code = course.code;
+  const entry = store.loadPlan().courses.find((c) => c.code === code);
+  if (!entry) {
+    return {
+      label: "Legg til",
+      ariaLabel: `Legg til ${code} i planen`,
+      state: "",
+      run: () => {
+        store.addCourse(course);
+        return `${code} lagt til i planen.`;
+      },
+    };
+  }
+  if (entry.source !== "program") {
+    return {
+      label: "Fjern",
+      ariaLabel: `Fjern ${code} fra planen`,
+      state: "Lagt til ✓",
+      run: () => {
+        store.removeCourse(code);
+        return `${code} fjernet fra planen.`;
+      },
+    };
+  }
+  if (entry.dropped) {
+    return {
+      label: "Legg tilbake",
+      ariaLabel: `Legg tilbake ${code} i planen`,
+      state: "droppet",
+      run: () => {
+        store.restoreCourse(code);
+        return `${code} lagt tilbake i planen.`;
+      },
+    };
+  }
+  return {
+    label: "Dropp",
+    ariaLabel: `Dropp ${code} fra planen`,
+    state: "fra programmet",
+    run: () => {
+      store.dropCourse(code);
+      return `${code} droppet — fortsatt en del av programmet.`;
+    },
+  };
+}
 
 /**
  * Mounts the add-course dialog once. `signal` aborts on the next page swap
@@ -87,6 +174,9 @@ export function mountAddCourse(deps: AddCourseDeps, signal: AbortSignal): AddCou
   searchForm.append(searchInput);
   body.append(searchForm);
 
+  // Result count *and* the dialog's only live region: a row's action writes
+  // its confirmation here, because the button that did it stays put and
+  // silent otherwise (a11y-2). The next keystroke restores the count.
   const status = el("p", "np-hint add-course-status");
   status.setAttribute("aria-live", "polite");
   body.append(status);
@@ -111,17 +201,6 @@ export function mountAddCourse(deps: AddCourseDeps, signal: AbortSignal): AddCou
    * fix).
    */
   const rows: { sync: () => void; invalidate: () => void }[] = [];
-
-  function setAddState(
-    button: HTMLButtonElement,
-    added: HTMLElement,
-    removeBtn: HTMLButtonElement,
-    inPlan: boolean,
-  ): void {
-    button.hidden = inPlan;
-    added.hidden = !inPlan;
-    removeBtn.hidden = !inPlan;
-  }
 
   /**
    * Lazy clash + credits line, on first hover/focus of the row — exactly
@@ -193,29 +272,39 @@ export function mountAddCourse(deps: AddCourseDeps, signal: AbortSignal): AddCou
     if (notTaught) {
       // S13: a course whose current catalog year has no offering would 404
       // on its timetable fetch the moment it landed in the plan — the row
-      // says so up front instead of offering an add that later errors.
-      note.textContent = `kun eksamen · ikke undervist i ${currentYear}`;
+      // says so up front instead of offering an add that later errors. Only
+      // what `offeredYears` supports, though — see the file header.
+      note.textContent = `ikke undervist i ${currentYear}`;
       return row;
     }
 
-    const addBtn = el("button", "np-btn add-course-add", "Legg til") as HTMLButtonElement;
-    addBtn.type = "button";
-    addBtn.setAttribute("aria-label", `Legg til ${code} i planen`);
-    const added = el("span", "np-note add-course-added", "Lagt til ✓");
-    const removeBtn = el("button", "np-btn add-course-remove", "Fjern") as HTMLButtonElement;
-    removeBtn.type = "button";
-    removeBtn.setAttribute("aria-label", `Fjern ${code} fra planen`);
-    actions.append(addBtn, added, removeBtn);
+    // One control, never hidden. The old add/added/remove triple hid the
+    // button the student had just pressed (a11y-2) — and hid nothing in
+    // practice, since `.np-btn { display: inline-flex }` outranks the UA
+    // `[hidden] { display: none }`, so every row painted "Legg til", "Lagt
+    // til ✓" and "Fjern" at once (copy-5). `.add-course-added` is a plain
+    // `<span>` with no `display` of its own, so `hidden` does work on it.
+    const stateEl = el("span", "np-note add-course-added");
+    // Keeps the `.add-course-add` hook e2e/flows.pw.ts:401 clicks, even
+    // though this is now the row's only action button whatever it reads.
+    const actionBtn = el("button", "np-btn add-course-add") as HTMLButtonElement;
+    actionBtn.type = "button";
+    actions.append(stateEl, actionBtn);
 
-    const sync = (): void => setAddState(addBtn, added, removeBtn, deps.store.hasCourse(code));
+    const input: AddCourseInput = { code, name, version };
+    const sync = (): void => {
+      const control = addCourseRowControl(deps.store, input);
+      actionBtn.textContent = control.label;
+      actionBtn.setAttribute("aria-label", control.ariaLabel);
+      stateEl.textContent = control.state;
+      stateEl.hidden = control.state === "";
+    };
     sync();
 
-    addBtn.addEventListener("click", () => {
-      deps.store.addCourse({ code, name, version });
-      sync();
-    });
-    removeBtn.addEventListener("click", () => {
-      deps.store.removeCourse(code);
+    actionBtn.addEventListener("click", () => {
+      // Re-derived on press, not captured at build time: the plan can have
+      // changed since (another row, another tab, the study-plan derive).
+      status.textContent = addCourseRowControl(deps.store, input).run();
       sync();
     });
 

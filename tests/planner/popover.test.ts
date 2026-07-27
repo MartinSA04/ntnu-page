@@ -188,8 +188,11 @@ describe("TMA4400 as MTDT — the picker's decision against applyGroupSelection"
     expect(lecturesAreExclusive(defaults)).toBe(false);
   });
 
-  test("an exclusive write would delete two thirds of the course (groups-2)", () => {
-    // What the radio did: the pick became the whole lecture layer.
+  test("even an exclusive write can no longer delete the other sessions (groups-2)", () => {
+    // What the radio wrote — and what an old share hash still carries, where no
+    // picker control can intervene. groups.ts applies a lecture pick per session
+    // family now, so it answers "Forelesning 1" and leaves the Thursday session
+    // and the plenary on their defaults.
     const exclusiveWrite = nextSelection({
       selection: [],
       layerKeys: new Set(groupOptions(tma4400).map((o) => o.key)),
@@ -198,11 +201,14 @@ describe("TMA4400 as MTDT — the picker's decision against applyGroupSelection"
       checked: true,
       exclusive: true,
     });
-    expect(drawn(exclusiveWrite)).not.toContain("Plenumsregning");
-    expect(drawn(exclusiveWrite)).not.toContain("Forelesning 2 MTIØT, MTKOM, MTDT");
+    expect(exclusiveWrite).toEqual(["forelesning-1-mtdt-mtiøt-mtkom"]);
+    expect(drawn(exclusiveWrite)).toContain("Plenumsregning");
+    expect(drawn(exclusiveWrite)).toContain("Forelesning 2 MTIØT, MTKOM, MTDT");
+    // Its own family is still narrowed — a pick is not a no-op.
+    expect(drawn(exclusiveWrite)).not.toContain("Forelesning 1 MTBYGG, MTING");
   });
 
-  test("additive ticks build the lecture layer up instead", () => {
+  test("additive ticks narrow within a session, never across sessions", () => {
     const lectureKeys = new Set(
       groupOptions(tma4400)
         .filter((o) => o.kind === "lecture")
@@ -217,18 +223,27 @@ describe("TMA4400 as MTDT — the picker's decision against applyGroupSelection"
         checked,
         exclusive: false,
       });
-    let selection = tick([], "forelesning-1-mtdt-mtiøt-mtkom", true);
-    selection = tick(selection, "plenumsregning", true);
+    let selection = tick([], "forelesning-1-mtbygg-mting", true);
     expect(drawn(selection)).toEqual([
-      "Forelesning 1 MTDT, MTIØT, MTKOM",
+      "Forelesning 1 MTBYGG, MTING",
+      "Forelesning 2 MTIØT, MTKOM, MTDT",
+      "Plenumsregning",
+      "Mattelab 1",
+      "Mattelab 2",
+    ]);
+
+    selection = tick(selection, "forelesning-2-mtbygg", true);
+    expect(drawn(selection)).toEqual([
+      "Forelesning 1 MTBYGG, MTING",
+      "Forelesning 2 MTBYGG",
       "Plenumsregning",
       "Mattelab 1",
       "Mattelab 2",
     ]);
 
     // …and unticking them again returns the whole default week (groups-6).
-    selection = tick(selection, "forelesning-1-mtdt-mtiøt-mtkom", false);
-    selection = tick(selection, "plenumsregning", false);
+    selection = tick(selection, "forelesning-1-mtbygg-mting", false);
+    selection = tick(selection, "forelesning-2-mtbygg", false);
     expect(selection).toEqual([]);
     expect(drawn(selection)).toEqual(drawn(undefined));
   });
@@ -236,9 +251,12 @@ describe("TMA4400 as MTDT — the picker's decision against applyGroupSelection"
   test("a cross-programme parallel the student picks still draws", () => {
     // The MTBYGG session is listed but filtered out by default; an explicit
     // tick must beat the programme filter (e2e/flows.pw.ts covers this live).
-    // The øving layer is untouched by a lecture pick, so the labs stay.
+    // The øving layer is untouched by a lecture pick, and so are the two
+    // sessions the pick says nothing about.
     expect(drawn(["forelesning-2-mtbygg"])).toEqual([
+      "Forelesning 1 MTDT, MTIØT, MTKOM",
       "Forelesning 2 MTBYGG",
+      "Plenumsregning",
       "Mattelab 1",
       "Mattelab 2",
     ]);

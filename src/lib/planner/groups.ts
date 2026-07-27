@@ -257,9 +257,20 @@ export function defaultLectureKeys(
  * for that kind, so a stale key out of an old hash or an upstream retitling
  * degrades to the default instead of blanking the course (audit store-5).
  *
- * An explicit pick for a kind wins outright — the student's pick beats the
- * programme filter, so a cross-programme parallel/øving they chose still
- * draws. With no pick for a kind, ungrouped entries always stay, and any
+ * Inside the lecture kind it narrows PER SESSION FAMILY (audit groups-2), the
+ * same grammar the default branch has always used: a pick answers the session
+ * it names and no other, so on TMA4400 choosing "Forelesning 2 MTBYGG" swaps
+ * that Thursday session and leaves "Forelesning 1 …" and "Plenumsregning" on
+ * their defaults. Treating a lecture pick as an allow-list across every family
+ * is how one tick deleted two thirds of a course's week — and it did so
+ * silently on load for anyone holding an old share hash, which no picker
+ * control can undo. Alternatives inside one family still replace each other
+ * (TDT4110's three "Forelesningsparallell N" are one family), so a real
+ * choice is still a choice.
+ *
+ * An explicit pick wins outright within its layer/family — the student's pick
+ * beats the programme filter, so a cross-programme parallel/øving they chose
+ * still draws. Where there is no pick, ungrouped entries always stay, and any
  * *grouped* entry is first narrowed to the programme's own section
  * (`entriesForProgram`): a non-lecture (øving/lab) group of the programme's own
  * stays "all groups" until the student picks (the grid's showOthers toggle
@@ -274,17 +285,29 @@ export function applyGroupSelection<T extends TimetableEntry>(
   selected: string[] | undefined,
   programCode: string | null | undefined,
 ): T[] {
-  // Which kind each group key actually belongs to, from the data itself — a
-  // key naming no entry belongs to neither and is ignored.
+  // Which kind each group key actually belongs to, and — for lectures — which
+  // weekly session it is a variant of, from the data itself. A key naming no
+  // entry belongs to neither kind and is ignored. Families are read off ALL
+  // entries, not the programme's own, because an explicit pick may name another
+  // programme's section, which `entriesForProgram` would have dropped.
   const lectureKeys = new Set<string>();
   const otherKeys = new Set<string>();
+  const familyByKey = new Map<string, string>();
   for (const entry of entries) {
-    const key = groupKey(rawGroupName(entry));
-    if (key === null) continue;
-    (classifyActivity(entry) === "lecture" ? lectureKeys : otherKeys).add(key);
+    const raw = rawGroupName(entry);
+    const key = groupKey(raw);
+    if (key === null || raw === null) continue;
+    if (classifyActivity(entry) === "lecture") {
+      lectureKeys.add(key);
+      familyByKey.set(key, sessionFamily(raw));
+    } else {
+      otherKeys.add(key);
+    }
   }
+  const familyOf = (key: string): string => familyByKey.get(key) ?? key;
   const pickedLectures = (selected ?? []).filter((key) => lectureKeys.has(key));
   const pickedOthers = (selected ?? []).filter((key) => otherKeys.has(key));
+  const pickedFamilies = new Set(pickedLectures.map(familyOf));
 
   const defaults = resolveLectureDefaults(entries, programCode).keys;
   const inProgramme = new Set(entriesForProgram(entries, programCode));
@@ -292,13 +315,14 @@ export function applyGroupSelection<T extends TimetableEntry>(
     const key = groupKey(rawGroupName(entry));
     if (key === null) return true;
     const isLecture = classifyActivity(entry) === "lecture";
-    const picked = isLecture ? pickedLectures : pickedOthers;
-    if (picked.length > 0) return picked.includes(key);
-    // No explicit pick for this kind — the default rule. Any grouped entry —
-    // lecture OR øving/lab — belonging to another programme's section is
-    // dropped. `entriesForProgram` is a no-op when the course doesn't name the
-    // programme (or none is set), so an ordinary course still shows all its
-    // groups.
+    // The pick applies to the session it belongs to; a session nobody picked in
+    // falls through to the default rule below and keeps its teaching (groups-2).
+    if (isLecture && pickedFamilies.has(familyOf(key))) return pickedLectures.includes(key);
+    if (!isLecture && pickedOthers.length > 0) return pickedOthers.includes(key);
+    // No pick applies here — the default rule. Any grouped entry — lecture OR
+    // øving/lab — belonging to another programme's section is dropped.
+    // `entriesForProgram` is a no-op when the course doesn't name the programme
+    // (or none is set), so an ordinary course still shows all its groups.
     if (!inProgramme.has(entry)) return false;
     if (!isLecture) return true;
     return defaults.length === 0 || defaults.includes(key);

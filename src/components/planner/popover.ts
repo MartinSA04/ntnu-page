@@ -1,6 +1,6 @@
 /**
  * Block popover — the detail + group-picker surface a clicked timetable
- * block (or "+N til" overflow chip) opens (Task 8; consumes `BlockDetail` /
+ * block (or a pile of simultaneous ones) opens (Task 8; consumes `BlockDetail` /
  * `GridRenderOptions.onBlockClick` from grid.ts, Task 7, and `GroupOption` /
  * `PlanStore.setCourseGroups` from groups.ts/store.ts, Tasks 2–3).
  *
@@ -25,6 +25,9 @@
  * the other two thirds of the course (audit groups-2), so which control the
  * lecture layer gets is decided from `ctx.defaults` — groups.ts's own answer
  * to "did we narrow this to one group?" — not from `kind === "lecture"`.
+ * `applyGroupSelection` narrows a lecture pick per session family as well, so
+ * no control here can delete a session the student did not pick in; the choice
+ * of control is what makes the narrowing legible, not what enforces it.
  *
  * Every group edit calls `store.setCourseGroups` immediately: the
  * store's plan-change event re-renders the grid live behind the (still
@@ -33,10 +36,11 @@
  * `renderContent` is a full, idempotent rebuild driven by the local
  * `selection`, called again after every edit.
  *
- * A "+N til" overflow chip whose hidden entries span more than one course
- * has no single course to key group/action state off (`detail.code` is the
- * codes joined `" · "`) — that context is `kind: "info"` (Task 12): the
- * dialog still opens with the detail's facts, just with no group section
+ * A pile — the single block a cluster too deep to lay out side by side
+ * collapses into (grid.ts) — spanning more than one course has no single
+ * course to key group/action state off (`detail.code` is the codes joined
+ * `" · "`) — that context is `kind: "info"` (Task 12): the dialog opens with
+ * the detail's facts and one course-page link per code, with no group section
  * and no dropp/fjern action, since neither means anything for a joint pile.
  */
 import type { GroupOption } from "../../lib/planner/groups.js";
@@ -50,8 +54,8 @@ const DESKTOP_QUERY = "(min-width: 60rem)";
 const ANCHOR_MARGIN = 8;
 
 /**
- * The material a clicked block (or overflow chip) hands the popover — built
- * by the caller from `BlockDetail` plus the course's plan/group state.
+ * The material a clicked block (or pile) hands the popover — built by the
+ * caller from `BlockDetail` plus the course's plan/group state.
  */
 export type BlockPopoverContext =
   | {
@@ -80,7 +84,7 @@ export type BlockPopoverContext =
       dropped: boolean;
     }
   | {
-      /** A multi-course "+N til" overflow chip — informational only, no groups/actions. */
+      /** A multi-course pile — informational, plus one link per course; no groups/actions. */
       kind: "info";
       detail: BlockDetail;
     };
@@ -383,6 +387,27 @@ export function mountBlockPopover(store: PlanStore, signal: AbortSignal): BlockP
   }
 
   /**
+   * A pile's way out: one course-page link per code. A pile is the week's most
+   * compressed block — several courses' sessions in one slab — and its popover
+   * was a dead end, since `renderContent` returned before `renderActions` and
+   * the pile got no link at all (audit grid-1). The course page is where the
+   * detail the pile compressed away is recoverable, so every code gets its own
+   * named link rather than one ambiguous "Gå til emnesiden →". `detail.code` is
+   * the codes joined `" · "` by grid.ts's `pileDetail`.
+   */
+  function renderPileLinks(detail: BlockDetail): HTMLElement {
+    const row = el("div", "planner-popover-actions");
+    for (const raw of detail.code.split(" · ")) {
+      const code = raw.trim();
+      if (code === "") continue;
+      const link = el("a", "planner-popover-link", `Gå til ${code} →`);
+      link.href = `/emne/${code}/`;
+      row.append(link);
+    }
+    return row;
+  }
+
+  /**
    * The close button. Esc and an outside pointerdown (wired below) are the
    * only two ways out a non-modal `<dialog>` gets by hand, and neither is
    * visible: below 60rem this is a full-bleed bottom sheet, so "outside" is a
@@ -414,7 +439,10 @@ export function mountBlockPopover(store: PlanStore, signal: AbortSignal): BlockP
       .join(" · ");
     if (noteText) dialog.append(el("p", "np-note", noteText));
 
-    if (ctx.kind !== "course") return;
+    if (ctx.kind !== "course") {
+      dialog.append(renderPileLinks(ctx.detail));
+      return;
+    }
     const { lectures, others } = pickableGroups(ctx);
     if (lectures.length > 0 || others.length > 0) dialog.append(renderGroupsSection(ctx));
     dialog.append(renderActions(ctx));

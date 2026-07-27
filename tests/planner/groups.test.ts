@@ -350,6 +350,75 @@ describe("applyGroupSelection", () => {
     expect(kept).toEqual([null, "Forelesning"]);
   });
 
+  test("an explicit lecture pick narrows its own session only (groups-2)", () => {
+    // TMA4400 as MTDT: "Forelesning 1 …" (tir), "Forelesning 2 …" (tor) and
+    // "Plenumsregning" (ons) are three weekly sessions the student attends all
+    // of, and the MTBYGG entries are alternatives to the first two. A flat
+    // allow-list made ticking one of them delete the other two sessions —
+    // exactly the loss the default branch's session families exist to prevent.
+    const tma4400 = [
+      e("Forelesning 1 MTDT, MTIØT, MTKOM", { dayNumber: 2, studyProgramKeys: ["MTDT"] }),
+      e("Forelesning 1 MTBYGG, MTING", { dayNumber: 1, studyProgramKeys: ["MTBYGG"] }),
+      e("Forelesning 2 MTIØT, MTKOM, MTDT", { dayNumber: 4, studyProgramKeys: ["MTDT"] }),
+      e("Forelesning 2 MTBYGG", {
+        dayNumber: 3,
+        startTime: "08:15",
+        studyProgramKeys: ["MTBYGG"],
+      }),
+      e("Plenumsregning", { dayNumber: 3, startTime: "14:15" }),
+    ];
+    const drawn = (selected: string[] | undefined) =>
+      applyGroupSelection(tma4400, selected, "MTDT").map((x) => x.title);
+
+    expect(drawn(["forelesning-1-mtdt-mtiøt-mtkom"])).toEqual([
+      "Forelesning 1 MTDT, MTIØT, MTKOM",
+      "Forelesning 2 MTIØT, MTKOM, MTDT",
+      "Plenumsregning",
+    ]);
+    // The pick still beats the programme filter inside its own family: the
+    // MTBYGG variant of "Forelesning 1" replaces MTDT's, and only that one.
+    expect(drawn(["forelesning-2-mtbygg"])).toEqual([
+      "Forelesning 1 MTDT, MTIØT, MTKOM",
+      "Forelesning 2 MTBYGG",
+      "Plenumsregning",
+    ]);
+    // Two picks answer two families; the plenary still has none and keeps its
+    // default.
+    expect(drawn(["forelesning-1-mtbygg-mting", "forelesning-2-mtbygg"])).toEqual([
+      "Forelesning 1 MTBYGG, MTING",
+      "Forelesning 2 MTBYGG",
+      "Plenumsregning",
+    ]);
+  });
+
+  test("bare-numbered complementary lectures survive a pick of one (groups-2, IT2805)", () => {
+    // "Forelesning 1" (tir) and "Forelesning 2" (man) are two weekly slots with
+    // identical programme keys — each is its own session family, so picking one
+    // must not take the other with it.
+    const it2805 = [
+      e("Forelesning 2", { dayNumber: 1, studyProgramKeys: ["BIT"] }),
+      e("Forelesning 1", { dayNumber: 2, studyProgramKeys: ["BIT"] }),
+    ];
+    expect(applyGroupSelection(it2805, ["forelesning-1"], "BIT").map((x) => x.title)).toEqual([
+      "Forelesning 2",
+      "Forelesning 1",
+    ]);
+  });
+
+  test("genuine alternatives in one family still replace each other", () => {
+    // TDT4110's three parallels share the family "forelesningsparallell", so a
+    // pick there is still the whole layer — the per-family rule must not turn
+    // every lecture list into an additive pile.
+    const tdt4110 = [
+      e("Forelesningsparallell 1", { dayNumber: 1 }),
+      e("Forelesningsparallell 2", { dayNumber: 3 }),
+      e("Forelesningsparallell 3", { dayNumber: 5 }),
+    ];
+    expect(
+      applyGroupSelection(tdt4110, ["forelesningsparallell-2"], null).map((x) => x.title),
+    ).toEqual(["Forelesningsparallell 2"]);
+  });
+
   test("a lecture entry tagged only for a different programme is dropped by default even with no ambiguity", () => {
     const soloOtherProgramme = [
       e("Forelesning", { studyProgramKeys: ["OTHERPROG"] }),

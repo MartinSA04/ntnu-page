@@ -20,10 +20,17 @@
  * `maxPeriodNumber` is 2 and `relevantCohorts` would offer a single kull. The
  * full programme length lives in an older, graduated cohort's plan (MTDT
  * fetched at 2020 lists periods 1–10). So we fetch the current-year plan (for
- * `name`/`publishedYears`/existence) *and* an older-cohort plan, and feed
- * `relevantCohorts` whichever reaches further. The per-cohort plan for
- * studieretning + the final classify is fetched on kull-select, exactly as
- * `plannerApp` does, so the committed direction code is valid for that kull.
+ * `name`/existence) *and* an older-cohort plan, and feed `relevantCohorts`
+ * whichever reaches further. The per-cohort plan for studieretning + the final
+ * classify is fetched on kull-select, exactly as `plannerApp` does, so the
+ * committed direction code is valid for that kull.
+ *
+ * **Programmes NTNU publishes no plan for** (MTPROD, MTPETR, BALIT, BFRA — ~17
+ * % of the catalogue) must still be savable: the modal is the only programme
+ * picker there is, so refusing to close is a hard dead end (modals-2/B8). We
+ * offer `fallbackCohorts` chips, record programme + kull with an empty prefill
+ * and say plainly that the emner have to be added by hand. The kull is stored
+ * because the planner names it, never because anything classifies against it.
  */
 import { semesterYear } from "../../lib/planner/schedule.js";
 import type { AddCourseInput, PlanProgram, PlanStore } from "../../lib/planner/store.js";
@@ -64,9 +71,69 @@ const MAX_PROGRAM_ROWS = 12;
  */
 const FULL_PLAN_LOOKBACK = 6;
 
+/**
+ * How many kull chips to offer when there is no study plan to derive them
+ * from — six, the length of the longest NTNU programme (medisin). Without a
+ * plan there is no `maxPeriodNumber` and therefore no relevance rule; these
+ * are simply the start years a student could still be studying under.
+ */
+const FALLBACK_COHORT_YEARS = 6;
+
+/**
+ * Said when NTNU publishes no study plan for the programme at all. It has to
+ * carry the instruction too: this is the state Lagre used to answer with
+ * "Velg kull …" while hiding every kull (modals-2/ux-fail-5).
+ */
+const PROGRAM_MISSING_HINT =
+  "Fant ingen studieplan for dette programmet. Velg kull og lagre — da husker vi programmet ditt, men emnene må du legge til selv.";
+
 /** "publiseres vanligvis i <måned>" — desember for vår, august for høst. */
 export function publishMonthFor(semesterId: string): string {
   return /v$/i.test(semesterId.trim()) ? "desember" : "august";
+}
+
+/**
+ * The kull chips offered for a programme NTNU publishes no study plan for
+ * (modals-2). Newest first, mirroring `relevantCohorts`. A **spring** semester
+ * belongs to the study year that started the previous autumn (`periodNumberFor`
+ * documents the same rule), so its newest plausible kull is one year back.
+ */
+export function fallbackCohorts(semesterId: string): number[] {
+  const year = semesterYear(semesterId);
+  if (year === null) return [];
+  const newest = /h$/i.test(semesterId.trim()) ? year : year - 1;
+  return Array.from({ length: FALLBACK_COHORT_YEARS }, (_, i) => newest - i);
+}
+
+/**
+ * The kull-level hint, from what the fetch actually returned rather than from
+ * the API's `publishedYears` — that field is the same global publication
+ * window for every programme, so it stayed silent when a plan really was
+ * missing and fired when one was found (plan-4). `foundYear` is the year
+ * `findProgramPlan` resolved at (`null` = no document at all); `periodMissing`
+ * is the dead end the modal already computes for the studieretning select and
+ * used to throw away (plan-5).
+ */
+export function cohortHint(input: {
+  cohort: number;
+  foundYear: number | null;
+  periodMissing: boolean;
+  semesterLabel: string;
+}): string {
+  const notes: string[] = [];
+  if (input.foundYear === null) {
+    notes.push(`Fant ingen studieplan for kull ${input.cohort} — du kan legge til emner selv.`);
+  } else if (input.foundYear !== input.cohort) {
+    notes.push(
+      `Fant ingen studieplan for kull ${input.cohort} — viser kull ${input.foundYear}. Juster selv.`,
+    );
+  }
+  if (input.periodMissing) {
+    notes.push(
+      `Studieplanen for kull ${input.cohort} har ingen periode for ${input.semesterLabel} ennå — velg et annet kull eller semester.`,
+    );
+  }
+  return notes.join(" ");
 }
 
 /** "Høst 2026" / "Vår 2027" — the label every surface uses for a semester. */
@@ -99,8 +166,6 @@ export function mountStudieinfo(deps: StudieinfoDeps, signal: AbortSignal): Stud
   let cohortsPlan: StudyPlan | null = null;
   /** The selected kull's own plan — studieretning options + the Lagre classify. */
   let cohortPlan: StudyPlan | null = null;
-  /** Every year the programme has a plan document for (S4 missing-kull hint). */
-  let publishedYears: number[] = [];
   /** `true` once a programme pick came back not-found/error. */
   let programMissing = false;
   /** Whichever `<select>` options studieretning currently offers. */
@@ -121,6 +186,11 @@ export function mountStudieinfo(deps: StudieinfoDeps, signal: AbortSignal): Stud
     return deps.semesters.some((s) => s.id === deps.defaultSemesterId)
       ? deps.defaultSemesterId
       : (deps.semesters[0]?.id ?? deps.defaultSemesterId);
+  }
+
+  function stagedSemesterLabel(): string {
+    const semester = deps.semesters.find((s) => s.id === stagedSemesterId);
+    return semester ? semesterLabel(semester) : stagedSemesterId;
   }
 
   // --- DOM skeleton (built once) ------------------------------------------
@@ -189,6 +259,18 @@ export function mountStudieinfo(deps: StudieinfoDeps, signal: AbortSignal): Stud
   const retningNote = el("p", "np-note studieinfo-note", "");
   retningNote.hidden = true;
   retningSection.append(retningNote);
+  // The way back out of a *nested* choice: once an answer resolves one level,
+  // the select moves on to the next one and the earlier answer is no longer
+  // among its options (plan-1). Only rendered in that case — an ordinary
+  // one-level choice is un-answered by picking "Ikke valgt ennå".
+  const retningReset = el(
+    "button",
+    "np-btn studieinfo-retning-reset",
+    "Nullstill studieretning",
+  ) as HTMLButtonElement;
+  retningReset.type = "button";
+  retningReset.hidden = true;
+  retningSection.append(retningReset);
   body.append(retningSection);
 
   // Semester --------------------------------------------------------------
@@ -224,6 +306,10 @@ export function mountStudieinfo(deps: StudieinfoDeps, signal: AbortSignal): Stud
   const saveBtn = el("button", "np-btn studieinfo-save", "Lagre") as HTMLButtonElement;
   saveBtn.type = "button";
   saveBtn.id = "studieinfo-save";
+  // A refused Lagre writes its reason into the hint; describing the button
+  // with it means the reason is reachable from the control that caused it
+  // (a11y-8). An empty/hidden hint is ignored by AT, so this costs nothing.
+  saveBtn.setAttribute("aria-describedby", "studieinfo-hint");
   const cancelBtn = el("button", "np-btn studieinfo-cancel", "Avbryt") as HTMLButtonElement;
   cancelBtn.type = "button";
   cancelBtn.id = "studieinfo-cancel";
@@ -248,7 +334,9 @@ export function mountStudieinfo(deps: StudieinfoDeps, signal: AbortSignal): Stud
   function setProgramActive(index: number): void {
     programActive = index;
     let activeId: string | null = null;
-    for (const [i, opt] of [...programListbox.children].entries()) {
+    // `Array.from`, not a spread: the Node typecheck pass (tsconfig.test.json)
+    // has no DOM.Iterable, and this module is reachable from tests/.
+    for (const [i, opt] of Array.from(programListbox.children).entries()) {
       if (opt.getAttribute("role") !== "option") continue;
       const isActive = i === index;
       opt.classList.toggle("is-active", isActive);
@@ -271,11 +359,21 @@ export function mountStudieinfo(deps: StudieinfoDeps, signal: AbortSignal): Stud
 
     programListbox.replaceChildren();
     if (programMatches.length === 0) {
-      programListbox.append(el("li", "studieinfo-typeahead-empty np-hint", "Ingen treff."));
+      // A `role="listbox"` may only contain options, so the bare <li> this
+      // used to be was dropped from the accessibility tree: the combobox
+      // reported itself expanded with zero children and a mistyped programme
+      // was answered with silence (a11y-8). A disabled option is valid, and
+      // pointing `aria-activedescendant` at it is what makes it spoken.
+      const empty = el("li", "studieinfo-typeahead-empty np-hint", "Ingen treff.");
+      empty.id = "studieinfo-program-option-empty";
+      empty.setAttribute("role", "option");
+      empty.setAttribute("aria-disabled", "true");
+      empty.setAttribute("aria-selected", "false");
+      programListbox.append(empty);
       programListbox.hidden = false;
       programActive = -1;
       programInput.setAttribute("aria-expanded", "true");
-      programInput.removeAttribute("aria-activedescendant");
+      programInput.setAttribute("aria-activedescendant", empty.id);
       return;
     }
     programMatches.forEach((option, index) => {
@@ -302,10 +400,17 @@ export function mountStudieinfo(deps: StudieinfoDeps, signal: AbortSignal): Stud
 
   programInput.addEventListener("input", renderProgramOptions);
   programInput.addEventListener("keydown", (event) => {
-    if (programListbox.hidden || programMatches.length === 0) {
-      if (event.key === "Escape") closeProgramList();
+    if (event.key === "Escape") {
+      // With no list open, Escape belongs to the dialog. With one open it must
+      // dismiss only the list — and a dialog's Escape close is a *close
+      // request*, which `stopPropagation()` does not touch: the old code let
+      // the whole modal go, taking every staged edit with it (modals-7).
+      if (programListbox.hidden) return;
+      event.preventDefault();
+      closeProgramList();
       return;
     }
+    if (programListbox.hidden || programMatches.length === 0) return;
     if (event.key === "ArrowDown") {
       event.preventDefault();
       setProgramActive((programActive + 1) % programMatches.length);
@@ -316,9 +421,6 @@ export function mountStudieinfo(deps: StudieinfoDeps, signal: AbortSignal): Stud
       event.preventDefault();
       const picked = programMatches[programActive] ?? programMatches[0];
       if (picked) pickProgram(picked);
-    } else if (event.key === "Escape") {
-      event.stopPropagation(); // close the list, not the dialog
-      closeProgramList();
     }
   });
   programForm.addEventListener("submit", (event) => event.preventDefault());
@@ -335,6 +437,10 @@ export function mountStudieinfo(deps: StudieinfoDeps, signal: AbortSignal): Stud
     stagedCohort = null;
     stagedDirection = null;
     renderProgramField();
+    // The input that had focus is now hidden, which dropped `activeElement` to
+    // <body> (a11y-1). Hand focus to the chip that replaced it: its label names
+    // the programme just picked, and Tab continues into the kull chips.
+    chipHost.querySelector<HTMLButtonElement>(".studieinfo-chip-remove")?.focus();
     void loadProgram(false);
   }
 
@@ -349,7 +455,6 @@ export function mountStudieinfo(deps: StudieinfoDeps, signal: AbortSignal): Stud
     const token = ++programToken;
     programMissing = false;
     cohortsPlan = null;
-    publishedYears = [];
     hintText = "";
     renderKull();
     renderRetning();
@@ -360,8 +465,7 @@ export function mountStudieinfo(deps: StudieinfoDeps, signal: AbortSignal): Stud
     if (token !== programToken) return;
     if ("kind" in head) {
       programMissing = true;
-      hintText =
-        "Fant ingen studieplan for dette programmet. Du kan fortsatt legge til emnene dine selv.";
+      hintText = PROGRAM_MISSING_HINT;
       renderKull();
       renderRetning();
       renderHint();
@@ -372,7 +476,6 @@ export function mountStudieinfo(deps: StudieinfoDeps, signal: AbortSignal): Stud
       program.name = head.plan.name;
       renderProgramField();
     }
-    publishedYears = head.plan.publishedYears ?? [];
 
     let fuller = head.plan;
     const older = await findProgramPlan(program.code, guessYear - FULL_PLAN_LOOKBACK);
@@ -407,6 +510,11 @@ export function mountStudieinfo(deps: StudieinfoDeps, signal: AbortSignal): Stud
     cohortPlan = null;
     renderKull();
     renderRetning();
+    if (programMissing) {
+      // Nothing to fetch, classify or gate on — the kull is recorded, not
+      // used, and PROGRAM_MISSING_HINT already says so (modals-2).
+      return;
+    }
 
     const res = await findProgramPlan(program.code, cohort);
     if (token !== cohortToken || stagedCohort !== cohort) return;
@@ -414,9 +522,14 @@ export function mountStudieinfo(deps: StudieinfoDeps, signal: AbortSignal): Stud
     // period structure; the fuller cohortsPlan is the last-resort fallback.
     cohortPlan = "kind" in res ? cohortsPlan : res.plan;
 
-    hintText = publishedYears.includes(cohort)
-      ? ""
-      : `Fant ingen studieplan for kull ${cohort} — du kan legge til emner selv.`;
+    hintText = cohortHint({
+      cohort,
+      foundYear: "kind" in res ? null : res.year,
+      periodMissing:
+        cohortPlan !== null &&
+        resolvePeriodFor(cohortPlan, stagedSemesterId, cohort).courses === null,
+      semesterLabel: stagedSemesterLabel(),
+    });
     renderRetning();
     renderHint();
   }
@@ -434,7 +547,9 @@ export function mountStudieinfo(deps: StudieinfoDeps, signal: AbortSignal): Stud
       chip.append(el("span", "studieinfo-chip-name", stagedProgram.name));
       const remove = el("button", "np-icon-btn studieinfo-chip-remove", "×") as HTMLButtonElement;
       remove.type = "button";
-      remove.setAttribute("aria-label", "Fjern studieprogram");
+      // Names the programme: this button is where focus lands after a pick and
+      // on open, so its label is what announces which programme is staged.
+      remove.setAttribute("aria-label", `Fjern studieprogram ${stagedProgram.code}`);
       remove.addEventListener("click", clearProgram);
       chip.append(remove);
       chipHost.append(chip);
@@ -451,7 +566,6 @@ export function mountStudieinfo(deps: StudieinfoDeps, signal: AbortSignal): Stud
     stagedDirection = null;
     cohortsPlan = null;
     cohortPlan = null;
-    publishedYears = [];
     programMissing = false;
     hintText = "";
     programInput.value = "";
@@ -462,19 +576,30 @@ export function mountStudieinfo(deps: StudieinfoDeps, signal: AbortSignal): Stud
     programInput.focus();
   }
 
+  /**
+   * The kull chips to offer. The study plan's own relevance rule when there is
+   * a plan; the generic start-year window when there is none, or when the plan
+   * has no period for this semester at all — a programme the modal cannot
+   * offer a kull for is a programme it cannot save (modals-2).
+   */
+  function kullChoices(): number[] {
+    const fromPlan = cohortsPlan ? relevantCohorts(cohortsPlan, stagedSemesterId) : [];
+    return fromPlan.length > 0 ? fromPlan : fallbackCohorts(stagedSemesterId);
+  }
+
   function renderKull(): void {
-    if (!stagedProgram || programMissing) {
+    if (!stagedProgram) {
       kullSection.hidden = true;
       kullChips.replaceChildren();
       return;
     }
     kullSection.hidden = false;
     kullChips.replaceChildren();
-    if (!cohortsPlan) {
+    if (!cohortsPlan && !programMissing) {
       kullChips.append(el("p", "np-hint studieinfo-loading", "henter studieplan …"));
       return;
     }
-    const cohorts = relevantCohorts(cohortsPlan, stagedSemesterId);
+    const cohorts = kullChoices();
     if (cohorts.length === 0) {
       kullChips.append(el("p", "np-hint", "Fant ingen kull for dette programmet."));
       return;
@@ -501,13 +626,27 @@ export function mountStudieinfo(deps: StudieinfoDeps, signal: AbortSignal): Stud
       retningSection.hidden = true;
       return;
     }
-    // No direction passed: detect whether the period is gated at all, so a
-    // student who already chose one can still change it (choosing it would
-    // otherwise resolve the gate and hide the select).
-    const gate = resolvePeriodFor(cohortPlan, stagedSemesterId, stagedCohort);
-    const pending = gate.pendingChoice;
+    // Resolving *with* the staged answer walks past the levels already
+    // answered, so a nested waypoint (CMED's "Veivalg - Klasse" behind the
+    // city) becomes askable here — the planner can otherwise ask a question
+    // this modal has no way to answer, which loops the student between the two
+    // (plan-1). When every level is answered we fall back to the top-level
+    // question so an existing choice stays changeable, exactly as before.
+    const staged = stagedDirection?.code ?? null;
+    const deepest = resolvePeriodFor(
+      cohortPlan,
+      stagedSemesterId,
+      stagedCohort,
+      staged,
+    ).pendingChoice;
+    const pending =
+      deepest ??
+      (staged === null
+        ? null
+        : resolvePeriodFor(cohortPlan, stagedSemesterId, stagedCohort).pendingChoice);
     if (!pending) {
       retningSection.hidden = true;
+      retningReset.hidden = true;
       return;
     }
     retningSection.hidden = false;
@@ -523,9 +662,16 @@ export function mountStudieinfo(deps: StudieinfoDeps, signal: AbortSignal): Stud
       option.value = direction.code;
       retningSelect.append(option);
     }
-    retningSelect.value = stagedDirection?.code ?? "";
+    // An answer given at another level is not among *this* level's options, so
+    // the select cannot show it — name it in the note and offer the way back.
+    const shown = staged !== null && pending.directions.some((d) => d.code === staged);
+    retningSelect.value = shown && staged !== null ? staged : "";
+    retningReset.hidden = staged === null || shown;
 
-    if (pending.deadlineDate) {
+    if (!retningReset.hidden && stagedDirection) {
+      retningNote.textContent = `valgt: ${stagedDirection.name}`;
+      retningNote.hidden = false;
+    } else if (pending.deadlineDate) {
       retningNote.textContent = `frist ${formatShortDate(pending.deadlineDate)}`;
       retningNote.hidden = false;
     } else {
@@ -534,25 +680,44 @@ export function mountStudieinfo(deps: StudieinfoDeps, signal: AbortSignal): Stud
   }
 
   function renderHint(): void {
+    if (hintText === "") {
+      hint.textContent = "";
+      hint.hidden = true;
+      return;
+    }
+    // Unhide *before* writing: a live region that is `hidden` is not in the
+    // accessibility tree, so the old order (text first, unhide second) changed
+    // the text of a region nothing was listening to (a11y-8). Keeping it
+    // mounted while empty would be better still, but that needs
+    // `.studieinfo-hint:empty { display: none }` in site.css — an empty <p> is
+    // a flex item of .studieinfo-body and would add a permanent gap.
+    hint.hidden = false;
     hint.textContent = hintText;
-    hint.hidden = hintText === "";
   }
 
   retningSelect.addEventListener("change", () => {
     const code = retningSelect.value;
     stagedDirection = code === "" ? null : (retningOptions.find((d) => d.code === code) ?? null);
+    // Re-render: answering one waypoint can open the next one (plan-1), and
+    // answering the last one closes the section.
+    renderRetning();
+  });
+
+  retningReset.addEventListener("click", () => {
+    stagedDirection = null;
+    renderRetning();
+    retningSelect.focus();
   });
 
   semesterSelect.addEventListener("change", () => {
     stagedSemesterId = semesterSelect.value;
     // Relevance and the studieretning question both depend on the semester.
-    if (stagedCohort !== null && cohortsPlan) {
-      const cohorts = relevantCohorts(cohortsPlan, stagedSemesterId);
-      if (!cohorts.includes(stagedCohort)) {
+    if (stagedCohort !== null && (cohortsPlan !== null || programMissing)) {
+      if (!kullChoices().includes(stagedCohort)) {
         stagedCohort = null;
         stagedDirection = null;
         cohortPlan = null;
-        hintText = "";
+        hintText = programMissing ? PROGRAM_MISSING_HINT : "";
       }
     }
     renderKull();
@@ -574,19 +739,27 @@ export function mountStudieinfo(deps: StudieinfoDeps, signal: AbortSignal): Stud
     const cohort = stagedCohort;
     const direction = stagedDirection;
 
-    // Semester commits *unconditionally* and first, so a semester-only edit is
-    // never dropped by an incomplete programme half, and the programme set
-    // re-derives against the semester the student is actually planning
-    // (setProgramPlan reads the freshly-switched plan).
-    deps.store.setSemester(semesterId);
-
-    // A staged programme still needs a kull before it can classify a period —
-    // only the programme part waits; the semester above already committed.
+    // A staged programme still needs a kull before it can classify a period.
+    // The refusal comes *before* the semester write: a rejected Lagre must
+    // write nothing at all, or an Avbryt afterwards leaves the planner on a
+    // semester the student never got told about (modals-5). Every branch below
+    // this point commits, so a semester-only edit is still never dropped.
     if (program && cohort === null) {
       hintText = "Velg kull for å lagre studieprogrammet.";
       renderHint();
+      // The refusal is silent to assistive tech otherwise — focus does not
+      // move and the hint is written into a region nothing was listening to
+      // (a11y-8). Moving focus to the control that answers it is what gets
+      // spoken; the chips are always on screen now, even for a programme with
+      // no study plan (modals-2).
+      kullChips.querySelector<HTMLButtonElement>(".studieinfo-kull-chip")?.focus();
       return;
     }
+
+    // Semester commits first, so the programme set re-derives against the
+    // semester the student is actually planning (setProgramPlan reads the
+    // freshly-switched plan).
+    deps.store.setSemester(semesterId);
 
     if (program && cohort !== null) {
       const planProgram: PlanProgram = {
@@ -598,9 +771,11 @@ export function mountStudieinfo(deps: StudieinfoDeps, signal: AbortSignal): Stud
       // Classify against the *kull-specific* plan. If its fetch is still in
       // flight `cohortPlan` is null; await the (memoised, near-instant) fetch
       // rather than falling back to a different cohort's curriculum. The
-      // not-found/error fallback to the fuller cohortsPlan is preserved.
+      // not-found/error fallback to the fuller cohortsPlan is preserved. A
+      // programme with no plan at all skips the round trip: there is nothing
+      // to classify, and the empty prefill is the honest answer (modals-2).
       let plan = cohortPlan;
-      if (!plan) {
+      if (!plan && !programMissing) {
         const res = await findProgramPlan(program.code, cohort);
         // Avbryt/Esc/reopen during the fetch bumped the token — the student
         // is no longer looking at this Lagre, so drop the write.
@@ -634,7 +809,15 @@ export function mountStudieinfo(deps: StudieinfoDeps, signal: AbortSignal): Stud
   }
 
   function focusInitial(): void {
-    if (!stagedProgram) programInput.focus();
+    if (!stagedProgram) {
+      programInput.focus();
+      return;
+    }
+    // Reading order is programme → kull → retning → semester → Lagre, so
+    // opening on the semester select (the fifth of seven controls) left
+    // forward Tab covering only Lagre and Avbryt before it wrapped (a11y-7).
+    const chipRemove = chipHost.querySelector<HTMLButtonElement>(".studieinfo-chip-remove");
+    if (chipRemove) chipRemove.focus();
     else semesterSelect.focus();
   }
 
@@ -652,7 +835,6 @@ export function mountStudieinfo(deps: StudieinfoDeps, signal: AbortSignal): Stud
     stagedDirection = null;
     cohortsPlan = null;
     cohortPlan = null;
-    publishedYears = [];
     programMissing = false;
     hintText = "";
     programInput.value = "";

@@ -2,12 +2,12 @@
  * EKSAMENER — the exam list (PRODUCT.md DR-3, rework Task 9). Replaces the
  * ribbon's horizontal date axis + hue dots with a chronological list: one
  * `.exam-row` per dated exam and a `.exam-gap` connector between consecutive
- * rows naming the whole-day gap ("5 dager mellomrom", tight ink under two
+ * rows naming the whole-day gap ("5 dagers mellomrom", tight ink under two
  * days, a same-day pair collapsing to "samme dag"). Dateless exams stay
  * listed, never dropped, as `.exam-dateless` rows. Sourced from catalog
- * `ExamDate` via the planner index (`examsFromIndex`), not scraped
- * `CourseExam` text — kont exams are already excluded upstream by the
- * crawler (see data.ts).
+ * `ExamDate` via the planner index (`examsFromIndex`); the scraped
+ * `CourseExam` list is used for exactly one thing, telling an ordinary
+ * sitting from a deferred one (see `collectExamInputs`).
  *
  * The list is ALL there is. It used to be preceded by its own ruled frame
  * holding a summary kicker ("5 eksamener over 26 dager"), which restated in
@@ -21,6 +21,7 @@
  */
 
 import {
+  type CourseExam,
   type ExamWindow,
   examsFromIndex,
   type PlannerIndex,
@@ -34,8 +35,49 @@ import {
 import { dot, el, formatShortDate } from "./dom.js";
 import type { PlanCourseState } from "./types.js";
 
-/** Collects one exam input per catalog-sourced exam occasion (dated or not) across the plan's courses. */
-function collectExamInputs(
+/**
+ * Is this scraped sitting a deferred ("utsatt"/kont) one? DR-3 wants ordinary
+ * sittings only, and the catalog cannot say: `continuation` is `false` on all
+ * 2 438 catalog exam rows, so `crawler/transform.mjs`'s filter is correct code
+ * fed a flag upstream never sets (exams-1). `occasion` is the honest signal —
+ * "Ordinær eksamen" vs "Utsatt eksamen" — and it is read as a **label only**,
+ * never re-parsed for a date (DR-3).
+ *
+ * Deliberately fail-open: an occasion we do not recognise keeps its exam.
+ * Deleting a real exam date is far worse than listing one too many.
+ */
+export function isDeferredOccasion(occasion: string | null | undefined): boolean {
+  if (!occasion) return false;
+  const text = occasion.toLowerCase();
+  if (text.startsWith("ordinær")) return false;
+  return text.includes("utsatt") || text.includes("kont");
+}
+
+/**
+ * Does the scraped exam list say this catalog date is a deferred sitting?
+ *
+ * The join is on the **exact ISO date** — the one structured field both sides
+ * carry — and only decides when the scrape actually knows that date and every
+ * sitting it lists there is deferred. No scrape (details 404'd, still in
+ * flight), no match, or a mixed day all keep the exam.
+ */
+function isDeferredOn(date: string | null, scraped: CourseExam[] | null | undefined): boolean {
+  if (date === null || !scraped) return false;
+  const onDate = scraped.filter((e) => e.date === date);
+  if (onDate.length === 0) return false;
+  return onDate.every((e) => isDeferredOccasion(e.occasion));
+}
+
+/**
+ * Collects one exam input per catalog-sourced exam occasion (dated or not)
+ * across the plan's courses, with deferred sittings joined out (exams-1).
+ *
+ * When the join removes *every* sitting a course has in this semester, the
+ * course still gets one dateless input rather than vanishing: MGLU1106's only
+ * dated Høst 2026 sittings are utsatt and its real Vår 2027 ordinary sitting
+ * carries no date, so "dato ikke satt" is what we know — "no exam" is not.
+ */
+export function collectExamInputs(
   courses: PlanCourseState[],
   semesterId: string,
   index: PlannerIndex | null,
@@ -47,7 +89,15 @@ function collectExamInputs(
   for (const state of courses) {
     const row = byCode.get(state.course.code);
     if (!row) continue;
-    inputs.push(...examsFromIndex(row, semesterId, window));
+    const catalog = examsFromIndex(row, semesterId, window);
+    if (catalog.length === 0) continue;
+    const scraped = state.bundle?.details?.exams ?? null;
+    const kept = catalog.filter((exam) => !isDeferredOn(exam.date, scraped));
+    if (kept.length === 0) {
+      inputs.push({ code: state.course.code, date: null });
+      continue;
+    }
+    inputs.push(...kept);
   }
   return inputs;
 }
@@ -83,12 +133,24 @@ function renderEmpty(listHost: HTMLElement, message: string | null): ExamRenderR
  * not cover at all, where "Ingen eksamensdatoer funnet ennå" would be a
  * finding reported by something that never looked. Pass no message to just
  * empty the host.
+ *
+ * `action` is the one recovery the panel can offer: a failed download of our
+ * own catalog is retryable, and without a control the column simply spun
+ * forever (pd-3/ux-fail-7).
  */
 export function renderExamMessage(
   listHost: HTMLElement,
   message?: string | null,
+  action?: { label: string; run: () => void } | null,
 ): ExamRenderResult {
-  return renderEmpty(listHost, message ?? null);
+  const result = renderEmpty(listHost, message ?? null);
+  if (message && action) {
+    const button = el("button", "np-btn", action.label);
+    button.type = "button";
+    button.addEventListener("click", action.run);
+    listHost.append(button);
+  }
+  return result;
 }
 
 /** The course chip a row wears — DESIGN §5's `.np-tag`, hue dot + mono code. */
@@ -106,7 +168,11 @@ function examRow(row: ExamListRow, hueVar: string): HTMLLIElement {
   item.append(el("span", "exam-date np-data", `${row.weekday} ${formatShortDate(row.date)}`));
   item.append(examCodeTag(row.code, hueVar));
   if (row.daysFromToday !== null) {
-    item.append(el("span", "np-hint", daysFromTodayText(row.daysFromToday)));
+    // `.np-note`, not `.np-hint`: "om 119 dager" is a verbless data fragment,
+    // the same kind of thing as the "16 dagers mellomrom" connector two rows
+    // below it — and it used to render in a different typeface at a different
+    // size from it, inside one list (ds-5, DESIGN §3).
+    item.append(el("span", "np-note", daysFromTodayText(row.daysFromToday)));
   }
   return item;
 }
@@ -130,13 +196,18 @@ function examGap(row: ExamListRow): HTMLLIElement {
     return el("li", "exam-gap np-note-clash", "samme dag");
   }
   const gap = row.gapToNext ?? 0;
-  const text = gap === 1 ? "1 dag mellomrom" : `${gap} dager mellomrom`;
+  // Genitive: a measure phrase modifying a noun takes it in bokmål — "sju
+  // dagers mellomrom", "én dags mellomrom" — and PRODUCT.md:145 writes the
+  // product's own example that way ("fra 2 til 5 dagers mellomrom") (copy-8).
+  const text = gap === 1 ? "1 dags mellomrom" : `${gap} dagers mellomrom`;
   const item = el("li", "exam-gap np-note", row.tight ? `${text} · tett` : text);
   if (row.tight) item.classList.add("is-tight");
   return item;
 }
 
-/** One "dato ikke satt" row (DR-3) — kept, not dropped, so the course isn't silently missing. */
+/** One "dato ikke satt" row (DR-3) — kept, not dropped, so the course isn't
+ *  silently missing. Also where a course whose only sittings this semester are
+ *  deferred lands, so the kont filter never reads as "no exam" (exams-1). */
 function datelessRow(code: string, hueVar: string): HTMLLIElement {
   const item = el("li", "exam-row exam-dateless");
   item.append(examCodeTag(code, hueVar));

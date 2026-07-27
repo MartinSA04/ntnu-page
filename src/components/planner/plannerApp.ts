@@ -30,7 +30,6 @@ import {
   type CourseBundle,
   clearCourseBundleMemo,
   type ExamWindow,
-  examsFromIndex,
   fetchCourseBundle,
   indexCoversSemester,
   indexForSemester,
@@ -39,7 +38,7 @@ import {
   type PlannerIndexCourse,
   type TimetableEntry,
 } from "../../lib/planner/data.js";
-import { defaultLectureKeys, groupOptions } from "../../lib/planner/groups.js";
+import { groupOptions, resolveLectureDefaults } from "../../lib/planner/groups.js";
 import { hueForIndex } from "../../lib/planner/hues.js";
 import { entriesForProgram, entriesInSemester, semesterYear } from "../../lib/planner/schedule.js";
 import {
@@ -56,7 +55,12 @@ import {
 } from "../../lib/planner/store.js";
 import { type AddCourseDeps, type AddCourseHandle, mountAddCourse } from "./addCourse.js";
 import { el, formatCreditNumber, formatCredits, formatShortDate } from "./dom.js";
-import { type ExamRenderResult, renderExamList, renderExamMessage } from "./examList.js";
+import {
+  collectExamInputs,
+  type ExamRenderResult,
+  renderExamList,
+  renderExamMessage,
+} from "./examList.js";
 import { type BlockDetail, type GridRenderResult, renderGrid, renderGridMessage } from "./grid.js";
 import { type BlockPopoverContext, mountBlockPopover } from "./popover.js";
 import {
@@ -185,13 +189,33 @@ function getElements(): PlannerElements | null {
   return found as PlannerElements;
 }
 
+/**
+ * Today in Oslo as "YYYY-MM-DD". `new Date().toISOString().slice(0, 10)` is
+ * the UTC date, which is *yesterday* between local midnight and 01:00 CET /
+ * 02:00 CEST — long enough to put "i dag" on the exam the student sat
+ * yesterday and leave this morning's exam with no countdown (exams-2). The
+ * week already uses local time (`new Date().getDay()`), so the two surfaces
+ * also disagreed with each other in that window.
+ */
+function todayInOslo(): string {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Europe/Oslo",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(new Date());
+  const get = (type: Intl.DateTimeFormatPartTypes): string =>
+    parts.find((p) => p.type === type)?.value ?? "";
+  return `${get("year")}-${get("month")}-${get("day")}`;
+}
+
 /** Current + next two non-summer semesters, ordered chronologically. */
 function candidateSemesters(file: SemestersFile): SemesterSummary[] {
   const teaching = file.semesters.filter((s) => s.id.endsWith("h") || s.id.endsWith("v"));
   teaching.sort((a, b) => (a.fromDate ?? "").localeCompare(b.fromDate ?? ""));
   const currentIndex = file.current
     ? teaching.findIndex((s) => s.id === file.current?.id)
-    : teaching.findIndex((s) => (s.fromDate ?? "") >= new Date().toISOString().slice(0, 10));
+    : teaching.findIndex((s) => (s.fromDate ?? "") >= todayInOslo());
   const start = currentIndex >= 0 ? currentIndex : 0;
   return teaching.slice(start, start + 3);
 }
@@ -308,19 +332,28 @@ export async function mountPlannerApp(
   const popover = mountBlockPopover(store, lifeSignal);
 
   /**
-   * The material a clicked block hands the popover. Built from the *unfiltered*
-   * bundle timetable (not the semester/programme-narrowed `filteredStates`):
-   * the picker lists ALL of a course's groups — every lecture parallel and
-   * øving/lab group — so `groupOptions` runs over the whole timetable and
-   * `defaultLectureKeys` marks the programme's own parallel via `programCode`.
+   * The material a clicked block hands the popover.
    *
-   * A "+N til" overflow chip's joined codes (`"TDT4100 · TMA4100"`, real
-   * course codes never contain " · ") match no single course — that gets the
-   * `kind: "info"` context instead (Task 12): the popover still opens with
-   * the chip's own facts, just without a group section or dropp/fjern
-   * actions, neither of which means anything for a joint pile of courses.
-   * A `null` timetable (bundle not loaded yet) still returns `null` — no
-   * popover — same as before.
+   * The picker lists the groups this student could plausibly be in, not every
+   * group the course publishes all year: this semester's weeks, and — for the
+   * øving/lab layer — the programme's own sections. EXPH0300 for an MTTK
+   * student listed 44 rows across Trondheim, Gjøvik and Ålesund, which on a
+   * phone put the popover's own Dropp/emneside actions ~1 000 px below the fold
+   * behind seminar groups in another city; it now lists 17 (groups-4/groups-3).
+   * `entriesForProgram` is a no-op for a course that never names the
+   * programme, so an ordinary course still lists everything it has.
+   *
+   * A key the student picked *explicitly* is kept in the list whatever the
+   * narrowing says — an explicit pick beats the programme filter in
+   * `applyGroupSelection` (groups.ts), so the control that unticks it has to
+   * stay reachable.
+   *
+   * A pile's joined codes (`"TDT4100 · TMA4100"`, real course codes never
+   * contain " · ") match no single course — that gets the `kind: "info"`
+   * context instead (Task 12): the popover still opens with the pile's own
+   * facts, just without a group section or dropp/fjern actions, neither of
+   * which means anything for a joint pile of courses. A `null` timetable
+   * (bundle not loaded yet) still returns `null` — no popover — same as before.
    */
   function buildPopoverContext(
     detail: BlockDetail,
@@ -331,12 +364,47 @@ export async function mountPlannerApp(
     if (!state || !timetable) {
       return detail.code.includes(" · ") ? { kind: "info", detail } : null;
     }
+    // `defaults` is read off exactly the set the GRID narrows — the week's
+    // entries, programme narrowing left to `applyGroupSelection` (groups.ts) —
+    // so the picker's ticked default is the block on screen. Its LENGTH also
+    // decides radios vs checkboxes in the popover, so it must stay
+    // `resolveLectureDefaults(...).keys` verbatim (groups-2/groups-3).
+    // `resolved` travels with it so the picker can stop labelling a
+    // provisional pick "(din parallell)" — for BDIGSEC/EXPH0300 the week draws
+    // one of two campus parallels and neither is the student's own until they
+    // say so (groups-5).
+    const week = semesterWeekEntries(state.bundle);
+    const lectures = resolveLectureDefaults(week, state.programCode);
+    const selected = state.course.groups ?? [];
+    const inWeek = new Set(groupOptions(week).map((o) => o.key));
+    // Programme narrowing on the ØVING/LAB layer only. That is where the flood
+    // is (39 of EXPH0300's 44 rows are seminar groups, most of them another
+    // campus's) and it is the layer `applyGroupSelection`'s default branch
+    // already narrows the same way. The lecture layer keeps every parallel the
+    // semester publishes: picking a parallel tagged for ANOTHER programme is a
+    // documented capability (groups.ts, tests/planner/groups.test.ts) and this
+    // picker is the only place it can be exercised — narrowing it away would
+    // make an MTDT student unable to choose TMA4400's "Forelesning 2 MTBYGG",
+    // which e2e/flows.pw.ts's "a non-default parallel renders with a programme
+    // set" ticks by hand.
+    const ownOther = new Set(
+      groupOptions(entriesForProgram(week, state.programCode))
+        .filter((o) => o.kind !== "lecture")
+        .map((o) => o.key),
+    );
     return {
       kind: "course",
       detail,
-      groups: groupOptions(timetable),
-      selected: state.course.groups ?? [],
-      defaults: defaultLectureKeys(timetable, state.programCode),
+      // From the YEAR's options, so a pick made for another semester (or one
+      // upstream has since retitled) is still listed and can be unticked.
+      groups: groupOptions(timetable).filter(
+        (o) =>
+          (o.kind === "lecture" ? inWeek.has(o.key) : ownOther.has(o.key)) ||
+          selected.includes(o.key),
+      ),
+      selected,
+      defaults: lectures.keys,
+      resolved: lectures.resolved,
       source: state.course.source,
       dropped: state.course.dropped === true,
     };
@@ -392,6 +460,39 @@ export async function mountPlannerApp(
     };
   }
 
+  /**
+   * Carries the two facts the hash grammar cannot hold — `credits` and the
+   * course's real `name` — from the plan already on disk onto the hash-derived
+   * one (store-4).
+   *
+   * The page writes its own hash on every render (`syncHash`), so a plain F5
+   * goes through the hash-wins branch below, and replacing outright used to
+   * *persist* `{name: code}` with no credits: an elective added from the study
+   * plan panel — the only path that supplies `credits` at all — lost the 7,5 sp
+   * only the study plan could know, on disk, permanently. That is B9.1's
+   * fallback destroyed by its own reload.
+   *
+   * Only same-semester storage is read: `np:plans` is keyed by semester and
+   * another semester's row says nothing about this one. Everything the hash
+   * *does* carry (version, source, dropped, groups) still wins outright.
+   */
+  function withStoredFacts(next: PlanState, stored: PlanState): PlanState {
+    if (stored.semesterId !== next.semesterId) return next;
+    const byCode = new Map(stored.courses.map((c) => [c.code, c]));
+    return {
+      ...next,
+      courses: next.courses.map((course) => {
+        const previous = byCode.get(course.code);
+        if (!previous) return course;
+        return {
+          ...course,
+          ...(course.name === course.code && previous.name !== "" ? { name: previous.name } : {}),
+          ...(previous.credits != null ? { credits: previous.credits } : {}),
+        };
+      }),
+    };
+  }
+
   // Hash wins over storage on load (PRODUCT.md §7) — but only a hash that
   // actually carries a plan. Every load ends by writing the *current* plan
   // back into the hash (syncHash below), so on a later visit a trivially-empty
@@ -402,7 +503,7 @@ export async function mountPlannerApp(
     hashPlan !== null && (hashPlan.program !== null || hashPlan.courses.length > 0);
   let plan: PlanState = store.loadPlan();
   if (hashPlan && hashHasPlan) {
-    plan = planFromHash(hashPlan);
+    plan = withStoredFacts(planFromHash(hashPlan), plan);
     // A program-less link (`#…;-;…courses`) must clear any stored profile, not
     // just omit one: `savePlan` can only ever *write* `np:profile`, never clear
     // it (store.ts), so the header chip would keep naming the old programme
@@ -417,11 +518,31 @@ export async function mountPlannerApp(
   }
 
   let plannerIndex: PlannerIndex | null = null;
+  /**
+   * The `/data/search-index.json` download failed. Kept apart from
+   * `plannerIndex === null` ("still in flight"): conflating the two left the
+   * exam column spinning forever and made the provenance line state that NTNU
+   * had published no exam dates — a failed download of our *own* build
+   * artifact reported as an upstream fact (pd-3/ux-fail-7).
+   */
+  let plannerIndexFailed = false;
+  /** Lazy by-code lookup over the raw index (`offeredYears` etc.). Reset with the index. */
+  let indexByCodeMemo: Map<string, PlannerIndexCourse> | null = null;
   let showOthers = false;
   let periodCourses: PeriodCourses | null = null;
   let studyPlanFetchToken = 0;
   /** `true` once a study plan is loaded but has no period for this semester (B4). */
   let periodMissing = false;
+  /**
+   * What actually happened to the study-plan fetch, so the provenance line can
+   * stop asserting "studieplan for kull N" over a 404, an error, or another
+   * cohort's document silently substituted by the step-back (plan-3/ux-fail-4).
+   */
+  let studyPlanOutcome:
+    | { kind: "pending" }
+    | { kind: "found"; year: number }
+    | { kind: "not-found" }
+    | { kind: "error" } = { kind: "pending" };
   /** Study-plan credits of the current prefill, when it exceeds a semester (B9.4). */
   let suspiciousPrefillCredits: number | null = null;
   /** The last hash this page wrote, so its own `replaceState` isn't read back as a paste. */
@@ -438,9 +559,16 @@ export async function mountPlannerApp(
     return { fromDate: semester.fromDate, examFinalDate: semester.examFinalDate };
   }
 
+  /**
+   * `history.state` is carried through, never replaced with `null`: Astro's
+   * ClientRouter seeds every entry with `{index, scrollX, scrollY}` and its
+   * `onPopState` returns early on a null state, so writing `null` here left
+   * the planner's own entry dead — Back (and Forward) onto it changed the URL
+   * and never swapped the page (app-1, CLAUDE.md's ClientRouter rule).
+   */
   function syncHash(): void {
     lastWrittenHash = formatPlanHash(plan);
-    history.replaceState(null, "", lastWrittenHash);
+    history.replaceState(history.state, "", lastWrittenHash);
   }
 
   /** A bundle's timetable, narrowed to this programme's sections and this semester's weeks. */
@@ -608,8 +736,17 @@ export async function mountPlannerApp(
     // remain both carry something the numbers cannot — a row excluded from
     // the arithmetic, and a defect in the study plan itself.
     if (suspiciousPrefillCredits !== null) {
+      // "Fjern det du ikke tar" needs something to remove. MSCHEM kull 2025 at
+      // Vår 2027 is one mandatory 60 sp masteroppgave — the study plan hangs a
+      // multi-semester course's whole credit on its final period — so the
+      // imperative told a student to prune a semester holding exactly one
+      // course they cannot drop (plan-6). Over 30 sp on a single course is a
+      // course spanning several semesters, not a defective study plan.
+      const single = (periodCourses?.obligatory.length ?? 0) === 1;
       notes.push(
-        `Studieplanen oppgir ${formatCreditNumber(suspiciousPrefillCredits)} sp dette semesteret — mer enn et normalt semester. Fjern det du ikke tar.`,
+        single
+          ? `Studieplanen fører opp hele emnet (${formatCreditNumber(suspiciousPrefillCredits)} sp) i dette semesteret — det går over flere semestre.`
+          : `Studieplanen oppgir ${formatCreditNumber(suspiciousPrefillCredits)} sp dette semesteret — mer enn et normalt semester. Fjern det du ikke tar.`,
       );
     }
     elements.creditNote.textContent = notes.join(" ");
@@ -642,8 +779,17 @@ export async function mountPlannerApp(
     // so the rail carried two identical buttons a line apart — the sentence
     // alone is what's left in that case.
     const pool = availablePool();
-    elements.gapButton.hidden = pool.length === 0;
-    if (pool.length > 0) elements.gapButton.textContent = `Velg fra studieplanen (${pool.length})`;
+    const noPool = pool.length === 0;
+    elements.gapButton.hidden = noPool;
+    // `hidden` alone does not hide it: `.np-btn { display: inline-flex }`
+    // (primitives.css) is an author rule and beats the UA's `[hidden]`, so on a
+    // programme+kull whose period offers no electives the rail kept a
+    // count-less "Velg fra studieplanen" promising the study plan and opening
+    // the whole catalog (plan-8). Belt and braces until `[hidden]` is enforced
+    // for `.np-btn` in the stylesheets — clearing it back to "" restores
+    // whatever the sheet says.
+    elements.gapButton.style.display = noPool ? "none" : "";
+    if (!noPool) elements.gapButton.textContent = `Velg fra studieplanen (${pool.length})`;
   }
 
   // --- Region tabs (narrow screens only) ---------------------------------
@@ -707,6 +853,21 @@ export async function mountPlannerApp(
       const note = `Studieplanen for kull ${program.cohort} har ingen periode for ${label} ennå. Legg til emnene du tar selv, eller bytt semester.`;
       return {
         title: "Ingen periode i studieplanen",
+        note,
+        action: { label: "Legg til emne", run: () => openAddFromQuestion() },
+        weekMessage: note,
+      };
+    }
+
+    // The period exists and names nothing at all (MPPR kull 2026 at Høst 2026:
+    // `{courseGroups: [], waypoints: []}`). Without this it rendered exactly
+    // like a normal period — "0 av 30 sp", no rows, no sentence — and looked
+    // identical to a network failure (plan-2). `empty` comes from
+    // `classifyPeriod`; nothing here re-derives it.
+    if (program && periodCourses?.empty === true) {
+      const note = `Studieplanen for kull ${program.cohort} oppgir ingen emner for ${label}. Legg til emnene du tar selv.`;
+      return {
+        title: "Ingen emner i studieplanen",
         note,
         action: { label: "Legg til emne", run: () => openAddFromQuestion() },
         weekMessage: note,
@@ -836,9 +997,12 @@ export async function mountPlannerApp(
   let bundlesForSemester = plan.semesterId;
 
   function syncCourseStates(): void {
-    // A bundle fetched for 26h is 2026 data; keeping it across a switch to
-    // 27v would filter 2026 entries against 2027's teaching weeks. The
-    // per-`code:year:version` memo in data.ts makes a same-year refetch free.
+    // Bundles are dropped on a semester switch because the ENTRIES are
+    // filtered against the new semester's teaching weeks — not because the
+    // fetch is year-scoped. It is not: `?year=` is a documented no-op upstream
+    // (byte-identical responses for 2023/2025/2026/2027, pd-8), so a switch
+    // costs one timetable request per course for data we may already hold. The
+    // details leg is memoised by code alone in data.ts and is genuinely free.
     if (bundlesForSemester !== plan.semesterId) {
       bundlesForSemester = plan.semesterId;
       for (const state of courseStates.values()) {
@@ -885,6 +1049,16 @@ export async function mountPlannerApp(
   // --- Render: EMNER course rows ------------------------------------------
 
   /**
+   * Whose row action to re-focus after the next `renderCourseRows` (app-4).
+   * Dropp/Legg tilbake/Fjern all write to the store, which re-renders the rail
+   * and `replaceChildren`s away the very button that was just activated — so
+   * keyboard focus fell to `<body>` with nothing announced, and the "one tap
+   * back" §0.3 promises was a full tab cycle away. popover.ts restores focus
+   * the same way after its own edits.
+   */
+  let pendingFocusCode: string | null = null;
+
+  /**
    * The plan itself, and nothing else: courses being taken, plus programme
    * courses the student dropped (grayed, one tap back — §0.3). The study
    * plan's choice pool deliberately does *not* live here; at 30–60 rows it
@@ -926,12 +1100,21 @@ export async function mountPlannerApp(
       const action = el("button", "np-btn planner-course-remove", label);
       action.type = "button";
       action.setAttribute("aria-label", `${label} ${course.code}`);
+      // The rebuilt row's own button is found by code, not by the aria-label
+      // (which flips Dropp ⇄ Legg tilbake) — popover.ts still matches the
+      // label suffix for its fallback, so both stay.
+      action.dataset.code = course.code;
       if (isProgram) {
-        action.addEventListener("click", () =>
-          isDropped ? store.restoreCourse(course.code) : store.dropCourse(course.code),
-        );
+        action.addEventListener("click", () => {
+          pendingFocusCode = course.code;
+          if (isDropped) store.restoreCourse(course.code);
+          else store.dropCourse(course.code);
+        });
       } else {
-        action.addEventListener("click", () => store.removeCourse(course.code));
+        action.addEventListener("click", () => {
+          pendingFocusCode = course.code;
+          store.removeCourse(course.code);
+        });
       }
       row.append(action);
 
@@ -950,13 +1133,58 @@ export async function mountPlannerApp(
         if (state && isOffSemester(state)) {
           meta.append(el("span", undefined, "undervises ikke i valgt semester"));
         }
-        for (const error of state?.bundle?.errors ?? []) {
-          meta.append(el("span", undefined, `fikk ikke hentet ${error}`));
+        // A course the catalog does not list for this year has nothing to
+        // fetch: `/api/course/TMA4100` 404s and the row used to print the
+        // failure as if the network had blinked. Say the true thing instead,
+        // in the same words /emne/[code]/ uses (crawler-3/S13).
+        const stale = notTaughtIn(course.code);
+        if (stale) {
+          meta.append(
+            el(
+              "span",
+              undefined,
+              `ikke undervist i ${stale.year} · sist undervist ${stale.lastYear}`,
+            ),
+          );
+        } else {
+          // `errors` is Norwegian on both sides of the colon (data.ts's
+          // `failureMessage`); the raw upstream English lives on `.detail` and
+          // is never rendered (copy-2).
+          for (const error of state?.bundle?.errors ?? []) {
+            meta.append(el("span", undefined, `fikk ikke hentet ${error}`));
+          }
+          // A transient blip used to be terminal for the session: the memo held
+          // the failed bundle and the only retry was mounted in a fallback
+          // branch a partial failure never reaches (pd-5). The failed bundle is
+          // no longer memoised, so resetting this one state really refetches.
+          if ((state?.bundle?.errors.length ?? 0) > 0) {
+            const retry = el("button", "np-btn planner-course-retry", "Prøv igjen");
+            retry.type = "button";
+            retry.setAttribute("aria-label", `Prøv å hente ${course.code} på nytt`);
+            retry.addEventListener("click", () => retryCourse(course.code));
+            meta.append(retry);
+          }
         }
       }
       row.append(meta);
 
       elements.courseRows.append(row);
+    }
+
+    // The rail was rebuilt around the button the student just pressed — put
+    // focus back on that course's action, which is now the *reverse* verb
+    // ("Legg tilbake TDT4136"), so the undo §0.3 promises is under the cursor
+    // rather than at the top of the document (app-4). A removed manual course
+    // has no row left; focus then stays where the browser put it.
+    if (pendingFocusCode !== null) {
+      const code = pendingFocusCode;
+      pendingFocusCode = null;
+      // `Array.from`, not a spread — no `DOM.Iterable` in the Node typecheck
+      // pass (see `scrollToToday`).
+      const actions = Array.from(
+        elements.courseRows.querySelectorAll<HTMLButtonElement>(".planner-course-remove"),
+      );
+      actions.find((button) => button.dataset.code === code)?.focus();
     }
   }
 
@@ -1062,32 +1290,43 @@ export async function mountPlannerApp(
    * student says so — but the exam list reaches into the index itself, so
    * the filter has to be baked in rather than passed per call.
    */
-  let examIndexMemo: {
-    semesterId: string;
-    index: PlannerIndex;
-    byCode: Map<string, PlannerIndexCourse>;
-  } | null = null;
+  let examIndexMemo: { semesterId: string; index: PlannerIndex } | null = null;
 
   function examIndexForSemester(): PlannerIndex | null {
     if (!plannerIndex) return null;
     if (examIndexMemo?.semesterId === plan.semesterId) return examIndexMemo.index;
     const index = indexForSemester(plannerIndex, plan.semesterId, currentExamWindow());
-    examIndexMemo = {
-      semesterId: plan.semesterId,
-      index,
-      byCode: new Map(index.courses.map((c) => [c[0], c])),
-    };
+    examIndexMemo = { semesterId: plan.semesterId, index };
     return index;
   }
 
   /**
-   * One course's index row with its exams already narrowed to this semester
-   * — so the add field's "eksamen 9. des" preview cannot quote a date from a
-   * year it was not asked about either (C3).
+   * One course's row in the RAW index — the un-narrowed one, so `offeredYears`
+   * (element 5) is readable. Used to tell "we could not fetch this" from "this
+   * course is simply not taught this year" in the course rail (crawler-3).
    */
-  function examRowFor(code: string): PlannerIndexCourse | undefined {
-    examIndexForSemester();
-    return examIndexMemo?.byCode.get(code);
+  function indexRowFor(code: string): PlannerIndexCourse | undefined {
+    if (!plannerIndex) return undefined;
+    if (!indexByCodeMemo) {
+      indexByCodeMemo = new Map(plannerIndex.courses.map((c) => [c[0], c]));
+    }
+    return indexByCodeMemo.get(code);
+  }
+
+  /**
+   * The catalog year and the course's last taught year, when this year's
+   * catalog does not carry the course at all — the same test `/emner/` and
+   * `/emne/[code]/` make (`!offeredYears.includes(index.year)`), against the
+   * CATALOG's canonical year, not the plan semester's. `null` while the index
+   * has not landed: "ikke undervist" is not something to guess at.
+   */
+  function notTaughtIn(code: string): { year: number; lastYear: number } | null {
+    const catalogYear = plannerIndex?.year;
+    const offered = indexRowFor(code)?.[5];
+    const lastYear = offered?.[0];
+    if (catalogYear === undefined || !offered || lastYear === undefined) return null;
+    if (offered.includes(catalogYear)) return null;
+    return { year: catalogYear, lastYear };
   }
 
   // --- The week's horizontal scroll (A4) -----------------------------------
@@ -1097,22 +1336,33 @@ export async function mountPlannerApp(
   }
 
   /**
-   * At 390 px the week frame is ~200 px narrower than its content and its own
-   * rounded border closes right after ONS — no fade, no arrow, no visible
-   * scrollbar, and the page itself does not scroll horizontally, so the clip
-   * reads as an edge and a student can conclude they have no Thursday lecture.
-   * `data-scroll` drives the edge mask; the hint is one fixed sentence (S15).
+   * Below ~370 px the week frame is narrower than the grid and its own rounded
+   * border closes mid-column — no fade, no arrow, no visible scrollbar, and the
+   * page itself does not scroll horizontally, so the clip reads as an edge and
+   * a student can conclude they have no Friday lecture. `data-scroll` drives the
+   * edge mask; the hint is one fixed sentence (S15).
+   *
+   * What is hidden is measured from the GRID's own box, not the frame's
+   * `scrollWidth`: the frame's 24 px padding counts as scrollable content, so
+   * `scrollWidth - clientWidth` stayed ~26 px at 390 px where all five days are
+   * on screen (the 21rem `min-width` in planner-week.css fixed the overflow the
+   * old comment here described). The result was a sentence telling the student
+   * to drag sideways to see a week they could already see in full, both edges
+   * faded, and the left ramp washing out the hour rail's own labels (mob-5).
    */
   function syncGridScroll(): void {
     const frame = elements.gridFrame;
-    const overflow = frame.scrollWidth - frame.clientWidth;
-    if (overflow <= 1) {
+    const grid = frame.querySelector<HTMLElement>(".planner-grid");
+    const maxScroll = frame.scrollWidth - frame.clientWidth;
+    // No grid mounted (a message or fallback card) — nothing to scroll to.
+    const hidden = grid ? grid.getBoundingClientRect().width - frame.clientWidth : 0;
+    if (hidden <= 1) {
       delete frame.dataset.scroll;
       elements.scrollHint.hidden = true;
       return;
     }
     const left = frame.scrollLeft;
-    frame.dataset.scroll = left <= 1 ? "start" : left >= overflow - 1 ? "end" : "middle";
+    frame.dataset.scroll = left <= 1 ? "start" : left >= maxScroll - 1 ? "end" : "middle";
     elements.scrollHint.hidden = false;
     elements.scrollHint.textContent = "Dra sidelengs for å se hele uken.";
   }
@@ -1127,7 +1377,9 @@ export async function mountPlannerApp(
     const weekday = new Date().getDay(); // 0 = Sunday
     const dayNumber = weekday === 0 ? 7 : weekday;
     if (dayNumber > 5) return;
-    const headers = [...frame.querySelectorAll<HTMLElement>(".planner-grid-day-header")];
+    // `Array.from`, not a spread: this module is now reachable from the Node
+    // typecheck pass (tsconfig.test.json), whose `lib` has no `DOM.Iterable`.
+    const headers = Array.from(frame.querySelectorAll<HTMLElement>(".planner-grid-day-header"));
     const header = headers[dayNumber - 1];
     if (!header) return;
     didScrollToToday = true;
@@ -1147,6 +1399,12 @@ export async function mountPlannerApp(
    * always computed and returned this number and the caller has always
    * thrown it away (U4). Counts are grouped slots, so a three-way clash is
    * one problem, and nothing is asserted while a fetch could still change it.
+   *
+   * When a course's timetable never arrived the check is INCOMPLETE, and the
+   * line says so out loud rather than going quiet: silence still reads as
+   * "nothing to report" beside a drawn week (pc-3, audit §1). It is a gap, not
+   * a clash, so it keeps `.planner-section-sub`'s muted ink — neither
+   * Green-Means-Fits nor Red-Is-Collision may be spent on "we do not know".
    */
   function renderVerdict(grid: GridRenderResult | null, loading: boolean): void {
     const host = elements.gridStatus;
@@ -1156,7 +1414,14 @@ export async function mountPlannerApp(
       host.textContent = "henter timeplan …";
       return;
     }
-    if (grid?.state !== "grid" || grid.partial) return;
+    if (grid?.state !== "grid") return;
+    if (grid.incompleteCourses.length > 0) {
+      const n = grid.incompleteCourses.length;
+      host.textContent = `kan ikke sjekkes — mangler timeplan for ${n} ${n === 1 ? "emne" : "emner"}`;
+      return;
+    }
+    // Anything still in flight (`partial` without an incomplete course).
+    if (grid.partial) return;
     if (grid.conflictCount === 0) {
       host.classList.add("is-clean");
       host.textContent = "ingen kollisjoner";
@@ -1202,6 +1467,22 @@ export async function mountPlannerApp(
     }
     // loadBundles flips the reset states to loading and paints the skeleton
     // itself, so there is no need to render the (momentarily empty) grid first.
+    void loadBundles();
+  }
+
+  /**
+   * Reloads ONE course's bundle — the recovery a partial failure needs, and
+   * the one `retryBundles` could never offer because it is mounted in a
+   * fallback branch that requires every bundle to be empty (pd-5). No memo
+   * clear: `fetchCourseBundle` drops a bundle carrying failures as it settles,
+   * so this really refetches.
+   */
+  function retryCourse(code: string): void {
+    const state = courseStates.get(code);
+    if (!state) return;
+    state.bundle = null;
+    state.loading = false;
+    renderCourseRows();
     void loadBundles();
   }
 
@@ -1276,11 +1557,27 @@ export async function mountPlannerApp(
         card.append(secondary);
       });
     } else if (showFallback && semester) {
-      if (question) {
-        // A studieretning/elective/period question owns the empty week — its
-        // sentence, not a fallback card, is what the student acts on. Rendered
-        // through renderGridMessage (D5), same as the pre-publish note.
-        renderGridMessage(elements.gridFrame, elements.gridNotes, question.weekMessage);
+      // Ordered by severity, not by narrative (ux-3/ux-fail-2). A question used
+      // to win over both branches below it, so an MTDT student who lost
+      // connectivity was told to pick a studieretning — with no mention of the
+      // failure and no "Prøv igjen" anywhere on the page — and an MTDT student
+      // planning an unpublished term was promised the week "fylles ut med en
+      // gang". Neither is answerable by the student. The question is not lost:
+      // `#planner-direction` renders it in its own panel directly above this
+      // frame on every render where `weekQuestion()` is non-null.
+      if (failed) {
+        // State 3: a fetch failed. NEVER the "publiseres" copy — offer a retry.
+        renderWeekCard((card) => {
+          // `.np-hint`, like the card's three other branches: DESIGN §3 gives
+          // sentences to `.np-hint` and mono fragments to `.np-note`, and this
+          // one rendered the only explanation of an empty week as the smallest,
+          // most label-like text on the page (ds-5).
+          card.append(el("p", "np-hint planner-week-card-hint", "Fikk ikke hentet timeplanen."));
+          const retry = el("button", "np-btn", "Prøv igjen");
+          retry.type = "button";
+          retry.addEventListener("click", retryBundles);
+          card.append(retry);
+        });
       } else if (!published) {
         // State 2: timetable not published yet (unchanged copy).
         renderGridMessage(
@@ -1288,15 +1585,11 @@ export async function mountPlannerApp(
           elements.gridNotes,
           `Timeplan for ${semesterLabel(semester)} publiseres vanligvis i ${publishMonthFor(semester.id)} — kom tilbake da.`,
         );
-      } else if (failed) {
-        // State 3: a fetch failed. NEVER the "publiseres" copy — offer a retry.
-        renderWeekCard((card) => {
-          card.append(el("p", "np-note planner-week-card-hint", "Fikk ikke hentet timeplanen."));
-          const retry = el("button", "np-btn", "Prøv igjen");
-          retry.type = "button";
-          retry.addEventListener("click", retryBundles);
-          card.append(retry);
-        });
+      } else if (question) {
+        // A studieretning/elective/period question owns the empty week — its
+        // sentence, not a fallback card, is what the student acts on. Rendered
+        // through renderGridMessage (D5), same as the pre-publish note.
+        renderGridMessage(elements.gridFrame, elements.gridNotes, question.weekMessage);
       } else {
         // State 4: published, courses exist, none taught this term.
         renderWeekCard((card) => {
@@ -1335,34 +1628,51 @@ export async function mountPlannerApp(
       String(showOthers || gridResult?.mutedLayerAutoRevealed === true),
     );
 
-    const examLoading = anyLoading || (states.length > 0 && plannerIndex === null);
+    // `anyLoading` stays in: since the kont join (exams-1) the list reads
+    // `bundle.details.exams` to tell an ordinary sitting from an "Utsatt" one,
+    // so a list painted before the bundles land really is provisional — and
+    // exactly the deferred rows and the false "tett" connector the join
+    // removes. `plannerIndexFailed` is the half that had to come out: with the
+    // index download dead, waiting is not a state that ever ends (pd-3).
+    const examLoading =
+      anyLoading || (states.length > 0 && plannerIndex === null && !plannerIndexFailed);
 
     // C3: the shipped index only carries this academic year's exam dates. For
     // a semester beyond it the list's own "Ingen eksamensdatoer funnet ennå"
     // is a finding reported by something that never looked — say what is
     // actually true instead, in the frame where the student is looking.
+    // A *failed download* is not that: it is our own artifact, and saying NTNU
+    // has published nothing would report our network as an upstream fact
+    // (pd-3/ux-fail-7), so it takes its own branch below.
     const examUncovered =
       !examLoading &&
+      !plannerIndexFailed &&
       activeCourses(plan).length > 0 &&
       !indexCoversSemester(plannerIndex, plan.semesterId);
 
     const examIndex = examIndexForSemester();
-    const examResult = examUncovered
-      ? renderExamMessage(
-          elements.examList,
-          `Eksamensdatoer er ikke publisert for ${semesterLabel(currentSemester())} ennå.`,
-        )
-      : renderExamList(
-          elements.examList,
-          states,
-          plan.semesterId,
-          examIndex,
-          currentExamWindow(),
-          new Date().toISOString().slice(0, 10),
-          {
-            loading: examLoading,
-          },
-        );
+    let examResult: ExamRenderResult;
+    if (plannerIndexFailed && states.length > 0) {
+      examResult = renderExamMessage(elements.examList, "Fikk ikke hentet eksamensdatoene.", {
+        label: "Prøv igjen",
+        run: retryIndex,
+      });
+    } else if (examUncovered) {
+      examResult = renderExamMessage(
+        elements.examList,
+        `Eksamensdatoer er ikke publisert for ${semesterLabel(currentSemester())} ennå.`,
+      );
+    } else {
+      examResult = renderExamList(
+        elements.examList,
+        states,
+        plan.semesterId,
+        examIndex,
+        currentExamWindow(),
+        todayInOslo(),
+        { loading: examLoading },
+      );
+    }
 
     renderVerdict(gridResult, anyLoading);
     renderExamVerdict(examResult, examLoading);
@@ -1379,6 +1689,12 @@ export async function mountPlannerApp(
    * and exam enrichment all came live from `/api` — and it said exactly the
    * same thing when the timetable was unpublished, when an exam had no date,
    * and when a bundle came back with `errors[]` (U9).
+   *
+   * It has to be RE-COMPOSED whenever any of that changes, which is the half
+   * that was missing: `loadBundles` re-rendered four things and not this one,
+   * so the line froze at "Henter timeplan fra NTNU nå" on every passive visit
+   * and the per-course failure clause below was structurally unreachable
+   * (copy-4/pd-2/ux-2/ux-fail-3/pc-4/edit-5 — six findings, one missing call).
    */
   function renderProvenance(): void {
     const semester = currentSemester();
@@ -1396,14 +1712,39 @@ export async function mountPlannerApp(
       sources.push("Timeplan hentet direkte fra NTNU nå");
     }
 
+    const indexCovers = indexCoversSemester(plannerIndex, plan.semesterId);
     if (states.length > 0) {
-      sources.push(
-        indexCoversSemester(plannerIndex, plan.semesterId)
-          ? `eksamensdatoer fra katalogen (hentet ${crawled})`
-          : `eksamensdatoer ikke publisert for ${semesterLabel(semester)}`,
-      );
+      if (plannerIndexFailed) {
+        // Our own artifact, not NTNU's: "ikke publisert" here was a statement
+        // about NTNU derived from our own failed download (pd-3/ux-fail-7).
+        sources.push("fikk ikke hentet eksamensdatoene");
+      } else {
+        sources.push(
+          indexCovers
+            ? `eksamensdatoer fra katalogen (hentet ${crawled})`
+            : `eksamensdatoer ikke publisert for ${semesterLabel(semester)}`,
+        );
+      }
     }
-    if (plan.program) sources.push(`studieplan for kull ${plan.program.cohort}`);
+    // Which study plan we actually read. The 404 step-back walks back up to
+    // two cohorts and used to be invisible: 184BG/MTMT kull 2026 got a
+    // confident full 30 sp week off the 2024 curriculum under the words
+    // "studieplan for kull 2026" (plan-3/ux-fail-4). Silent while the fetch is
+    // in flight — a plan we have not received yet is not a source.
+    const program = plan.program;
+    if (program) {
+      if (studyPlanOutcome.kind === "found") {
+        sources.push(
+          studyPlanOutcome.year === program.cohort
+            ? `studieplan for kull ${program.cohort}`
+            : `studieplan for kull ${studyPlanOutcome.year} (ingen egen plan for kull ${program.cohort})`,
+        );
+      } else if (studyPlanOutcome.kind === "not-found") {
+        sources.push(`fant ingen studieplan for ${program.code}`);
+      } else if (studyPlanOutcome.kind === "error") {
+        sources.push(`fikk ikke hentet studieplanen for ${program.code}`);
+      }
+    }
 
     // The gaps, named. Both counts are already computed elsewhere; saying
     // "hentet fra NTNU" over a course whose timetable 404'd is the failure
@@ -1415,7 +1756,12 @@ export async function mountPlannerApp(
         failures.push(`${what} for ${state.course.code}`);
       }
     }
-    const dateless = countDatelessExams();
+    // Only when the index can actually speak for this semester. Otherwise the
+    // count came from last catalog year's dateless rows (which survive the
+    // window by design — a dateless exam carries no year to be wrong about)
+    // and was stated inside a sentence that had just said we have no exam data
+    // for the semester at all (exams-3).
+    const dateless = indexCovers && !plannerIndexFailed ? countDatelessExams() : 0;
 
     const parts = [`${sources.join(" · ")}.`];
     if (failures.length > 0) parts.push(`Fikk ikke hentet ${failures.join(", ")}.`);
@@ -1428,18 +1774,69 @@ export async function mountPlannerApp(
     elements.provenance.textContent = parts.join(" ");
   }
 
-  /** Exams the catalog lists for this semester but has set no date for (DR-3/U9). */
+  /**
+   * Exams the catalog lists for this semester but has set no date for
+   * (DR-3/U9). Built through the exam list's own `collectExamInputs` so the
+   * number and the rows can never disagree — that also makes the kont join
+   * (exams-1) count once: a course whose only sittings this semester are
+   * deferred contributes exactly the one "dato ikke satt" row it renders.
+   */
   function countDatelessExams(): number {
-    let count = 0;
-    for (const state of orderedActiveStates()) {
-      const row = examRowFor(state.course.code);
-      if (!row) continue;
-      count += examsFromIndex(row, plan.semesterId).filter((e) => e.date === null).length;
-    }
-    return count;
+    return collectExamInputs(
+      orderedActiveStates(),
+      plan.semesterId,
+      examIndexForSemester(),
+      currentExamWindow(),
+    ).filter((e) => e.date === null).length;
   }
 
   // --- Top-level render orchestration --------------------------------------
+
+  /**
+   * Loads `/data/search-index.json` — our own build artifact, so a failure is
+   * never worded as an NTNU fact. A rejection is no longer memoised in
+   * `data.ts`, so `retryIndex` genuinely refetches (pd-3/ux-fail-7).
+   */
+  function loadIndex(): void {
+    loadPlannerIndex()
+      .then((index) => {
+        plannerIndex = index;
+        plannerIndexFailed = false;
+        indexByCodeMemo = null;
+        // The add-course dialog searches this same index (mutated in place —
+        // see its mount call above); it renders "henter emner …" until it's set.
+        addCourseDeps.index = index;
+        const indexByCode = new Map(index.courses.map((c) => [c[0], c]));
+        // Backfill real course names for any hash-sourced courses that only had their code.
+        let changed = false;
+        const nextCourses: PlanCourse[] = plan.courses.map((c) => {
+          if (c.name !== c.code) return c;
+          const found = indexByCode.get(c.code);
+          if (!found) return c;
+          changed = true;
+          return { ...c, name: found[1] };
+        });
+        if (changed) store.savePlan({ ...plan, courses: nextCourses });
+        examIndexMemo = null;
+        renderGridAndExams(); // exam list needed the index to render its catalog data
+        renderCourseRows(); // "ikke undervist i {year}" needs `offeredYears`
+        renderProvenance();
+      })
+      .catch(() => {
+        // Not swallowed any more: the exam column used to spin forever and the
+        // provenance line claimed NTNU had published no exam dates (pd-3).
+        plannerIndexFailed = true;
+        renderGridAndExams();
+        renderProvenance();
+      });
+  }
+
+  /** The exam panel's "Prøv igjen" — back to the loading state, then refetch. */
+  function retryIndex(): void {
+    plannerIndexFailed = false;
+    renderGridAndExams();
+    loadIndex();
+  }
 
   function renderAll(): void {
     syncCourseStates();
@@ -1463,6 +1860,14 @@ export async function mountPlannerApp(
   async function loadBundles(): Promise<void> {
     const year = semesterYear(plan.semesterId);
     if (year === null) return;
+    // The generation token `loadPeriodCourses` has had all along
+    // (`studyPlanFetchToken`). Bundles are year- and week-scoped, the memo key
+    // includes the year, and `syncCourseStates` clears every held bundle on a
+    // switch — so without this a 26h fetch still in flight when the student
+    // switches to 27h lands afterwards and writes 2026 rooms and times into the
+    // 27h state. `bundle !== null` then hides it from the `toLoad` filter below,
+    // so nothing refetches it for the rest of the page load (app-5).
+    const forSemester = plan.semesterId;
 
     const toLoad = orderedActiveStates().filter((s) => s.bundle === null && !s.loading);
     if (toLoad.length === 0) return;
@@ -1472,18 +1877,45 @@ export async function mountPlannerApp(
 
     await Promise.all(
       toLoad.map(async (state) => {
-        const bundle = await fetchCourseBundle(state.course.code, year, state.course.version);
+        // `lifeSignal` (plus data.ts's own 15 s cap) so a stalled socket does
+        // not hold the page, and so a page swap cancels what is in flight. It
+        // is the PAGE's signal, not the semester's, so it cannot stand in for
+        // the token above.
+        const bundle = await fetchCourseBundle(state.course.code, year, state.course.version, {
+          signal: lifeSignal,
+        });
+        if (forSemester !== plan.semesterId) return; // superseded by a semester switch
         const current = courseStates.get(state.course.code);
         if (!current) return; // removed/dropped while loading
         current.bundle = bundle;
         current.loading = false;
+        // Per course, not after `Promise.all`: one slow course used to withhold
+        // the whole page — skeleton and three "henter …" spinners — even when
+        // every other bundle had landed in under a second (pd-4).
+        scheduleBundleRender();
       }),
     );
 
-    renderCreditLine();
-    renderCourseRows();
-    renderGapLine();
-    renderGridAndExams();
+    scheduleBundleRender();
+  }
+
+  /** Coalesces the post-fetch re-renders that land in the same tick (pd-4). */
+  let bundleRenderQueued = false;
+
+  function scheduleBundleRender(): void {
+    if (bundleRenderQueued) return;
+    bundleRenderQueued = true;
+    queueMicrotask(() => {
+      bundleRenderQueued = false;
+      renderCreditLine();
+      renderCourseRows();
+      renderGapLine();
+      renderGridAndExams();
+      // The one that was missing, and the reason DR-8's moat sentence froze at
+      // "Henter timeplan fra NTNU nå" on every passive load while its failure
+      // clause could never fire (copy-4/pd-2/ux-2/ux-fail-3/pc-4/edit-5).
+      renderProvenance();
+    });
   }
 
   /** Everything the programme course set is derived from — see `loadPeriodCourses`. */
@@ -1525,23 +1957,47 @@ export async function mountPlannerApp(
   async function loadPeriodCourses(): Promise<void> {
     const program = plan.program;
     if (!program) {
+      // The token is bumped HERE too, or an in-flight fetch for the programme
+      // we just cleared still passes its own `token !== studyPlanFetchToken`
+      // guard and resurrects it — profile, prefilled courses, title and hash
+      // all flipping back seconds after a program-less shared link was opened
+      // (store-2). `findProgramPlan` can spend three sequential round trips on
+      // a 404 ladder, so the window is real.
+      ++studyPlanFetchToken;
       periodCourses = null;
       periodMissing = false;
       suspiciousPrefillCredits = null;
       programDerivedFor = null;
+      studyPlanOutcome = { kind: "pending" };
       renderPlanDependents();
       return;
     }
     const token = ++studyPlanFetchToken;
+    studyPlanOutcome = { kind: "pending" };
     const result = await findProgramPlan(program.code, program.cohort);
     if (token !== studyPlanFetchToken) return; // superseded by a newer programme/kull pick
+    // Belt and braces on the same race: the plan may have moved on without the
+    // token changing (a store write that did not come through here).
+    const live = plan.program;
+    if (
+      !live ||
+      live.code !== program.code ||
+      live.cohort !== program.cohort ||
+      (live.direction?.code ?? null) !== (program.direction?.code ?? null)
+    ) {
+      return;
+    }
     if ("kind" in result) {
       periodCourses = null;
       periodMissing = false;
       suspiciousPrefillCredits = null;
+      studyPlanOutcome = result.kind === "not-found" ? { kind: "not-found" } : { kind: "error" };
       renderPlanDependents();
       return;
     }
+    // The year the 404 step-back actually landed on — MTMT/184BG kull 2026
+    // resolve to the 2024 document. The provenance line says which (plan-3).
+    studyPlanOutcome = { kind: "found", year: result.year };
 
     const resolved = resolvePeriodFor(
       result.plan,
@@ -1604,6 +2060,12 @@ export async function mountPlannerApp(
   let lastDerivationKey: string | null = null;
 
   const unsubscribe = store.onPlanChange((next) => {
+    // C4's note only ever explains a semester we SUBSTITUTED for the link's
+    // own, so a deliberate switch is exactly when it stops being true. Nothing
+    // else clears it on this path: studieinfo's Lagre goes through savePlan and
+    // `syncHash`'s replaceState, which fires no `hashchange` (app-3) — so the
+    // banner said Høst 2027 while a line above it insisted on Høst 2026.
+    if (next.semesterId !== plan.semesterId) linkNote = null;
     plan = next;
     // The add-course dialog's deps are mutated in place (not re-passed) —
     // see its mount call above — so a semester switch or a programme
@@ -1641,35 +2103,14 @@ export async function mountPlannerApp(
       // Same as the initial load: a program-less link clears the stored profile
       // (savePlan cannot), so the chip stops naming the old programme (finding 2).
       if (parsed.program === null) store.removeProgram();
-      store.savePlan(planFromHash(parsed));
+      // Same merge as the initial load: a pasted link that re-states courses
+      // already in the plan must not strip their credits either (store-4).
+      store.savePlan(withStoredFacts(planFromHash(parsed), plan));
     },
     { signal },
   );
 
-  loadPlannerIndex()
-    .then((index) => {
-      plannerIndex = index;
-      // The add-course dialog searches this same index (mutated in place —
-      // see its mount call above); it renders "henter emner …" until it's set.
-      addCourseDeps.index = index;
-      const indexByCode = new Map(index.courses.map((c) => [c[0], c]));
-      // Backfill real course names for any hash-sourced courses that only had their code.
-      let changed = false;
-      const nextCourses: PlanCourse[] = plan.courses.map((c) => {
-        if (c.name !== c.code) return c;
-        const found = indexByCode.get(c.code);
-        if (!found) return c;
-        changed = true;
-        return { ...c, name: found[1] };
-      });
-      if (changed) store.savePlan({ ...plan, courses: nextCourses });
-      examIndexMemo = null;
-      renderGridAndExams(); // exam list needed the index to render its catalog data
-      renderProvenance();
-    })
-    .catch(() => {
-      // Typeahead search + exam list will simply show no results; the rest of the page still works.
-    });
+  loadIndex();
 
   // First paint from the initial (hash-or-storage) plan, then kick off fetches.
   syncHash();
@@ -1684,7 +2125,7 @@ export async function mountPlannerApp(
     params.delete("studieinfo");
     const query = params.toString();
     history.replaceState(
-      null,
+      history.state, // never null — see syncHash (app-1)
       "",
       `${location.pathname}${query ? `?${query}` : ""}${location.hash}`,
     );
