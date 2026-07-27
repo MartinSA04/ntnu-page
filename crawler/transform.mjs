@@ -1,6 +1,7 @@
 /**
  * Pure transform functions from `ntnu-api` shapes to the JSON contracts in
- * docs/SPEC.md ("Crawled data contracts"). No I/O, no network — kept pure so
+ * docs/SPEC.md ("Crawled data contracts"), plus the pure floor checks the
+ * crawl asserts before it writes anything. No I/O, no network — kept pure so
  * they are unit-testable with inline fixtures.
  */
 
@@ -110,15 +111,30 @@ export function mergeCatalogs(catalogs) {
 /**
  * Build the compact `public/data/search-index.json` shape from a catalog.
  *
- * Exams are filtered to non-continuation (kont exams are not planning data)
- * and mapped to `[season, date]` pairs.
+ * Exams are filtered to non-continuation and mapped to `[season, date]` pairs.
+ *
+ * WARNING — that kont filter is a no-op against today's upstream, so DR-3's
+ * "ordinary-only by default, kont filtered out" is NOT delivered here and the
+ * emitted pairs are every published sitting, ordinary and deferred alike.
+ * The catalog search portlet reports `continuation: false` on every exam it
+ * returns: 0 of 2 438 exam rows in `data/catalog.json` carry the flag, and a
+ * raw portlet response for HBIOT2030 (measured 2026-07-27) sends
+ * `continuation: false` for its 2026-12-01 sitting, which
+ * `/api/course/HBIOT2030` labels `occasion: "Utsatt eksamen"`. The filter
+ * stays because it is the contract and costs nothing the day upstream starts
+ * populating the flag — but the only honest kont signal is `occasion` in the
+ * per-course details payload, which this crawl deliberately does not fetch:
+ * that is one request per course, against the ~20 requests docs/SPEC.md
+ * budgets for the whole crawl. Joining `occasion` onto these `[season, date]`
+ * pairs by exact ISO date is the consumer's job; see audit finding exams-1.
  *
  * The tuple is fetched at runtime, so it stays positional and append-only:
- * `version` (index 4) is what DR-4 needs to fetch the right timetable — 220
- * courses are not version "1", and asking for the default version of one of
- * them returns a differently-shaped payload for the same slot — and
- * `offeredYears` (index 5) lets a result row say a course is not taught this
- * year rather than pretending it is.
+ * `version` (index 4) is what DR-4 needs to fetch the right timetable — 293
+ * of 5 470 index rows are not version "1" (220 of them offered in the
+ * canonical year; both measured 2026-07-27), and asking for the default
+ * version of one of them returns a differently-shaped payload for the same
+ * slot — and `offeredYears` (index 5) lets a result row say a course is not
+ * taught this year rather than pretending it is.
  *
  * @param {{ year: number, courses: CatalogCourse[] }} catalog
  * @returns {{ year: number, courses: [string, string, string | null, [string | null, string | null][], string | null, number[]][] }}
@@ -165,4 +181,58 @@ export function toPrograms(programs, crawledAt) {
  */
 export function toSemesters(semesters, current, crawledAt) {
   return { crawledAt, current, semesters };
+}
+
+/**
+ * Absolute floor for one catalog year. A real year is ~4 767 courses (2026),
+ * so an order of magnitude below that is a broken crawl, not a shrinking NTNU.
+ */
+export const MIN_COURSES_PER_YEAR = 1000;
+
+/** Floors for the two small lists (real 2026 numbers: 403 and 36). */
+export const MIN_PROGRAMS = 100;
+export const MIN_SEMESTERS = 4;
+
+/** Fraction of upstream's own `numFound` a finished year pass must reach. */
+const CATALOG_COVERAGE = 0.9;
+
+/**
+ * The minimum course count one catalog-year pass has to produce.
+ *
+ * The ratio against upstream's own `numFound` catches a truncated pagination
+ * run: `hasMoreResults` goes through `asBool`, which defaults a missing or
+ * renamed field to `false`, so `searchAll` would stop after page 1 — 500 of
+ * 4 767 courses. The absolute floor catches the case where `numFound` is
+ * itself 0: the search portlet answers an empty 200 body instead of an error
+ * when it dislikes a parameter, and ntnu-api turns that into
+ * `{ courses: [], hasMoreResults: false, numFound: 0 }` without throwing.
+ *
+ * @param {number} numFound upstream's reported hit count for the year
+ * @returns {number}
+ */
+export function catalogFloor(numFound) {
+  const covered = Number.isFinite(numFound) ? Math.ceil(numFound * CATALOG_COVERAGE) : 0;
+  return Math.max(MIN_COURSES_PER_YEAR, covered);
+}
+
+/**
+ * Throw unless `actual` clears `minimum`.
+ *
+ * docs/SPEC.md states the rule this enforces — "if either catalog pass fails
+ * the whole crawl fails (exit 1) — a half-crawl that looks complete is worse
+ * than a red build" — but nothing used to enforce it: crawl.mjs only logged
+ * its counts, and `.github/workflows/crawl.yml` runs crawl → build → deploy
+ * nightly with no lint, typecheck, test or e2e step in between, so a hollow
+ * catalog would deploy itself with every badge green.
+ *
+ * @param {string} label what is being counted, for the error message
+ * @param {number} actual
+ * @param {number} minimum
+ */
+export function assertFloor(label, actual, minimum) {
+  if (!(actual >= minimum)) {
+    throw new Error(
+      `${label}: got ${actual}, expected at least ${minimum} — refusing to write a hollow artifact`,
+    );
+  }
 }

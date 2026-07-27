@@ -51,6 +51,23 @@ function direction(
   return { code, name, courseGroups, waypoints: [] };
 }
 
+/** Nesting fixtures build directions and waypoints straight from the exported shape. */
+type Dir = StudyPlan["periods"][number]["direction"];
+type Wp = Dir["waypoints"][number];
+
+function waypoint(name: string, directions: Dir[], deadlineDate: string | null = null): Wp {
+  return { code: null, name, description: null, deadlineDate, directions };
+}
+
+function nested(
+  code: string | null,
+  name: string | null,
+  courseGroups: ReturnType<typeof group>[],
+  waypoints: Wp[] = [],
+): Dir {
+  return { code, name, courseGroups, waypoints };
+}
+
 function planWith(periods: StudyPlan["periods"]): StudyPlan {
   return {
     code: "TEST",
@@ -265,6 +282,267 @@ describe("classifyPeriod — studieretning waypoints", () => {
     expect(result?.obligatory.map((c) => c.code)).toEqual(["TDT4136", "TDT4172", "TMA4135"]);
     expect(result?.obligatory.filter((c) => c.code === "TDT4136")).toHaveLength(1);
     expect(result?.obligatory[0]?.groupName).toBe("Fellesemner");
+  });
+});
+
+/**
+ * Nesting fixtures, probed live against the real API on 2026-07-27. MTDT and
+ * BIT (the shapes the module was built against) have none of this, which is
+ * why the docstring's "no programme in the crawled data has them" survived.
+ */
+
+/**
+ * CMED period 1: the period carries no courses, one "Veivalg - By" waypoint
+ * holds city directions that carry none either, and each city's nested
+ * "Veivalg - Klasse" waypoint holds two groups that BOTH carry the same
+ * EXPH0400 + MD4012. Answering the city used to yield literally zero courses.
+ */
+function cityThenClassPlan(): StudyPlan {
+  const city = (code: string, name: string) =>
+    nested(
+      code,
+      name,
+      [],
+      [
+        waypoint(`${name} - Veivalg - Klasse`, [
+          nested(`${code}-V-G1`, `${name} - Gruppe 1`, [
+            group(`Obligatoriske emner - ${name} - Gruppe 1`, [
+              { code: "EXPH0400", choice: "O" },
+              { code: "MD4012", choice: "O", credits: null },
+            ]),
+          ]),
+          nested(`${code}-V-G2`, `${name} - Gruppe 2`, [
+            group(`Obligatoriske emner - ${name} - Gruppe 2`, [
+              { code: "EXPH0400", choice: "O" },
+              { code: "MD4012", choice: "O", credits: null },
+            ]),
+          ]),
+        ]),
+      ],
+    );
+  return planWith([
+    {
+      periodNumber: 1,
+      direction: nested(
+        null,
+        null,
+        [],
+        [
+          waypoint("Medisinstudiet - Veivalg - By", [
+            city("CMED26-V-T", "Medisinstudiet - Trondheim"),
+            city("CMED26-V-G", "Medisinstudiet - Gjøvik"),
+          ]),
+        ],
+      ),
+    },
+  ]);
+}
+
+/**
+ * BSPL period 3: the city direction carries its own 15 sp obligatory course
+ * and a nested "valg av praksisløp" waypoint whose five options carry one
+ * 15 sp obligatory course each (the fifth carries none). Answering the city
+ * used to show one course and "15 av 30 sp".
+ */
+function cityThenPraksisPlan(): StudyPlan {
+  const praksis = (suffix: string) =>
+    nested(`BSPL25-V-T-PRALØP${suffix}`, `Praksisløp ${suffix}`, [
+      group("Praksis", [{ code: `SYT2101${suffix}`, choice: "O", credits: 15 }]),
+    ]);
+  return planWith([
+    {
+      periodNumber: 3,
+      direction: nested(
+        null,
+        null,
+        [],
+        [
+          waypoint("Valg av studieby", [
+            nested(
+              "BSPL25-V-TRONDHEIM",
+              "Trondheim",
+              [group("Obligatoriske emner", [{ code: "SYT2100", choice: "O", credits: 15 }])],
+              [
+                waypoint("Bachelor i sykepleie - valg av praksisløp, Trondheim", [
+                  praksis("HJE"),
+                  praksis("MED"),
+                  praksis("KIR"),
+                  praksis("PSY"),
+                  nested("BSPL25-V-T-PRALØP5", "Praksisløp 5", []),
+                ]),
+              ],
+            ),
+          ]),
+        ],
+      ),
+    },
+  ]);
+}
+
+describe("classifyPeriod — nested waypoints", () => {
+  it("prefills courses two levels down that every nested branch agrees on", () => {
+    // CMED kull 2026, Trondheim: EXPH0400 + MD4012 are obligatory in both
+    // Klasse groups, so the student provably has them whichever class they
+    // land in. Before the descent this returned zero courses and no question.
+    const result = classifyPeriod(cityThenClassPlan(), 1, "CMED26-V-T");
+    expect(result?.obligatory.map((c) => c.code)).toEqual(["EXPH0400", "MD4012"]);
+    expect(result?.appliedDirection).toEqual({
+      code: "CMED26-V-T",
+      name: "Medisinstudiet - Trondheim",
+    });
+  });
+
+  it("asks the nested question instead of resolving the period silently", () => {
+    const result = classifyPeriod(cityThenClassPlan(), 1, "CMED26-V-T");
+    expect(result?.pendingChoice?.name).toBe("Medisinstudiet - Trondheim - Veivalg - Klasse");
+    expect(result?.pendingChoice?.directions.map((d) => d.code)).toEqual([
+      "CMED26-V-T-V-G1",
+      "CMED26-V-T-V-G2",
+    ]);
+  });
+
+  it("intersects through the nesting when no level has been answered yet", () => {
+    // Both cities and all four Klasse groups carry EXPH0400 + MD4012, so they
+    // are obligatory whatever the student picks — the intersection rule one
+    // level down. The city question is still the one asked.
+    const result = classifyPeriod(cityThenClassPlan(), 1);
+    expect(result?.obligatory.map((c) => c.code)).toEqual(["EXPH0400", "MD4012"]);
+    expect(result?.pendingChoice?.name).toBe("Medisinstudiet - Veivalg - By");
+    expect(result?.appliedDirection).toBeNull();
+  });
+
+  it("keeps the nested alternatives out of the prefill and in the pool", () => {
+    // BSPL kull 2025, Trondheim: SYT2100 is the student's, the four praksis
+    // courses are alternatives — offered (U7), never prefilled (DR-5).
+    const result = classifyPeriod(cityThenPraksisPlan(), 3, "BSPL25-V-TRONDHEIM");
+    expect(result?.obligatory.map((c) => c.code)).toEqual(["SYT2100"]);
+    expect(result?.choice.map((c) => c.code)).toEqual([
+      "SYT2101HJE",
+      "SYT2101MED",
+      "SYT2101KIR",
+      "SYT2101PSY",
+    ]);
+    expect(result?.pendingChoice?.name).toBe(
+      "Bachelor i sykepleie - valg av praksisløp, Trondheim",
+    );
+  });
+
+  it("resolves an answer stored for a deeper level all the way down", () => {
+    // A profile carries ONE direction code. Answering the Klasse question
+    // stores the leaf code, which names no city — without the subtree match
+    // the city answer would be silently lost and the period blank again.
+    const result = classifyPeriod(cityThenClassPlan(), 1, "CMED26-V-T-V-G1");
+    expect(result?.obligatory.map((c) => c.code)).toEqual(["EXPH0400", "MD4012"]);
+    expect(result?.pendingChoice).toBeNull();
+    expect(result?.appliedDirection).toEqual({
+      code: "CMED26-V-T-V-G1",
+      name: "Medisinstudiet - Trondheim - Gruppe 1",
+    });
+  });
+
+  it("descends three levels (MGLU1-7 period 5: fag A → studieretning → fag B)", () => {
+    const fagB = waypoint("Valg av undervisningsfag B", [
+      nested("GLU1B11NAT-26", "Naturfag", [
+        group("Obligatoriske emner", [
+          { code: "MGLU3105", choice: "O" },
+          { code: "MGLU3106", choice: "O" },
+        ]),
+      ]),
+      nested("GLU1B11KRLE-26", "KRLE", [
+        group("Obligatoriske emner", [{ code: "MGLU3201", choice: "O" }]),
+      ]),
+    ]);
+    const plan = planWith([
+      {
+        periodNumber: 5,
+        direction: nested(
+          null,
+          null,
+          [],
+          [
+            waypoint("Valg av undervisningsfag A", [
+              nested(
+                "GLU1AENG-26",
+                "Engelsk",
+                [],
+                [
+                  waypoint("Valg av masterstudieretning", [
+                    nested("GLU1S1ENG-26", "Engelsk", [], [fagB]),
+                  ]),
+                ],
+              ),
+            ]),
+          ],
+        ),
+      },
+    ]);
+    // Level 1 and 2 have a single option each, so they apply without asking;
+    // level 3 is the real question and its two branches share nothing.
+    const result = classifyPeriod(plan, 5);
+    expect(result?.pendingChoice?.name).toBe("Valg av undervisningsfag B");
+    expect(result?.obligatory).toEqual([]);
+    expect(result?.choice.map((c) => c.code)).toEqual(["MGLU3105", "MGLU3106", "MGLU3201"]);
+  });
+
+  it("terminates on a cyclic document instead of recursing forever", () => {
+    // `JSON.parse` cannot build one, so this pins the depth guard rather than
+    // a shape the API produces.
+    const loop = nested("LOOP", "Løkke", [
+      group("Obligatoriske emner", [{ code: "AAA1000", choice: "O" }]),
+    ]);
+    const other = nested("OTHER", "Annet", [
+      group("Obligatoriske emner", [{ code: "BBB1000", choice: "O" }]),
+    ]);
+    loop.waypoints = [waypoint("Veivalg", [loop, other])];
+    const plan = planWith([
+      { periodNumber: 1, direction: nested(null, null, [], [waypoint("Veivalg", [loop, other])]) },
+    ]);
+    const answered = classifyPeriod(plan, 1, "LOOP");
+    expect(answered?.obligatory.map((c) => c.code)).toEqual(["AAA1000"]);
+    expect(answered?.pendingChoice?.name).toBe("Veivalg");
+    expect(classifyPeriod(plan, 1)?.pendingChoice?.name).toBe("Veivalg");
+  });
+});
+
+describe("classifyPeriod — a period that resolves to nothing", () => {
+  it("marks a period the study plan leaves completely blank", () => {
+    // MPPR 2024 period 1 is literally {courseGroups: [], waypoints: []}.
+    // Without this flag the caller cannot tell it from a normal period and
+    // renders "0 av 30 sp" with no rows, no question and no explanation.
+    const plan = planWith([{ periodNumber: 1, direction: direction(null, null, []) }]);
+    const result = classifyPeriod(plan, 1);
+    expect(result).not.toBeNull();
+    expect(result?.empty).toBe(true);
+    expect(result?.obligatory).toEqual([]);
+    expect(result?.choice).toEqual([]);
+    expect(result?.pendingChoice).toBeNull();
+  });
+
+  it("is not empty when the period has courses, a pool or a question", () => {
+    const withCourses = planWith([
+      {
+        periodNumber: 1,
+        direction: direction(null, null, [
+          group("Obligatoriske emner", [{ code: "EXPH0300", choice: "O" }]),
+        ]),
+      },
+    ]);
+    expect(classifyPeriod(withCourses, 1)?.empty).toBe(false);
+    // BIT period 5: no obligatory course, only electives.
+    const electivesOnly = planWith([
+      {
+        periodNumber: 5,
+        direction: direction(null, null, [
+          group("Valgbare IT-emner", [{ code: "IT2810", choice: "M2A" }]),
+        ]),
+      },
+    ]);
+    expect(classifyPeriod(electivesOnly, 5)?.empty).toBe(false);
+    expect(classifyPeriod(directionGatedPlan(), 5)?.empty).toBe(false);
+  });
+
+  it("stays distinct from a period that does not exist at all", () => {
+    expect(classifyPeriod(planWith([]), 1)).toBeNull();
   });
 });
 

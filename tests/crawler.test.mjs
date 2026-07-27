@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
+  assertFloor,
+  catalogFloor,
+  MIN_COURSES_PER_YEAR,
+  MIN_PROGRAMS,
+  MIN_SEMESTERS,
   mergeCatalogs,
   toCatalog,
   toPrograms,
@@ -321,5 +326,48 @@ describe("toSemesters", () => {
       current: null,
       semesters: [],
     });
+  });
+});
+
+describe("catalogFloor / assertFloor", () => {
+  it("keeps a healthy year (2026: 4 767 courses, numFound 4 767)", () => {
+    expect(() => assertFloor("catalog year 2026", 4767, catalogFloor(4767))).not.toThrow();
+  });
+
+  it("rejects the empty-200 path, where upstream reports numFound 0", () => {
+    // ntnu-api's search() answers `{courses: [], numFound: 0}` without
+    // throwing when the portlet dislikes a parameter, so the ratio is
+    // vacuously satisfied and only the absolute floor can catch it.
+    expect(catalogFloor(0)).toBe(MIN_COURSES_PER_YEAR);
+    expect(() => assertFloor("catalog year 2026", 0, catalogFloor(0))).toThrow(/hollow artifact/);
+  });
+
+  it("rejects a pagination run truncated after page 1", () => {
+    // A renamed `hasMoreResults` defaults to false via asBool, so searchAll
+    // stops with 500 of 4 767 courses.
+    expect(() => assertFloor("catalog year 2026", 500, catalogFloor(4767))).toThrow(
+      /got 500, expected at least 4291/,
+    );
+  });
+
+  it("allows the crawl's own cross-page dedup to shave a little off numFound", () => {
+    expect(() => assertFloor("catalog year 2026", 4400, catalogFloor(4767))).not.toThrow();
+  });
+
+  it("still applies the absolute floor when numFound is missing or absurd", () => {
+    expect(catalogFloor(Number.NaN)).toBe(MIN_COURSES_PER_YEAR);
+    expect(catalogFloor(undefined)).toBe(MIN_COURSES_PER_YEAR);
+  });
+
+  it("names the count and both numbers in the failure", () => {
+    expect(() => assertFloor("programs", 0, MIN_PROGRAMS)).toThrow(
+      "programs: got 0, expected at least 100 — refusing to write a hollow artifact",
+    );
+  });
+
+  it("guards the two small lists at their documented floors", () => {
+    expect(() => assertFloor("programs", 403, MIN_PROGRAMS)).not.toThrow();
+    expect(() => assertFloor("semesters", 36, MIN_SEMESTERS)).not.toThrow();
+    expect(() => assertFloor("semesters", 0, MIN_SEMESTERS)).toThrow(/hollow artifact/);
   });
 });

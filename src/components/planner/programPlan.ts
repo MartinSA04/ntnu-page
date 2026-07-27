@@ -14,6 +14,11 @@
  * - **3.–5. år sivilingeniør**: the period's own `courseGroups` are **empty**
  *   and every course hangs off a `Valg av studieretning` waypoint (MTDT
  *   period 5). Classifying only top-level groups yields nothing at all.
+ * - **profesjonsstudier**: the waypoints *nest*, and the courses sit at the
+ *   bottom. CMED period 1 is by → klasse (2 levels; both klasse groups carry
+ *   the same EXPH0400 + MD4012), BSPL period 3 is by → praksisløp, and
+ *   MGLU1-7 period 5 is fag A → masterstudieretning → fag B (3 levels, 441
+ *   leaves). Stopping after the first waypoint yields nothing at all here too.
  *
  * So a period resolves in three parts: `obligatory` (prefilled), `choice`
  * (offered, never prefilled — DR-5), and `pendingChoice` (the studieretning
@@ -128,6 +133,15 @@ export interface PeriodCourses {
   pendingChoice: DirectionChoice | null;
   /** The direction whose courses were folded in, when one applied. */
   appliedDirection: DirectionOption | null;
+  /**
+   * The period exists in the study plan but names nothing at all: no
+   * obligatory course, no offered course and no question (MPPR 2024 period 1
+   * is literally `{courseGroups: [], waypoints: []}`). Distinguishable from a
+   * missing period (`classifyPeriod` returns `null`) and from an ordinary
+   * period, so the caller can say *why* the week is blank instead of leaving
+   * "0 av 30 sp" standing next to no rows and no explanation.
+   */
+  empty: boolean;
 }
 
 const MAX_STEP_BACK_TRIES = 3;
@@ -297,6 +311,16 @@ function collectGroups(
 }
 
 /**
+ * How many waypoint levels any walk over a period descends. Real plans reach
+ * three (MGLU1-7 period 5: fag A → masterstudieretning → fag B); the ceiling
+ * is a fail-safe, not a claim about the data. It is also the recursion guard:
+ * `fetchPlan` builds every production value with `JSON.parse`, which cannot
+ * produce a cycle, but a hand-built or future value that did would simply
+ * bottom out here instead of spinning.
+ */
+const MAX_DIRECTION_DEPTH = 6;
+
+/**
  * Everything a direction offers that isn't already accounted for, into the
  * pool. Used only on the gated path: with the question still open the
  * intersection is all we can prefill, so without this the pool is empty
@@ -304,11 +328,16 @@ function collectGroups(
  * disabled, `effectiveScope()` falling back to the whole 5 470-course
  * catalog (U7). Group names stay verbatim (DR-5); `seen` keeps a course that
  * two directions share from being listed twice.
+ *
+ * Descends into nested waypoints: a direction that carries no courses of its
+ * own but whose sub-directions do (CMED's cities, MGLU1-7's fag A) would
+ * otherwise contribute nothing to the pool.
  */
 function collectPool(
   direction: PlanDirection,
   seen: Set<string>,
   choice: ClassifiedCourse[],
+  depth = 0,
 ): void {
   for (const group of direction.courseGroups ?? []) {
     for (const course of group.courses ?? []) {
@@ -318,22 +347,46 @@ function collectPool(
       choice.push(toClassified(course, group));
     }
   }
+  if (depth >= MAX_DIRECTION_DEPTH) return;
+  for (const waypoint of direction.waypoints ?? []) {
+    for (const nested of waypoint.directions ?? []) {
+      collectPool(nested, seen, choice, depth + 1);
+    }
+  }
+}
+
+/**
+ * The obligatory courses a direction leaves the student no way out of: its
+ * own, plus the ones every branch of its next waypoint agrees on. CMED's city
+ * directions carry no courses themselves and both nested Klasse groups carry
+ * EXPH0400 + MD4012, so the student provably has those whichever class they
+ * end up in — the intersection rule applied one level down.
+ */
+function effectiveObligatory(
+  direction: PlanDirection,
+  depth: number,
+): Map<string, ClassifiedCourse> {
+  const byCode = new Map<string, ClassifiedCourse>();
+  for (const group of direction.courseGroups ?? []) {
+    for (const course of group.courses ?? []) {
+      if (!isRealCourse(course) || !isObligatory(course)) continue;
+      if (!byCode.has(course.code)) byCode.set(course.code, toClassified(course, group));
+    }
+  }
+  if (depth >= MAX_DIRECTION_DEPTH) return byCode;
+  const waypoint = gatingWaypoint(direction);
+  if (!waypoint) return byCode;
+  for (const course of obligatoryIntersection(waypoint.directions ?? [], depth + 1)) {
+    if (!byCode.has(course.code)) byCode.set(course.code, course);
+  }
+  return byCode;
 }
 
 /** The obligatory courses shared by *every* direction — see "the intersection rule" above. */
-function obligatoryIntersection(directions: PlanDirection[]): ClassifiedCourse[] {
+function obligatoryIntersection(directions: PlanDirection[], depth = 0): ClassifiedCourse[] {
   if (directions.length === 0) return [];
 
-  const perDirection = directions.map((direction) => {
-    const byCode = new Map<string, ClassifiedCourse>();
-    for (const group of direction.courseGroups ?? []) {
-      for (const course of group.courses ?? []) {
-        if (!isRealCourse(course) || !isObligatory(course)) continue;
-        if (!byCode.has(course.code)) byCode.set(course.code, toClassified(course, group));
-      }
-    }
-    return byCode;
-  });
+  const perDirection = directions.map((direction) => effectiveObligatory(direction, depth));
 
   const [first, ...rest] = perDirection;
   if (!first) return [];
@@ -350,6 +403,41 @@ function gatingWaypoint(direction: PlanDirection): StudyWaypoint | null {
     if ((waypoint.directions ?? []).length > 0) return waypoint;
   }
   return null;
+}
+
+/** True when `code` names this direction or any direction nested under it. */
+function containsDirection(direction: PlanDirection, code: string, depth: number): boolean {
+  if (direction.code === code) return true;
+  if (depth >= MAX_DIRECTION_DEPTH) return false;
+  for (const waypoint of direction.waypoints ?? []) {
+    for (const nested of waypoint.directions ?? []) {
+      if (containsDirection(nested, code, depth + 1)) return true;
+    }
+  }
+  return false;
+}
+
+/**
+ * The direction a waypoint resolves to, or `undefined` while it is still a
+ * question. A waypoint offering exactly one direction is applied without
+ * asking — a question with one answer isn't a question.
+ *
+ * The stored answer is matched against this level's own codes first and only
+ * then against the levels whose subtree contains it. A profile carries ONE
+ * direction code, so the deeper answer (`CMED26-V-T-V-G1`) is the only record
+ * of the whole chain that leads to it; without the subtree match, answering a
+ * nested question would silently unanswer its parent.
+ */
+function pickDirection(
+  directions: PlanDirection[],
+  directionCode: string | null | undefined,
+): PlanDirection | undefined {
+  if (directions.length === 1) return directions[0];
+  if (!directionCode) return undefined;
+  return (
+    directions.find((d) => d.code === directionCode) ??
+    directions.find((d) => containsDirection(d, directionCode, 0))
+  );
 }
 
 function directionOption(direction: PlanDirection): DirectionOption | null {
@@ -373,11 +461,15 @@ function directionOption(direction: PlanDirection): DirectionOption | null {
  * Returns `null` if the period itself doesn't exist (DR-7 fallback: unpublished
  * cohort or off-by-one period math → caller shows no prefill).
  *
- * Nested waypoints *inside* a chosen direction are not descended into. No
- * programme in the crawled data has them (every `Valg av studieretning` in
- * MTDT's ten periods is top-level and its directions carry none), and
- * guessing past a second unanswered choice would reintroduce exactly the
- * wrong-30-sp failure the intersection rule exists to prevent.
+ * **Waypoints nest, and the descent follows them all the way down.** An
+ * earlier version stopped after one level on the (false) premise that no
+ * crawled programme nested them: CMED period 1 is by → klasse and resolved to
+ * literally zero courses once the city was answered, and BSPL period 3 lost
+ * the 15 sp praksis half of the semester. The loop below applies each answered
+ * level in turn and stops at the first waypoint that is still a question — so
+ * a nested question is asked with the same shape as a top-level one, and the
+ * intersection rule keeps prefilling only what every remaining branch agrees
+ * on. Guessing past an open choice is still never done.
  */
 export function classifyPeriod(
   plan: StudyPlan,
@@ -393,26 +485,36 @@ export function classifyPeriod(
 
   collectGroups(period.direction, seen, obligatory, choice);
 
-  const waypoint = gatingWaypoint(period.direction);
-  if (!waypoint) {
-    return { obligatory, choice, pendingChoice: null, appliedDirection: null };
+  // The answered chain: fold in every level the student has already resolved.
+  // `applied` is the outermost of them, `explicit` the one the stored code
+  // names — the caller backfills the stored direction's display name from
+  // `appliedDirection`, so a nested answer must not be rewritten to its parent.
+  let waypoint = gatingWaypoint(period.direction);
+  let applied: PlanDirection | null = null;
+  let explicit: PlanDirection | null = null;
+  for (let depth = 0; waypoint !== null && depth < MAX_DIRECTION_DEPTH; depth++) {
+    const chosen = pickDirection(waypoint.directions ?? [], directionCode);
+    if (!chosen) break;
+    collectGroups(chosen, seen, obligatory, choice);
+    if (applied === null) applied = chosen;
+    if (chosen.code !== null && chosen.code === directionCode) explicit = chosen;
+    waypoint = gatingWaypoint(chosen);
   }
 
-  const directions = waypoint.directions ?? [];
-  const only = directions.length === 1 ? directions[0] : undefined;
-  const chosen =
-    only ?? (directionCode ? directions.find((d) => d.code === directionCode) : undefined);
+  const resolved = explicit ?? applied;
+  const appliedDirection = resolved === null ? null : directionOption(resolved);
 
-  if (chosen) {
-    collectGroups(chosen, seen, obligatory, choice);
+  if (!waypoint) {
     return {
       obligatory,
       choice,
       pendingChoice: null,
-      appliedDirection: directionOption(chosen),
+      appliedDirection,
+      empty: obligatory.length === 0 && choice.length === 0,
     };
   }
 
+  const directions = waypoint.directions ?? [];
   for (const course of obligatoryIntersection(directions)) {
     if (seen.has(course.code)) continue;
     seen.add(course.code);
@@ -433,7 +535,12 @@ export function classifyPeriod(
       deadlineDate: waypoint.deadlineDate,
       directions: directions.map(directionOption).filter((d): d is DirectionOption => d !== null),
     },
-    appliedDirection: null,
+    // Non-null when an outer level was already answered and only a nested
+    // question is left (CMED: city chosen, klasse still open).
+    appliedDirection,
+    // A pending question is itself something to show, so this branch is never
+    // the silent-blank state `empty` exists to name.
+    empty: false,
   };
 }
 

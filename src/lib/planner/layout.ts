@@ -14,12 +14,17 @@
  *
  * A cluster that would need MORE than `MAX_COLUMNS` columns is not split at
  * all: every member is marked `piled`, and the renderer draws the whole
- * cluster as ONE block listing its course codes (grid.ts). Three columns in a
- * ~106 px weekday is ~35 px per block, at which width `.planner-block-code`'s
- * `overflow-wrap: anywhere` broke course codes one character per line —
- * "T D T 4 1 0 9" stacked down a sliver. Two readable blocks, or one readable
- * pile, beats three unreadable slivers; the pile names its courses, which the
- * old "+N til" overflow chip did not.
+ * cluster as ONE block listing every session in it — code and start–end time
+ * (grid.ts). Three columns in a ~106 px weekday is ~35 px per block, at which
+ * width `.planner-block-code`'s `overflow-wrap: anywhere` broke course codes
+ * one character per line — "T D T 4 1 0 9" stacked down a sliver. Two
+ * readable blocks, or one readable pile, beats three unreadable slivers; the
+ * pile names its sessions, which the old "+N til" overflow chip did not.
+ *
+ * `LayoutSlot.cluster` is the renderer's partition too: grid.ts groups a
+ * day's entries by it rather than re-deriving the clustering rule, so there
+ * is exactly one implementation of "what overlaps what" and these tests are
+ * on it (audit tests-6).
  */
 
 export interface LayoutInput {

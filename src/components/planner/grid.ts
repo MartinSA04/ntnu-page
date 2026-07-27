@@ -30,6 +30,14 @@
  * a service course publishes a dozen, and drawing them all made the toggle a
  * switch between "my week" and "the cohort's week". See `renderGrid`.
  *
+ * What the week does NOT do is answer for teaching it never saw. Every course
+ * carries a `TimetableOutcome` from the fetch (data.ts), and `planGaps` turns
+ * the ones the grid cannot draw into named margin notes: a fetch we never got
+ * an answer for makes the collision check incomplete (`incompleteCourses`, so
+ * the caller must not print a clean verdict), while a course NTNU publishes
+ * nothing for — or nothing in this semester — is drawn nowhere and said out
+ * loud instead of vanishing (audit §1 / pc-3 / ux-4).
+ *
  * The frame's ruling is owned here, not by the markup: it is stripped in
  * every empty/message branch (Ruling-Marks-The-Plan — the ruling appears
  * exactly where planning happens, never around an apology) and restored when
@@ -42,7 +50,13 @@ import {
   groupConflicts,
   mergeParallelSlots,
 } from "../../lib/planner/conflicts.js";
-import { applyGroupSelection, entryGroupKey } from "../../lib/planner/groups.js";
+import { timetableOutcomeOf } from "../../lib/planner/data.js";
+import {
+  applyGroupSelection,
+  entryGroupKey,
+  groupOptions,
+  resolveLectureDefaults,
+} from "../../lib/planner/groups.js";
 import { type LayoutInput, layoutDay } from "../../lib/planner/layout.js";
 import { parseWeeks, type ScheduleEntry } from "../../lib/planner/schedule.js";
 import { dayName, dot, el, weekLabel } from "./dom.js";
@@ -84,14 +98,15 @@ interface GridEntry extends ScheduleEntry {
 }
 
 /**
- * What a clicked block (or "+N til" chip) hands its listener — the material
- * for the block popover (§5). A chip's `code` is the hidden entries' codes
- * joined with " · "; a single block's is one course code.
+ * What a clicked block (or pile) hands its listener — the material for the
+ * block popover (§5). A pile's `code` is its courses' codes joined with
+ * " · " (plannerApp reads that separator to pick the whole-pile popover);
+ * a single block's is one course code.
  */
 export interface BlockDetail {
-  /** Course code, or joined codes for a "+N til" chip. */
+  /** Course code, or the pile's codes joined with " · ". */
   code: string;
-  /** Course name (the proper name), or joined names for a chip. */
+  /** Course name (the proper name), or joined names for a pile. */
   name: string;
   /** The activity/group label ("Forelesningsparallell 2"), when the block is one entry. */
   entryName: string | null;
@@ -118,9 +133,10 @@ export interface GridRenderOptions {
    */
   pendingChoiceMessage?: string | null;
   /**
-   * Called when a block or a "+N til" chip is clicked, with the block's
-   * detail and the clicked element (the popover's anchor). Optional: the
-   * one-course `/emne/` reuse passes none, so its blocks are inert.
+   * Called when a block, a pile or a "velg din gruppe" margin note is
+   * clicked, with the detail and the clicked element (the popover's anchor).
+   * Optional: the one-course `/emne/` reuse passes none, so its blocks are
+   * inert.
    */
   onBlockClick?: (detail: BlockDetail, anchor: HTMLElement) => void;
   /**
@@ -155,7 +171,19 @@ export interface GridRenderResult {
   blockCount: number;
   /** Which branch rendered. Only `"grid"` carries meaningful counts. */
   state: "grid" | "empty" | "loading" | "pending-choice";
-  /** A grid was drawn while bundles were still loading: the counts may still grow. */
+  /**
+   * The plan's courses whose timetable we do not have and therefore could
+   * not check: the fetch failed, or it was never made. NOT the courses NTNU
+   * publishes nothing for — those are a known, drawable-as-nothing answer
+   * (see `planGaps`). Non-empty ⇒ `conflictCount` is a floor, not the truth,
+   * and the caller must not print a clean verdict (pc-3).
+   */
+  incompleteCourses: string[];
+  /**
+   * The counts are not the whole truth: a fetch is still in flight, or one
+   * came back without an answer (`incompleteCourses`). Either way the verdict
+   * line must stay quiet about "ingen kollisjoner".
+   */
   partial: boolean;
 }
 
@@ -241,6 +269,93 @@ function collectEntries(courses: PlanCourseState[], showAllGroups: boolean): Gri
   return entries;
 }
 
+/** Courses the week cannot draw, split by WHY — the four are different sentences. */
+export interface PlanGaps {
+  /** The timetable fetch failed: we do not know this course's sessions. */
+  failed: string[];
+  /** No fetch has been made (and none is in flight): the same unknown, other cause. */
+  pending: string[];
+  /** The fetch succeeded and NTNU published no rows at all for the course. */
+  empty: string[];
+  /** Rows exist, but none of them fall in the semester the week is showing. */
+  offSemester: string[];
+}
+
+/**
+ * Why each course is missing from the week, from the fetch outcome the bundle
+ * carries — never re-derived from the entry array. The semester-narrowed
+ * clone plannerApp hands us keeps the *fetch's* outcome (data.ts), so
+ * "fetched fine, nothing this semester" (`offSemester`) stays a different
+ * sentence from "we never got an answer" (`failed`). Only the second kind
+ * makes the collision check incomplete; the first two are answers.
+ *
+ * A course whose fetch is still in flight is in none of the lists — the
+ * caller's `loading` flag already says so, and "mangler timeplan" about a
+ * request that is running is not true yet.
+ */
+export function planGaps(courses: PlanCourseState[]): PlanGaps {
+  const gaps: PlanGaps = { failed: [], pending: [], empty: [], offSemester: [] };
+  for (const state of courses) {
+    const code = state.course.code;
+    const outcome = timetableOutcomeOf(state.bundle);
+    if (outcome.kind === "failed") gaps.failed.push(code);
+    else if (outcome.kind === "pending") {
+      if (!state.loading) gaps.pending.push(code);
+    } else if (outcome.kind === "empty") gaps.empty.push(code);
+    else if ((state.bundle?.timetable ?? []).length === 0) gaps.offSemester.push(code);
+  }
+  return gaps;
+}
+
+/** A course whose lecture layer is a guess, and how many alternatives it is a guess between. */
+export interface LectureChoice {
+  code: string;
+  name: string;
+  hueVar: string;
+  /** Lecture groups the guess is one of — always ≥ 2 (`resolveLectureDefaults`). */
+  count: number;
+}
+
+/**
+ * Courses whose lecture parallel we could NOT resolve and the student has not
+ * picked (audit edit-4/ux-1/groups-5/week-5). `resolveLectureDefaults` draws
+ * one provisional session per ambiguous family rather than all nine of
+ * TMA4400's — which is only honest if the week says so, so each of these
+ * becomes the same "velg din" note the øving layer already gets, in the
+ * lecture-only view too.
+ *
+ * `showAllGroups` (the `/emne/` reuse) narrows nothing, so nothing there is a
+ * guess and the list is empty.
+ */
+export function unresolvedLectureChoices(
+  courses: PlanCourseState[],
+  showAllGroups: boolean,
+): LectureChoice[] {
+  if (showAllGroups) return [];
+  const choices: LectureChoice[] = [];
+  for (const state of courses) {
+    const timetable = state.bundle?.timetable;
+    if (!timetable || timetable.length === 0) continue;
+    const resolution = resolveLectureDefaults(timetable, state.programCode);
+    if (resolution.resolved) continue;
+    // An explicit lecture pick is an answer, even a wrong one — the picker is
+    // where it gets changed, not a margin note repeating the question.
+    const lectureKeys = new Set(
+      groupOptions(timetable)
+        .filter((o) => o.kind === "lecture")
+        .map((o) => o.key),
+    );
+    if ((state.course.groups ?? []).some((key) => lectureKeys.has(key))) continue;
+    choices.push({
+      code: state.course.code,
+      name: state.course.name,
+      hueVar: state.hueVar,
+      count: resolution.alternatives.length,
+    });
+  }
+  return choices;
+}
+
 /**
  * Collapses a course's identical parallel slots into one block (U1). Kept
  * apart by activity title and by lecture/other, so we never have to invent a
@@ -276,9 +391,9 @@ function capitalize(value: string): string {
 }
 
 /** "A, B og C" — the Norwegian list separator, not a bare comma join. */
-function joinCodes(codes: string[]): string {
-  if (codes.length <= 1) return codes[0] ?? "";
-  return `${codes.slice(0, -1).join(", ")} og ${codes[codes.length - 1]}`;
+function joinList(items: string[]): string {
+  if (items.length <= 1) return items[0] ?? "";
+  return `${items.slice(0, -1).join(", ")} og ${items[items.length - 1]}`;
 }
 
 /** Duration in minutes; 0 for a malformed pair rather than a negative height. */
@@ -399,44 +514,6 @@ function buildGridShell(
   return { element: grid, dayColumns };
 }
 
-// --- Clustering -----------------------------------------------------------
-
-/**
- * Partitions a day's entries into overlap clusters — a maximal run where each
- * entry starts before the running end of the cluster so far (a touching
- * `start === prevEnd` boundary is NOT an overlap and starts a new cluster,
- * matching conflicts.ts / layout.ts). The sort mirrors `layoutDay`'s, so the
- * clusters here line up one-to-one with the columns `layoutDay` assigns — the
- * renderer needs the cluster only to place one "+N til" chip over the pile's
- * overflow, since column packing itself lives in `layoutDay` now.
- */
-function dayClusters(dayEntries: GridEntry[]): GridEntry[][] {
-  const sorted = [...dayEntries].sort(
-    (a, b) =>
-      timeToMinutes(a.startTime) - timeToMinutes(b.startTime) ||
-      timeToMinutes(a.endTime) - timeToMinutes(b.endTime) ||
-      blockId(a).localeCompare(blockId(b)),
-  );
-
-  const clusters: GridEntry[][] = [];
-  let current: GridEntry[] = [];
-  let maxEnd = Number.NEGATIVE_INFINITY;
-
-  for (const entry of sorted) {
-    const start = timeToMinutes(entry.startTime);
-    if (current.length > 0 && start >= maxEnd) {
-      clusters.push(current);
-      current = [];
-      maxEnd = Number.NEGATIVE_INFINITY;
-    }
-    current.push(entry);
-    maxEnd = Math.max(maxEnd, timeToMinutes(entry.endTime));
-  }
-  if (current.length > 0) clusters.push(current);
-
-  return clusters;
-}
-
 // --- Blocks ---------------------------------------------------------------
 
 interface BlockGeometry {
@@ -497,9 +574,16 @@ function groupLabel(entry: GridEntry): string {
   return entry.groupCount > 1 ? `${entry.name} · ${entry.groupCount} grupper` : entry.name;
 }
 
-/** The block's second line: `room · start` (just the start when there is no room). */
-function metaLine(entry: GridEntry): string {
-  return [entry.rooms, entry.startTime].filter(Boolean).join(" · ");
+/**
+ * The block's second line: `start · room` (just the start when there is no
+ * room). The start time comes FIRST because `.planner-block-meta` is
+ * `nowrap` + ellipsis and a 73 px block clips whatever is last — with the
+ * room first, the time was the one fact a student copies into a calendar and
+ * the only one the hour rail (whole hours) cannot give back (week-4). The
+ * room survives in the block's `title`, its aria-label and the popover.
+ */
+export function metaLine(entry: { rooms: string; startTime: string }): string {
+  return [entry.startTime, entry.rooms].filter(Boolean).join(" · ");
 }
 
 /** The popover material for a single block. */
@@ -563,16 +647,86 @@ function buildBlock(
   return block;
 }
 
+/** The structural subset of a pile member its labels are built from. */
+interface PileMember {
+  courseCode: string;
+  startTime: string;
+  endTime: string;
+}
+
+/** Everything a pile says about itself, in one place so the block and the popover agree. */
+export interface PileSummary {
+  /** Distinct course codes, first-session-first. */
+  codes: string[];
+  /** "5 aktiviteter" — sessions, not courses. */
+  activities: string;
+  /** The block's caption: "2 emner · 5 aktiviteter", or just the activities for one course. */
+  meta: string;
+  /** Every session timed: "ETT1101 08:15–10:00 og 09:15–10:00; ETT1102 08:15–11:00". */
+  sessions: string;
+  /** The same, grouped: one row per course, its times in start order. */
+  byCourse: { code: string; times: string[] }[];
+}
+
+/**
+ * What a pile is allowed to claim. Three findings meet here:
+ *
+ *  - grid-1: the pile printed one row per distinct COURSE and the cluster's
+ *    earliest start, so four of five days on a prefilled BERGO week were
+ *    identical featureless slabs reading "2 emner · 08:15" over nine real
+ *    sessions. Every session is named and timed now.
+ *  - copy-1/grid-5: the two counts wore each other's nouns — "1 emner",
+ *    "1 aktiviteter samtidig". Courses count as emner, sessions as
+ *    aktiviteter, and a single-course pile drops the course count entirely:
+ *    it is one course's own overlapping sessions, not a pile of courses.
+ *  - grid-2: nothing says "samtidig" any more. A cluster is a *chain* of
+ *    overlaps (A–B, B–C, with A and C free of each other) and the week is a
+ *    composite of every teaching week, so two members can be a month apart —
+ *    ETT1101's Tuesday lectures run weeks 33-34, 37-42, ETT1102's 35-36. What
+ *    the pile can honestly say is that they share one rute; the times say the
+ *    rest.
+ *
+ * `sessions` names the course on every row only when there is more than one —
+ * a single-course pile has its code above the list already.
+ */
+export function pileSummary(members: PileMember[]): PileSummary {
+  const byCourse: { code: string; times: string[] }[] = [];
+  for (const member of members) {
+    const time = `${member.startTime}–${member.endTime}`;
+    const row = byCourse.find((r) => r.code === member.courseCode);
+    if (row) row.times.push(time);
+    else byCourse.push({ code: member.courseCode, times: [time] });
+  }
+  const codes = byCourse.map((r) => r.code);
+  const activities = `${members.length} ${members.length === 1 ? "aktivitet" : "aktiviteter"}`;
+  const single = codes.length === 1;
+  return {
+    codes,
+    activities,
+    // The plural of "emne" needs no branch in the multi-course arm: one
+    // course takes the other one.
+    meta: single ? activities : `${codes.length} emner · ${activities}`,
+    sessions: single
+      ? joinList(byCourse[0]?.times ?? [])
+      : byCourse.map((r) => `${r.code} ${joinList(r.times)}`).join("; "),
+    byCourse,
+  };
+}
+
 /**
  * ONE block for a whole cluster that would need more than `MAX_COLUMNS`
  * columns — the pile. It spans the cluster's own start→end at full day width
- * and lists each distinct course code on its own line, so nothing is hidden
- * and no code is squeezed into a 35 px sliver.
+ * and lists every session it holds, so nothing is hidden and no code is
+ * squeezed into a 35 px sliver.
  *
  * This replaces the "+N til" chip, which showed the first two columns and
  * reduced everything behind them to a count. A count is the one thing a
  * student cannot act on: "+3 til" does not say whether the pile contains the
  * lecture they came for. Clicking still opens the popover with every entry.
+ *
+ * Each course's code sits on its own row and its session times on the rows
+ * below it: a ~106 px weekday has no room for a code and a start–end range
+ * side by side, and the code is the one thing that must never be clipped.
  */
 function buildPileBlock(
   entries: GridEntry[],
@@ -595,53 +749,61 @@ function buildPileBlock(
     appendClashBand(block, start, end, geometry.clashWindow);
   }
 
-  // One entry per distinct course, in start order — the hue dot carries
-  // identity, exactly as it does on a single block.
-  const byCode = new Map<string, GridEntry>();
-  for (const entry of entries) {
-    if (!byCode.has(entry.courseCode)) byCode.set(entry.courseCode, entry);
-  }
-  const courses = [...byCode.values()];
+  const summary = pileSummary(entries);
+  const hueByCode = new Map(entries.map((e) => [e.courseCode, e.hueVar]));
+  const single = summary.codes.length === 1;
+  const soleCode = single ? summary.codes[0] : undefined;
 
-  block.append(
-    el("span", "planner-block-meta np-data", `${courses.length} emner · ${minutesToTime(start)}`),
-  );
+  // One course's own overlapping sessions are not a pile of courses: the
+  // block wears that course's tag exactly like a single block does (grid-5).
+  if (soleCode) block.append(courseTag(hueByCode.get(soleCode) ?? "", soleCode));
+  block.append(el("span", "planner-block-meta np-data", summary.meta));
+
   const list = el("span", "planner-pile-list");
-  for (const entry of courses) {
-    const row = el("span", "planner-pile-row");
-    row.append(dot(entry.hueVar));
-    row.append(el("span", "planner-block-code np-data", entry.courseCode));
-    list.append(row);
+  for (const row of summary.byCourse) {
+    if (!single) {
+      const head = el("span", "planner-pile-row");
+      head.append(dot(hueByCode.get(row.code) ?? ""));
+      head.append(el("span", "planner-block-code np-data", row.code));
+      list.append(head);
+    }
+    for (const time of row.times) list.append(el("span", "planner-block-meta np-data", time));
   }
   block.append(list);
 
   const detail = pileDetail(entries);
-  block.title = `${detail.code} · ${detail.timeLabel}`;
+  block.title = [detail.timeLabel, detail.rooms, detail.weeksLabel].filter(Boolean).join(" · ");
   block.setAttribute(
     "aria-label",
-    `${courses.length} aktiviteter samtidig: ${detail.code}, ${detail.timeLabel}`,
+    `${soleCode ? `${soleCode}, ` : ""}${summary.activities} i samme rute, ${dayName(entries[0]?.dayNumber ?? 1)}: ${summary.sessions}`,
   );
   if (onBlockClick) block.addEventListener("click", () => onBlockClick(detail, block));
   return block;
 }
 
-/** Synthetic popover material for a pile: its entries, codes joined " · ". */
-function pileDetail(hidden: GridEntry[]): BlockDetail {
-  const first = hidden[0];
-  const codes = [...new Set(hidden.map((e) => e.courseCode))].join(" · ");
-  const names = [...new Set(hidden.map((e) => e.courseName))].join(" · ");
-  const start = Math.min(...hidden.map((e) => timeToMinutes(e.startTime)));
-  const end = Math.max(...hidden.map((e) => timeToMinutes(e.endTime)));
-  const rooms = [...new Set(hidden.flatMap((e) => e.rooms.split(", ")))].filter(Boolean).join(", ");
-  const weeks = [...new Set(hidden.flatMap((e) => e.weeksNumbers))].sort((a, b) => a - b);
+/**
+ * Synthetic popover material for a pile: its entries, codes joined " · "
+ * (plannerApp keys the whole-pile popover off that separator). `timeLabel`
+ * lists every session rather than the cluster's outer span — the popover was
+ * the pile's only escape hatch and it answered "tirsdag 08:15–12:00" for nine
+ * different sessions (grid-1).
+ */
+function pileDetail(entries: GridEntry[]): BlockDetail {
+  const first = entries[0];
+  const codes = [...new Set(entries.map((e) => e.courseCode))].join(" · ");
+  const names = [...new Set(entries.map((e) => e.courseName))].join(" · ");
+  const rooms = [...new Set(entries.flatMap((e) => e.rooms.split(", ")))]
+    .filter(Boolean)
+    .join(", ");
+  const weeks = [...new Set(entries.flatMap((e) => e.weeksNumbers))].sort((a, b) => a - b);
   return {
     code: codes,
     name: names,
     entryName: null,
-    timeLabel: `${dayName(first?.dayNumber ?? 1)} ${minutesToTime(start)}–${minutesToTime(end)}`,
+    timeLabel: `${dayName(first?.dayNumber ?? 1)} · ${pileSummary(entries).sessions}`,
     rooms,
     weeksLabel: weekLabel(weeks),
-    isLecture: hidden.some((e) => e.isLecture),
+    isLecture: entries.some((e) => e.isLecture),
   };
 }
 
@@ -679,19 +841,68 @@ function fillConflictNote(host: HTMLElement, group: ConflictGroup): string {
     host.append(el("span", "np-data", weeks));
   }
 
-  return `${day} ${time} · ${joinCodes(group.codes)} kolliderer${weeks ? ` · ${weeks}` : ""}`;
+  return `${day} ${time} · ${joinList(group.codes)} kolliderer${weeks ? ` · ${weeks}` : ""}`;
+}
+
+/**
+ * A margin sentence about courses the week could not draw: grotesk (it has a
+ * verb) with the course codes in `.np-data` (Data-Is-Mono), same idiom as the
+ * conflict note above.
+ */
+function gapNote(lead: string, codes: string[], tail: string): HTMLElement {
+  const note = el("p", "planner-grid-note np-hint");
+  if (lead) note.append(lead);
+  codes.forEach((code, i) => {
+    if (i > 0) note.append(i === codes.length - 1 ? " og " : ", ");
+    note.append(el("span", "np-data", code));
+  });
+  note.append(tail);
+  return note;
 }
 
 // --- Render ---------------------------------------------------------------
 
 /**
- * Renders the weekly spread + its margin conflict notes into `frame` /
- * `notesHost`. `showOthers` (the page's "Vis øvinger og labber" toggle)
- * decides whether non-lecture entries are drawn at all — when off, only
- * lectures render, matching DR-1's lecture-based-by-default rule, *unless*
- * the plan has no lecture-classified entry at all, in which case the muted
- * layer is revealed anyway rather than showing a blank week (B7a). Hour
- * clamping follows the SHOWN entries so the default view stays compact.
+ * Which entries the week actually draws, and whether the muted layer had to
+ * reveal itself to have anything to draw at all.
+ *
+ * Two guards meet here and their COMPOSITION is what broke (ux-fail-1):
+ *
+ *  - B7a: 47 programmes have timetable entries and not one that classifies as
+ *    a lecture. DR-1 accepts under-classification *because* the toggle layer
+ *    still shows the entry, so when that layer is all there is, it is shown
+ *    and the margin says why — rather than shipping a blank week.
+ *  - The øving/lab layer shows the groups the student PICKED, not every group
+ *    the course publishes: EXPH0300 alone ships nine seminar groups at nine
+ *    different times and drawing them all put 41 blocks in an MTDT week.
+ *
+ * Applied together, the second emptied the first: in the auto-reveal branch
+ * nothing is a lecture *by definition*, so `isLecture || groupPicked` kept
+ * exactly nothing for a student who had picked no group — BI1006's eleven
+ * real sessions rendered as a blank, green-verdict week. An auto-revealed
+ * layer therefore draws every entry it has; the "har N grupper — velg din"
+ * note is the narrowing invitation, and narrowing is only allowed to remove
+ * teaching when something else is left standing.
+ */
+export function visibleLayer<T extends { isLecture: boolean; groupPicked: boolean }>(
+  entries: T[],
+  showOthers: boolean,
+): { shown: T[]; mutedLayerAutoRevealed: boolean } {
+  const lectures = entries.filter((e) => e.isLecture);
+  const mutedLayerAutoRevealed = !showOthers && entries.length > 0 && lectures.length === 0;
+  if (mutedLayerAutoRevealed) return { shown: entries, mutedLayerAutoRevealed };
+  if (!showOthers) return { shown: lectures, mutedLayerAutoRevealed };
+  return { shown: entries.filter((e) => e.isLecture || e.groupPicked), mutedLayerAutoRevealed };
+}
+
+/**
+ * Renders the weekly spread + its margin notes into `frame` / `notesHost`.
+ * `showOthers` (the page's "Vis øvinger og labber" toggle) decides whether
+ * non-lecture entries are drawn at all — see `visibleLayer` for that rule and
+ * its auto-reveal. Hour clamping follows the SHOWN entries so the default
+ * view stays compact. The margin carries three kinds of sentence: what the
+ * week could not draw and why (`planGaps`), which slots collide, and which
+ * courses are still waiting for the student to pick a group.
  */
 export function renderGrid(
   frame: HTMLElement,
@@ -702,6 +913,15 @@ export function renderGrid(
 ): GridRenderResult {
   const loading = options.loading ?? false;
   const rawEntries = collectEntries(courses, options.showAllGroups ?? false);
+  // What the week has no answer for, straight from each fetch's own outcome
+  // (pc-3/ux-4). A failed or never-made fetch is the only kind that makes the
+  // collision check incomplete; the other two gaps are answers, and get said
+  // out loud in the margin instead of vanishing.
+  const gaps = planGaps(courses);
+  const incompleteCourses = [...gaps.failed, ...gaps.pending];
+  // Courses whose lecture layer is one provisional pick out of several — the
+  // week draws it, the margin says so (edit-4/ux-1/groups-5/week-5).
+  const lectureChoices = unresolvedLectureChoices(courses, options.showAllGroups ?? false);
 
   const empty = (state: GridRenderResult["state"], message?: string): GridRenderResult => {
     renderGridMessage(frame, notesHost, message);
@@ -711,7 +931,8 @@ export function renderGrid(
       mutedLayerAutoRevealed: false,
       blockCount: 0,
       state,
-      partial: loading,
+      incompleteCourses,
+      partial: loading || incompleteCourses.length > 0,
     };
   };
 
@@ -739,32 +960,22 @@ export function renderGrid(
       mutedLayerAutoRevealed: false,
       blockCount: 0,
       state: "loading",
+      incompleteCourses,
       partial: true,
     };
   }
   if (rawEntries.length === 0) {
-    return pending
-      ? empty("pending-choice", pending)
+    if (pending) return empty("pending-choice", pending);
+    // "Ingen timeplandata … ennå" is a claim about NTNU's data. It may only
+    // be made when we actually got an answer; a failed fetch says so instead
+    // (pc-3).
+    return gaps.failed.length > 0
+      ? empty("empty", `Fikk ikke hentet timeplan for ${joinList(gaps.failed)}.`)
       : empty("empty", "Ingen timeplandata for emnene i planen ennå.");
   }
 
-  // B7a: 47 programmes have timetable entries and not one that classifies as
-  // a lecture. DR-1 accepts under-classification *because* the toggle layer
-  // still shows the entry — so when that layer is the only thing there is,
-  // show it and say why, rather than shipping a blank week.
-  const lectureEntries = rawEntries.filter((e) => e.isLecture);
-  const mutedLayerAutoRevealed = !showOthers && lectureEntries.length === 0;
-
-  // The øving/lab layer shows the groups the student PICKED, not every group
-  // the course publishes. EXPH0300 alone ships nine seminar groups at nine
-  // different times; drawing them all put 41 blocks in an MTDT week and made
-  // the toggle a switch between "my week" and "the cohort's week". An
-  // unpicked course is not silently dropped — `unpickedGroups` below turns
-  // each one into a margin note that opens its picker.
+  const { shown, mutedLayerAutoRevealed } = visibleLayer(rawEntries, showOthers);
   const revealOthers = showOthers || mutedLayerAutoRevealed;
-  const shown = revealOthers
-    ? rawEntries.filter((e) => e.isLecture || e.groupPicked)
-    : lectureEntries;
   const entries = mergeSlots(shown);
 
   // Courses with øving/lab groups and no pick, with how many they offer.
@@ -833,9 +1044,9 @@ export function renderGrid(
     "Ukeplan med timeplanblokker for emnene i planen",
   );
 
-  // Every rendered entry resolves to the element that represents it — an
-  // overflow entry stands behind the "+N til" chip. Conflict notes flash
-  // through this map rather than through getElementById (C5b).
+  // Every rendered entry resolves to the element that represents it — a
+  // piled entry resolves to its pile. Conflict notes flash through this map
+  // rather than through getElementById (C5b).
   const nodeByEntry = new Map<ScheduleEntry, HTMLElement>();
   const geometryBase = { minMinutes };
   let blockCount = 0;
@@ -874,7 +1085,27 @@ export function renderGrid(
     }));
     const slotById = new Map(layoutDay(layoutInput).map((slot) => [slot.id, slot]));
 
-    for (const cluster of dayClusters(packable)) {
+    // The cluster partition comes from `layoutDay`'s own `slot.cluster`, not
+    // from a second copy of its clustering rule here: the two agreed
+    // character for character, but only one of them had tests, and the day
+    // one edit made them disagree two entries would draw at identical
+    // geometry with one hiding the other (tests-6). Members keep start order
+    // so the pile lists its sessions in the order they happen.
+    const clusters = new Map<number, GridEntry[]>();
+    for (const entry of [...packable].sort(
+      (a, b) =>
+        timeToMinutes(a.startTime) - timeToMinutes(b.startTime) ||
+        timeToMinutes(a.endTime) - timeToMinutes(b.endTime) ||
+        blockId(a).localeCompare(blockId(b)),
+    )) {
+      const slot = slotById.get(blockId(entry));
+      if (!slot) continue;
+      const members = clusters.get(slot.cluster);
+      if (members) members.push(entry);
+      else clusters.set(slot.cluster, [entry]);
+    }
+
+    for (const cluster of [...clusters.entries()].sort(([a], [b]) => a - b).map(([, m]) => m)) {
       // `layoutDay` piles a cluster all-or-nothing, so the first member's
       // verdict is the cluster's.
       const first = cluster[0];
@@ -946,6 +1177,33 @@ export function renderGrid(
   // one Thursday afternoon to fix, and reporting it three times inflates the
   // damage and buries the actionable fact (U3).
   notesHost.replaceChildren();
+
+  // The gaps come first: they qualify every sentence below them. A course we
+  // could not fetch makes the whole collision check incomplete; a course NTNU
+  // publishes nothing for — or nothing in this semester — is a real answer,
+  // but it is one the week cannot draw, so it is said instead of vanishing
+  // (pc-3/ux-4).
+  if (gaps.failed.length > 0) {
+    notesHost.append(
+      gapNote(
+        "Fikk ikke hentet timeplan for ",
+        gaps.failed,
+        " — kollisjonssjekken er ufullstendig.",
+      ),
+    );
+  }
+  if (gaps.pending.length > 0) {
+    notesHost.append(
+      gapNote("Mangler timeplan for ", gaps.pending, " — kollisjonssjekken er ufullstendig."),
+    );
+  }
+  if (gaps.empty.length > 0) {
+    notesHost.append(gapNote("NTNU har ingen timeplan for ", gaps.empty, "."));
+  }
+  if (gaps.offSemester.length > 0) {
+    notesHost.append(gapNote("", gaps.offSemester, " undervises ikke i valgt semester."));
+  }
+
   if (mutedLayerAutoRevealed) {
     notesHost.append(
       el(
@@ -969,27 +1227,49 @@ export function renderGrid(
     notesHost.append(list);
   }
 
-  // Nothing the øving filter withheld is hidden silently: one line per course
-  // whose groups are still unpicked, and clicking it opens that course's
+  // Nothing a narrowing withheld is hidden silently: one line per course we
+  // narrowed on a guess or on nothing, and clicking it opens that course's
   // picker (the same popover a block opens).
-  if (unpickedGroups.size > 0) {
-    const list = el("ul", "planner-notes-list");
-    for (const [code, row] of unpickedGroups) {
+  //
+  // The lecture lines come first and are NOT gated on the øving toggle: an
+  // unresolved lecture parallel is drawn provisionally (groups.ts picks one
+  // per session family), and a provisional pick the student is never told
+  // about is how MTIØT's week showed one of TMA4400's nine alternatives — or,
+  // before that, all nine — under a green verdict (edit-4/ux-1/week-5).
+  const choiceNotes = [
+    ...lectureChoices.map((choice) => ({
+      code: choice.code,
+      name: choice.name,
+      hueVar: choice.hueVar,
+      text: ` har ${choice.count} alternative forelesninger — velg din`,
+      aria: `${choice.code} har ${choice.count} alternative forelesninger — vi viser én av dem, velg din`,
+    })),
+    ...[...unpickedGroups].map(([code, row]) => {
       const count = row.keys.size;
+      const noun = count === 1 ? "gruppe" : "grupper";
+      return {
+        code,
+        name: row.name,
+        hueVar: row.hueVar,
+        text: ` har ${count} ${noun} — velg din`,
+        aria: `${code} har ${count} ${noun} du ikke har valgt — velg din`,
+      };
+    }),
+  ];
+  if (choiceNotes.length > 0) {
+    const list = el("ul", "planner-notes-list");
+    for (const note of choiceNotes) {
       const item = el("li");
       const link = el("button", "np-hint planner-note-link planner-note-groups");
       link.type = "button";
-      link.append(dot(row.hueVar));
-      link.append(el("span", "np-data", code));
-      link.append(` har ${count} ${count === 1 ? "gruppe" : "grupper"} — velg din`);
-      link.setAttribute(
-        "aria-label",
-        `${code} har ${count} ${count === 1 ? "gruppe" : "grupper"} du ikke har valgt — velg din`,
-      );
+      link.append(dot(note.hueVar));
+      link.append(el("span", "np-data", note.code));
+      link.append(note.text);
+      link.setAttribute("aria-label", note.aria);
       if (options.onBlockClick) {
         const detail: BlockDetail = {
-          code,
-          name: row.name,
+          code: note.code,
+          name: note.name,
           entryName: null,
           timeLabel: "",
           rooms: "",
@@ -1010,6 +1290,7 @@ export function renderGrid(
     mutedLayerAutoRevealed,
     blockCount,
     state: "grid",
-    partial: loading,
+    incompleteCourses,
+    partial: loading || incompleteCourses.length > 0,
   };
 }
