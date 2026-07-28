@@ -20,6 +20,7 @@
  * unit-tested `buildExamList` (examSchedule.ts) — this module is DOM-only.
  */
 
+import { isDeferredOccasion } from "ntnu-api";
 import {
   type CourseExam,
   type ExamWindow,
@@ -40,18 +41,19 @@ import type { PlanCourseState } from "./types.js";
  * sittings only, and the catalog cannot say: `continuation` is `false` on all
  * 2 438 catalog exam rows, so `crawler/transform.mjs`'s filter is correct code
  * fed a flag upstream never sets (exams-1). `occasion` is the honest signal —
- * "Ordinær eksamen" vs "Utsatt eksamen" — and it is read as a **label only**,
- * never re-parsed for a date (DR-3).
+ * "Ordinær eksamen" vs "Utsatt eksamen".
  *
- * Deliberately fail-open: an occasion we do not recognise keeps its exam.
- * Deleting a real exam date is far worse than listing one too many.
+ * Now `ntnu-api`'s, and re-exported here so DR-3's readers keep one import:
+ * which wordings NTNU prints is a fact about NTNU, and `ntnu-mcp` was filtering
+ * on the dead `continuation` flag for want of this. `ExamDate.continuation`
+ * now documents its own uselessness upstream too, so the next consumer does
+ * not have to rediscover it.
+ *
+ * Still read as a **label only**, never re-parsed for a date (DR-3), and still
+ * fail-open: an occasion we do not recognise keeps its exam. Deleting a real
+ * exam date is far worse than listing one too many.
  */
-export function isDeferredOccasion(occasion: string | null | undefined): boolean {
-  if (!occasion) return false;
-  const text = occasion.toLowerCase();
-  if (text.startsWith("ordinær")) return false;
-  return text.includes("utsatt") || text.includes("kont");
-}
+export { isDeferredOccasion };
 
 /**
  * Does the scraped exam list say this catalog date is a deferred sitting?

@@ -1,54 +1,35 @@
 /**
- * Time/week math for the planner engine. Week parsing is reimplemented here
- * (rather than importing `ntnu-api`'s `weekNumbers`) so this module stays
- * framework-free and safe to bundle into the browser: see PLANNER.md §3.
+ * Time/week math for the planner engine.
+ *
+ * `parseWeeks`/`toMinutes` were reimplemented here for years, on the grounds
+ * that importing `ntnu-api` would drag its `HttpClient` into a browser bundle
+ * (PLANNER.md §3). That reasoning no longer applies: they now live in
+ * `ntnu-api/schedule`, are pure, and the package is `sideEffects: false`, so
+ * Rollup drops everything the planner does not call — the built client bundle
+ * carries no upstream URL, which `tests/planner/schedule.test.ts` asserts. The
+ * hardened behaviour (dedupe, sort, skip reversed/multi-dash/non-numeric
+ * tokens) went upstream with them, so `ntnu-api`'s own `weekNumbers` no longer
+ * disagrees with what the planner does.
+ *
+ * They stay re-exported from this module rather than being imported directly
+ * everywhere: the planner has ~15 call sites and this is the seam they already
+ * point at.
+ *
+ * What remains genuinely local is below — semester-id arithmetic and the two
+ * "which entries count for this student" filters are planner product rules,
+ * not facts about NTNU's payloads.
  */
 
-/** A recurring weekly slot, shaped like `ntnu-api`'s `TimetableEntry` (structural subset). */
-export interface ScheduleEntry {
-  courseCode: string;
-  dayNumber: number;
-  startTime: string;
-  endTime: string;
-  weeks: string[];
-}
+import { parseWeeks, type WeeklySlot } from "ntnu-api";
+
+export { parseWeeks, toMinutes } from "ntnu-api";
 
 /**
- * Expand week-range strings (`"2-13"`, `"36"`) into a flat, deduplicated,
- * ascending list of ISO week numbers. Malformed entries (non-numeric,
- * reversed ranges, empty strings) are skipped rather than thrown — upstream
- * data is not guaranteed clean.
+ * A recurring weekly slot, shaped like `ntnu-api`'s `TimetableEntry`
+ * (structural subset). Now `ntnu-api`'s own `WeeklySlot` — kept under this
+ * name because the planner names it in ~40 places and the two are identical.
  */
-export function parseWeeks(weeks: string[]): number[] {
-  const result = new Set<number>();
-  for (const raw of weeks) {
-    const token = raw.trim();
-    if (token === "") continue;
-    const rangeMatch = /^(\d+)-(\d+)$/.exec(token);
-    if (rangeMatch) {
-      const start = Number(rangeMatch[1]);
-      const end = Number(rangeMatch[2]);
-      if (start > end) continue;
-      for (let w = start; w <= end; w++) result.add(w);
-      continue;
-    }
-    if (/^\d+$/.test(token)) {
-      result.add(Number(token));
-    }
-    // anything else (e.g. "abc") is silently skipped
-  }
-  return [...result].sort((a, b) => a - b);
-}
-
-/** Parse `"HH:MM"` into minutes since midnight, or `null` if malformed. */
-export function toMinutes(time: string): number | null {
-  const m = /^(\d{1,2}):(\d{2})$/.exec(time.trim());
-  if (!m) return null;
-  const hours = Number(m[1]);
-  const minutes = Number(m[2]);
-  if (hours < 0 || hours > 23 || minutes < 0 || minutes > 59) return null;
-  return hours * 60 + minutes;
-}
+export type ScheduleEntry = WeeklySlot;
 
 /** The calendar year encoded in a `Semester.id` like `"26h"`/`"27v"` (2-digit year + season letter). */
 export function semesterYear(semesterId: string): number | null {

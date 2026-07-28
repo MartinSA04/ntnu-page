@@ -16,6 +16,8 @@
  * string survives as `detail` for the console only.
  */
 
+import { decodeEntities } from "ntnu-api";
+
 /** Structural subset of `ntnu-api`'s `TimetableEntry` (see routes.ts serialization). */
 export interface TimetableEntry {
   courseCode: string;
@@ -286,34 +288,19 @@ async function fetchJson<T>(
   }
 }
 
-/** Named + numeric HTML entities NTNU's own activity titles carry (ux-7). */
-const NAMED_ENTITIES: Record<string, string> = {
-  amp: "&",
-  lt: "<",
-  gt: ">",
-  quot: '"',
-  apos: "'",
-  nbsp: " ",
-};
-
 /**
  * Decodes the HTML entities upstream ships inside plain-text fields — real
- * blocks render "Forelesning 1 MTELSYS &#38; MTTK" without this. Regex, not
- * an element: this module runs under vitest too, and innerHTML on upstream
- * text is not a trade we want.
+ * blocks render "Forelesning 1 MTELSYS &#38; MTTK" without this (ux-7).
+ *
+ * The decoder is now `ntnu-api`'s, which also applies it inside
+ * `parseTimetableEntry` itself — so a freshly-parsed payload arrives decoded
+ * and this pass is a no-op on it. It is re-exported and still applied below,
+ * which is not redundancy: the worker's KV cache holds entries parsed by the
+ * *previous* library version for up to a full TTL after a deploy, and those
+ * still carry raw entities. Decoding twice is safe (decoded text contains no
+ * entity to decode) and costs one `includes("&")` per field.
  */
-export function decodeEntities(text: string): string {
-  if (!text.includes("&")) return text;
-  return text.replace(/&(#\d+|#[xX][0-9a-fA-F]+|[a-zA-Z]+);/g, (whole, body: string) => {
-    if (!body.startsWith("#")) return NAMED_ENTITIES[body.toLowerCase()] ?? whole;
-    const code =
-      body[1] === "x" || body[1] === "X"
-        ? Number.parseInt(body.slice(2), 16)
-        : Number.parseInt(body.slice(1), 10);
-    if (!Number.isFinite(code) || code <= 0 || code > 0x10ffff) return whole;
-    return String.fromCodePoint(code);
-  });
-}
+export { decodeEntities };
 
 /** Same entry unless `title`/`name` actually carried an entity. */
 function decodeEntry(entry: TimetableEntry): TimetableEntry {

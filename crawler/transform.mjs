@@ -128,6 +128,11 @@ export function mergeCatalogs(catalogs) {
  * budgets for the whole crawl. Joining `occasion` onto these `[season, date]`
  * pairs by exact ISO date is the consumer's job; see audit finding exams-1.
  *
+ * This measurement is no longer only written down here: `ntnu-api` documents
+ * it on `ExamDate.continuation` itself, so the next consumer to reach for the
+ * flag is warned at the type rather than after shipping. `ntnu-mcp` had
+ * already shipped the same no-op filter for want of that.
+ *
  * The tuple is fetched at runtime, so it stays positional and append-only:
  * `version` (index 4) is what DR-4 needs to fetch the right timetable — 293
  * of 5 470 index rows are not version "1" (220 of them offered in the

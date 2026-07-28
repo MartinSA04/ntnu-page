@@ -40,59 +40,28 @@
  * `groupName` carries the group's verbatim title so the UI can quote the
  * place where "velg 2 av 5" is actually written down.
  */
+import type {
+  PlanCourseGroup,
+  PlanDirection,
+  PlannedCourse,
+  StudyPlan,
+  StudyWaypoint,
+} from "ntnu-api";
 import { semesterYear } from "../../lib/planner/schedule.js";
 
-interface StudyChoice {
-  code: string | null;
-  name: string | null;
-  description: string | null;
-}
-
-interface PlannedCourse {
-  code: string;
-  version: string | null;
-  name: string | null;
-  credits: number | null;
-  planElement: boolean;
-  studyChoice: StudyChoice | null;
-}
-
-interface PlanCourseGroup {
-  code: string | null;
-  name: string | null;
-  description: string | null;
-  courses: PlannedCourse[];
-}
-
-interface StudyWaypoint {
-  code: string | null;
-  name: string | null;
-  description: string | null;
-  deadlineDate: string | null;
-  directions: PlanDirection[];
-}
-
-interface PlanDirection {
-  code: string | null;
-  name: string | null;
-  courseGroups: PlanCourseGroup[];
-  waypoints: StudyWaypoint[];
-}
-
-interface StudyPlanPeriod {
-  periodNumber: number | null;
-  direction: PlanDirection;
-}
-
-export interface StudyPlan {
-  code: string;
-  name: string | null;
-  year: number | null;
-  startTerm: string | null;
-  updated: string | null;
-  periods: StudyPlanPeriod[];
-  publishedYears: number[];
-}
+/**
+ * The study-plan document shape, straight from `ntnu-api`.
+ *
+ * These seven interfaces used to be re-declared here, byte-for-byte identical
+ * to the library's — unlike `data.ts`'s structural subsets, which are
+ * deliberately partial and shaped by what the worker serializes. Copies of a
+ * type that is not ours only drift. Type-only imports are erased at build, so
+ * the browser bundle is unchanged.
+ *
+ * `PlanDirection`'s recursion (waypoints → directions → waypoints) is the
+ * upstream document's own; everything below walks it.
+ */
+export type { StudyPlan };
 
 export interface ClassifiedCourse {
   code: string;

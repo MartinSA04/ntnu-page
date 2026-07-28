@@ -59,6 +59,20 @@
   already-decoded request for the same code share one cache entry.
 - Upstream NTNU endpoint knowledge lives in the `ntnu-api` package only
   (same layering rule as ntnu-mcp); this repo consumes its public client.
+  That rule now covers **derived** upstream knowledge too, not just URLs:
+  activity classification (`classifyActivity` — what a `title` means, the
+  FORM/FERD/DISAM/SAM buckets), the conflict engine (`findConflicts`,
+  `groupConflicts`, `mergeParallelSlots`), week/time parsing (`parseWeeks`,
+  `toMinutes`, `weeksToRanges`), `decodeEntities` and `isDeferredOccasion`
+  all live upstream and are re-exported through the thin modules that used
+  to own them (`src/lib/planner/{activity,conflicts,schedule}.ts`,
+  `examList.ts`). Those files now hold only this product's *policy* — DR-1's
+  asymmetric collapse to `lecture | other`, the "no exam logic in
+  conflicts.ts" rule. Fix a fact about NTNU in `ntnu-api`; fix a rule about
+  Semesterplan here. It is safe to import from `"ntnu-api"` in browser code:
+  the package is `sideEffects: false`, every such helper is pure, and
+  `tests/bundle.test.mjs` fails if an upstream URL ever reaches a client
+  chunk (i.e. if the HTTP layer stops being tree-shaken out).
 - **ClientRouter rule (load-bearing):** hoisted page/component scripts run
   ONCE per module — they do NOT re-execute after a view-transition swap. Every
   page's setup must go through `onPage(setup)` (`src/lib/pageLifecycle.ts`),
