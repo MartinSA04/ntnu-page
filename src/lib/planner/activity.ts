@@ -40,9 +40,17 @@
  * percentage points more, but changed 106 distinct titles instead of 15,
  * promoting programme names ("Bachelor i Paramedisin Gjøvik"), orientation
  * weeks and admin ("Annet", "Info/diverse") to lectures. Wrong side of DR-1.
- * The one place the name bucket IS consulted is "Samling N", where live data
- * spreads the same title across four different buckets and the bucket is the
- * only thing separating block-taught lectures from group work.
+ * `name` is therefore still never consulted: `title` decides, always.
+ *
+ * The same pass moved `/samling/i` from the non-lecture list to the lecture
+ * one. It had been read as a delivery format ("block-taught, not a lecture
+ * slot"), which inverted it: a *samling* is the gathering a samlingsbasert
+ * (remote/part-time) programme calls its students in for, and that gathering
+ * is the teaching. Live data spreads "Samling N" across FOR, FORM, SAM and
+ * DISAM names indifferently, which is why the title decides and the bucket
+ * does not. The sibling rows that keep this from over-reaching are titles like
+ * "Øving"/"Fellesøving"/"Seminar" carrying a SAM *name* — the non-lecture
+ * keyword check runs first, so those stay øvinger.
  *
  * What this does NOT fix: ~22% of course-terms still classify as entirely
  * lecture-less, and most of them genuinely are (Kunstakademiet's "allmøte" and
@@ -97,6 +105,17 @@ const LECTURE_KEYWORDS = [
   /\bplenum/i, // "Plenumsregning" — whole-class lecture-style session
   /teorimodul/i, // TDT4140's "1 Teorimodul" — the lecture half of a modular course
   /regneverksted/i, // whole-class worked-example session, taught from the front
+  // "Samling", "Samling 3", "Samling uke 3", "Samling 2 - uke 7",
+  // "Samlingsuke 1", "Samlingsbasert undervisning". A samling is the gathering
+  // a samlingsbasert (remote/part-time) programme calls its students in for —
+  // they *samles*, in person, and that gathering IS the teaching. It was in
+  // NON_LECTURE_KEYWORDS until 2026-07-28 on the reading that it named a
+  // delivery format rather than an activity; that was backwards, and it cost
+  // those programmes their entire lecture layer. A clash against a samling is
+  // also as real as a clash gets: the student has to be in the room that day.
+  // The bucket the department filed it under does not change that — live data
+  // spreads "Samling N" across FOR, FORM, SAM and DISAM names alike.
+  /samling/i,
 ];
 
 /**
@@ -112,7 +131,6 @@ const NON_LECTURE_KEYWORDS = [
   /\bgruppe/i, // "Gruppe", "Gruppearbeid", "10Gruppe", "Gruppeøving"
   /kollokvie/i,
   /\bekskursjon|\btur\b|omvisning/i, // field trips
-  /samling/i, // "Samlingsbasert undervisning", "Samling 1" — block-taught, not a lecture slot
   /øvelse/i,
   // PBL is group work, not a plenary, whichever way a faculty spells it
   // (conf-2). BI1001's 2026_VÅR timetable publishes 29 rows titled exactly
@@ -154,12 +172,6 @@ const COMBINED_SEPARATOR = /\s*\/\s*|\s+and\s+|\s*&\s*|\s+og\s+/i;
  */
 const BUCKET_LECTURE_TITLE = /^(?:formidling|undervisning)$|^fellesundervisning/i;
 
-/** "Samling", "Samling 1" — block teaching, but only per the name bucket. */
-const SAMLING_TITLE = /^samling\s*\d*$/i;
-
-/** The two `name` buckets that mean "this is a plenary". */
-const LECTURE_NAME_BUCKET = /^(?:forelesning|formidling)$/i;
-
 /**
  * True for a title that is nothing but joined activity qualifiers, at least
  * one of which is a plain lecture — "Forelesning/Øving", "Forelesning / Øving",
@@ -196,19 +208,12 @@ function isCombinedLecture(text: string): boolean {
  * `"other"` (the safe default — see module docs).
  */
 export function classifyActivity(entry: ActivityLike): ActivityKind {
-  // Bucket-as-title runs FIRST and reads `title`/`name` as separate fields
-  // rather than the resolved text below: the whole point is that the
-  // department published nothing finer than the bucket, which is only
-  // observable while the two fields are still distinguishable. "Samling" also
-  // has to be decided here because `/samling/i` is itself a non-lecture
-  // keyword and would otherwise swallow it.
+  // Bucket-as-title runs FIRST and reads `title` rather than the resolved text
+  // below: the whole point is that the department published nothing finer than
+  // the bucket, which is only observable while `title` and `name` are still
+  // distinguishable. `{title: "Øving", name: "Formidling"}` must stay an øving.
   const rawTitle = entry.title?.trim() ?? "";
-  if (rawTitle !== "") {
-    if (BUCKET_LECTURE_TITLE.test(rawTitle)) return "lecture";
-    if (SAMLING_TITLE.test(rawTitle) && LECTURE_NAME_BUCKET.test(entry.name?.trim() ?? "")) {
-      return "lecture";
-    }
-  }
+  if (rawTitle !== "" && BUCKET_LECTURE_TITLE.test(rawTitle)) return "lecture";
 
   const text = entry.title?.trim() || entry.name?.trim() || entry.acronym?.trim() || "";
   if (text === "") return "other";

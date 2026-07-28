@@ -84,13 +84,20 @@ describe("classifyActivity — real-data validation set", () => {
     // only here and not as a general separator).
     ["Forelesning og øving", "FOR", "Forelesning"],
     ["Forelesning og øving", "DISAM", "Dialog- og samarbeidsbasert undervisning"],
-    // Block teaching for samlingsbaserte studier, but ONLY when the name
-    // bucket says it is a lecture — "Samling N" is spread across four
-    // different buckets in live data and the bucket is the only thing that
-    // separates them (see the "other" list for the DISAM/SAM-named siblings).
+    // A "samling" is the gathering a samlingsbasert (remote/part-time) study
+    // programme calls its students in for — they samles, physically, and that
+    // gathering IS the teaching. So it is a lecture whatever pedagogy bucket
+    // the department filed it under, and a clash against one is as real as a
+    // clash gets: the student has to be in the room.
     ["Samling", "FOR", "Forelesning"],
     ["Samling 3", "FOR", "Forelesning"],
     ["Samling 1", "FORM", "Formidling"],
+    ["Samlingsbasert undervisning", "SAM", "Samlingsbasert undervisning"],
+    ["Samling 1", "SAM", "Samlingsbasert undervisning"],
+    ["Samling 2", "DISAM", "Dialog- og samarbeidsbasert undervisning"],
+    ["Samlingsuke 2", "DISAM", "Dialog- og samarbeidsbasert undervisning"],
+    ["Samling 2 - uke 7", "SAM", "Samlingsbasert undervisning"],
+    ["Samling uke 3", "SAM", "Samlingsbasert undervisning"],
   ];
 
   const other: Array<[string | null, string | null, string | null]> = [
@@ -112,8 +119,11 @@ describe("classifyActivity — real-data validation set", () => {
     [" Gruppe 1", "DISAM", "Dialog- og samarbeidsbasert undervisning"],
     ["Gruppearbeid", "DISAM-P", "Dialog- og samarbeidsbasert undervisning"],
     ["Gruppe", "GR", "Gruppe"],
-    ["Samlingsbasert undervisning", "SAM", "Samlingsbasert undervisning"],
-    ["Samling 1", "SAM", "Samlingsbasert undervisning"],
+    // A SAM *name* rides on øvinger and seminars too, so the title still wins:
+    // these are the sibling rows that keep "samling" from over-reaching.
+    ["Øving", "SAM", "Samlingsbasert undervisning"],
+    ["Fellesøving", "SAM", "Samlingsbasert undervisning"],
+    ["Seminar", "SAM", "Samlingsbasert undervisning"],
     // PBL, in each of the three spellings live data shows. This row used to be
     // hand-labeled a lecture ("the health faculties' PBL plenary") — BI1001
     // publishes it across five mutually exclusive weekly slots, so it is
@@ -143,10 +153,6 @@ describe("classifyActivity — real-data validation set", () => {
     // only means "joint" — too generic to promote on. Its lecture-less week is
     // the margin note's job, not the classifier's.
     ["Felles", "FORM", "Formidling"],
-    // "Samling N" whose bucket is NOT a lecture stays out — this is the pair
-    // that makes the name check load-bearing rather than decoration.
-    ["Samling 2", "DISAM", "Dialog- og samarbeidsbasert undervisning"],
-    ["Samling 4", "SAM", "Samlingsbasert undervisning"],
     // " og " admits a combined session only when EVERY part is a recognized
     // activity qualifier, exactly like "/" — it is not a general separator.
     ["Øving og gruppearbeid", "DISAM", "Dialog- og samarbeidsbasert undervisning"],
