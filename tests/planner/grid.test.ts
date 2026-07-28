@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, test } from "vitest";
 import {
+  lectureLessCourses,
   metaLine,
   pileSummary,
   planGaps,
@@ -79,6 +80,39 @@ describe("visibleLayer (ux-fail-1)", () => {
 
   test("an empty week is not an auto-reveal", () => {
     expect(visibleLayer([], false)).toEqual({ shown: [], mutedLayerAutoRevealed: false });
+  });
+});
+
+describe("lectureLessCourses", () => {
+  /**
+   * The gap the auto-reveal cannot cover. `visibleLayer`'s B7a reveal is
+   * plan-GLOBAL — it only fires when NOT ONE course in the plan has a lecture.
+   * So a lecture-less course sharing a plan with an ordinary one is silently
+   * dropped from both the week and the collision check, with nothing said.
+   * TFY4220's 2026_HØST hit exactly this before its "Formidling" titles were
+   * classified; ~22% of course-terms still do, and always will (Kunstakademiet
+   * publishes "allmøte" and "atelierflyt/rydding", never a lecture).
+   */
+  const lec = (courseCode: string) => ({ courseCode, isLecture: true, groupPicked: false });
+  const oth = (courseCode: string) => ({ courseCode, isLecture: false, groupPicked: false });
+
+  test("names a course whose entries are all non-lecture", () => {
+    expect(lectureLessCourses([lec("TMA4400"), oth("BK1151"), oth("BK1151")])).toEqual(["BK1151"]);
+  });
+
+  test("says nothing when every course has a lecture", () => {
+    expect(lectureLessCourses([lec("TMA4400"), oth("TMA4400"), lec("TFY4220")])).toEqual([]);
+  });
+
+  test("reports each lecture-less course once, in plan order", () => {
+    expect(lectureLessCourses([oth("BK2452"), oth("BK1151"), oth("BK2452")])).toEqual([
+      "BK2452",
+      "BK1151",
+    ]);
+  });
+
+  test("a course with no entries at all is not lecture-less — planGaps owns that sentence", () => {
+    expect(lectureLessCourses([])).toEqual([]);
   });
 });
 

@@ -938,6 +938,38 @@ export function visibleLayer<T extends { isLecture: boolean; groupPicked: boolea
 }
 
 /**
+ * Courses that published sessions but not one this app can call a lecture, in
+ * plan order.
+ *
+ * `visibleLayer`'s B7a auto-reveal is plan-GLOBAL: it fires only when NOT ONE
+ * course in the plan has a lecture. Add an ordinary course alongside a
+ * lecture-less one and the reveal stops firing, so the lecture-less course
+ * drops out of the drawn week AND out of the (lecture-only, DR-1) collision
+ * check with nothing said about it. That silence is the defect — TFY4220's
+ * autumn hit it before its bucket-titles were classified (activity.ts), and a
+ * measured ~22% of course-terms still cannot be lecture-classified at all and
+ * never will be: Kunstakademiet publishes "allmøte" and "atelierflyt/rydding",
+ * the conservatory "Gehør gruppe 1".
+ *
+ * The fix is to SAY it, not to draw it. Auto-revealing these per-course was
+ * considered and rejected on the data: BK1151 alone would add 36 blocks
+ * including four all-day "examn week" rows, and feeding those to the conflict
+ * engine would collide every other course in the plan against them — mass
+ * false reds, the precise failure DR-1 exists to prevent.
+ */
+export function lectureLessCourses<T extends { courseCode: string; isLecture: boolean }>(
+  entries: T[],
+): string[] {
+  const withLecture = new Set<string>();
+  const seen: string[] = [];
+  for (const e of entries) {
+    if (e.isLecture) withLecture.add(e.courseCode);
+    else if (!seen.includes(e.courseCode)) seen.push(e.courseCode);
+  }
+  return seen.filter((code) => !withLecture.has(code));
+}
+
+/**
  * Renders the weekly spread + its margin notes into `frame` / `notesHost`.
  * `showOthers` (the page's "Vis øvinger og labber" toggle) decides whether
  * non-lecture entries are drawn at all — see `visibleLayer` for that rule and
@@ -1263,6 +1295,20 @@ export function renderGrid(
         "Ingen aktiviteter er merket som forelesning i disse emnene — viser all undervisning.",
       ),
     );
+  } else if (!revealOthers) {
+    // The plan-global auto-reveal above did not fire because SOME course has a
+    // lecture — which is exactly when a lecture-less course disappears without
+    // a word. Name it rather than draw it (`lectureLessCourses`).
+    const silent = lectureLessCourses(rawEntries);
+    if (silent.length > 0) {
+      notesHost.append(
+        gapNote(
+          "Ingen aktiviteter er merket som forelesning i ",
+          silent,
+          " — timene vises ikke her, og de er ikke med i kollisjonssjekken. Slå på «vis øvinger og labber» for å se dem.",
+        ),
+      );
+    }
   }
   if (conflictGroups.length > 0) {
     const list = el("ul", "planner-notes-list");

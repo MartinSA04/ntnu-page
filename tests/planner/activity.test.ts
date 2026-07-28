@@ -56,6 +56,41 @@ describe("classifyActivity — real-data validation set", () => {
     ["2Forlesning/Øving", "FORM", "Formidling"],
     ["Lecture and Lab exercise ", "FORM", "Formidling"],
     ["Lecture/Tutorial/Lab", "FORM", "Formidling"],
+    // --- bucket-as-title (audit 2026-07-28) -------------------------------
+    // When a department fills in no finer title than the delivery-format
+    // bucket itself, the bucket IS the activity — there is no other signal.
+    // TFY4220 2026_HØST publishes its whole autumn this way: two weekly
+    // "Formidling" slots in one room (the lectures) plus three
+    // "Ferdighetstrening" slots in three rooms (the øvinger). Measured over a
+    // full-catalog timetable sweep, a bare "Formidling" title co-occurs with a
+    // real "Forelesning" in the same course-term only 6% of the time — it is
+    // the teaching, not a second activity alongside it.
+    ["Formidling", "FORM", "Formidling"],
+    ["Undervisning", "FORM", "Formidling"],
+    ["Undervisning", "FOR", "Forelesning"],
+    // "Joint teaching" — a plenary by construction. Never co-occurs with a
+    // real lecture in the sweep. Matched as a prefix because live data glues
+    // a cohort onto it ("Fellesundervisning1B").
+    ["Fellesundervisning", "FØ", "Forelesning/Øving"],
+    ["Fellesundervisning1B", "FELLES", "Defineres i timeplan"],
+    ["Fellesundervisning i pedagogikk", "SEM", "Seminar"],
+    // The plural was the whole bug: /\blecture\b/ cannot match "lectures", so
+    // BK1151's real Friday lecture series classified as "other".
+    ["Lectures", "FOR", "Forelesning"],
+    ["Lectures, week 1", "FOR", "Forelesning"],
+    ["Friday lectures", "DISAM", "Dialog- og samarbeidsbasert undervisning"],
+    // Norwegian " og " joining ONE combined session, the B7b carve-out written
+    // the Norwegian way (see COMBINED_SEPARATOR for why " og " is admitted
+    // only here and not as a general separator).
+    ["Forelesning og øving", "FOR", "Forelesning"],
+    ["Forelesning og øving", "DISAM", "Dialog- og samarbeidsbasert undervisning"],
+    // Block teaching for samlingsbaserte studier, but ONLY when the name
+    // bucket says it is a lecture — "Samling N" is spread across four
+    // different buckets in live data and the bucket is the only thing that
+    // separates them (see the "other" list for the DISAM/SAM-named siblings).
+    ["Samling", "FOR", "Forelesning"],
+    ["Samling 3", "FOR", "Forelesning"],
+    ["Samling 1", "FORM", "Formidling"],
   ];
 
   const other: Array<[string | null, string | null, string | null]> = [
@@ -94,8 +129,28 @@ describe("classifyActivity — real-data validation set", () => {
     ["Eksamensavvikling", "DISAM", "Dialog- og samarbeidsbasert undervisning"],
     ["Annet", "ORIENT", "Orientering"],
     ["Diverse", "FORM", "Formidling"],
-    ["Undervisning", "FORM", "Formidling"],
     ["Vurdering", "FORM", "Formidling"],
+    // The bucket-as-title rule is a CLOSED list, deliberately not a general
+    // "fall back to the name bucket when the title is opaque" rule. Scored
+    // against the full sweep, that general rule rescued ~5 points more but
+    // promoted 106 distinct titles instead of 15, including these — programme
+    // names, orientation weeks and admin, all carrying a FORM/FOR bucket.
+    ["Bachelor i Paramedisin Gjøvik", "FORM", "Formidling"],
+    ["Safety guide tour for exchange students", "FORM", "Formidling"],
+    ["orienteringsuke", "FOR", "Forelesning"],
+    ["Info/diverse", "FORM", "Formidling"],
+    // "Felles" on its own is one course-term in the whole catalog and the word
+    // only means "joint" — too generic to promote on. Its lecture-less week is
+    // the margin note's job, not the classifier's.
+    ["Felles", "FORM", "Formidling"],
+    // "Samling N" whose bucket is NOT a lecture stays out — this is the pair
+    // that makes the name check load-bearing rather than decoration.
+    ["Samling 2", "DISAM", "Dialog- og samarbeidsbasert undervisning"],
+    ["Samling 4", "SAM", "Samlingsbasert undervisning"],
+    // " og " admits a combined session only when EVERY part is a recognized
+    // activity qualifier, exactly like "/" — it is not a general separator.
+    ["Øving og gruppearbeid", "DISAM", "Dialog- og samarbeidsbasert undervisning"],
+    ["Undervisning inkludert lab i FKB", "FORM", "Formidling"],
     ["Prosjektperiode", "FELT", "Feltarbeid"],
     // an administrative artifact, not a teaching session, despite a
     // FOR/Forelesning acronym+name pair (acronym/name are never consulted)
