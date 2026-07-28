@@ -849,6 +849,24 @@ export async function mountPlannerApp(
     const program = plan.program;
     const label = semesterLabel(currentSemester());
 
+    // NTNU publishes no study plan for this programme at all — KNOAND, MTPROD
+    // and 5 of 31 sampled programmes have none at 2026, 2025 or 2024. Reachable
+    // in normal use since studieinfo stopped refusing to save such a programme
+    // (ux-fail-5): before this the banner named the programme, the week said
+    // the generic "Legg til emner for å se ukeplanen." and nothing anywhere
+    // explained why the prefill was empty. Only the `not-found` outcome —
+    // `error` is a fetch that failed, which the provenance line names as such
+    // and which is not NTNU's publication fact.
+    if (program && studyPlanOutcome.kind === "not-found") {
+      const note = `NTNU publiserer ingen studieplan for ${program.name}. Legg til emnene du tar selv.`;
+      return {
+        title: "Fant ingen studieplan",
+        note,
+        action: { label: "Legg til emne", run: () => openAddFromQuestion() },
+        weekMessage: note,
+      };
+    }
+
     if (program && periodMissing) {
       const note = `Studieplanen for kull ${program.cohort} har ingen periode for ${label} ennå. Legg til emnene du tar selv, eller bytt semester.`;
       return {
@@ -1806,6 +1824,7 @@ export async function mountPlannerApp(
         // The add-course dialog searches this same index (mutated in place —
         // see its mount call above); it renders "henter emner …" until it's set.
         addCourseDeps.index = index;
+        addCourseDeps.indexFailed = false;
         const indexByCode = new Map(index.courses.map((c) => [c[0], c]));
         // Backfill real course names for any hash-sourced courses that only had their code.
         let changed = false;
@@ -1823,9 +1842,11 @@ export async function mountPlannerApp(
         renderProvenance();
       })
       .catch(() => {
-        // Not swallowed any more: the exam column used to spin forever and the
-        // provenance line claimed NTNU had published no exam dates (pd-3).
+        // Not swallowed any more: the exam column used to spin forever, the
+        // add dialog forever said "Henter emner …", and the provenance line
+        // claimed NTNU had published no exam dates (pd-3).
         plannerIndexFailed = true;
+        addCourseDeps.indexFailed = true;
         renderGridAndExams();
         renderProvenance();
       });
@@ -1834,6 +1855,7 @@ export async function mountPlannerApp(
   /** The exam panel's "Prøv igjen" — back to the loading state, then refetch. */
   function retryIndex(): void {
     plannerIndexFailed = false;
+    addCourseDeps.indexFailed = false;
     renderGridAndExams();
     loadIndex();
   }

@@ -7,8 +7,12 @@
  * (`index.courses`, the same `search-index.json` `/emner/` searches), a row
  * per match with **one persistent action button** whose verb follows the
  * plan entry (`addCourseRowControl`), and the dialog stays open afterwards
- * so several courses can be added in one visit. Esc/backdrop-adjacent
- * dismissal is the native `showModal()` behaviour — nothing extra to wire.
+ * so several courses can be added in one visit. Esc dismissal is the native
+ * `showModal()` behaviour — nothing extra to wire, as long as nothing inside
+ * the dialog eats the key first (see `searchInput.type` below). Backdrop
+ * clicks are NOT a dismissal: no browser closes a `showModal()` dialog on
+ * one without `closedby="any"`, and this dialog sets no such attribute — the
+ * "Lukk" button and Esc are the two ways out (modals-7).
  *
  * **The clash line is lazy**, reusing `/emner/`'s exact pattern
  * (`attachClashPreview`): computed on a row's first hover/focus, cached
@@ -53,6 +57,13 @@ export interface AddCourseDeps {
   store: PlanStore;
   /** `null` while `loadPlannerIndex()` is still in flight — see file header. */
   index: PlannerIndex | null;
+  /**
+   * The catalog download failed, so `index` will stay `null` until the
+   * planner's own "Prøv igjen" refetches it. Without this the dialog read
+   * "Henter emner …" forever over a dead download and offered no way out
+   * (pd-3); the caller sets it from `loadPlannerIndex()`'s own outcome.
+   */
+  indexFailed?: boolean;
   semester: SemesterSummary;
   programCode: string | null;
 }
@@ -168,7 +179,13 @@ export function mountAddCourse(deps: AddCourseDeps, signal: AbortSignal): AddCou
   const searchForm = el("form", "np-field add-course-field") as HTMLFormElement;
   searchForm.autocomplete = "off";
   const searchInput = el("input", "add-course-input") as HTMLInputElement;
-  searchInput.type = "search";
+  // NOT `type="search"`: Chrome's search input consumes the first Escape to
+  // clear itself and cancels the dialog's close request with it, so a keyboard
+  // user pressing Esc from the field emptied it instead of leaving (press 1 →
+  // `{open: true, value: ""}`, press 2 → `{open: false}`) — the dismissal
+  // gesture reads as broken until the second press (modals-7). The native
+  // clear button is not load-bearing: `open()` resets the value anyway.
+  searchInput.type = "text";
   searchInput.placeholder = "Søk etter emnekode eller emnenavn …";
   searchInput.setAttribute("aria-label", "Søk etter emne");
   searchForm.append(searchInput);
@@ -320,7 +337,12 @@ export function mountAddCourse(deps: AddCourseDeps, signal: AbortSignal): AddCou
     results.replaceChildren();
 
     if (!index) {
-      status.textContent = "Henter emner …";
+      // A failed download is not a slow one: "Henter emner …" over a dead
+      // fetch is a spinner that never resolves, and this dialog is the only
+      // way to add a course by code (pd-3). The retry lives on the planner's
+      // exam panel and repairs both surfaces at once, so the sentence states
+      // the fact rather than pointing at a control that is not in here.
+      status.textContent = deps.indexFailed ? "Fikk ikke hentet emnekatalogen." : "Henter emner …";
       return;
     }
     if (query === "") {

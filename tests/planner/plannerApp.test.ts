@@ -1139,4 +1139,100 @@ describe("mountPlannerApp — audit repro", () => {
     expect(frame.textContent).toContain("14:15");
     expect(frame.textContent).not.toContain("08:15");
   });
+
+  // KNOAND/MTPROD: NTNU publishes no study plan at all. The modal now saves
+  // such a programme (studieinfo's half of ux-fail-5), so the planner is where
+  // the student lands — and it used to say nothing about why the week is bare.
+  it("ux-fail-5: a programme with no study plan says so and offers the way out", async () => {
+    await mount(
+      {
+        "/data/search-index.json": () => ({ year: 2026, courses: [] }),
+        "/api/program/KNOAND/plan": () => "FAIL404",
+      },
+      "#26h;KNOAND.2026;",
+    );
+    expect(find("planner-direction").hidden).toBe(false);
+    expect(find("planner-direction-title").textContent).toBe("Fant ingen studieplan");
+    expect(find("planner-direction-note").textContent).toBe(
+      "NTNU publiserer ingen studieplan for KNOAND. Legg til emnene du tar selv.",
+    );
+    expect(find("planner-direction-btn").textContent).toBe("Legg til emne");
+    // The week says the same thing instead of the canned "Legg til emner …".
+    expect(find("planner-grid-frame").textContent).toContain("publiserer ingen studieplan");
+    // ux-fail-4's provenance half (landed in wave 3) must not contradict it.
+    expect(find("planner-provenance").textContent).toContain("fant ingen studieplan for KNOAND");
+    expect(find("planner-provenance").textContent).not.toContain("studieplan for kull 2026");
+  });
+
+  // A study plan we asked for and did not get is a different fact, and the
+  // branch above must not claim NTNU publishes nothing over it.
+  it("ux-fail-5 control: a failed study-plan fetch is not reported as 'ingen studieplan'", async () => {
+    await mount(
+      {
+        "/data/search-index.json": () => ({ year: 2026, courses: [] }),
+        "/api/program/KNOAND/plan": () => "FAIL",
+      },
+      "#26h;KNOAND.2026;",
+    );
+    expect(find("planner-direction-title").textContent).not.toBe("Fant ingen studieplan");
+    expect(find("planner-provenance").textContent).toContain(
+      "fikk ikke hentet studieplanen for KNOAND",
+    );
+  });
+
+  it("pd-3/modals-7: the add dialog names a dead catalog and does not eat Escape", async () => {
+    await mount(
+      {
+        "/data/search-index.json": () => "FAIL",
+        "/api/course/TDT4109/timetable": () => [entry("TDT4109", 1, "08:15", "10:00")],
+        "/api/course/": () => DETAILS,
+      },
+      "#26h;-;%2BTDT4109",
+    );
+    find("planner-add-course-btn").click();
+    const dialog = body.querySelector(".add-course-dialog");
+    expect(dialog?.open).toBe(true);
+    expect(body.querySelector(".add-course-status")?.textContent).toBe(
+      "Fikk ikke hentet emnekatalogen.",
+    );
+    // modals-7: `type="search"` made Chrome swallow the first Escape to clear
+    // the field, so the dialog took two presses to leave.
+    expect(body.querySelector(".add-course-input")?.type).toBe("text");
+  });
+
+  it("pd-3 control: the add dialog still says 'Henter emner …' while the catalog loads", async () => {
+    let releaseIndex = (): void => {};
+    const gate = new Promise<void>((resolve) => {
+      releaseIndex = resolve;
+    });
+    (globalThis as unknown as Record<string, unknown>).location = {
+      hash: "#26h;-;%2BTDT4109",
+      search: "",
+      pathname: "/planlegger/",
+    };
+    (globalThis as unknown as Record<string, unknown>).fetch = vi.fn(async (url: string) => {
+      if (url.includes("/data/search-index.json")) {
+        await gate;
+        return jsonResponse({ year: 2026, courses: [] });
+      }
+      if (url.includes("/timetable")) return jsonResponse([entry("TDT4109", 1, "08:15", "10:00")]);
+      if (url.includes("/api/course/")) return jsonResponse(DETAILS);
+      return { ok: false, status: 404, json: async () => ({ error: "Not found" }) };
+    });
+    const { mountPlannerApp } = await import("../../src/components/planner/plannerApp.js");
+    const { clearCourseBundleMemo, clearPlannerIndexMemo } = await import(
+      "../../src/lib/planner/data.js"
+    );
+    clearCourseBundleMemo();
+    clearPlannerIndexMemo();
+    const mounted = mountPlannerApp(SEMESTERS as never, [], undefined);
+    for (let i = 0; i < 5; i++) await new Promise((r) => setTimeout(r, 0));
+
+    find("planner-add-course-btn").click();
+    expect(body.querySelector(".add-course-status")?.textContent).toBe("Henter emner …");
+
+    releaseIndex();
+    await mounted;
+    for (let i = 0; i < 20; i++) await new Promise((r) => setTimeout(r, 0));
+  });
 });

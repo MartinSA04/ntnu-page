@@ -965,13 +965,19 @@ export function renderGrid(
     };
   }
   if (rawEntries.length === 0) {
+    // Ordered by severity, the same way the caller's own fallback chain is
+    // (ux-3): a fetch that failed is not a question the student can answer, so
+    // telling them to pick a studieretning over it sends them to a control
+    // that cannot fix the week. The question is not lost — `#planner-direction`
+    // keeps its own panel above the frame.
+    if (gaps.failed.length > 0) {
+      return empty("empty", `Fikk ikke hentet timeplan for ${joinList(gaps.failed)}.`);
+    }
     if (pending) return empty("pending-choice", pending);
     // "Ingen timeplandata … ennå" is a claim about NTNU's data. It may only
     // be made when we actually got an answer; a failed fetch says so instead
     // (pc-3).
-    return gaps.failed.length > 0
-      ? empty("empty", `Fikk ikke hentet timeplan for ${joinList(gaps.failed)}.`)
-      : empty("empty", "Ingen timeplandata for emnene i planen ennå.");
+    return empty("empty", "Ingen timeplandata for emnene i planen ennå.");
   }
 
   const { shown, mutedLayerAutoRevealed } = visibleLayer(rawEntries, showOthers);
