@@ -21,6 +21,19 @@
   regression the variable-font switch exists to prevent. Only the two
   `latin` faces are preloaded in `Layout.astro` (Norwegian æ/ø/å live in
   `latin`; `latin-ext` never loads for our own copy).
+- Two non-obvious fixes a reasonable person would undo — don't.
+  (a) `primitives.css`'s `[hidden] { display: none !important }` (with its
+  `biome-ignore`): the UA rule lives at UA origin, so **any** author
+  `display` beats it whatever the specificity, and most `.np-*` primitives
+  declare one (`.np-btn` is `inline-flex`) — `el.hidden = true` hid nothing,
+  which is how the add dialog painted "Legg til" + "Lagt til ✓" + "Fjern" at
+  once and a suppressed button stayed 160×36 and clickable. Non-`!important`
+  forms lose to site.css and every Astro-scoped block. Something that must
+  stay laid out while hidden wants its own state class, not this attribute.
+  (b) `addCourse.ts`'s search field is `type="text"`, **not `"search"`**:
+  Chrome's search input eats the first Escape to clear itself and cancels the
+  dialog's close request with it, so dismissal took two presses. The native
+  clear button is not load-bearing.
 - `data/*.json` + `public/data/search-index.json` are crawler output
   (`npm run crawl`) — gitignored build artifacts, baked into each deploy;
   don't hand-edit and don't commit. `prebuild` runs `crawler/ensure-data.mjs`

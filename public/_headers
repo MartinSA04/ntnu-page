@@ -1,0 +1,28 @@
+# Cache policy for the static half of the site. `public/` is copied verbatim
+# into `dist/`, and `dist/` is the Workers assets directory (wrangler.jsonc),
+# whose asset server reads this file — so these rules ship with every deploy.
+#
+# Without it everything, including content-hashed assets, is served on the
+# asset server's default `public, max-age=0, must-revalidate`: a measured 15
+# conditional requests (all 304, zero-length bodies) on a second hard load,
+# and 3 more on an in-site ClientRouter navigation — one of them the
+# render-blocking planner-week stylesheet, which the view transition waits on
+# (perf-2).
+#
+# HTML is deliberately NOT listed: it must keep revalidating, or a deploy
+# would not be picked up until the max-age expired.
+
+# Everything Astro emits under /_astro/ carries a content hash in its name
+# (JS chunks, stylesheets, the four variable-font .woff2 files), so a changed
+# byte is a changed URL and the old one can never be wrong.
+/_astro/*
+  Cache-Control: public, max-age=31536000, immutable
+
+# Crawler output (search-index.json today), redeployed nightly by crawl.yml at
+# a stable URL — so not immutable, but it is a 482 KB download the planner and
+# the catalog page both fetch on mount, and it is at most a day stale by
+# construction. Trailing wildcard, not `/data/*.json`: a splat with a suffix
+# after it is not worth relying on, and everything under /data/ is the same
+# nightly artifact.
+/data/*
+  Cache-Control: public, max-age=3600, stale-while-revalidate=86400

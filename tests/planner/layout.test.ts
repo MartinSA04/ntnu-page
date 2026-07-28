@@ -107,4 +107,44 @@ describe("layoutDay", () => {
   test("empty input returns empty output", () => {
     expect(layoutDay([])).toEqual([]);
   });
+
+  // grid-3: at 390 px a day column is ~56 px, so a 2-column cluster draws 27 px
+  // blocks and "FRA1010" comes out one character per line over seven lines.
+  // The renderer passes 1 there (grid.ts's `maxColumnsForViewport`).
+  test("a phone cap of 1 piles a 2-deep cluster instead of splitting it", () => {
+    const items = [
+      { id: "a", start: 480, end: 600 },
+      { id: "b", start: 495, end: 615 },
+    ];
+    expect(slot(layoutDay(items), "a")).toMatchObject({ cols: 2, piled: false });
+    const narrow = layoutDay(items, 1);
+    expect(narrow).toHaveLength(2);
+    expect(narrow.every((s) => s.piled && s.col === 0 && s.cols === 1)).toBe(true);
+    expect(new Set(narrow.map((s) => s.cluster)).size).toBe(1);
+  });
+
+  test("a phone cap leaves non-overlapping items alone", () => {
+    // One column is still one column: only clusters that would SPLIT pile.
+    const r = layoutDay(
+      [
+        { id: "a", start: 480, end: 600 },
+        { id: "b", start: 615, end: 720 },
+      ],
+      1,
+    );
+    expect(r.every((s) => !s.piled)).toBe(true);
+    expect(new Set(r.map((s) => s.cluster)).size).toBe(2);
+  });
+
+  test("the cap defaults to MAX_COLUMNS and never goes below 1", () => {
+    const items = [
+      { id: "a", start: 480, end: 600 },
+      { id: "b", start: 495, end: 615 },
+    ];
+    expect(layoutDay(items, MAX_COLUMNS)).toEqual(layoutDay(items));
+    // A nonsense cap must not make a lone item pile — it has to draw somewhere.
+    expect(layoutDay([{ id: "a", start: 480, end: 600 }], 0)).toEqual([
+      { id: "a", col: 0, cols: 1, cluster: 0, piled: false },
+    ]);
+  });
 });

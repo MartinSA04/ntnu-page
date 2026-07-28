@@ -3,9 +3,10 @@
  * that used to live in the Emner rail).
  *
  * One native `<dialog>`, built and mounted once (same idiom as
- * `studieinfo.ts`/`popover.ts`): a flat search over the *whole* catalog
- * (`index.courses`, the same `search-index.json` `/emner/` searches), a row
- * per match with **one persistent action button** whose verb follows the
+ * `studieinfo.ts`/`popover.ts`): a search over the *whole* catalog
+ * (`index.courses`, the same `search-index.json` `/emner/` searches) through
+ * `/emner/`'s own ranked `searchCatalog`, a row per match with **one
+ * persistent action button** whose verb follows the
  * plan entry (`addCourseRowControl`), and the dialog stays open afterwards
  * so several courses can be added in one visit. Esc dismissal is the native
  * `showModal()` behaviour — nothing extra to wire, as long as nothing inside
@@ -49,8 +50,9 @@
 import { fetchCourseBundle, type PlannerIndex } from "../../lib/planner/data.js";
 import { semesterYear } from "../../lib/planner/schedule.js";
 import { type AddCourseInput, DEFAULT_VERSION, type PlanStore } from "../../lib/planner/store.js";
+import { searchCatalog } from "../site/catalogSearch.js";
 import { clashSentence, planClash } from "../site/planClash.js";
-import { el, fold, formatCreditNumber } from "./dom.js";
+import { el, formatCreditNumber } from "./dom.js";
 import type { SemesterSummary } from "./plannerApp.js";
 
 export interface AddCourseDeps {
@@ -72,7 +74,12 @@ export interface AddCourseHandle {
   open(): void;
 }
 
-/** Rows shown at once — matches the deleted typeahead's own cap. */
+/**
+ * Rows shown at once — matches the deleted typeahead's own cap. The cap is
+ * why `render()` ranks through `searchCatalog` rather than keeping its own
+ * `filter()`: unranked catalog order put TMA4100 at row 77 of 112 for
+ * "matematikk" on `/emner/` (search-1), and here only the first 12 survive.
+ */
 const MAX_ROWS = 12;
 
 /** What a row's single button says, and what pressing it does. */
@@ -83,6 +90,15 @@ export interface AddCourseRowControl {
   ariaLabel: string;
   /** The state beside the button; `""` when the course is not in the plan. */
   state: string;
+  /**
+   * Machine-readable twin of `state`. The span carries three different
+   * sentences and they do not want the same tone — "I planen" is the
+   * membership state DESIGN §2 gives the accent to, while "fra programmet"
+   * and "droppet" are provenance and de-emphasis, which the rail itself
+   * renders as plain muted text. CSS cannot select on text, so the tone
+   * split needs this hook (modals-4).
+   */
+  stateKind: "none" | "added" | "program" | "dropped";
   /** Performs the action and returns the sentence to announce afterwards. */
   run: () => string;
 }
@@ -117,6 +133,7 @@ export function addCourseRowControl(store: PlanStore, course: AddCourseInput): A
       label: "Legg til",
       ariaLabel: `Legg til ${code} i planen`,
       state: "",
+      stateKind: "none",
       run: () => {
         store.addCourse(course);
         return `${code} lagt til i planen.`;
@@ -127,7 +144,12 @@ export function addCourseRowControl(store: PlanStore, course: AddCourseInput): A
     return {
       label: "Fjern",
       ariaLabel: `Fjern ${code} fra planen`,
-      state: "Lagt til ✓",
+      // DESIGN §7's mandated pair is "Legg til i planen" → "I planen"; this
+      // said "Lagt til ✓" while three sibling surfaces each said something
+      // else (copy-6). The *verbs* stay as they are: Dropp/Legg tilbake are
+      // §7-correct and cannot collapse into a two-state toggle.
+      state: "I planen",
+      stateKind: "added",
       run: () => {
         store.removeCourse(code);
         return `${code} fjernet fra planen.`;
@@ -139,6 +161,7 @@ export function addCourseRowControl(store: PlanStore, course: AddCourseInput): A
       label: "Legg tilbake",
       ariaLabel: `Legg tilbake ${code} i planen`,
       state: "droppet",
+      stateKind: "dropped",
       run: () => {
         store.restoreCourse(code);
         return `${code} lagt tilbake i planen.`;
@@ -149,6 +172,7 @@ export function addCourseRowControl(store: PlanStore, course: AddCourseInput): A
     label: "Dropp",
     ariaLabel: `Dropp ${code} fra planen`,
     state: "fra programmet",
+    stateKind: "program",
     run: () => {
       store.dropCourse(code);
       return `${code} droppet — fortsatt en del av programmet.`;
@@ -314,6 +338,9 @@ export function mountAddCourse(deps: AddCourseDeps, signal: AbortSignal): AddCou
       actionBtn.textContent = control.label;
       actionBtn.setAttribute("aria-label", control.ariaLabel);
       stateEl.textContent = control.state;
+      // Lets site.css mute "fra programmet"/"droppet" while "I planen" keeps
+      // the accent — the span paints all three today (modals-4).
+      stateEl.dataset.state = control.stateKind;
       stateEl.hidden = control.state === "";
     };
     sync();
@@ -332,7 +359,7 @@ export function mountAddCourse(deps: AddCourseDeps, signal: AbortSignal): AddCou
 
   function render(): void {
     const index = deps.index;
-    const query = fold(searchInput.value.trim());
+    const query = searchInput.value.trim();
     rows.length = 0;
     results.replaceChildren();
 
@@ -350,9 +377,7 @@ export function mountAddCourse(deps: AddCourseDeps, signal: AbortSignal): AddCou
       return;
     }
 
-    const matched = index.courses.filter(
-      ([code, name]) => fold(code).includes(query) || fold(name).includes(query),
-    );
+    const matched = searchCatalog(index.courses, query);
     const shown = matched.slice(0, MAX_ROWS);
     for (const course of shown) results.append(buildRow(course));
 

@@ -126,18 +126,36 @@ hover); `--shadow-lg` only for true overlays. Radii are instrument corners:
 the **content box** (`background-origin: content-box`) so it stays in
 register with whatever it's ruling instead of starting 16px early under the
 frame's padding — every ruled surface's own padding must therefore be a
-whole multiple of `--cell`. It appears on planning surfaces only: the weekly
-timetable spread and the exam date list (`examList.ts` — replaced the exam
-ribbon 2026-07-25, ruling carried over unchanged). `.np-ruled--hours` (a modifier, used
-*with* `.np-ruled`) draws a heavier line every 4th cell on the week — a real
-timetable sheet has an hour rule, and uniform 15-minute squares alone read
-as texture rather than an instrument.
+whole multiple of `--cell`.
+
+**Where it actually is, corrected 2026-07-27 (audit ds-1/ds-4 — the doc was
+stale, the code is right).** The squared field was **retired from the weekly
+spread** in f86105b (adjudicated in
+`docs/superpowers/specs/2026-07-27-planner-simplification-design.md`): a
+15-minute square in both axes behind five columns of blocks is ~600 squares
+of texture, and what a student reads off a timetable is the *hour*. The week
+therefore carries **one hour hairline only**, drawn by `planner-week.css` on
+`.planner-grid-rail`/`.planner-grid-day` — i.e. on the boxes whose top edge
+*is* the slot grid's origin, which is what keeps it in register (tiling it
+from the frame is what caused REVIEW.md D4's ~22 px misregistration). Neither
+`.np-frame` nor `.np-ruled` is on the spread, and the exam date list carries
+no ruling either. **`.np-ruled--hours` is deleted** (§5) — it had zero callers
+while still shipping in the sitewide bundle, and reaching for it would have
+given a contributor a 15-minute square field plus a second hour rule anchored
+to a different box than the live one. The only surviving `.np-ruled` surface
+on the whole site is the homepage proof panel (`.home-proof-frame`, §8).
+
+If the ruling ever comes back on a planning surface, put it on the rail/day
+columns, not the frame.
 
 ### Named rules
 
 **Ruling-Marks-The-Plan.** The squared ruling appears exactly where
-planning happens. Everywhere else the paper is plain — if the whole site is
-ruteark, nothing is.
+planning happens — and, since f86105b, *only where a plan is depicted rather
+than operated*: the live week reduced to its hour hairline, and the last
+squared field is the homepage's picture of a plan (§8). Everywhere else the
+paper is plain — if the whole site is ruteark, nothing is. A message is never
+rendered inside a ruled frame (`renderGridMessage` exists for that).
 
 **Ink-Before-Chrome.** Structure is tonal steps and hairlines; interactive
 controls carry fills or washes, never borders. No sanctioned exception
@@ -212,8 +230,13 @@ focus = global 2px accent outline.
   call site keeps its own flex/grid) — only the shared padding/corner/
   `.is-active`-highlight, which is what drifted between three hand-rolled
   copies before this existed.
-- **`.np-frame` + `.np-ruled`** (+ `.np-ruled--hours`) — the planning spread
-  (§4).
+- **`.np-frame`** — the bordered, rounded paper box. Live users: the three
+  `<dialog>`s (studieinfo, add-course, block popover) and the homepage proof
+  panel. Note it sets `overflow: hidden`, which is why the week's frame is
+  deliberately *not* an `.np-frame` (it would kill the horizontal scroll —
+  see `planner-week.css`).
+- **`.np-ruled`** — the squared field, used with `.np-frame`. One live user:
+  the homepage proof panel (§4/§8). Not on the week, not on the exam list.
 
 **Disclosure**
 - **`.np-summary`** — mono disclosure row with rotating chevron.
@@ -223,9 +246,12 @@ focus = global 2px accent outline.
 
 **Deleted — do not reach for these, they no longer exist:** `.np-kbd`
 (zero users), `.np-tile` (zero users; §12's killed triptych was its only
-prospective user), `.np-lift` (zero users). A documented primitive with no
-caller is system debt; the primitive layer is defined once and every user
-of it is expected to actually exist.
+prospective user), `.np-lift` (zero users), **`.np-ruled--hours`** (zero
+users as of 2026-07-27, audit ds-4 — the week's hour line is hand-drawn in
+`planner-week.css` on the box that keeps it in register; this modifier would
+have tiled a second one from a different origin, §4). A documented primitive
+with no caller is system debt; the primitive layer is defined once and every
+user of it is expected to actually exist.
 
 ## 6. Motion
 
@@ -259,6 +285,16 @@ apology. Empty states are invitations to act.
 - **Course hues never color text.** Hue-colored text on warm paper fails
   contrast in half the pairs; the square dot carries identity, text stays
   ink. Do not add colored course names for "scannability".
-- **The ruling is not on cards.** Reviewers may suggest extending the
-  squared background to panels or the hero for "cohesion" — that dilutes
-  the one signature. It stays on planning surfaces only.
+- **The ruling is not on cards** — re-adjudicated 2026-07-27 (audit ds-1),
+  because the live state had inverted the original wording. Two decisions,
+  and they are separate:
+  1. *Do not spread it.* Extending the squared background to panels, cards
+     or a hero for "cohesion" dilutes the one signature. That still stands,
+     and it is the half reviewers keep proposing.
+  2. *The week does not carry it either.* f86105b retired the squared field
+     from the weekly spread in favour of a single hour hairline (§4). So the
+     one `.np-ruled` element left on the site is the homepage proof panel
+     `.home-proof-frame` — an `aria-hidden` **picture of a plan**, not a card
+     and not a control. That is sanctioned: it is the site's one illustration
+     of the instrument, and the signature belongs on the thing being
+     illustrated. It is not a licence to rule any other decorative surface.

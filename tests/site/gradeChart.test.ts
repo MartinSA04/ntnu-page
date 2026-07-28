@@ -40,6 +40,9 @@ class FakeEl {
   setAttribute(key: string, value: string): void {
     this.attrs.set(key, value);
   }
+  removeAttribute(key: string): void {
+    this.attrs.delete(key);
+  }
   querySelector(selector: string): FakeEl | null {
     const role = selector.match(/^\[data-role="(.+)"\]$/)?.[1];
     if (!role) return null;
@@ -74,21 +77,38 @@ const rowsOf = (specs: GradeSpec[]) =>
     })),
   );
 
-/** `exams: null` stands for a details fetch that did not answer. */
-function stubFetch(specs: GradeSpec[], exams: ExamSpec[] | null): void {
+/** Every URL the module asked for, in order — pc-2 is about which one. */
+let requested: string[] = [];
+
+/**
+ * `exams: null` stands for a details fetch that did not answer. `examYear`
+ * makes the stub behave like the worker: the off-year courses only answer on
+ * the year-qualified URL, and 404 on the bare one.
+ */
+function stubFetch(specs: GradeSpec[], exams: ExamSpec[] | null, examYear?: number): void {
   const globals = globalThis as unknown as { fetch: unknown };
   globals.fetch = async (url: string) => {
+    requested.push(String(url));
     if (String(url).endsWith("/grades"))
       return { ok: true, json: async () => ({ rows: rowsOf(specs) }) };
     if (exams === null) return { ok: false, json: async () => ({}) };
+    if (examYear !== undefined && !String(url).includes(`?year=${examYear}`))
+      return { ok: false, json: async () => ({ error: "Not found" }) };
     return { ok: true, json: async () => ({ exams }) };
   };
 }
 
+/** The `[data-role="status"]` line, which carries perf-1's height lease. */
+let status: FakeEl;
+
 beforeEach(() => {
+  requested = [];
   section = new FakeEl();
-  const status = new FakeEl();
+  status = new FakeEl();
   status.setAttribute("data-role", "status");
+  // The page ships the placeholder with the reservation on it; the module's
+  // job is to hand it back on every branch that keeps the line visible.
+  status.setAttribute("data-reserve", "");
   const body = new FakeEl();
   body.setAttribute("data-role", "body");
   body.hidden = true;
@@ -145,6 +165,29 @@ describe("deferred sittings (pc-2/cpc-6)", () => {
     expect(textsOf("grades-source")[0]).toBe(
       "Utsatt eksamen er ikke tatt med (Høst 2025, Høst 2024, Høst 2023). Det er kandidater som tar eksamen på nytt, ikke et ordinært kull.",
     );
+  });
+
+  /**
+   * pc-2's completeness half. 703 of 5 470 courses are carried over from last
+   * year's catalog, and `/api/course/:code` 404s for every one of them without
+   * a `?year=`. The page passes `mountCourseDetails` and `mountGradeChart` the
+   * SAME year for exactly that reason — one URL, one cache entry, and an
+   * occasion join that actually resolves instead of failing open.
+   */
+  test("an off-year course joins on the year-qualified details URL", async () => {
+    stubFetch([resit(2025), spring(2025, 200)], SPRING_TAUGHT, 2025);
+    await mountGradeChart("TMA4100", undefined, 2025);
+
+    expect(requested).toContain("/api/course/TMA4100?year=2025");
+    expect(textsOf("grades-chart-term")).toEqual(["Vår 2025"]);
+  });
+
+  test("without the year the same course 404s and keeps its re-sit chart", async () => {
+    stubFetch([resit(2025), spring(2025, 200)], SPRING_TAUGHT, 2025);
+    await mountGradeChart("TMA4100");
+
+    expect(requested).toContain("/api/course/TMA4100");
+    expect(textsOf("grades-chart-term")).toEqual(["Høst 2025", "Vår 2025"]);
   });
 
   test("an unanswered exam scrape holds nothing out", async () => {
@@ -266,5 +309,38 @@ describe("y-scales (course-5/cpc-5)", () => {
     // 100 % of the plot belongs to the 153-candidate cohort's tallest bar,
     // not to one candidate's D.
     expect(barHeights()).toEqual([100, 82, 69]);
+  });
+});
+
+/**
+ * perf-1: `#grades-section` is the second-biggest post-paint grower on the
+ * course page and its growth moves `#details-section` under the reader's
+ * thumb. The page now reserves the figure's height on the status line, so the
+ * module owns the other half of the lease: every terminal branch that LEAVES
+ * that line on screen has to release it, or a course with no statistics gets a
+ * permanent 36rem hole under one sentence.
+ */
+describe("height reservation (perf-1)", () => {
+  test("a rendered figure hides the placeholder, which releases the reservation", async () => {
+    stubFetch([spring(2025, 200)], null);
+    await mountGradeChart("TDT4100");
+    expect(status.hidden).toBe(true);
+  });
+
+  test("a course with no statistics hands the reservation back", async () => {
+    stubFetch([], null);
+    await mountGradeChart("TDT4100");
+    expect(status.textContent).toBe("Ingen karakterstatistikk registrert for dette emnet.");
+    expect(status.hidden).toBe(false);
+    expect(status.attrs.has("data-reserve")).toBe(false);
+  });
+
+  test("a failed fetch hands the reservation back", async () => {
+    const globals = globalThis as unknown as { fetch: unknown };
+    globals.fetch = async () => ({ ok: false, json: async () => ({}) });
+    await mountGradeChart("TDT4100");
+    expect(status.textContent).toBe("Fikk ikke hentet karakterstatistikk.");
+    expect(status.hidden).toBe(false);
+    expect(status.attrs.has("data-reserve")).toBe(false);
   });
 });

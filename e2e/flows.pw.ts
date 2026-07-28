@@ -40,6 +40,32 @@ import { expect, type Page, test } from "@playwright/test";
 const courseRows = (page: Page) => page.locator("#planner-course-rows .planner-course-row");
 const gridBlocks = (page: Page) => page.locator("#planner-grid-frame .planner-block");
 
+/**
+ * Waits for `#planner-grid-status` to settle and returns it, failing loudly if
+ * the plan's own data never arrived.
+ *
+ * The verdict has THREE states since pc-3: a clash count, the green clean
+ * state, and a muted "kan ikke sjekkes — mangler timeplan for N emne(r)" when a
+ * course's timetable fetch failed or was never made. That third state is the
+ * fix — the line used to print "ingen kollisjoner" over a week missing a
+ * course — but it means an upstream flake no longer shows up as a wrong
+ * verdict, it shows up as a *missing* one. A test matching only
+ * `/\d+ kollisjon/` would then time out and report the clash engine as broken.
+ * So the wait is explicit and the upstream case gets its own message.
+ */
+async function settledVerdict(page: Page, timeout = 45_000): Promise<string> {
+  const status = page.locator("#planner-grid-status");
+  await expect
+    .poll(async () => (await status.textContent())?.trim() ?? "", { timeout })
+    .not.toMatch(/^$|^henter timeplan/);
+  const text = (await status.textContent())?.trim() ?? "";
+  expect(
+    text,
+    "a timetable fetch never landed — upstream/CI flake, NOT a clash-engine regression",
+  ).not.toContain("kan ikke sjekkes");
+  return text;
+}
+
 /** The course code of each row, read from the row's own `.np-data` head span (never its meta/credits spans). */
 function courseCodesOf(page: Page): Promise<string[]> {
   return page.locator("#planner-course-rows .planner-course-row-head .np-data").allTextContents();
@@ -137,9 +163,9 @@ test("overlap: two colliding courses render side by side, both readable", async 
 
   // `\d+ kollisjon` (never a bare /kollisjon/, which "ingen kollisjoner" also
   // matches): assert the verdict actually counts a clash, not its clean state.
-  await expect(page.locator("#planner-grid-status")).toContainText(/\d+ kollisjon/, {
-    timeout: 30_000,
-  });
+  // `settledVerdict` separates that from the third state ("kan ikke sjekkes"),
+  // which means the data never arrived and says nothing about the engine.
+  expect(await settledVerdict(page)).toMatch(/\d+ kollisjon/);
 
   // Only the two colliding blocks carry "kolliderer med" in their aria-label.
   const clashBlocks = page.locator('.planner-block[aria-label*="kolliderer med"]');
@@ -154,6 +180,37 @@ test("overlap: two colliding courses render side by side, both readable", async 
     const codeText = (await block.locator(".planner-block-code").textContent())?.trim() ?? "";
     expect(codeText).not.toBe("");
   }
+});
+
+test("verdict: a failed timetable fetch refuses the check instead of clearing it", async ({
+  page,
+}) => {
+  // pc-3, the audit's one blocker: with 4 of 5 timetables fine and TMA4400's
+  // 503, the week drew a normal grid and #planner-grid-status said "ingen
+  // kollisjoner" in Green-Means-Fits accent — a confident answer to PRODUCT
+  // §1's only question, computed over data it never had. The verdict now has a
+  // third state, and this is the only place the three are distinguishable.
+  await page.route("**/api/course/TMA4400/timetable*", (route) =>
+    route.fulfill({
+      status: 503,
+      contentType: "application/json",
+      body: JSON.stringify({ error: "Upstream unavailable" }),
+    }),
+  );
+
+  await page.goto("/planlegger/#26h;MTDT.2026;");
+  await expect(courseRows(page)).toHaveCount(5, { timeout: 30_000 });
+  // The rest of the week still draws — a mixed outcome, which is exactly the
+  // case the all-courses-empty fallback card cannot reach.
+  await expect(gridBlocks(page).first()).toBeVisible({ timeout: 45_000 });
+  await expect(gridBlocks(page).filter({ hasText: "TMA4400" })).toHaveCount(0);
+
+  const status = page.locator("#planner-grid-status");
+  await expect(status).toContainText(/kan ikke sjekkes/, { timeout: 45_000 });
+  await expect(status).toContainText(/mangler timeplan for \d+ emne/);
+  // Not the clean state, and not silence either: `.is-clean` is the accent-green
+  // mark, and it must never sit on a verdict we could not compute.
+  await expect(status).not.toHaveClass(/is-clean/);
 });
 
 test("groups: switching parallel updates the grid and survives the URL", async ({ page }) => {
@@ -197,6 +254,16 @@ test("groups: a non-default parallel renders with a programme set", async ({ pag
   // … MTDT" (Thu); "Forelesning 2 MTBYGG" (Wed 08:15) is tagged for MTBYGG only —
   // exactly the cross-programme parallel the pre-narrow used to drop.
   const tmaBlocks = () => page.locator("#planner-grid-frame .planner-block").filter({ hasText: "TMA4400" });
+  // The picked session itself, addressed by its own aria-label rather than by
+  // position. `.first()` used to stand in for it and no longer can: since
+  // groups-2 a lecture pick answers only its own session family, so the week
+  // keeps "Forelesning 1 MTDT …" (tirsdag 10:15) and "Plenumsregning" (onsdag
+  // 14:15) beside the picked "Forelesning 2 MTBYGG" — and blocks are appended
+  // day-major, which makes `.first()` the TUESDAY block. blockAriaLabel emits
+  // "TMA4400, onsdag 08:15 til 10:00, uke 34 til 47", so the prefix pins the
+  // 08:15 session and never the 14:15 plenary.
+  const mtbyggBlock = () =>
+    page.locator('#planner-grid-frame .planner-block[aria-label^="TMA4400, onsdag 08:15"]');
 
   await page.goto("/planlegger/#26h;MTDT.2026;");
   await expect(courseRows(page)).toHaveCount(5, { timeout: 30_000 });
@@ -213,13 +280,57 @@ test("groups: a non-default parallel renders with a programme set", async ({ pag
 
   // The picked MTBYGG parallel (Wednesday) must now draw — pre-fix it drew
   // nothing at all for TMA4400.
-  await expect(tmaBlocks().first()).toBeVisible();
-  await expect(tmaBlocks().first()).toHaveAttribute("aria-label", /onsdag/i);
+  await expect(mtbyggBlock()).toHaveCount(1);
   expect(page.url()).toMatch(/TMA4400~forelesning-2-mtbygg/i);
 
+  // …and the student's OTHER Matematikk 1 sessions must survive it. A pick is
+  // not an allow-list over the whole course: one tick used to delete every
+  // lecture whose group the student had not also named (groups-2).
+  expect(await tmaBlocks().count()).toBeGreaterThan(1);
+
   await page.reload();
-  await expect(tmaBlocks().first()).toBeVisible({ timeout: 45_000 });
-  await expect(tmaBlocks().first()).toHaveAttribute("aria-label", /onsdag/i);
+  await expect(mtbyggBlock()).toHaveCount(1, { timeout: 45_000 });
+  expect(await tmaBlocks().count()).toBeGreaterThan(1);
+});
+
+test("groups: the picker lists this semester's groups, not the whole year's", async ({ page }) => {
+  // groups-3/groups-4: EXPH0300 publishes 36 seminar groups and 5 lecture
+  // parallels across Trondheim, Gjøvik and Ålesund over a full year, and the
+  // picker listed all 44 — on a phone that put the popover's own Dropp and
+  // "Gå til emnesiden" ~1 000 px below the fold behind another city's seminars.
+  await page.goto("/planlegger/#26h;MTDT.2026;");
+  const exphBlock = gridBlocks(page).filter({ hasText: "EXPH0300" }).first();
+  await expect(exphBlock).toBeVisible({ timeout: 45_000 });
+  await exphBlock.click();
+
+  const popover = page.locator("#planner-popover");
+  await expect(popover).toBeVisible();
+  const groupRows = popover.locator(".planner-popover-group-row");
+
+  // Every Ålesund session of this course — the five seminar groups and
+  // "Forelesningsparallell 3 Ålesund" — is taught in weeks 3-17, so none of it
+  // belongs to a Høst plan. The picker is built from the SEMESTER's entries now
+  // (the øving layer additionally narrowed to the programme's own sections).
+  await expect(
+    popover.locator(".planner-popover-group-row", { hasText: "Ålesund" }),
+  ).toHaveCount(0);
+  // A bound, not an exact count: the audit measured 44 rows here, of which ~15
+  // were drawable. The number depends on live tagging, so this pins the order
+  // of magnitude — a revert to "every group the course publishes all year"
+  // fails it. The lower bound catches the other way this can go wrong: a pile
+  // (or a narrowing that ate the whole picker) has no group section at all.
+  const rowCount = await groupRows.count();
+  expect(rowCount).toBeGreaterThan(0);
+  expect(rowCount).toBeLessThan(30);
+
+  // The LECTURE layer is deliberately NOT narrowed by programme: picking a
+  // parallel tagged for another programme or campus is a documented capability
+  // (groups.ts), and this picker is the only control that can exercise it.
+  // "Forelesningsparallell 3 Gjøvik" runs weeks 34-45, so it is a real autumn
+  // option for a Trondheim student who wants it.
+  await expect(
+    popover.locator(".planner-popover-group-row", { hasText: "Forelesningsparallell 3 Gjøvik" }),
+  ).toHaveCount(1);
 });
 
 test("popover: closes from its own button, not just Esc", async ({ page }) => {
@@ -387,6 +498,57 @@ test("course page: the grade figure renders from DBH", async ({ page }) => {
   await expect(first.locator(".grades-bar-grade").first()).toHaveText("A");
   await expect(first).toContainText("kandidater");
   expect(await first.locator(".grades-bar").count()).toBeGreaterThan(1);
+
+  // course-4: the figure was 39 % of the mobile page. At most three charts are
+  // on screen; everything older stacks inside a collapsed disclosure, so the
+  // section stops pushing credits and vurderingsform below y=2438.
+  expect(await charts.count()).toBeLessThanOrEqual(3);
+  const older = page.locator("#grades-section .grades-older");
+  // Guarded, not asserted: whether a course has a fourth ordinary sitting in
+  // range is live DBH data. When it does, the disclosure must start closed and
+  // still open.
+  if ((await older.count()) === 1) {
+    await expect(older.locator(".grades-chart").first()).toBeHidden();
+    await older.locator("summary").click();
+    await expect(older.locator(".grades-chart").first()).toBeVisible();
+  }
+});
+
+test("catalog: the clash verdict is rendered in the row, not only in a tooltip", async ({
+  page,
+}) => {
+  // search-2: the verdict was written to `title`/`aria-label` only. On touch,
+  // the tap that triggers the check is the same tap that commits the add, so a
+  // phone user saw nothing before or after pressing "Legg til i planen".
+  await page.goto("/planlegger/#26h;-;%2BTDT4160");
+  await expect(courseRows(page)).toHaveCount(1, { timeout: 30_000 });
+
+  await page.goto("/emner/?q=TDT4110");
+  const row = page.locator("#emner-results li", { hasText: "TDT4110" }).first();
+  await expect(row).toBeVisible({ timeout: 15_000 });
+  const clash = row.locator(".emner-row-clash");
+  await expect(clash).toBeEmpty();
+
+  // Hover is a deliberate dwell (200 ms) before the timetable fetch — the same
+  // pointerenter a tap fires. Either verdict is the fix; TDT4110 vs TDT4160 is
+  // a live clash today ("Kolliderer med TDT4160, mandag 14:15."), but asserting
+  // that exact pair would go red on an upstream reshuffle that says nothing
+  // about this finding.
+  await row.locator(".emner-row-add").hover();
+  await expect(clash).toContainText(/kollisjon|kolliderer/i, { timeout: 30_000 });
+});
+
+test("catalog: a course that is not taught this year offers no add button", async ({ page }) => {
+  // crawler-3: TMA4100 and 702 others exist only in last year's catalog. Adding
+  // one contributed nothing to the week and left the planner showing a raw
+  // English "fikk ikke hentet detaljer: Not found". The page still exists — the
+  // two-year union is why — so only the add control goes.
+  await page.goto("/emner/?q=TMA4100");
+  const row = page.locator("#emner-results li", { hasText: "TMA4100" }).first();
+  await expect(row).toBeVisible({ timeout: 15_000 });
+  await expect(row.locator('a[href="/emne/TMA4100/"]')).toHaveCount(1);
+  await expect(row).toContainText("ikke undervist i");
+  await expect(row.locator(".emner-row-add")).toHaveCount(0);
 });
 
 test("manual adds stay in their semester", async ({ page }) => {
@@ -487,7 +649,12 @@ test("BSPL: a campus choice whose own code contains Ø survives a reload (B10)",
   await page.click("#studieinfo-save");
   await expect(dialog).toBeHidden();
 
-  await expect(question).toBeHidden();
+  // The city answer resolves its own courses (EXPH0400, SYG1000, SYG1001) and
+  // opens the NEXT waypoint — BSPL26-V-GJØVIK nests "valg av praksisløp,
+  // Gjøvik" underneath itself, and since plan-1 `classifyPeriod` descends into
+  // it instead of stopping one level down. So the week fills AND keeps asking;
+  // the old `expect(question).toBeHidden()` here asserted the one-level
+  // behaviour that finding removed.
   await expect(courseRows(page).first()).toBeVisible({ timeout: 30_000 });
   await expect(gridBlocks(page).first()).toBeVisible({ timeout: 30_000 });
 
@@ -496,8 +663,8 @@ test("BSPL: a campus choice whose own code contains Ø survives a reload (B10)",
   expect(page.url()).toMatch(/BSPL\.2026\.[^;]*GJ(%C3%98|Ø)VIK/i);
 
   await page.reload();
-  await expect(page.locator("#planner-direction")).toBeHidden();
   await expect(courseRows(page).first()).toBeVisible({ timeout: 30_000 });
+  expect(page.url()).toMatch(/BSPL\.2026\.[^;]*GJ(%C3%98|Ø)VIK/i);
 });
 
 test("drop and restore a programme course", async ({ page }) => {
@@ -523,4 +690,49 @@ test("drop and restore a programme course", async ({ page }) => {
   await expect(gridBlocks(page).filter({ hasText: code }).first()).toBeVisible({
     timeout: 30_000,
   });
+});
+
+test("dropping from the block popover keeps focus inside the week", async ({ page }) => {
+  // a11y-3: "Dropp" destroys the block that opened the popover, and the close
+  // handler then called focus() on a detached node — a silent no-op that left
+  // focus on <body>, outside a deliberately NON-modal dialog, so the next Tab
+  // restarted at the skip link. The course's own row toggle is the honest
+  // landing place: it is the same drop, so it also undoes it.
+  await page.goto("/planlegger/#26h;MTDT.2026;");
+  await expect(courseRows(page)).toHaveCount(5, { timeout: 30_000 });
+  await expect(gridBlocks(page).first()).toBeVisible({ timeout: 45_000 });
+
+  const code = (await gridBlocks(page).first().locator(".planner-block-code").textContent())?.trim() ?? "";
+  expect(code).not.toBe("");
+
+  await gridBlocks(page).first().click();
+  const popover = page.locator("#planner-popover");
+  await expect(popover).toBeVisible();
+  await popover.locator(".planner-popover-action", { hasText: "Dropp" }).click();
+  await expect(popover).toBeHidden();
+
+  const row = courseRows(page).filter({ hasText: code }).first();
+  await expect(row).toHaveClass(/is-dropped/);
+  await expect(row.locator(".planner-course-remove")).toBeFocused();
+  // Belt and braces: whatever holds focus, it must not be the document body.
+  expect(await page.evaluate(() => document.activeElement?.tagName ?? "")).not.toBe("BODY");
+});
+
+test("add dialog: one Escape from the search field closes it", async ({ page }) => {
+  // modals-7: the field was `type="search"`, and Chrome's search input eats the
+  // first Escape to clear itself, cancelling the dialog's close request — so
+  // the dismissal gesture read as broken until the second press. Typing first
+  // is the point: an empty search input has nothing to clear and would pass
+  // even with the bug.
+  await page.goto("/planlegger/");
+  await page.click("#planner-add-course-btn");
+  const addDialog = page.locator("#planner-add-dialog");
+  await expect(addDialog).toBeVisible();
+
+  const input = addDialog.locator("input.add-course-input");
+  await input.fill("TDT4100");
+  await expect(addDialog.locator(".add-course-row").first()).toBeVisible({ timeout: 15_000 });
+
+  await input.press("Escape");
+  await expect(addDialog).toBeHidden();
 });

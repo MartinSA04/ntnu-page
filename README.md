@@ -3,11 +3,13 @@
 Uoffisiell semesterplanlegger for NTNU: velg emner (eller hent dem fra et
 studieprogram og kull), og se timeplankollisjoner, eksamensdatoer og
 studiepoeng før du melder deg opp. Emnekatalog og studieplaner følger med.
-Karakterstatistikk (HK-dir/DBH) is reachable via the worker's
-`/api/course/:code/grades` endpoint but is not shown on any page today —
-the browsable grade chart was removed from `/emne/[code]/` (it read as
-DBH-mirror parasitism rather than helping a decision); a future season-split
-shape in a decision context is the only planned return, see PRODUCT.md §6.
+Karakterstatistikk (HK-dir/DBH) is served by the worker's
+`/api/course/:code/grades` endpoint and rendered on `/emne/[code]/` as a
+season-split figure (small multiples, one hue, cohort `n` on every chart,
+deferred sittings held out) — added 2026-07-27 as a deliberate partial
+reversal of PRODUCT.md D12: the fork point counts as a decision context.
+Sortable columns, cross-course leaderboards and hue-tinted bars stay killed;
+see PRODUCT.md §6 and D12.
 
 Astro static site + Cloudflare Worker in one deployable unit: the Worker
 serves the built site via Workers Assets and exposes a cached `/api/*` layer
@@ -23,8 +25,10 @@ open: `docs/ROADMAP.md`.
 ## Data flow
 
 - **Crawled nightly** (`data/` + `public/data/` — gitignored build artifacts,
-  never committed): course catalog (`searchAll`), study-program catalog,
-  semesters — ~10 upstream requests. Static pages (`/emne/[code]`) and the
+  never committed): course catalog (`searchAll`, **two catalog years unioned**
+  — the canonical one and `year - 1`, so a course taught last year still gets a
+  page), study-program catalog, semesters — ~20 upstream requests. Static
+  pages (`/emne/[code]`) and the
   client-side search index are built from these and ship only as part of the
   deployed site (`/studier/[code]` was deleted 2026-07-25 — see PRODUCT.md
   §0 addendum). `npm run build` crawls automatically

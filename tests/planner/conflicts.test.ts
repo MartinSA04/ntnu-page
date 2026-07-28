@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { lecturesOnly } from "../../src/lib/planner/activity.js";
 import {
-  analyzeExams,
   findConflicts,
   groupConflicts,
   mergeParallelSlots,
@@ -194,94 +193,6 @@ describe("mergeParallelSlots", () => {
   });
 });
 
-describe("analyzeExams", () => {
-  it("sorts by date and computes day gaps", () => {
-    const rows = analyzeExams([
-      { code: "A", date: "2026-12-10" },
-      { code: "B", date: "2026-12-05" },
-    ]);
-    expect(rows.map((r) => r.code)).toEqual(["B", "A"]);
-    expect(rows[0]?.dayGap).toBe(5);
-    expect(rows[1]?.dayGap).toBeNull();
-  });
-
-  it("flags a same-day collision on both rows", () => {
-    const rows = analyzeExams([
-      { code: "A", date: "2026-12-05" },
-      { code: "B", date: "2026-12-05" },
-    ]);
-    expect(rows[0]?.collision).toBe(true);
-    expect(rows[1]?.collision).toBe(true);
-    expect(rows[0]?.dayGap).toBe(0);
-    expect(rows[0]?.tight).toBe(false);
-  });
-
-  it("flags a 1-day gap as tight, not a collision", () => {
-    const rows = analyzeExams([
-      { code: "A", date: "2026-12-05" },
-      { code: "B", date: "2026-12-06" },
-    ]);
-    expect(rows[0]?.tight).toBe(true);
-    expect(rows[1]?.tight).toBe(true);
-    expect(rows[0]?.collision).toBe(false);
-  });
-
-  it("does not flag a 2-day gap as tight or a collision", () => {
-    const rows = analyzeExams([
-      { code: "A", date: "2026-12-05" },
-      { code: "B", date: "2026-12-07" },
-    ]);
-    expect(rows[0]?.tight).toBe(false);
-    expect(rows[0]?.collision).toBe(false);
-    expect(rows[0]?.dayGap).toBe(2);
-  });
-
-  it("skips null dates", () => {
-    const rows = analyzeExams([
-      { code: "A", date: null },
-      { code: "B", date: "2026-12-05" },
-    ]);
-    expect(rows).toHaveLength(1);
-    expect(rows[0]?.code).toBe("B");
-  });
-
-  it("skips empty-string dates", () => {
-    const rows = analyzeExams([{ code: "A", date: "" }]);
-    expect(rows).toEqual([]);
-  });
-
-  it("handles multiple exams for the same course", () => {
-    const rows = analyzeExams([
-      { code: "A", date: "2026-05-15" },
-      { code: "A", date: "2026-12-05" },
-    ]);
-    expect(rows).toHaveLength(2);
-    expect(rows.every((r) => r.code === "A")).toBe(true);
-  });
-
-  it("returns [] for no exams", () => {
-    expect(analyzeExams([])).toEqual([]);
-  });
-
-  it("handles a three-way same-day collision", () => {
-    const rows = analyzeExams([
-      { code: "A", date: "2026-12-05" },
-      { code: "B", date: "2026-12-05" },
-      { code: "C", date: "2026-12-05" },
-    ]);
-    expect(rows.every((r) => r.collision)).toBe(true);
-  });
-
-  it("computes gaps across a chain of exams", () => {
-    const rows = analyzeExams([
-      { code: "A", date: "2026-12-01" },
-      { code: "B", date: "2026-12-03" },
-      { code: "C", date: "2026-12-10" },
-    ]);
-    expect(rows.map((r) => r.dayGap)).toEqual([2, 7, null]);
-  });
-});
-
 describe("findConflicts — lecture-only (DR-1)", () => {
   // An entry shaped like ScheduleEntry + a title, the way a caller filters
   // real TimetableEntry data before handing it to findConflicts.
@@ -311,6 +222,83 @@ describe("findConflicts — lecture-only (DR-1)", () => {
       title: "Forelesning",
     };
     expect(findConflicts(lecturesOnly([a, b]))).toHaveLength(1);
+  });
+
+  it("does not red BI1001 against TKT4116 — PBL is parallel group work, not a plenary", () => {
+    // conf-2's exact live geometry (2026_VÅR, both courses curled). BI1001
+    // publishes "Problembasert læring" across five mutually exclusive weekly
+    // slots; two of them sit exactly on TKT4116's two lectures. While PBL was
+    // hand-labeled a lecture this produced 2 conflict groups — a false red for
+    // a student who attends ONE PBL group. Its real lectures (1-1/1-2) clear
+    // TKT4116 entirely, so the honest answer is 0.
+    const bi1001 = [
+      {
+        courseCode: "BI1001",
+        dayNumber: 1,
+        startTime: "12:15",
+        endTime: "14:00",
+        weeks: ["2-13", "16-18"],
+        title: "1-1Forelesning",
+      },
+      {
+        courseCode: "BI1001",
+        dayNumber: 4,
+        startTime: "15:15",
+        endTime: "17:00",
+        weeks: ["2-13", "15"],
+        title: "1-2Forelesning",
+      },
+      {
+        courseCode: "BI1001",
+        dayNumber: 1,
+        startTime: "14:15",
+        endTime: "16:00",
+        weeks: ["5-13", "16-17"],
+        title: "Problembasert læring",
+      },
+      {
+        courseCode: "BI1001",
+        dayNumber: 4,
+        startTime: "12:15",
+        endTime: "15:00",
+        weeks: ["5-13", "15-17"],
+        title: "Problembasert læring",
+      },
+    ];
+    const tkt4116 = [
+      {
+        courseCode: "TKT4116",
+        dayNumber: 1,
+        startTime: "14:15",
+        endTime: "16:00",
+        weeks: ["2-13", "16-17"],
+        title: "Forelesning",
+      },
+      {
+        courseCode: "TKT4116",
+        dayNumber: 4,
+        startTime: "12:15",
+        endTime: "14:00",
+        weeks: ["2-13", "15-17"],
+        title: "Forelesning",
+      },
+    ];
+    const lectures = lecturesOnly([...bi1001, ...tkt4116]);
+    expect(lectures.map((e) => e.title)).toEqual([
+      "1-1Forelesning",
+      "1-2Forelesning",
+      "Forelesning",
+      "Forelesning",
+    ]);
+    expect(groupConflicts(findConflicts(lectures))).toEqual([]);
+
+    // Anti-vacuity: the two slots really do overlap — treating PBL as a lecture
+    // (what the classifier used to do) is what produced the two false groups.
+    const asLectures = groupConflicts(findConflicts([...bi1001, ...tkt4116]));
+    expect(asLectures.map((g) => [g.dayNumber, g.start, g.end])).toEqual([
+      [1, 855, 960],
+      [4, 735, 840],
+    ]);
   });
 
   it("øving/øving overlap across different courses is never flagged, filtered or not", () => {
@@ -360,5 +348,65 @@ describe("findConflicts dedupe", () => {
       entry("BBB2000", "h2", 2, "10:15", "12:00"),
     ];
     expect(findConflicts(entries)).toHaveLength(2);
+  });
+
+  it("keeps every clashing entry when distinct pairs share one overlap window", () => {
+    // conf-4, with the live geometry that produces it: TDT4109's only 26h
+    // lecture is Fri 12:15–13:00 (uke 34-35,45-46), and SYG1000 publishes
+    // three Friday lectures that each cover it. All three intersections are
+    // the identical window 12:15–13:00 over uke 34,35,45,46 — so a dedupe key
+    // built from the INTERSECTION collapsed them to one conflict and dropped
+    // two entries that really do clash. grid.ts reads the dropped set for
+    // `groupsByEntry`, `clashWindowFor` and blockAriaLabel's "kolliderer med".
+    const tdt4109 = {
+      courseCode: "TDT4109",
+      dayNumber: 5,
+      startTime: "12:15",
+      endTime: "13:00",
+      weeks: ["34-35", "45-46"],
+    };
+    const syg1000 = [
+      ["08:15", "15:00"],
+      ["11:15", "13:00"],
+      ["12:15", "14:00"],
+    ].map(([startTime, endTime]) => ({
+      courseCode: "SYG1000",
+      dayNumber: 5,
+      startTime: startTime ?? "",
+      endTime: endTime ?? "",
+      weeks: ["33-38", "40-47"],
+    }));
+
+    const conflicts = findConflicts([tdt4109, ...syg1000]);
+    expect(conflicts).toHaveLength(3);
+    // Every SYG1000 lecture is present in the output, exactly once.
+    expect(conflicts.map((c) => `${c.b.startTime}-${c.b.endTime}`)).toEqual([
+      "08:15-15:00",
+      "11:15-13:00",
+      "12:15-14:00",
+    ]);
+    // The intersection really is identical for all three — that is the whole
+    // reason the old key merged them.
+    expect(conflicts.map((c) => [c.start, c.end, c.weeks])).toEqual([
+      [735, 780, [34, 35, 45, 46]],
+      [735, 780, [34, 35, 45, 46]],
+      [735, 780, [34, 35, 45, 46]],
+    ]);
+    // Downstream is unchanged: one day, one window, still one problem to fix.
+    expect(groupConflicts(conflicts)).toHaveLength(1);
+    expect(groupConflicts(conflicts)[0]?.entries).toHaveLength(4);
+  });
+
+  it("collapses parallel groups regardless of the order the courses interleave", () => {
+    // The dedupe key sorts the two (course, span) tokens, so the same pair of
+    // slots keys identically whichever entry the loop visits first. Keying on
+    // `a` and `b` positionally would leave this list with 2 conflicts.
+    const entries = [
+      entry("AAA1000", "g1", 1, "10:15", "12:00"),
+      entry("BBB2000", "h1", 1, "11:15", "13:00"),
+      entry("BBB2000", "h2", 1, "11:15", "13:00"),
+      entry("AAA1000", "g2", 1, "10:15", "12:00"),
+    ];
+    expect(findConflicts(entries)).toHaveLength(1);
   });
 });

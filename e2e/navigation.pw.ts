@@ -157,6 +157,30 @@ test.describe("other pages keep working after navigation", () => {
     await expect(page.locator("#emner-results li").first()).toBeVisible({ timeout: 15_000 });
   });
 
+  test("the catalog query survives Back from a course page", async ({ page }) => {
+    // search-4: `?q=` was read on setup but never written, so Back from a
+    // course page restored /emner/ with an empty field, zero rows and "Skriv
+    // for å søke i 5470 emner." — comparing three candidates meant retyping the
+    // query three times.
+    await page.goto("/emner/");
+    await page.fill("#emner-search", "algoritmer");
+    await expect(page.locator("#emner-results li").first()).toBeVisible({ timeout: 15_000 });
+    // The write is debounced behind the last keystroke (search-7/astro-6), so
+    // this is a wait, not a read.
+    await expect(page).toHaveURL(/\?q=algoritmer/, { timeout: 15_000 });
+
+    const link = page.locator("#emner-results a.emner-row-link").first();
+    const href = await link.getAttribute("href");
+    expect(href).toBeTruthy();
+    await link.click();
+    await page.waitForURL(`**${href}`);
+
+    await page.goBack();
+    await page.waitForURL(/\/emner\/\?q=algoritmer/);
+    await expect(page.locator("#emner-search")).toHaveValue("algoritmer");
+    await expect(page.locator("#emner-results li").first()).toBeVisible({ timeout: 15_000 });
+  });
+
   test("a course page fetches its own course, not the previous one", async ({ page }) => {
     await page.goto("/emne/TDT4120/");
     await expect(page.locator('#details-section [data-role="body"]')).not.toBeEmpty({
@@ -211,6 +235,32 @@ test.describe("the studieinfo chip", () => {
 test("/studier/ is gone", async ({ page }) => {
   const response = await page.goto("/studier/");
   expect(response?.status()).toBe(404);
+});
+
+test("a lowercase course URL lands on the course page, not a 404 (astro-7)", async ({ page }) => {
+  // `getStaticPaths` emits the catalog's own casing, so /emne/tdt4100/ used to
+  // 404 on a page that exists one casing change away. The worker 301s to the
+  // uppercased path after ASSETS has said 404 — the redirect can never loop,
+  // uppercasing being idempotent.
+  const response = await page.goto("/emne/tdt4100/");
+  expect(response?.status()).toBe(200);
+  expect(page.url()).toMatch(/\/emne\/TDT4100\/$/);
+  await expect(page.locator(".emne-code")).toHaveText("TDT4100");
+});
+
+test("every route carries the security headers (sec-3)", async ({ page }) => {
+  // A dropped header, or an inline script added under a hash-based CSP, has to
+  // fail somewhere. The worker sets these on the ASSETS branch and on every
+  // JSON route; nothing below the browser sees the real pipeline.
+  for (const path of ["/", "/api/health"]) {
+    const response = await page.goto(path);
+    const headers = response?.headers() ?? {};
+    const csp = headers["content-security-policy"] ?? "";
+    expect(csp, `no CSP on ${path}`).toContain("default-src 'self'");
+    expect(csp, `framing not denied on ${path}`).toContain("frame-ancestors 'none'");
+    expect(headers["x-content-type-options"], path).toBe("nosniff");
+    expect(headers["referrer-policy"], path).toBe("strict-origin-when-cross-origin");
+  }
 });
 
 test("no console or page errors during a full navigation circuit", async ({ page }) => {

@@ -218,6 +218,11 @@ export async function mountGradeChart(
 
     if (model.semesters.length === 0) {
       status.textContent = "Ingen karakterstatistikk registrert for dette emnet.";
+      // Hands back the height the placeholder was holding for the figure
+      // (perf-1). This branch KEEPS the status line on screen, so without the
+      // release a course DBH has never recorded would carry 36rem of empty
+      // page under one sentence, permanently — see [code].astro's own note.
+      status.removeAttribute("data-reserve");
       return;
     }
 
@@ -263,5 +268,8 @@ export async function mountGradeChart(
   } catch (err) {
     if ((err as Error)?.name === "AbortError") return;
     status.textContent = "Fikk ikke hentet karakterstatistikk.";
+    // Same lease, same reason: the apology stays visible, so the reservation
+    // under it has to go (perf-1).
+    status.removeAttribute("data-reserve");
   }
 }

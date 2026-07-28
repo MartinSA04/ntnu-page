@@ -26,11 +26,10 @@ describe("classifyActivity — real-data validation set", () => {
     ["Main lecture", "FORM", "Formidling"],
     ["Assignment lecture", "FORM-P", "Formidling"],
     ["Plenumsregning", "FORM", "Formidling"],
-    // Modular/PBL course formats whose lecture half carries its own name
-    // (TDT4140's "1 Teorimodul", the health faculties' PBL plenary).
+    // The lecture half of a modular course carries its own name (TDT4140's
+    // "1 Teorimodul").
     ["1 Teorimodul", "FORM", "Formidling"],
     ["Teorimodul", "FORM", "Formidling"],
-    ["Problembasert læring", "DISAM", "Dialog- og samarbeidsbasert undervisning"],
     ["Regneverksted", "FORM", "Formidling"],
     // Slash-joined combined sessions (REVIEW.md B7b): the student is in the
     // room either way, so a clash against one of these is a real clash. Every
@@ -47,6 +46,16 @@ describe("classifyActivity — real-data validation set", () => {
     ["Forelesning/Seminar", "DISAM", "Dialog- og samarbeidsbasert undervisning"],
     // Same combination written the other way round — same session.
     ["Fellesøving / forelesning", "DISAM", "Dialog- og samarbeidsbasert undervisning"],
+    // conf-3: four titles that emptied whole courses' lecture layer. All four
+    // are verbatim from the live API — the dropped-e misspelling (LKRO001E
+    // 2026_HØST, IT3708 2026_VÅR), and the English combined sessions joined by
+    // " and " instead of "/" (IIK4100 2026_HØST, note the trailing space) or
+    // carrying an unrecognised "Tutorial" part (AIS4004 2026_VÅR).
+    ["Forlesning", "FOR", "Forelesning"],
+    ["Forlesning/Øving sammen med MGLU2509", "FOR", "Forelesning/Øving"],
+    ["2Forlesning/Øving", "FORM", "Formidling"],
+    ["Lecture and Lab exercise ", "FORM", "Formidling"],
+    ["Lecture/Tutorial/Lab", "FORM", "Formidling"],
   ];
 
   const other: Array<[string | null, string | null, string | null]> = [
@@ -70,6 +79,13 @@ describe("classifyActivity — real-data validation set", () => {
     ["Gruppe", "GR", "Gruppe"],
     ["Samlingsbasert undervisning", "SAM", "Samlingsbasert undervisning"],
     ["Samling 1", "SAM", "Samlingsbasert undervisning"],
+    // PBL, in each of the three spellings live data shows. This row used to be
+    // hand-labeled a lecture ("the health faculties' PBL plenary") — BI1001
+    // publishes it across five mutually exclusive weekly slots, so it is
+    // parallel group work and the label was the source of a false red (conf-2).
+    ["Problembasert læring", "DISAM", "Dialog- og samarbeidsbasert undervisning"],
+    ["PBL-gruppe 1", "GR", "Gruppe"],
+    ["PBL-fasilitering IAB", "DISAM", "Dialog- og samarbeidsbasert undervisning"],
     // excursions / admin / social — not teaching in the lecture sense
     ["Demo omvisning", "EKSKUR", "Ekskursjon"],
     ["Tur", "EKSKUR", "Ekskursjon"],
@@ -90,10 +106,16 @@ describe("classifyActivity — real-data validation set", () => {
     // reads as "these things happen here over the term", so the
     // under-classification bias still applies (DR-1).
     ["Øving, prosjektarbeid, forelesning", "DISAM", "Dialog- og samarbeidsbasert undervisning"],
-    // A slash-joined title we do not fully understand stays "other" — the
-    // carve-out only covers combinations of recognized activity qualifiers.
+    // A joined title we do not fully understand stays "other" — the carve-out
+    // only covers combinations of recognized activity qualifiers, whichever
+    // separator joins them.
     ["Forelesning/Øving/Frokost", "DISAM", "Dialog- og samarbeidsbasert undervisning"],
     ["Lab/Ekskursjon", "FERD", "Ferdighetstrening"],
+    ["Lecture and Lab and Frokost", "FORM", "Formidling"],
+    // "Tutorial" on its own is øving by another name, not a lecture — it only
+    // rides along inside a combined session (conf-3).
+    ["Tutorial", "DISAM", "Dialog- og samarbeidsbasert undervisning"],
+    ["Tutorial/Lab", "FERD", "Ferdighetstrening"],
     // Other modules of a modular course are not the lecture module.
     ["2 Prosjektarbeid", "FORM", "Formidling"],
     ["3 Refleksjonsmodul", "FORM", "Formidling"],

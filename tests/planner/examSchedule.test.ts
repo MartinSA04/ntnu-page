@@ -37,6 +37,73 @@ describe("buildExamList", () => {
     expect(gap3.rows[0]?.tight).toBe(false);
   });
 
+  // The cases below came over from `analyzeExams`, the dead second engine
+  // deleted under conf-7/exams-6. Its threshold was `gapDays === 1` set on
+  // BOTH rows; this module's is `gap <= 2` on the earlier row only, and these
+  // pin that difference so the surviving rule cannot drift back.
+  it("flags a 1-day gap as tight on the earlier row only, and not as sameDay", () => {
+    const model = buildExamList(
+      [
+        { code: "A", date: "2026-12-05" },
+        { code: "B", date: "2026-12-06" },
+      ],
+      "2026-01-01",
+    );
+    expect(model.rows[0]?.gapToNext).toBe(1);
+    expect(model.rows.map((r) => r.tight)).toEqual([true, false]);
+    expect(model.rows.map((r) => r.sameDay)).toEqual([false, false]);
+  });
+
+  it("a 2-day gap is tight but never sameDay", () => {
+    const model = buildExamList(
+      [
+        { code: "A", date: "2026-12-05" },
+        { code: "B", date: "2026-12-07" },
+      ],
+      "2026-01-01",
+    );
+    expect(model.rows[0]?.gapToNext).toBe(2);
+    expect(model.rows[0]?.tight).toBe(true);
+    expect(model.rows.every((r) => !r.sameDay)).toBe(true);
+  });
+
+  it("computes gaps across a chain of exams", () => {
+    const model = buildExamList(
+      [
+        { code: "A", date: "2026-12-01" },
+        { code: "B", date: "2026-12-03" },
+        { code: "C", date: "2026-12-10" },
+      ],
+      "2026-01-01",
+    );
+    expect(model.rows.map((r) => r.gapToNext)).toEqual([2, 7, null]);
+    expect(model.rows.map((r) => r.tight)).toEqual([true, false, false]);
+  });
+
+  it("keeps multiple exams for the same course as separate rows", () => {
+    const model = buildExamList(
+      [
+        { code: "A", date: "2026-12-05" },
+        { code: "A", date: "2026-05-15" },
+      ],
+      "2026-01-01",
+    );
+    expect(model.rows.map((r) => r.date)).toEqual(["2026-05-15", "2026-12-05"]);
+    expect(model.rows.every((r) => r.code === "A")).toBe(true);
+  });
+
+  it("treats an empty-string date as dateless, not as a row with NaN gaps", () => {
+    const model = buildExamList(
+      [
+        { code: "A", date: "" },
+        { code: "B", date: "2026-12-05" },
+      ],
+      "2026-01-01",
+    );
+    expect(model.dateless).toEqual(["A"]);
+    expect(model.rows.map((r) => r.code)).toEqual(["B"]);
+  });
+
   it("the last dated row always has gapToNext null and tight false", () => {
     const model = buildExamList(
       [
@@ -124,6 +191,36 @@ describe("buildExamList", () => {
       ],
       "2026-06-01",
     );
+    expect(model.rows.every((r) => r.daysFromToday === null)).toBe(true);
+  });
+
+  it("marks rows strictly before today as past, and today itself as not past", () => {
+    const model = buildExamList(
+      [
+        { code: "SAT", date: "2026-01-01" },
+        { code: "TODAY", date: "2026-01-10" },
+        { code: "SOON", date: "2026-01-20" },
+      ],
+      "2026-01-10",
+    );
+    expect(model.rows.map((r) => r.past)).toEqual([true, false, false]);
+  });
+
+  it("gives a caller enough to drop clash ink between two exams already sat", () => {
+    // exams-7's live repro: on 11. des, the 9. des → 10. des connector still
+    // read "1 dags mellomrom · tett" in clash ink about two exams that were
+    // both over. `tight` stays true (the spacing WAS tight — that is a fact
+    // about the dates, not about now); what the renderer needs is knowing both
+    // ends are history.
+    const model = buildExamList(
+      [
+        { code: "TDT4120", date: "2026-12-09" },
+        { code: "TDT4195", date: "2026-12-10" },
+      ],
+      "2026-12-11",
+    );
+    expect(model.rows[0]?.tight).toBe(true);
+    expect(model.rows.map((r) => r.past)).toEqual([true, true]);
     expect(model.rows.every((r) => r.daysFromToday === null)).toBe(true);
   });
 

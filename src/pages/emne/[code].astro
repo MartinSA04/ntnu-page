@@ -202,7 +202,7 @@ const description = `${course.code} ${course.name} — timeplan, eksamen og nøk
 
     <section class="emne-section" id="grades-section">
       <h2 class="np-kicker emne-section-head">Karakterer</h2>
-      <p class="emne-loading np-hint" data-role="status" aria-live="polite">
+      <p class="emne-loading np-hint" data-role="status" data-reserve aria-live="polite">
         Henter karakterstatistikk …
       </p>
       <div data-role="body" hidden></div>
@@ -298,14 +298,45 @@ const description = `${course.code} ${course.name} — timeplan, eksamen og nøk
      a terminal state that keeps that line on screen ("Klarte ikke å hente
      timeplanen."), so a failure never sits at the top of 24rem of empty
      page. The success path hides the whole line, which releases it too.
-     Karakterer is deliberately not reserved: `gradeChart.ts` leaves its
-     status visible for a course with no statistics at all, which would make
-     the hole permanent there. */
+     That is also what lets Karakterer hold space at all: a course with no
+     statistics keeps its one-line status, and `gradeChart.ts` hands the lease
+     back on both of those branches rather than leaving a permanent hole. */
   #timetable-section [data-role="status"][data-reserve] {
     min-height: 24rem;
   }
   #details-section [data-role="status"][data-reserve] {
     min-height: 8rem;
+  }
+  /* Karakterer's height is the one that is actually predictable: the figure
+     draws exactly `VISIBLE_SEMESTERS` charts of a fixed 96 px plot, so the
+     only variable is how many columns they sit in — which is the same two
+     breakpoints `.grades-grid` above switches on. Measured in Chromium on the
+     real stylesheets with three six-bar charts: the section settles at 657 px
+     one-up, 437 px two-up and 237 px three-up. Each reservation is set a
+     little under its band's measurement, so the residual is a small DOWNWARD
+     nudge rather than the section snapping upward out from under a thumb.
+
+     The cost, stated plainly: a course DBH has never recorded releases the
+     lease and the page jumps UP by the reservation instead — a shift it does
+     not have today. That is why the numbers were checked against the real
+     population rather than guessed. One DBH query for every NTNU course code
+     in table 308, intersected with data/catalog.json: 4 811 of 5 470 courses
+     (88,0 %) have grade rows, 659 (12,0 %) have none. Expected shift at
+     390 px is 0,88 × 57 px + 0,12 × 556 px ≈ 117 px, against 0,88 × 612 px ≈
+     539 px with no reservation at all. If that ratio ever inverts, delete
+     these three rules — not the release in gradeChart.ts. */
+  #grades-section [data-role="status"][data-reserve] {
+    min-height: 36rem;
+  }
+  @media (min-width: 40rem) {
+    #grades-section [data-role="status"][data-reserve] {
+      min-height: 24rem;
+    }
+  }
+  @media (min-width: 60rem) {
+    #grades-section [data-role="status"][data-reserve] {
+      min-height: 13rem;
+    }
   }
 
   .emne-exams-list {
@@ -441,6 +472,33 @@ const description = `${course.code} ${course.name} — timeplan, eksamen og nøk
     }
   }
 
+  /* course-4: the figure was 39 % of the mobile page, so only the newest three
+     semesters are drawn up front and the rest fold into this disclosure
+     (gradeChart.ts). Its list repeats `.grades-grid`'s columns rather than
+     reusing the class — e2e/flows.pw.ts locates `#grades-section .grades-grid`
+     strictly, and a second match would fail the whole test rather than the
+     rule. Without the columns the older charts stack one full-width row each
+     the moment the disclosure opens, which is the shape being fixed. */
+  :global(.grades-older) {
+    margin-top: var(--space-5);
+  }
+  :global(.grades-older-list) {
+    padding-top: var(--space-3);
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--space-5) var(--space-6);
+  }
+  @media (min-width: 40rem) {
+    :global(.grades-older-list) {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+  @media (min-width: 60rem) {
+    :global(.grades-older-list) {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+  }
+
   :global(.grades-chart-head) {
     display: flex;
     align-items: baseline;
@@ -548,8 +606,16 @@ const description = `${course.code} ${course.name} — timeplan, eksamen og nøk
 
     // Off-year courses need the catalog year they actually come from, or the
     // details endpoint 404s and Nøkkeltall renders empty (course-1/cpc-3).
-    mountCourseDetails(code, isOffered ? null : sourceYear);
-    void mountGradeChart(code, signal);
+    //
+    // pc-2: the grade figure reads the SAME payload to learn which seasons
+    // hold an ordinary exam, so both callers take the one year — one URL, one
+    // cache entry, one request. Passing it to only one of them would 404 the
+    // other on the 703 courses carried over from last year's catalog (their
+    // figure would keep drawing utsatt sittings as peer semesters) and, worse,
+    // split what is one payload across two distinct requests.
+    const detailsYear = isOffered ? null : sourceYear;
+    mountCourseDetails(code, detailsYear);
+    void mountGradeChart(code, signal, detailsYear);
 
     // crawler-3: a course the catalog no longer offers gets no add control at
     // all (addCourse.ts's policy for the same row), so the week, the verdict
@@ -606,6 +672,14 @@ const description = `${course.code} ${course.name} — timeplan, eksamen og nøk
      * `.is-active` rather than `aria-pressed` carries the in-plan fill: with
      * four states there is nothing to press, the accessible name is the
      * visible verb, and `hasCourse` is deliberately blind to `dropped`.
+     *
+     * copy-6: the STATE is spelled "I planen" — DESIGN §7's other half of
+     * "Legg til i planen", and the same words /emner/ puts on its toggle and
+     * the add dialog puts in its own state span. The button cannot carry it
+     * here (four verbs, and the verb has to name what pressing does), so the
+     * span does; one state, one spelling, across all four surfaces. The two
+     * programme lines stay sentences rather than being folded into it — they
+     * are why the verb beside them is "Dropp" and not "Fjern".
      */
     function syncPlanBtn(): void {
       if (!planBtn) return;
@@ -626,7 +700,7 @@ const description = `${course.code} ${course.name} — timeplan, eksamen og nøk
             ? "droppet — fortsatt en del av programmet"
             : program
               ? "fra studieprogrammet ditt"
-              : "i planen din";
+              : "I planen";
         planState.hidden = !entry;
       }
     }

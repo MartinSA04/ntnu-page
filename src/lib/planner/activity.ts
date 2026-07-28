@@ -30,19 +30,19 @@
  * competing øving/lab/seminar keyword in the same title; unrecognized
  * strings and empty titles fall back to `"other"`.
  *
- * The one carve-out (REVIEW.md B7b) is the *slash-joined* combined session —
+ * The one carve-out (REVIEW.md B7b) is the *joined* combined session —
  * "Forelesning/Øving", "Forelesning / Øving", "Forelesning/Lab",
- * "Forelesing/øving", "Fellesøving / forelesning". The under-classification
- * bias cost more than it bought there: whole faculties schedule every one of
- * their slots that way, so their default week came out empty. And the
- * tradeoff does not actually apply — the slash means *one* session that is
- * partly lecture, the student is in the room either way, so a clash against
- * it is a real clash, not a false red. The carve-out is deliberately narrow:
- * every slash-separated part must itself be a recognized lecture or
- * non-lecture qualifier ("Forelesning/Øving/Frokost" stays "other"), and
- * comma-joined enumerations ("Øving, prosjektarbeid, forelesning") are left
- * alone — those read as "these things happen here over the term", not as one
- * session.
+ * "Forelesing/øving", "Fellesøving / forelesning", "Lecture/Tutorial/Lab",
+ * "Lecture and Lab exercise". The under-classification bias cost more than it
+ * bought there: whole faculties schedule every one of their slots that way,
+ * so their default week came out empty. And the tradeoff does not actually
+ * apply — the join means *one* session that is partly lecture, the student is
+ * in the room either way, so a clash against it is a real clash, not a false
+ * red. The carve-out is deliberately narrow: every part must itself be a
+ * recognized lecture or non-lecture qualifier ("Forelesning/Øving/Frokost"
+ * stays "other"), only "/", " and " and "&" join (comma-joined enumerations
+ * like "Øving, prosjektarbeid, forelesning" are left alone — those read as
+ * "these things happen here over the term", not as one session).
  */
 
 /** Structural subset of `TimetableEntry`/`ScheduleActivity` this classifier reads. */
@@ -62,28 +62,37 @@ export type ActivityKind = "lecture" | "other";
 const LECTURE_KEYWORDS = [
   /forelesning(?:sparallell)?/i, // "Forelesning", "1Forelesning", "Forelesningsparallell 3"
   /forelesing/i, // observed misspelling (KP3200-style courses)
+  /forlesning/i, // the other observed misspelling — dropped e (LKRO001E, IT3708)
   /\blecture\b/i, // "Main lecture", "Assignment lecture"
   /\bplenum/i, // "Plenumsregning" — whole-class lecture-style session
   /teorimodul/i, // TDT4140's "1 Teorimodul" — the lecture half of a modular course
-  /problembasert\s+l(?:æ|ae)ring/i, // PBL plenary, medicine/health faculties
   /regneverksted/i, // whole-class worked-example session, taught from the front
 ];
 
 /**
  * Keywords that mark a *non-lecture* teaching activity. A hit here keeps the
  * entry out of `"lecture"` per the asymmetric-risk tradeoff above — unless
- * the whole title is a slash-joined combined session (see
- * `isSlashCombinedLecture`).
+ * the whole title is a joined combined session (see `isCombinedLecture`).
  */
 const NON_LECTURE_KEYWORDS = [
   /øving/i, // "Øving", "Øvingstime", "Fellesøving", "Gruppeøving", "Laboratorieøving"
   /\blab\b|laboratorie/i, // "Lab", "Lab exercises", "Laboratorieøvelse", "Mattelab"
   /seminar/i, // "Seminar 1", "Seminargrupper"
+  /tutorial/i, // English for øving — AIS4004's "Lecture/Tutorial/Lab"
   /\bgruppe/i, // "Gruppe", "Gruppearbeid", "10Gruppe", "Gruppeøving"
   /kollokvie/i,
   /\bekskursjon|\btur\b|omvisning/i, // field trips
   /samling/i, // "Samlingsbasert undervisning", "Samling 1" — block-taught, not a lecture slot
   /øvelse/i,
+  // PBL is group work, not a plenary, whichever way a faculty spells it
+  // (conf-2). BI1001's 2026_VÅR timetable publishes 29 rows titled exactly
+  // "Problembasert læring" across FIVE mutually exclusive weekly slots (ma
+  // 10:15 and 14:15, ti 10:15, on 12:15, to 12:15) — the repeated-identical-row
+  // signature of parallel groups, not five plenaries anyone attends. MDT4030
+  // spells the same activity "PBL-gruppe 1…16" and "PBL-fasilitering IAB".
+  // Classifying it as a lecture produced a real false red: BI1001 + TKT4116
+  // yielded 2 conflict groups, 0 once PBL is group work.
+  /problembasert|\bpbl\b/i,
 ];
 
 function matchesAny(patterns: RegExp[], text: string): boolean {
@@ -91,20 +100,28 @@ function matchesAny(patterns: RegExp[], text: string): boolean {
 }
 
 /**
- * True for a title that is nothing but slash-joined activity qualifiers, at
- * least one of which is a plain lecture — "Forelesning/Øving",
- * "Forelesning / Øving", "1Forelesning/Lab", "Fellesøving / forelesning",
- * "Forelesning/øving Ålesund uke 19".
+ * The three ways live data joins the parts of ONE combined session: a slash,
+ * the English " and ", and "&". Norwegian " og " is deliberately NOT here — it
+ * joins ordinary prose inside titles and names ("Dialog- og samarbeidsbasert
+ * undervisning") far more often than it joins two activities.
+ */
+const COMBINED_SEPARATOR = /\s*\/\s*|\s+and\s+|\s*&\s*/i;
+
+/**
+ * True for a title that is nothing but joined activity qualifiers, at least
+ * one of which is a plain lecture — "Forelesning/Øving", "Forelesning / Øving",
+ * "1Forelesning/Lab", "Fellesøving / forelesning",
+ * "Forelesning/øving Ålesund uke 19", "Lecture/Tutorial/Lab",
+ * "Lecture and Lab exercise".
  *
  * The `every` guard is what keeps this narrow: a part that is neither a
  * lecture nor a recognized non-lecture qualifier ("Forelesning/Øving/Frokost")
  * means we do not understand the title, and not understanding it sends us
  * back to the safe `"other"` verdict.
  */
-function isSlashCombinedLecture(text: string): boolean {
-  if (!text.includes("/")) return false;
+function isCombinedLecture(text: string): boolean {
   const parts = text
-    .split("/")
+    .split(COMBINED_SEPARATOR)
     .map((part) => part.trim())
     .filter((part) => part !== "");
   if (parts.length < 2) return false;
@@ -121,15 +138,15 @@ function isSlashCombinedLecture(text: string): boolean {
  * Classify one timetable/schedule entry as `"lecture"` or `"other"`.
  * `"lecture"` when `title` (falling back to `name`, then `acronym`) contains
  * a lecture keyword and either no competing non-lecture keyword at all, or
- * only ones that sit on the other side of a slash (a combined session the
- * student attends either way). Missing/blank text classifies as `"other"`
- * (the safe default — see module docs).
+ * only ones that sit on the other side of a combining separator (a combined
+ * session the student attends either way). Missing/blank text classifies as
+ * `"other"` (the safe default — see module docs).
  */
 export function classifyActivity(entry: ActivityLike): ActivityKind {
   const text = entry.title?.trim() || entry.name?.trim() || entry.acronym?.trim() || "";
   if (text === "") return "other";
   if (matchesAny(NON_LECTURE_KEYWORDS, text)) {
-    return isSlashCombinedLecture(text) ? "lecture" : "other";
+    return isCombinedLecture(text) ? "lecture" : "other";
   }
   if (matchesAny(LECTURE_KEYWORDS, text)) return "lecture";
   return "other";

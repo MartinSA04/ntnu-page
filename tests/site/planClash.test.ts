@@ -104,14 +104,21 @@ describe("planClash", () => {
   });
 
   // conf-1: "no entries this semester" and "entries we cannot classify" are
-  // different states. IIK4100 is the live instance — its autumn entries are
-  // titled "Lecture and Lab exercise", which DR-1's asymmetric classifier
-  // sends to "other", and the page used to print "Undervises ikke i Høst
-  // 2026" directly above its own autumn grid.
+  // different states, and the page used to print "Undervises ikke i Høst 2026"
+  // directly above a course's own autumn grid.
+  //
+  // The fixture is an øving-only autumn course, NOT IIK4100 as originally
+  // written: its "Lecture and Lab exercise" title was a valid example of the
+  // "other" bucket when this test was written, but conf-3 later taught the
+  // classifier to read joined combined sessions as lectures, so IIK4100 now
+  // resolves to a real lecture verdict — a strictly better outcome for that
+  // course, and the reason this fixture had to move. A course publishing only
+  // øvinger this semester is the case that genuinely cannot be classified, and
+  // it is what keeps the "unclassified" branch reachable.
   it("says unclassified, not off-semester, when in-semester entries exist but none is a lecture", async () => {
     stubFetch({ TDT4110: [entry("TDT4110")] });
     const verdict = await planClash({ code: "IIK4100", version: "1" }, plan("TDT4110"), SEMESTER, [
-      entry("IIK4100", { title: "Lecture and Lab exercise", weeks: ["34-46"] }),
+      entry("IIK4100", { title: "Øving", weeks: ["34-46"] }),
     ]);
     expect(verdict).toEqual({ kind: "unclassified" });
     expect(clashSentence(verdict, SEMESTER)).toBe(

@@ -49,6 +49,7 @@ describe("addCourseRowControl", () => {
     const control = addCourseRowControl(store, TDT4109);
     expect(control.label).toBe("Legg til");
     expect(control.state).toBe("");
+    expect(control.stateKind).toBe("none");
     expect(control.ariaLabel).toContain("Legg til");
 
     expect(control.run()).toBe("TDT4109 lagt til i planen.");
@@ -61,7 +62,9 @@ describe("addCourseRowControl", () => {
     store.addCourse(TDT4109);
     const control = addCourseRowControl(store, TDT4109);
     expect(control.label).toBe("Fjern");
-    expect(control.state).toBe("Lagt til ✓");
+    // copy-6: DESIGN §7's mandated half of the pair, not "Lagt til ✓".
+    expect(control.state).toBe("I planen");
+    expect(control.stateKind).toBe("added");
 
     expect(control.run()).toBe("TDT4109 fjernet fra planen.");
     expect(store.loadPlan().courses).toEqual([]);
@@ -73,6 +76,8 @@ describe("addCourseRowControl", () => {
     const control = addCourseRowControl(store, TDT4109);
     expect(control.label).toBe("Dropp");
     expect(control.state).toBe("fra programmet");
+    // modals-4's CSS half: the tone split needs a hook CSS can select on.
+    expect(control.stateKind).toBe("program");
 
     expect(control.run()).toBe("TDT4109 droppet — fortsatt en del av programmet.");
     expect(store.loadPlan().courses).toEqual([
@@ -111,6 +116,7 @@ describe("addCourseRowControl", () => {
     const control = addCourseRowControl(store, TDT4109);
     expect(control.label).toBe("Legg tilbake");
     expect(control.state).toBe("droppet");
+    expect(control.stateKind).toBe("dropped");
     expect(control.state).not.toContain("Lagt til");
 
     expect(control.run()).toBe("TDT4109 lagt tilbake i planen.");

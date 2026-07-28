@@ -20,10 +20,11 @@
    too — and that is precisely how /emne/[code]/ came to clip its Friday
    column at 360 px with no fade, no hint and no scroll offset while
    /planlegger/ faded correctly (mob-2). It lives here now, so the two
-   surfaces cannot disagree about it again. Note the JS half is still
-   planner-only: `syncGridScroll` (plannerApp.ts) is what sets [data-scroll],
-   and until courseTimetable.ts calls an equivalent, these rules simply never
-   match on the course page. */
+   surfaces cannot disagree about it again, and BOTH halves are live: the
+   planner sets [data-scroll] from `syncGridScroll` (plannerApp.ts) and the
+   course page from `syncScroll` (courseTimetable.ts), each on its own frame,
+   each also rendering a `.planner-scroll-hint` — whose spacing is therefore
+   here too, not in one page's scoped block. */
 
 /* No .np-frame, and no .np-ruled: the week is not a spreadsheet. It used to
    be a bordered, rounded box tiled with a 1px line every 15 minutes in BOTH
@@ -72,6 +73,15 @@
 
 .planner-grid-frame[data-scroll="end"] {
   mask-image: linear-gradient(to right, transparent 0, #000 3rem);
+}
+
+/* The sentence that names what the mask is fading. Both surfaces render one
+   (plannerApp.ts and courseTimetable.ts), so its spacing belongs beside the
+   mask rather than in /planlegger/'s scoped block, where /emne/[code]/'s copy
+   could never reach it. `:not([hidden])` because the element is mounted empty
+   and unhidden only when a day really is off-frame. */
+.planner-scroll-hint:not([hidden]) {
+  margin-bottom: var(--space-2);
 }
 
 /* The frame's own padding is the spacing; a message inside it is not prose. */
@@ -209,7 +219,19 @@
   transition: background var(--dur-fast) var(--ease);
 }
 
-.planner-block:hover {
+/* cpc-4: `renderGrid` emits a `<button>` per block and wires a click only when
+   its caller supplies `onBlockClick`. /emne/[code]/ has nothing to hand it, so
+   every block there was a pointer-cursored, hover-lit control that answered no
+   click — 24 of them on EXPH0300. `courseTimetable.ts` marks that frame
+   `data-static`; the cursor comes off here, and every hover wash below is
+   scoped to a frame that actually handles a click, so the wash keeps meaning
+   "this responds to you" rather than becoming decoration. (The tab stops are
+   removed on the JS side, where the buttons are built.) */
+.planner-grid-frame[data-static] .planner-block {
+  cursor: default;
+}
+
+.planner-grid-frame:not([data-static]) .planner-block:hover {
   background: color-mix(in srgb, var(--dot) var(--wash-course-hover), var(--card));
 }
 
@@ -224,7 +246,7 @@
   color: var(--muted);
 }
 
-.planner-block.is-muted:hover {
+.planner-grid-frame:not([data-static]) .planner-block.is-muted:hover {
   background: color-mix(in srgb, var(--dot) var(--wash-course), var(--card));
 }
 
@@ -269,7 +291,19 @@
 
 /* The full course code, never truncated (§5): it may WRAP inside a narrow
    column ("TDT4110" → two rows) but it is never cut with an ellipsis, so the
-   student always reads which course a block is. */
+   student always reads which course a block is.
+
+   course-7 asked for `break-word` here instead of `anywhere`, on the reading
+   that it "wraps only at real break opportunities". It does not: both keywords
+   break an otherwise-unbreakable word that does not fit, and they differ only
+   in whether that break counts toward min-content sizing — which a block whose
+   inline size is fixed by `inset-inline` above never consults. Measured in
+   Chromium on this stylesheet at 320/360/390/640/1280 px, both one- and
+   two-column clusters: the two keywords give identical width, line count and
+   overflow in every case. What actually fixed the three-line "TDT"/"410"/"0"
+   is the ≤40rem block at the foot of this file (one line, 40,3 px at 390 px)
+   plus `maxColumnsForViewport` piling 2-deep clusters at phone width. Don't
+   swap the keyword expecting a rendering change; there isn't one. */
 .planner-block-code {
   min-width: 0;
   font-size: var(--text-sm);
@@ -334,8 +368,8 @@
   background: color-mix(in srgb, var(--fg) 4%, var(--card));
 }
 
-.planner-block.planner-block-pile:hover,
-.planner-block.planner-block-pile.is-muted:hover {
+.planner-grid-frame:not([data-static]) .planner-block.planner-block-pile:hover,
+.planner-grid-frame:not([data-static]) .planner-block.planner-block-pile.is-muted:hover {
   background: color-mix(in srgb, var(--fg) 12%, var(--card));
 }
 

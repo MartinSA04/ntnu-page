@@ -227,7 +227,18 @@ export async function mountCourseTimetable(
   // TDT4109's only lecture hangs behind the edge — no fade, no hint, no
   // scroll offset, because A4's mobile-week fix lives on /planlegger/ (its
   // `[data-scroll]` mask and `#planner-scroll-hint`) and this surface shares
-  // only the geometry. The frame is swipeable; nothing said so.
+  // only the geometry. The frame is swipeable; nothing said so. The mask and
+  // the hint's spacing are in planner-week.css now, so both surfaces get them
+  // from one place.
+  //
+  // The third part of that fix — /planlegger/'s `scrollToToday`, which happens
+  // to consume the frame's own `var(--cell)` padding and so recovers ~24 px on
+  // the right — is deliberately NOT ported. There is no "today" in a week that
+  // repeats for one course, and any non-zero starting scrollLeft puts the
+  // frame in `[data-scroll="middle"]`, whose left ramp then washes out the
+  // hour rail the student reads the grid against (mob-5) for every visit.
+  // Fading the rail permanently to win 24 px of a 56 px clip the hint already
+  // names is the wrong trade.
   const scrollHint = el("p", "np-hint planner-scroll-hint");
   scrollHint.hidden = true;
   body.append(scrollHint, frame, notes);

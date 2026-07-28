@@ -1,0 +1,14 @@
+# The 5470 course pages are only reachable through the sitemap: /emner/ builds
+# its rows in the browser, so no server-rendered page links to /emne/ (astro-2).
+#
+# The host below MUST match `site` in astro.config.mjs — it is still the
+# placeholder ntnu.martinsundal.no and both have to be changed together before
+# the first real deploy. tests/site/discoverability.test.ts asserts they agree.
+User-agent: *
+Allow: /
+
+# JSON for the site's own scripts, not content — nothing to index, and the
+# worker pays an upstream fetch for a cold one.
+Disallow: /api/
+
+Sitemap: https://ntnu.martinsundal.no/sitemap.xml

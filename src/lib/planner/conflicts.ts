@@ -1,6 +1,14 @@
 /**
  * The conflict engine (PLANNER.md §3): pairwise timetable clash detection
- * and exam-date collision/gap analysis over a selected set of courses.
+ * over a selected set of courses.
+ *
+ * Timetables only. Exam dates are NOT analysed here — `examSchedule.ts`'s
+ * `buildExamList` is the single owner of the sort, the whole-day gaps, the
+ * same-day flag and the "tett" threshold. This module used to export a second
+ * `analyzeExams` that no caller ever ran and that disagreed with the live one
+ * on both the threshold (1 day vs 2) and the date math (`Date.parse` vs
+ * examSchedule's deliberate `Date.UTC` differencing); it was deleted rather
+ * than reconciled (conf-7/exams-6). Do not re-add exam logic here.
  *
  * DR-1 (PRODUCT.md): hard conflicts are lecture-only. `findConflicts` itself
  * stays classification-agnostic — the simpler of the two APIs described in
@@ -61,8 +69,19 @@ export function findConflicts(entries: ScheduleEntry[]): Conflict[] {
       const weeks = bWeeks.filter((w) => aWeeks.has(w));
       if (weeks.length === 0) continue;
 
-      const [codeX, codeY] = [a.courseCode, b.courseCode].sort();
-      const key = `${codeX}|${codeY}|${a.dayNumber}|${start}|${end}|${weeks.join(",")}`;
+      // Keyed on the two ENTRIES' own spans, never on the intersection:
+      // distinct pairs can share one overlap window, and keying on the window
+      // silently dropped the later ones from the returned Conflict[] (conf-4).
+      // Live geometry that does it: TDT4109's only 26h lecture is Fri
+      // 12:15–13:00 (uke 34-35,45-46), and SYG1000 publishes three Friday
+      // lectures (08:15–15:00, 11:15–13:00, 12:15–14:00) that each cover it —
+      // one intersection, three real clashes. Sorted so the key cannot depend
+      // on which entry the loop happened to visit first.
+      const [spanX, spanY] = [
+        `${a.courseCode}@${aStart}-${aEnd}`,
+        `${b.courseCode}@${bStart}-${bEnd}`,
+      ].sort();
+      const key = `${spanX}|${spanY}|${a.dayNumber}|${weeks.join(",")}`;
       if (seen.has(key)) continue;
       seen.add(key);
       conflicts.push({ a, b, dayNumber: a.dayNumber, start, end, weeks });
@@ -167,65 +186,4 @@ export function mergeParallelSlots<T extends ScheduleEntry>(
     inOrder.push(group);
   }
   return inOrder;
-}
-
-/** One course's exam occasion as input to `analyzeExams`. */
-export interface ExamInput {
-  code: string;
-  date: string | null;
-}
-
-/** One row of the sorted exam timeline, annotated with spacing to the next exam. */
-export interface ExamRow {
-  code: string;
-  date: string;
-  /** Days until the next row's exam (by date order); `null` for the last row. */
-  dayGap: number | null;
-  /** Another exam falls on the exact same date. */
-  collision: boolean;
-  /** Next exam is within 1 day (but not a same-day collision) — "tett". */
-  tight: boolean;
-}
-
-const MS_PER_DAY = 24 * 60 * 60 * 1000;
-
-/**
- * Sort exams by date and annotate day-gaps, same-date collisions and
- * 1-day-gap "tight" spacing warnings. Entries with a `null` date are
- * skipped (not scheduled yet). Multiple exams can share a course code
- * (multi-part/continuation exams).
- */
-export function analyzeExams(exams: ExamInput[]): ExamRow[] {
-  const dated = exams.filter(
-    (e): e is ExamInput & { date: string } => e.date !== null && e.date !== "",
-  );
-  const sorted = [...dated].sort((x, y) => x.date.localeCompare(y.date));
-
-  const rows: ExamRow[] = sorted.map((e) => ({
-    code: e.code,
-    date: e.date,
-    dayGap: null,
-    collision: false,
-    tight: false,
-  }));
-
-  for (let i = 0; i < rows.length; i++) {
-    const current = rows[i];
-    const next = rows[i + 1];
-    if (!current) continue;
-    if (!next) continue;
-
-    const gapDays = Math.round((Date.parse(next.date) - Date.parse(current.date)) / MS_PER_DAY);
-    current.dayGap = gapDays;
-
-    if (gapDays === 0) {
-      current.collision = true;
-      next.collision = true;
-    } else if (gapDays === 1) {
-      current.tight = true;
-      next.tight = true;
-    }
-  }
-
-  return rows;
 }

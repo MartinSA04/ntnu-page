@@ -1,8 +1,9 @@
-import { describe, expect, test } from "vitest";
+import { afterEach, describe, expect, test } from "vitest";
 import {
   metaLine,
   pileSummary,
   planGaps,
+  renderGrid,
   unresolvedLectureChoices,
   visibleLayer,
 } from "../../src/components/planner/grid.js";
@@ -254,5 +255,191 @@ describe("metaLine (week-4)", () => {
 
   test("no room, still a time", () => {
     expect(metaLine({ rooms: "", startTime: "08:15" })).toBe("08:15");
+  });
+});
+
+/* --- The DOM half ------------------------------------------------------
+ *
+ * Two of `renderGrid`'s decisions are not expressible in the pure helpers
+ * above and were shipping unverified below the browser suite: the header
+ * row's shape (week-7) and the phone-width column cap (grid-3). This repo
+ * ships no jsdom/happy-dom and does not want one, so the shim below is the
+ * smallest thing `renderGrid` actually touches — createElement, classList,
+ * append/replaceChildren, attributes and a `style.setProperty` that records
+ * custom properties, because both findings are asserted on those.
+ *
+ * It is NOT a DOM: no layout, no CSS, no selector engine. It proves which
+ * nodes are built and what they carry, never how wide they end up.
+ */
+
+class ShimEl {
+  classes = new Set<string>();
+  props = new Map<string, string>();
+  attrs = new Map<string, string>();
+  children: ShimEl[] = [];
+  text = "";
+  title = "";
+  hidden = false;
+  offsetWidth = 0;
+  constructor(readonly tagName: string) {}
+  classList = {
+    add: (...names: string[]) => {
+      for (const n of names) this.classes.add(n);
+    },
+    remove: (...names: string[]) => {
+      for (const n of names) this.classes.delete(n);
+    },
+    toggle: (name: string, force?: boolean) => {
+      if (force ?? !this.classes.has(name)) this.classes.add(name);
+      else this.classes.delete(name);
+    },
+    contains: (name: string) => this.classes.has(name),
+  };
+  style = {
+    setProperty: (name: string, value: string) => {
+      this.props.set(name, value);
+    },
+    removeProperty: (name: string) => {
+      this.props.delete(name);
+    },
+  };
+  get className(): string {
+    return [...this.classes].join(" ");
+  }
+  set className(value: string) {
+    this.classes = new Set(value.split(/\s+/).filter(Boolean));
+  }
+  get textContent(): string {
+    return this.children.length === 0
+      ? this.text
+      : this.children.map((c) => c.textContent).join("");
+  }
+  set textContent(value: string) {
+    this.text = value;
+    this.children = [];
+  }
+  setAttribute(name: string, value: string) {
+    this.attrs.set(name, value);
+  }
+  getAttribute(name: string) {
+    return this.attrs.get(name) ?? null;
+  }
+  removeAttribute(name: string) {
+    this.attrs.delete(name);
+  }
+  append(...nodes: ShimEl[]) {
+    this.children.push(...nodes);
+  }
+  prepend(...nodes: ShimEl[]) {
+    this.children.unshift(...nodes);
+  }
+  replaceChildren(...nodes: ShimEl[]) {
+    this.children = [...nodes];
+  }
+  addEventListener() {}
+  focus() {}
+  scrollIntoView() {}
+  /** Depth-first walk — the shim has no selector engine. */
+  *walk(): Generator<ShimEl> {
+    for (const child of this.children) {
+      yield child;
+      yield* child.walk();
+    }
+  }
+  find(className: string): ShimEl[] {
+    return [...this.walk()].filter((n) => n.classes.has(className));
+  }
+}
+
+function installShim(narrow: boolean): () => void {
+  const g = globalThis as unknown as Record<string, unknown>;
+  const before = { document: g.document, matchMedia: g.matchMedia };
+  g.document = { createElement: (tag: string) => new ShimEl(tag.toUpperCase()) };
+  g.matchMedia = (query: string) => ({
+    matches: narrow && query === "(max-width: 40rem)",
+    addEventListener: () => {},
+    removeEventListener: () => {},
+  });
+  return () => {
+    g.document = before.document;
+    g.matchMedia = before.matchMedia;
+  };
+}
+
+let uninstall: (() => void) | null = null;
+afterEach(() => {
+  uninstall?.();
+  uninstall = null;
+});
+
+/** Renders one plan into a fresh frame and hands back the frame. */
+function draw(courses: PlanCourseState[], narrow: boolean): ShimEl {
+  uninstall = installShim(narrow);
+  const frame = new ShimEl("DIV");
+  const notes = new ShimEl("DIV");
+  renderGrid(frame as unknown as HTMLElement, notes as unknown as HTMLElement, courses, false, {});
+  return frame;
+}
+
+describe("renderGrid: the header row (week-7)", () => {
+  const courses = [state({ code: "TMA4400", bundle: bundleFromEntries([entry("Forelesning")]) })];
+
+  test("row 1 spans the hour rail, so a sticky header can cover the full width", () => {
+    const headers = draw(courses, false).find("planner-grid-day-header");
+    // Five weekdays plus the rail cell — without the rail cell, column 1 is a
+    // background-less band the hour labels slide through while scrolling.
+    expect(headers).toHaveLength(6);
+    const rail = headers.filter((h) => h.classes.has("planner-grid-rail-header"));
+    expect(rail).toHaveLength(1);
+    expect(rail[0]?.props.get("--planner-day")).toBe("0");
+    expect(rail[0]?.textContent).toBe("");
+    // It names nothing, so it must not be announced as a column either.
+    expect(rail[0]?.getAttribute("aria-hidden")).toBe("true");
+  });
+
+  test("the day names still come first, so scrollToToday's index is unmoved", () => {
+    // plannerApp.ts's scrollToToday reads `.planner-grid-day-header` by
+    // weekday ordinal; a rail cell in front of them would scroll to Sunday.
+    const headers = draw(courses, false).find("planner-grid-day-header");
+    expect(headers.slice(0, 5).map((h) => h.textContent)).toEqual([
+      "man",
+      "tir",
+      "ons",
+      "tor",
+      "fre",
+    ]);
+    expect(headers[5]?.classes.has("planner-grid-rail-header")).toBe(true);
+  });
+});
+
+describe("renderGrid: the phone column cap (grid-3)", () => {
+  // Two overlapping Monday sessions: two readable columns on a desktop day
+  // column, two 27 px slivers of one-character-per-line code on a phone.
+  const overlapping = [
+    state({
+      code: "FRA1010",
+      bundle: bundleFromEntries([
+        entry("Forelesning", { courseCode: "FRA1010", startTime: "10:15", endTime: "12:00" }),
+        entry("Forelesning", { courseCode: "FRA1010", startTime: "11:15", endTime: "13:00" }),
+      ]),
+    }),
+  ];
+
+  test("splits into two columns above 40rem", () => {
+    const frame = draw(overlapping, false);
+    const blocks = frame.find("planner-block");
+    expect(blocks).toHaveLength(2);
+    expect(blocks[0]?.props.get("--planner-col-count")).toBe("2");
+    expect(frame.find("planner-block-pile")).toHaveLength(0);
+  });
+
+  test("piles into one block at 40rem and below", () => {
+    const frame = draw(overlapping, true);
+    const piles = frame.find("planner-block-pile");
+    expect(piles).toHaveLength(1);
+    expect(piles[0]?.props.get("--planner-col-count")).toBe("1");
+    // Nothing is dropped: the pile names both sessions it stands for.
+    expect(piles[0]?.textContent).toContain("10:15");
+    expect(piles[0]?.textContent).toContain("11:15");
   });
 });

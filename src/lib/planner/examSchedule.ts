@@ -6,6 +6,11 @@
  * countdown on the first upcoming exam. Exams without a confirmed date are
  * kept separately, in input order, and never enter the gap math.
  *
+ * This is the ONE exam engine. `conflicts.ts` used to export a second,
+ * never-called `analyzeExams` with a different threshold (1 day, set on both
+ * rows) and `Date.parse` date math; it was deleted rather than reconciled
+ * (conf-7/exams-6), so the "tett" rule below is the only one in the repo.
+ *
  * No DOM, no dependencies. Date math is done entirely with `Date.UTC`
  * day-differencing over hand-parsed "YYYY-MM-DD" ISO strings, so behaviour
  * never depends on the runtime's locale or timezone (no `Date.parse`).
@@ -34,6 +39,15 @@ export interface ExamListRow {
   sameDay: boolean;
   /** Set ONLY on the first row with `date >= todayIso`; every other row `null`. */
   daysFromToday: number | null;
+  /**
+   * This exam has already been sat — `date < todayIso`, strictly, so a sitting
+   * today is NOT past (matching `daysFromToday`, which counts today as
+   * upcoming). Exists so the list can de-emphasise history and stop painting
+   * clash ink on spacing that is now over: during the January window a student
+   * saw a red "1 dags mellomrom · tett" between two exams they had already
+   * taken (exams-7). Rendering is the caller's; this only states the fact.
+   */
+  past: boolean;
 }
 
 /** The full exam-list model for a course selection. */
@@ -68,7 +82,12 @@ export function buildExamList(exams: ExamListInput[], todayIso: string): ExamLis
   const dateless: string[] = [];
   const dated: { code: string; date: string }[] = [];
   for (const exam of exams) {
-    if (exam.date === null) {
+    // A blank date is "not scheduled", exactly like `null`. The deleted
+    // `analyzeExams` guarded this and `buildExamList` did not; without the
+    // guard an "" date parses to NaN and renders as "NaN dagers mellomrom".
+    // Unreachable in shipped data (0 of 2 438 catalog exam rows are ""), kept
+    // so the consolidation onto one engine loses no defence (conf-7).
+    if (exam.date === null || exam.date === "") {
       dateless.push(exam.code);
     } else {
       dated.push({ code: exam.code, date: exam.date });
@@ -85,6 +104,7 @@ export function buildExamList(exams: ExamListInput[], todayIso: string): ExamLis
     tight: false,
     sameDay: false,
     daysFromToday: null,
+    past: exam.date < todayIso,
   }));
 
   for (let i = 0; i < rows.length; i++) {

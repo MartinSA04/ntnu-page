@@ -67,6 +67,21 @@ h3 {
   max-width: var(--measure);
 }
 
+/* Same split, for the UA's 40px list indent. A classed list is a data
+   surface — search results, the exam ribbon, note lists, activity lists —
+   and every one of them turns markers off, so the indent was pure dead
+   gutter: at 360px the rows stepped 40px right of the search field and the
+   counter that produced them, losing 12% of the viewport (mob-8). Unclassed
+   prose lists keep the indent, because they keep their bullets.
+   `:where(...)` around the whole selector (not `:where(ul, ol)[class]`, which
+   the attribute selector would leave at 0,1,0) makes this zero specificity,
+   so a list that genuinely wants a marker just declares its own padding and
+   wins regardless of load order — `.details-activities-list` does exactly
+   that, and keeps its bullets. */
+:where(ul[class], ol[class]) {
+  padding-inline-start: 0;
+}
+
 a {
   color: var(--accent-ink);
   text-decoration: underline;

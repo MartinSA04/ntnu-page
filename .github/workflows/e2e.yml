@@ -11,23 +11,41 @@ name: E2E
 # publishes) independently of any commit here, and only a schedule catches
 # that. `release.yml` also runs this suite directly before every deploy, so
 # a tag push is gated even if the triggering diff missed these paths.
+#
+# The filter used to be five globs under src/lib/planner, src/components/planner
+# and worker — which missed BOTH files CLAUDE.md names load-bearing:
+# `src/layouts/Layout.astro`'s `astro:after-swap` re-apply and
+# `src/lib/pageLifecycle.ts`'s `onPage()`. navigation.pw.ts exists to guard
+# exactly those two, no unit test touches either, and HEAD~1 edited Layout's
+# script and triggered nothing (tests-1). `src/**` is now the glob: the suite
+# drives whole pages, so every page, layout, component and stylesheet is a path
+# it protects. Do not narrow this back without checking, per CLAUDE.md, that
+# the flagship flow cannot regress through a path that is no longer watched.
 
 on:
   pull_request:
     paths:
-      - "src/lib/planner/**"
-      - "src/components/planner/**"
+      - "src/**"
       - "worker/**"
       - "e2e/**"
       - "playwright.config.ts"
+      - "astro.config.mjs"
+      - "wrangler.jsonc"
+      - "package.json"
+      - "package-lock.json"
+      - ".github/workflows/e2e.yml"
   push:
     branches: [main]
     paths:
-      - "src/lib/planner/**"
-      - "src/components/planner/**"
+      - "src/**"
       - "worker/**"
       - "e2e/**"
       - "playwright.config.ts"
+      - "astro.config.mjs"
+      - "wrangler.jsonc"
+      - "package.json"
+      - "package-lock.json"
+      - ".github/workflows/e2e.yml"
   schedule:
     - cron: "17 5 * * *" # off-hour, offset from crawl.yml's 03:47 and ntnu-api's 05:17
   workflow_dispatch: {}
@@ -43,14 +61,21 @@ jobs:
           cache: npm
       - id: date
         run: echo "today=$(date -u +%F)" >> "$GITHUB_OUTPUT"
-      - name: Restore crawl artifacts (any recent day is fine)
+      # Today's key ONLY — no `restore-keys` prefix. With one, a prefix hit
+      # restored yesterday's bytes, `ensure-data.mjs` saw four present files and
+      # skipped the crawl, and actions/cache re-saved the same bytes under
+      # today's key: by induction the artifacts froze at the first cold run and
+      # this job never crawled again, which is precisely what the nightly cron
+      # exists to do (tests-5). Missing the key is the point — it is what makes
+      # the crawl run. Same key as ci.yml, so the first job of the day pays for
+      # it and the rest hit exactly.
+      - name: Restore crawl artifacts (today's crawl, or none)
         uses: actions/cache@v4
         with:
           path: |
             data
             public/data
           key: crawl-data-${{ steps.date.outputs.today }}
-          restore-keys: crawl-data-
       - run: npm ci
       - name: Ensure crawl artifacts (crawls only on a cold cache)
         run: node crawler/ensure-data.mjs

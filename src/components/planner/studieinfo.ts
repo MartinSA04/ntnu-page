@@ -296,10 +296,10 @@ export function mountStudieinfo(deps: StudieinfoDeps, signal: AbortSignal): Stud
   body.append(semesterSection);
 
   // Hint + footer ---------------------------------------------------------
-  const hint = el("p", "np-hint studieinfo-hint", "");
+  // Permanently mounted, never `hidden` — see `renderHint()` for why.
+  const hint = el("p", "np-hint studieinfo-hint sr-only", "");
   hint.id = "studieinfo-hint";
   hint.setAttribute("aria-live", "polite");
-  hint.hidden = true;
   body.append(hint);
 
   const actions = el("div", "studieinfo-actions");
@@ -308,7 +308,8 @@ export function mountStudieinfo(deps: StudieinfoDeps, signal: AbortSignal): Stud
   saveBtn.id = "studieinfo-save";
   // A refused Lagre writes its reason into the hint; describing the button
   // with it means the reason is reachable from the control that caused it
-  // (a11y-8). An empty/hidden hint is ignored by AT, so this costs nothing.
+  // (a11y-8). An empty hint contributes no description, so this costs nothing
+  // in the resting state.
   saveBtn.setAttribute("aria-describedby", "studieinfo-hint");
   const cancelBtn = el("button", "np-btn studieinfo-cancel", "Avbryt") as HTMLButtonElement;
   cancelBtn.type = "button";
@@ -679,19 +680,23 @@ export function mountStudieinfo(deps: StudieinfoDeps, signal: AbortSignal): Stud
     }
   }
 
+  /**
+   * The polite live region under the fields. It stays MOUNTED and in the
+   * accessibility tree at all times: a region that is `hidden` (or
+   * `display: none`) at the moment its text lands is not being listened to,
+   * so a refused Lagre announced nothing at all (a11y-8). Unhiding first and
+   * writing second — the previous shape — still enters the tree and mutates
+   * in one task, which several screen readers treat as initial content
+   * rather than an update.
+   *
+   * The only reason it used to hide was layout: `.studieinfo-body` is a flex
+   * column with `gap: var(--space-4)`, so an empty `<p>` left a permanent gap
+   * above the actions. `.sr-only` (base.css) takes it out of flow instead of
+   * out of the tree, which costs nothing here — while `hintText` is empty
+   * there is nothing to see anyway.
+   */
   function renderHint(): void {
-    if (hintText === "") {
-      hint.textContent = "";
-      hint.hidden = true;
-      return;
-    }
-    // Unhide *before* writing: a live region that is `hidden` is not in the
-    // accessibility tree, so the old order (text first, unhide second) changed
-    // the text of a region nothing was listening to (a11y-8). Keeping it
-    // mounted while empty would be better still, but that needs
-    // `.studieinfo-hint:empty { display: none }` in site.css — an empty <p> is
-    // a flex item of .studieinfo-body and would add a permanent gap.
-    hint.hidden = false;
+    hint.classList.toggle("sr-only", hintText === "");
     hint.textContent = hintText;
   }
 

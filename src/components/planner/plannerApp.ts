@@ -1237,8 +1237,11 @@ export async function mountPlannerApp(
     return groups;
   }
 
-  /** One offered course row: code · name · credits + a "Legg til"/"I planen ✓"
-   *  affordance (the add-dialog's row pattern, simplified — reuses the store). */
+  /** One offered course row: code · name · credits + a "Legg til"/"I planen"
+   *  affordance (the add-dialog's row pattern, simplified — reuses the store).
+   *  The in-plan word is DESIGN §7's mandated half of the pair, spelled the
+   *  same way on every surface — this row said "I planen ✓" while /emner/
+   *  said "Lagt til" and the add dialog "Lagt til ✓" (copy-6). */
   function buildPlanPanelRow(course: ClassifiedCourse): HTMLElement {
     const row = el("div", "planner-plan-row");
 
@@ -1248,7 +1251,7 @@ export async function mountPlannerApp(
     row.append(head);
 
     const inPlan = store.hasCourse(course.code);
-    const action = el("button", "np-btn planner-plan-add", inPlan ? "I planen ✓" : "Legg til");
+    const action = el("button", "np-btn planner-plan-add", inPlan ? "I planen" : "Legg til");
     action.type = "button";
     action.disabled = inPlan;
     if (!inPlan) {
@@ -1410,6 +1413,16 @@ export async function mountPlannerApp(
 
   elements.gridFrame.addEventListener("scroll", syncGridScroll, { passive: true, signal });
   window.addEventListener("resize", syncGridScroll, { passive: true, signal });
+
+  // The week's column cap is viewport-dependent since grid-3 (a 2-deep cluster
+  // is 27 px wide on a phone, so it piles instead of splitting), and crossing
+  // that boundary — a rotation, a desktop window drag — changes no plan state,
+  // so nothing else would redraw the grid. Only the boundary fires, not every
+  // resize frame, which is why this is a `change` listener and not more work
+  // on the `resize` above.
+  globalThis
+    .matchMedia?.("(max-width: 40rem)")
+    .addEventListener("change", () => renderGridAndExams(), { signal });
 
   /**
    * The verdict beside the Ukeplan kicker — PRODUCT §1's primary job, *kan

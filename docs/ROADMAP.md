@@ -31,18 +31,30 @@ this one is current. e2e: 18/18 green on the tree this shipped against.
   legacy/versioned hash parsing deleted (no compat, per the mandate).
 - **Calendar-engine grid** (`layout.ts` + `grid.ts`): side-by-side overlap
   clusters, group-filtered parallels (default = the programme's own,
-  `groups.ts`), a block popover (`popover.ts`) with a group picker, "+N til"
-  overflow for 4+-way clashes.
+  `groups.ts`), a block popover (`popover.ts`) with a group picker, and a
+  "+N til" overflow chip for 4+-way clashes. *(The chip is gone as of the
+  2026-07-27 audit fixes: the column cap is 2 (1 on a phone) and a deeper
+  cluster collapses into one pile block that names every session in it — a
+  count the student could not act on became a list they can. SPEC.md's
+  `layout.ts` bullet.)*
 - **Exam date list** (`examSchedule.ts` + `examList.ts`) with explicit gap
   lines, replacing the exam ribbon.
-- **Persistent nav**: Planlegger + Emner + a studieinfo chip + a plan-count
-  link, identical on every page; the plan strip is deleted.
+- **Persistent nav**: Planlegger + Emner + a studieinfo chip, identical on
+  every page; the plan strip is deleted. *(A sitewide plan-count link shipped
+  here too and was removed 2026-07-27, commit 665513f — it duplicated the chip
+  one row below it. The chip alone carries the cross-page affordance;
+  PRODUCT.md §4.)*
 - **Add-course modal** (`addCourse.ts`); `planClash` is now
   programme-section-aware everywhere (kills the false-positive preview);
   `setProgramPlan` preserves group selections across re-derivation.
 - **Four honest planner empty/fallback states**, including a real
   fetch-failure retry path; `/studier/*` (both surfaces) + `studyPlan.ts` +
   `programUrl.ts` deleted with no redirects; 404 simplified.
+- **Homepage proof fragment** (`.home-proof`, commit 74cd6ff): the small
+  `.np-frame.np-ruled` red-ink collision with "Del planen med en lenke —
+  ingen innlogging" beneath it. This file and PRODUCT.md §5 both listed it as
+  the one open MUST of §5 until 2026-07-27 (audit pc-7) — it is built; it
+  sits below the CTA rather than above the fold.
 
 **UX-STUDY.md folded in.** This rework subsumes S1–S4 (picker regression +
 kull-chip dead-end — the modal + kull-relevance rule fix all four), S5 (the
@@ -142,7 +154,9 @@ exam ribbon and credit line all fixed:
   footer link row demoting `/emner/`/`/studier/` (I5), the sitewide plan
   strip (I2, suppressed on `/` and `/planlegger/`), `/emne/[code]/` reordered
   around the verdict CTA with the grade chart removed and the timetable
-  extracted to the shared `grid.ts` renderer (U10/U12/U13/U14, D12), a
+  extracted to the shared `grid.ts` renderer (U10/U12/U13/U14, D12 — the
+  figure **returned 2026-07-27**, season-split and constrained; see the
+  Phase 4 note below and PRODUCT.md §6), a
   plan-aware clash preview on `/emner/` rows and `/emne/[code]/`'s add CTA
   (U11), `/studier/[code]/` reduced to current + next period with DR-5's
   verbatim group prose and no per-course "+" (U16/U17), city-level campus
@@ -204,10 +218,6 @@ the next session doesn't have to re-derive it from a diff:
   three-way interstitial for an incoming plan on top of an existing one
   (today an incoming hash simply applies, which is strictly better than the
   pre-B10 divergence but skips the interstitial PRODUCT.md §3.6 specifies).
-- **Homepage proof fragment**: the one small `.np-frame.np-ruled` fragment
-  showing a red-ink collision below the picker, with "del planen med en
-  lenke — ingen innlogging" named as a visible action (PRODUCT.md §5 — the
-  one MUST in that section still open).
 - **Temporal margin banner** (`termContext()`, PRODUCT.md §3's
   flow-agnostic rule): "Oppmelding for Høst 2026 stenger ~15. sep · 24 dager
   igjen." Depends on knowing the registration deadline, which isn't in any
@@ -223,8 +233,13 @@ first (PRODUCT.md §7's forward-compatibility note):
 - Shortlist tier UI: ghost blocks, promote/demote, header shows
   "X av 30 sp · +Y sp under vurdering".
 - Inline decision facts in choice-group rows: clash-vs-committed +
-  assessment form + grade shape (D12: decision cells only — the browsable
-  course-page grade chart stays deleted).
+  assessment form + grade shape. *(D12 was partially reversed 2026-07-27,
+  commit 94b5d9a: the season-split figure now ships on `/emne/[code]/` —
+  the fork point is itself a decision context, PRODUCT.md §3 flow 4. This
+  item is therefore the **remaining** half — the same shape inside a
+  choice-group row — not a first build of the figure. What stays killed:
+  sortable columns, cross-course leaderboards, hue-tinted bars, any derived
+  difficulty score. Do not delete `#grades-section` as a regression.)*
 - **Swap delta sentence** on promotion.
 - Commit summary (copyable committed-code list + "bekreft i Studentweb").
 

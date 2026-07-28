@@ -23,14 +23,19 @@ jobs:
           cache: npm
       - id: date
         run: echo "today=$(date -u +%F)" >> "$GITHUB_OUTPUT"
-      - name: Restore crawl artifacts (any recent day is fine for CI)
+      # Today's key ONLY — the `restore-keys: crawl-data-` prefix that used to
+      # sit here made the comment above false: a prefix hit restored yesterday's
+      # artifacts, `ensure-data.mjs` skipped the crawl because the files existed,
+      # and the same bytes were re-saved under today's key, so after the first
+      # cold run CI never crawled again (tests-5). e2e.yml uses the same key, so
+      # whichever job runs first that day pays for the crawl.
+      - name: Restore crawl artifacts (today's crawl, or none)
         uses: actions/cache@v4
         with:
           path: |
             data
             public/data
           key: crawl-data-${{ steps.date.outputs.today }}
-          restore-keys: crawl-data-
       - run: npm ci
       - name: Ensure crawl artifacts (crawls only on a cold cache)
         run: node crawler/ensure-data.mjs

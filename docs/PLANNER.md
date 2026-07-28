@@ -49,11 +49,18 @@ source of truth for the full file-and-function detail, same as before.
 The design system is **Ruteark** (docs/DESIGN.md — designed for this site;
 its named rules are law). The planner is the system's home turf:
 
-**Signature — red ink on the squared spread.** The timetable is `.np-frame`
-+ `.np-ruled` (+ `.np-ruled--hours` on the week — a heavier line every 4th
-cell): a paper sheet with the squared ruling in register with its own
-content box (DESIGN.md §4), blocks laid on the grid like a hand-drawn
-timetable done neatly. When two courses collide, the page marks the sheet
+**Signature — red ink on the ruled sheet.** *(Corrected 2026-07-27, audit
+ds-1/ds-4 — this paragraph described a spread the code retired in f86105b.)*
+The week carries **one hour hairline**, drawn by `planner-week.css` on
+`.planner-grid-rail`/`.planner-grid-day`, and **neither `.np-frame` nor
+`.np-ruled`** — the squared 15-minute field in both axes read as texture
+behind the blocks, and `.np-frame`'s `overflow: hidden` fights the week's own
+horizontal scroll. `.np-ruled--hours` does not exist any more at all; do not
+reach for it (DESIGN.md §4/§5). What survives of the signature here is the
+register: blocks laid on the grid like a hand-drawn timetable done neatly,
+with the hour line anchored to the same box the slot grid starts at.
+
+When two courses collide, the page marks the sheet
 in red ink: a solid 2px `--clash-edge` inline-start rule on the colliding
 block plus `--clash-bg` on the overlapping band only (not a hatch over the
 whole block — that read at the same weight as the pastel course wash and
@@ -134,7 +141,7 @@ All pure TS, unit-tested, no framework. Files owned by the "lib" agent:
   `hasCourse`, `setSemester`, `setProgramPlan`, `setProgram`,
   `removeProgram`, `setCourseGroups`, `onPlanChange(cb)` (storage + custom
   event `ntnu:plan-change`, fires across components, tabs and the
-  persistent nav's studieinfo chip/count-link). Storage injectable for
+  persistent nav's studieinfo chip). Storage injectable for
   tests. Hash sync: `parsePlanHash`/`formatPlanHash`, `hashchange`-aware so
   a pasted link applies live.
 - **`layout.ts`**, **`groups.ts`**, **`examSchedule.ts`** — the
@@ -161,12 +168,17 @@ All pure TS, unit-tested, no framework. Files owned by the "lib" agent:
   disjoint weeks NOT a conflict; multi-exam courses; null dates skipped).
 - **`data.ts`** — fetch + shape. Per course: `GET
   /api/course/:code/timetable?year=&version=` (grid, version-threaded —
-  DR-4) and `GET /api/course/:code` (credits, exams, assessment), memoised
-  per `code:year:version`. Static tier for instant add/name/exam-dates: the
-  search index (§4 below). `indexForSemester()` narrows an index's exams to
-  one semester's window before anything renders them (REVIEW.md C3).
-  Tolerates individual per-course failures (the page renders what it has,
-  composing the gap into the provenance line — DR-8).
+  DR-4) and `GET /api/course/:code` (credits, exams, assessment). Static tier
+  for instant add/name/exam-dates: the search index (§4 below).
+  `indexForSemester()` narrows an index's exams to one semester's window
+  before anything renders them (REVIEW.md C3). Tolerates individual
+  per-course failures (the page renders what it has, composing the gap into
+  the provenance line — DR-8) — and states *which* kind of gap it is:
+  `TimetableOutcome` ("entries" / "empty" / "failed" + reason) is the
+  authority for the week's verdict, and every failure carries a ready
+  Norwegian sentence. Memoisation is per-part and failures are never cached.
+  **See SPEC.md's `data.ts` bullet for that contract in full; it is not
+  restated here to keep the two from drifting.**
 - **`hues.ts`** — `hueForIndex(i)` cycling the six categorical custom
   properties by insertion order.
 

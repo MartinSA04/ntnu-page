@@ -22,9 +22,10 @@
  *   3. an all-day non-lecture drop-in window becomes a band behind the day
  *      rather than a full-height column that squeezes everything else;
  *   4. `layoutDay` packs the rest into side-by-side columns; a cluster deeper
- *      than `MAX_COLUMNS` (2) collapses whole into ONE pile block naming each
- *      of its courses, instead of splitting into unreadable slivers. Both a
- *      block and a pile open the popover via `onBlockClick`.
+ *      than the column cap (2, or 1 below 40rem — `maxColumnsForViewport`)
+ *      collapses whole into ONE pile block naming each of its courses,
+ *      instead of splitting into unreadable slivers. Both a block and a pile
+ *      open the popover via `onBlockClick`.
  *
  * The øving/lab layer additionally shows only groups the student has PICKED —
  * a service course publishes a dozen, and drawing them all made the toggle a
@@ -57,7 +58,7 @@ import {
   groupOptions,
   resolveLectureDefaults,
 } from "../../lib/planner/groups.js";
-import { type LayoutInput, layoutDay } from "../../lib/planner/layout.js";
+import { type LayoutInput, layoutDay, MAX_COLUMNS } from "../../lib/planner/layout.js";
 import { parseWeeks, type ScheduleEntry } from "../../lib/planner/schedule.js";
 import { dayName, dot, el, weekLabel } from "./dom.js";
 import type { PlanCourseState } from "./types.js";
@@ -74,6 +75,29 @@ const SKELETON_DAYS = 5;
 const ALL_DAY_MINUTES = 5 * 60;
 /** Below this height a block only has room for its code + room·time — name/weeks move to the popover. */
 const COMPACT_BLOCK_MINUTES = 90;
+
+/**
+ * Phone width, spelled exactly as `planner-week.css`'s own
+ * `@media (max-width: 40rem)` blocks so the two cannot disagree about where a
+ * phone starts. It is the width at which `.planner-grid` drops to
+ * `min-width: 21rem` (REVIEW A4), i.e. ~56 px per day column.
+ */
+const NARROW_VIEWPORT_QUERY = "(max-width: 40rem)";
+
+/**
+ * How many side-by-side columns a cluster may take before it piles.
+ *
+ * One below 40rem: half a 56 px day column is 27 px, and at that width
+ * `.planner-block-code` broke "FRA1010" into seven one-character lines
+ * (grid-3, measured at 390x844). No type step fits a 7-character mono code in
+ * 27 px, so a 2-deep cluster piles instead — one readable block that names
+ * both sessions beats two unreadable slivers, which is the same trade
+ * `MAX_COLUMNS` already makes at 3. No `matchMedia` (a non-browser host)
+ * means the desktop cap, i.e. the behaviour before this rule existed.
+ */
+function maxColumnsForViewport(): number {
+  return globalThis.matchMedia?.(NARROW_VIEWPORT_QUERY).matches === true ? 1 : MAX_COLUMNS;
+}
 
 interface GridEntry extends ScheduleEntry {
   hueVar: string;
@@ -464,6 +488,9 @@ interface GridShell {
  * is absolutely positioned from its column's top, so a header inside the
  * column is painted over by any entry starting at the grid's first hour, and
  * a week grid without day names is not a week grid.
+ *
+ * Row 1 spans the rail too (see `railHeader` below), so the whole header row
+ * can be made sticky in one rule once the frame becomes a vertical scroller.
  */
 function buildGridShell(
   minMinutes: number,
@@ -485,6 +512,21 @@ function buildGridShell(
     header.style.setProperty("--planner-day", String(day));
     grid.append(header);
   }
+
+  // A sixth (or seventh) header cell over the hour rail. It says nothing —
+  // there is no name for the rail column — and is `aria-hidden`, but the row
+  // has to be complete for `.planner-grid-day-header` to go `position: sticky`
+  // in a vertically scrolling frame: without it column 1 is a background-less
+  // band through which the hour labels slide up behind the day names (week-7).
+  // `--planner-day: 0` puts it at `grid-column: calc(0 + 1)`, i.e. the rail's
+  // own column, so it needs no placement rule of its own. Appended AFTER the
+  // day names on purpose: plannerApp's `scrollToToday` indexes
+  // `.planner-grid-day-header` by weekday, and a rail cell in front of them
+  // would shift every day by one.
+  const railHeader = el("div", "planner-grid-day-header planner-grid-rail-header");
+  railHeader.style.setProperty("--planner-day", "0");
+  railHeader.setAttribute("aria-hidden", "true");
+  grid.append(railHeader);
 
   const rail = el("div", "planner-grid-rail");
   for (let hour = minMinutes / 60; hour <= maxMinutes / 60; hour++) {
@@ -1055,6 +1097,8 @@ export function renderGrid(
   // rather than through getElementById (C5b).
   const nodeByEntry = new Map<ScheduleEntry, HTMLElement>();
   const geometryBase = { minMinutes };
+  // Measured once per render, not per day: every day column is the same width.
+  const columnCap = maxColumnsForViewport();
   let blockCount = 0;
 
   for (let day = 1; day <= dayCount; day++) {
@@ -1079,17 +1123,18 @@ export function renderGrid(
       blockCount++;
     }
 
-    // Everything else is column-packed by layoutDay: up to MAX_COLUMNS
+    // Everything else is column-packed by layoutDay: up to `columnCap`
     // overlapping sessions get distinct side-by-side columns (overlap is
     // supported, both stay readable), and a cluster that would need more
-    // collapses whole into ONE pile block naming its courses.
+    // collapses whole into ONE pile block naming its courses. The cap is 1 on
+    // a phone — see `maxColumnsForViewport` (grid-3).
     const packable = dayEntries.filter((e) => !isBandEntry(e));
     const layoutInput: LayoutInput[] = packable.map((e) => ({
       id: blockId(e),
       start: timeToMinutes(e.startTime),
       end: timeToMinutes(e.endTime),
     }));
-    const slotById = new Map(layoutDay(layoutInput).map((slot) => [slot.id, slot]));
+    const slotById = new Map(layoutDay(layoutInput, columnCap).map((slot) => [slot.id, slot]));
 
     // The cluster partition comes from `layoutDay`'s own `slot.cluster`, not
     // from a second copy of its clustering rule here: the two agreed
