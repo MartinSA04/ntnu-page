@@ -49,6 +49,9 @@ const description = "Søk i NTNUs emnekatalog etter emnekode, emnenavn eller stu
     list-style: none;
     /* D6: a result list is a data surface, not prose — no 38rem cap. */
     max-width: none;
+    /* The UA's 40px list indent stepped every row right of the search field
+       that produced them, and cost 12% of a 360px viewport (mob-8). */
+    padding-inline-start: 0;
     display: flex;
     flex-direction: column;
   }
@@ -59,6 +62,8 @@ const description = "Søk i NTNUs emnekatalog etter emnekode, emnenavn eller stu
   :global(.emner-row) {
     display: flex;
     align-items: center;
+    /* The clash line is a full-width third child, so the row has to wrap. */
+    flex-wrap: wrap;
     gap: var(--space-4);
     padding: var(--space-2);
     border-bottom: 1px solid var(--border);
@@ -111,6 +116,23 @@ const description = "Søk i NTNUs emnekatalog etter emnekode, emnenavn eller stu
     gap: var(--space-2);
     flex-shrink: 0;
   }
+  /* The pre-add verdict, on its own line under the row it belongs to. It used
+     to live only in `title`/`aria-label`, so a phone — where the tap that
+     triggers the check is the same tap that commits the add — never showed
+     it at all (search-2). Empty until a hover/focus/tap resolves, and an
+     empty <p> takes no line box, so a cold list is unchanged. */
+  :global(.emner-row-clash) {
+    flex-basis: 100%;
+    margin: 0;
+  }
+  :global(.emner-row-clash.is-clash) {
+    color: var(--clash);
+  }
+  /* Truth at the end of the list too, not only in the status line 200 rows
+     above it (search-1). */
+  :global(.emner-more) {
+    padding: var(--space-3) var(--space-2);
+  }
   /* A3: at 390px the exam note used to overflow into the location, and the
      name collapsed to zero width. Wrap the link instead: code + notes on the
      first line, the full name on its own. */
@@ -156,48 +178,33 @@ const description = "Søk i NTNUs emnekatalog etter emnekode, emnenavn eller stu
 </style>
 
 <script>
-  import { clashSentence, planClash, semesterLabel } from "../../components/site/planClash";
+  import { type CatalogRow, searchCatalog } from "../../components/site/catalogSearch";
+  import { clashSentence, planClash } from "../../components/site/planClash";
   import { onPage } from "../../lib/pageLifecycle.ts";
   import { createPlanStore } from "../../lib/planner/store.ts";
   import semestersData from "../../../data/semesters.json";
 
-  /**
-   * `public/data/search-index.json`, positional. Elements 4 and 5 were
-   * appended by the two-year crawl (C1/C2): the catalog course version that
-   * has to ride along on every timetable call, and the catalog years the
-   * course is actually offered in.
-   */
+  /** `public/data/search-index.json`; the row shape is `CatalogRow`. */
   interface SearchIndex {
     year: number;
-    courses: [
-      code: string,
-      name: string,
-      location: string | null,
-      exams: [season: string, date: string | null][],
-      version: string | null,
-      offeredYears: number[],
-    ][];
+    courses: CatalogRow[];
   }
 
   const RESULT_CAP = 200;
+  /**
+   * How long the pointer has to rest on a row's button before its clash check
+   * fires, and how long typing has to stop before the live region and the URL
+   * are written. Both exist because `render()` rebuilds every row on every
+   * keystroke (search-7, search-8, astro-6).
+   */
+  const HOVER_DWELL_MS = 200;
+  const SETTLE_MS = 350;
   const SEASON_LABELS: Record<string, string> = {
     SPRING: "vår",
     AUTUMN: "høst",
     WINTER: "vinter",
     SUMMER: "sommer",
   };
-
-  // Case/diacritic-insensitive substring matching. NFD decomposes Å but not
-  // Æ/Ø, so those two are pre-mapped — "okonomi" has to find "Økonomi" on a
-  // Norwegian site, and 238 course codes contain Ø or Æ.
-  function fold(value: string): string {
-    return value
-      .toLowerCase()
-      .replace(/æ/g, "a")
-      .replace(/ø/g, "o")
-      .normalize("NFD")
-      .replace(/[\u0300-\u036f]/g, "");
-  }
 
   /** The comma-joined catalog location string as city facets: "Gjøvik, Trondheim" → 2. */
   function cities(location: string | null): string[] {
@@ -224,7 +231,6 @@ const description = "Søk i NTNUs emnekatalog etter emnekode, emnenavn eller stu
     if (!statusEl || !resultsEl || !facetsEl || !searchInput) return;
 
     const semester = semestersData.current;
-    const term = semesterLabel(semester.name);
     const store = createPlanStore(semester.id);
     const clashSemester = {
       id: semester.id,
@@ -241,37 +247,100 @@ const description = "Søk i NTNUs emnekatalog etter emnekode, emnenavn eller stu
      * removed the very button the student had just pressed, which threw
      * keyboard focus back to `<body>` on every add (A5).
      */
-    const rows: { sync: () => void; invalidate: () => void }[] = [];
+    const rows: { sync: () => void; invalidate: () => void; cancel: () => void }[] = [];
 
+    let settleTimer: ReturnType<typeof setTimeout> | null = null;
+    function cancelSettle(): void {
+      if (settleTimer === null) return;
+      clearTimeout(settleTimer);
+      settleTimer = null;
+    }
+    /**
+     * Defers work until typing stops. Two things wait on it: the `aria-live`
+     * count — typing "matematikk" wrote ten counts into `#emner-status`, nine
+     * of them for prefixes nobody searched (search-8) — and the `?q=`
+     * writeback, which would otherwise rewrite the history entry per
+     * keystroke. The result list itself stays synchronous.
+     */
+    function afterTyping(fn: () => void): void {
+      cancelSettle();
+      settleTimer = setTimeout(() => {
+        settleTimer = null;
+        fn();
+      }, SETTLE_MS);
+    }
+
+    /** Immediate status write; supersedes anything `afterTyping` has queued. */
     function setStatus(text: string, voice: "hint" | "note"): void {
       if (!statusEl) return;
+      cancelSettle();
       statusEl.className = `emner-status ${voice === "note" ? "np-note" : "np-hint"}`;
       statusEl.textContent = text;
     }
 
-    function setAddState(button: HTMLButtonElement, inPlan: boolean, code: string): void {
+    /**
+     * Keeps `?q=` in step with the field. Back from a course page used to
+     * restore an empty catalog, and a page that arrived with `?q=` kept
+     * advertising the old query in the address bar (search-4, astro-6); the
+     * read side at the bottom of this setup already handled the rest.
+     *
+     * `history.state` is carried through, never replaced with `null`: Astro's
+     * ClientRouter seeds every entry with `{index, scrollX, scrollY}` and its
+     * popstate handler returns early on a null state, so nulling it here would
+     * kill Back onto this page (app-1, CLAUDE.md's ClientRouter rule).
+     */
+    function syncQuery(raw: string): void {
+      const target = raw === "" ? location.pathname : `?q=${encodeURIComponent(raw)}`;
+      history.replaceState(history.state, "", target);
+    }
+
+    /**
+     * DESIGN §7's pair, both halves. The accessible name starts with the
+     * visible label so voice control matches what the student can read — the
+     * old button said "Lagt til" and answered to "Fjern TDT4100 fra planen",
+     * which is a WCAG 2.5.3 failure as well as a fourth spelling of one state
+     * (copy-6).
+     */
+    function setAddState(button: HTMLButtonElement, code: string, sentence: string): void {
+      const inPlan = store.hasCourse(code);
+      const label = inPlan ? "I planen" : "Legg til i planen";
       button.setAttribute("aria-pressed", String(inPlan));
-      button.textContent = inPlan ? "Lagt til" : "Legg til";
-      if (!inPlan) button.setAttribute("aria-label", `Legg til ${code} i planen`);
-      else button.setAttribute("aria-label", `Fjern ${code} fra planen`);
+      button.textContent = label;
+      button.setAttribute(
+        "aria-label",
+        sentence === "" ? `${label} — ${code}` : `${label} — ${code} · ${sentence}`,
+      );
     }
 
     /**
      * U11: the clash verdict has to be available *before* the student
      * commits, but a verdict per visible row is 200 timetable fetches. So it
-     * is computed lazily on first hover/focus of the row's add button and
-     * cached on the element — by the time a pointer or keyboard focus is on
-     * the button, the answer is on its tooltip and accessible name.
+     * is computed lazily on first deliberate hover/focus of the row's add
+     * button, and rendered into the row itself — writing it only into
+     * `title`/`aria-label` meant a touch user, whose tap both triggers the
+     * check and commits the add, never saw it at all (search-2).
      */
     function attachClashPreview(
       button: HTMLButtonElement,
+      clashEl: HTMLElement,
       code: string,
       version: string,
-    ): () => void {
+      sync: () => void,
+    ): { invalidate: () => void; cancel: () => void } {
       let checked = false;
+      let generation = 0;
+      let dwell: ReturnType<typeof setTimeout> | null = null;
+
+      const cancel = (): void => {
+        if (dwell === null) return;
+        clearTimeout(dwell);
+        dwell = null;
+      };
+
       const check = async (): Promise<void> => {
         if (checked) return;
         checked = true;
+        const gen = ++generation;
         const currentPlan = store.loadPlan();
         const verdict = await planClash(
           { code, version },
@@ -280,47 +349,88 @@ const description = "Søk i NTNUs emnekatalog etter emnekode, emnenavn eller stu
           undefined,
           currentPlan.program?.code ?? null,
         );
+        // Superseded: the plan changed while this was in flight, so the
+        // verdict is a diff against a plan that no longer exists. Writing it
+        // anyway advertised "Ingen kollisjon i planen din" over a plan that
+        // does collide, in the tooltip *and* the accessible name, until the
+        // next completed check (search-3). Same guard as addCourse.ts.
+        if (gen !== generation) return;
         const sentence = clashSentence(verdict, clashSemester);
         button.title = sentence;
-        const inPlan = store.hasCourse(code);
-        button.setAttribute(
-          "aria-label",
-          `${inPlan ? `Fjern ${code} fra planen` : `Legg til ${code} i planen`} — ${sentence}`,
-        );
+        clashEl.textContent = sentence;
+        clashEl.classList.toggle("is-clash", verdict.kind === "clash");
+        sync();
       };
-      button.addEventListener("pointerenter", check);
+
+      // A dwell, not a bare `pointerenter`: `render()` rebuilds every row on
+      // every keystroke, so a cursor left parked over the button column got a
+      // boundary event from whichever new button landed under it — two
+      // upstream NTNU calls per re-render for courses nobody chose to
+      // inspect (search-7). Focus stays immediate: it is the keyboard
+      // equivalent of a deliberate hover.
+      button.addEventListener("pointerenter", () => {
+        cancel();
+        dwell = setTimeout(check, HOVER_DWELL_MS);
+      });
+      button.addEventListener("pointerleave", cancel);
+      button.addEventListener("pointercancel", cancel);
       button.addEventListener("focus", check);
+
       // The verdict is a diff against the plan, so it expires the moment the
       // plan does. Dropping the cached answer is honest; recomputing 200 of
       // them eagerly is 200 timetable fetches.
-      return () => {
-        checked = false;
-        button.title = "";
+      return {
+        cancel,
+        invalidate: () => {
+          cancel();
+          checked = false;
+          generation++;
+          button.title = "";
+          clashEl.textContent = "";
+          clashEl.classList.remove("is-clash");
+        },
       };
+    }
+
+    /** The catalog narrowed to the selected city chips (all of them = no filter). */
+    function scopedCourses(): CatalogRow[] {
+      if (!index) return [];
+      if (activeCities.size === 0) return index.courses;
+      return index.courses.filter(([, , location]) =>
+        cities(location).some((c) => activeCities.has(c)),
+      );
     }
 
     function render(): void {
       if (!statusEl || !resultsEl || !searchInput) return;
       if (!index) return;
-      const query = fold(searchInput.value.trim());
+      const raw = searchInput.value.trim();
+      const scoped = scopedCourses();
 
       // §3: no 200-row dump on an empty query — the page is a search mode,
-      // not a browsable catalog.
-      if (query === "") {
+      // not a browsable catalog. The chips still have to answer something,
+      // though: the city filter used to live *below* this return, so a chip
+      // latched `aria-pressed` and changed nothing on the page (astro-4).
+      if (raw === "") {
+        for (const row of rows) row.cancel();
+        rows.length = 0;
         resultsEl.replaceChildren();
-        setStatus(`Skriv for å søke i ${index.courses.length} emner.`, "hint");
+        const where = activeCities.size > 0 ? ` i ${[...activeCities].join(", ")}` : "";
+        const noun = scoped.length === 1 ? "emne" : "emner";
+        setStatus(`Skriv for å søke i ${scoped.length} ${noun}${where}.`, "hint");
+        syncQuery(raw);
         return;
       }
 
-      const filtered = index.courses.filter(([code, name, location]) => {
-        if (activeCities.size > 0 && !cities(location).some((c) => activeCities.has(c)))
-          return false;
-        return fold(code).includes(query) || fold(name).includes(query);
-      });
+      // Ranked, then capped — the other way round the cap was a blind cut
+      // through catalog order, and "teknologi" dropped 42 rows of which 39
+      // were Trondheim (search-1/astro-5).
+      const ranked = searchCatalog(scoped, raw);
 
+      for (const row of rows) row.cancel();
       resultsEl.replaceChildren();
       rows.length = 0;
-      const shown = filtered.slice(0, RESULT_CAP);
+      const shown = ranked.slice(0, RESULT_CAP);
       for (const [code, name, location, exams, version, offeredYears] of shown) {
         const row = document.createElement("li");
         row.className = "emner-row";
@@ -356,59 +466,80 @@ const description = "Søk i NTNUs emnekatalog etter emnekode, emnenavn eller stu
 
         // C1: 703 of these rows come from last year's catalog only. Adding
         // one contributes zero blocks to this semester's week, so the row
-        // says so rather than letting the "+" imply otherwise.
+        // says so — in the same words /emne/[code]/ uses.
         const stale = !offeredYears.includes(index.year);
         if (stale) {
+          const lastYear = offeredYears[0];
           const staleEl = document.createElement("span");
           staleEl.className = "emner-row-stale";
-          staleEl.textContent = `ikke undervist i ${index.year}`;
+          staleEl.textContent =
+            lastYear === undefined
+              ? `ikke undervist i ${index.year}`
+              : `ikke undervist i ${index.year} · sist undervist ${lastYear}`;
           link.append(staleEl);
         }
 
-        const actions = document.createElement("span");
-        actions.className = "emner-row-actions";
+        row.append(link);
 
-        const addBtn = document.createElement("button");
-        addBtn.type = "button";
-        addBtn.className = "np-btn emner-row-add";
+        // No add control on a stale row. It used to be live, and pressing it
+        // produced a planner claiming the whole plan had no teaching plus a
+        // raw English API error in the course row (crawler-3). The dialog's
+        // guard (addCourse.ts) already worked this way; the three add
+        // affordances now agree.
+        if (!stale) {
+          const actions = document.createElement("span");
+          actions.className = "emner-row-actions";
 
-        // I2: the row was write-only — the "+" mutated localStorage and said
-        // nothing. The button reports the state now. It used to be followed by
-        // a "se ukeplanen →" link; the topbar chip already goes there.
+          const clashEl = document.createElement("p");
+          clashEl.className = "np-hint emner-row-clash";
 
-        const sync = (): void => {
-          const inPlan = store.hasCourse(code);
-          setAddState(addBtn, inPlan, code);
-        };
-        sync();
+          const addBtn = document.createElement("button");
+          addBtn.type = "button";
+          addBtn.className = "np-btn emner-row-add";
 
-        addBtn.addEventListener("click", () => {
-          if (store.hasCourse(code)) {
-            store.removeCourse(code);
-          } else {
-            store.addCourse({ code, name, version: version || "1" });
-          }
-          // `savePlan` dispatches synchronously, so `syncRows` has normally
-          // already run by here; this keeps the button honest if it has not.
+          // I2: the row was write-only — the "+" mutated localStorage and
+          // said nothing. The button reports the state now. It used to be
+          // followed by a "se ukeplanen →" link; the topbar chip goes there.
+          const sync = (): void => setAddState(addBtn, code, clashEl.textContent ?? "");
           sync();
-        });
 
-        let invalidate = (): void => {};
-        if (!stale) invalidate = attachClashPreview(addBtn, code, version || "1");
-        else addBtn.title = `Undervises ikke i ${term} — ingen kollisjon å sjekke.`;
-        rows.push({ sync, invalidate });
+          addBtn.addEventListener("click", () => {
+            if (store.hasCourse(code)) {
+              store.removeCourse(code);
+            } else {
+              store.addCourse({ code, name, version: version || "1" });
+            }
+            // `savePlan` dispatches synchronously, so `syncRows` has normally
+            // already run by here; this keeps the button honest if it has not.
+            sync();
+          });
 
-        actions.append(addBtn);
-        row.append(link, actions);
+          const preview = attachClashPreview(addBtn, clashEl, code, version || "1", sync);
+          rows.push({ sync, ...preview });
+
+          actions.append(addBtn);
+          row.append(actions, clashEl);
+        }
+
         resultsEl.append(row);
       }
 
-      setStatus(
-        filtered.length > RESULT_CAP
-          ? `viser ${RESULT_CAP} av ${filtered.length} treff`
-          : `${filtered.length} treff`,
-        "note",
-      );
+      if (ranked.length > RESULT_CAP) {
+        const more = document.createElement("li");
+        more.className = "np-hint emner-more";
+        more.textContent = `${ranked.length - RESULT_CAP} flere treff — presiser søket.`;
+        resultsEl.append(more);
+      }
+
+      afterTyping(() => {
+        setStatus(
+          ranked.length > RESULT_CAP
+            ? `viser ${RESULT_CAP} av ${ranked.length} treff`
+            : `${ranked.length} treff`,
+          "note",
+        );
+        syncQuery(raw);
+      });
     }
 
     /**
@@ -491,6 +622,10 @@ const description = "Søk i NTNUs emnekatalog etter emnekode, emnenavn eller stu
     }
 
     signal.addEventListener("abort", store.onPlanChange(syncRows));
+    signal.addEventListener("abort", () => {
+      cancelSettle();
+      for (const row of rows) row.cancel();
+    });
 
     const params = new URLSearchParams(location.search);
     const initialQuery = params.get("q");

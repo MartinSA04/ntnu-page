@@ -15,7 +15,7 @@
   left: var(--space-2);
   z-index: 100;
   padding: var(--space-2) var(--space-3);
-  background: var(--accent);
+  background: var(--accent-strong);
   color: var(--accent-contrast);
   border-radius: var(--radius-sm);
   font-family: var(--font-sans);
@@ -69,11 +69,12 @@
   margin-left: auto;
 }
 
-/* Narrow phones: the wordmark + three nav links + toggle must fit 360px
-   without horizontal page scroll — tighten gaps, drop the mono suffix. */
+/* Narrow phones: the wordmark + two nav links + the studieinfo chip + the
+   toggle must fit 360px without horizontal page scroll — tighten gaps, drop
+   the mono suffix. See the chip/brand block below for the rest of the budget. */
 @media (max-width: 480px) {
   .site-topbar {
-    gap: var(--gap-2);
+    gap: var(--gap-1);
   }
 
   .site-brand-suffix {
@@ -99,9 +100,49 @@
   white-space: nowrap;
 }
 
+/* At 360 px the topbar's four children want ~460 px between them, so two of
+   them have to give — and both were giving badly: the chip was cut mid-glyph
+   at "Velg s" and the theme toggle was crushed to a 7 px sliver (mob-1). The
+   toggle no longer shrinks at all (primitives.css `flex: none`), so the give
+   is shared here between the wordmark and the chip, each with a floor and a
+   real ellipsis.
+
+   `display: block` is what makes the ellipsis work: inside an inline-flex the
+   label sits in an anonymous flex item no rule can reach, which is why the
+   `text-overflow` above did nothing. `line-height` then does the vertical
+   centring the flexbox was doing. */
 @media (max-width: 480px) {
+  .site-brand,
   .studieinfo-chip {
-    max-width: 7rem;
+    display: block;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    line-height: var(--control-h);
+  }
+
+  /* The floors are measured, not chosen: gutters 32 + nav 114 + toggle 44 +
+     three 4 px gaps = 202, which leaves 118 px for the two labels at 320 px —
+     so 4rem each is the most either may claim without the page itself
+     scrolling sideways (measured at 320/360/390: scrollWidth == the viewport
+     in all three). The chip carries the higher shrink factor, so the wordmark
+     is the last thing to lose a letter; the chip degrades gracefully because
+     its label is an invitation ("Velg studieprogram") or a short fact
+     ("MTDT · 2026"). */
+  .studieinfo-chip {
+    flex: 0 4 auto;
+    min-width: 4rem;
+    max-width: 9rem;
+  }
+
+  /* One scale step down (--text-md → --text-base) buys the wordmark ~12 px,
+     which is the difference between "Semesterplan" whole and "Semesterpl…" on
+     a 390 px phone. */
+  .site-brand {
+    flex: 0 1 auto;
+    min-width: 4rem;
+    font-size: var(--text-base);
   }
 }
 
@@ -165,13 +206,12 @@
   background: color-mix(in srgb, var(--fg) 45%, transparent);
 }
 
-/* The sections below set an explicit `display`, whose class specificity (0,1,0)
-   beats the UA `[hidden] { display: none }` — so this class+attribute selector
-   (0,2,0) is what actually hides a toggled section (chip vs. search field, an
-   unanswered studieretning, etc.). */
-.studieinfo-dialog [hidden] {
-  display: none;
-}
+/* The sections below set an explicit `display`, which used to beat the UA
+   `[hidden] { display: none }` and needed a `.studieinfo-dialog [hidden]`
+   patch here. primitives.css now enforces `[hidden]` for the whole site, so
+   the patch is gone — every toggled section in this dialog (chip vs. search
+   field, an unanswered studieretning, the reset button) hides through that
+   one rule. */
 
 .studieinfo-body {
   display: flex;
@@ -313,14 +353,15 @@
 }
 
 /* Lagre is the primary — accent fill in both rest and hover (the shared
-   .np-btn hover would wash it back to a neutral control). */
+   .np-btn hover would wash it back to a neutral control). --accent-strong is
+   the fill variant that clears AA under --accent-contrast (a11y-6). */
 .studieinfo-save {
-  background: var(--accent);
+  background: var(--accent-strong);
   color: var(--accent-contrast);
 }
 
 .studieinfo-save:hover {
-  background: color-mix(in srgb, var(--accent) 88%, var(--fg));
+  background: color-mix(in srgb, var(--accent-strong) 88%, var(--fg));
   color: var(--accent-contrast);
 }
 
@@ -501,22 +542,35 @@
   gap: var(--space-1);
 }
 
+/* The one editing control PRODUCT names, and the only interactive rows on the
+   page that used to ignore --control-h: 20.8 px tall with a 13x13 px native
+   input, a 24.8 px pitch between "Mattelab 1" and "Mattelab 2" on a touch
+   screen where every other control is 44 (mob-6). The token already carries
+   the touch value, so no media query is needed. */
 .planner-popover-group-row {
   display: flex;
   align-items: center;
   gap: var(--gap-2);
+  min-height: var(--control-h);
   font-size: var(--text-sm);
   cursor: pointer;
 }
 
 .planner-popover-group-row input {
+  flex: none;
+  width: 1.15rem;
+  height: 1.15rem;
   accent-color: var(--accent);
 }
 
+/* Wraps because a PILE's popover puts one "Gå til emnesiden" link per course
+   in this row, and three of them overflowed the bottom sheet sideways below
+   60rem. Harmless for the ordinary course popover's [button, link] pair. */
 .planner-popover-actions {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  flex-wrap: wrap;
   gap: var(--gap-3);
   padding-top: var(--space-3);
   border-top: 1px solid var(--border);

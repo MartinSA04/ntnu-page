@@ -2,26 +2,32 @@ import { describe, expect, it } from "vitest";
 import {
   type CourseTimetableEntry,
   type CourseTimetableOptions,
+  decodeEntry,
+  entriesForSemester,
   termLabel,
   termNote,
 } from "../../src/components/site/courseTimetable.js";
+
+/** Høst 2026's real teaching weeks, from data/semesters.json. */
+const AUTUMN_WEEKS = [34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47];
+const SPRING_WEEKS = [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17];
 
 const OPTIONS: CourseTimetableOptions = {
   code: "TDT4100",
   name: "Objektorientert programmering",
   version: "1",
   year: 2026,
-  semester: { season: "AUTUMN", year: 2026, label: "Høst 2026" },
+  semester: { season: "AUTUMN", year: 2026, label: "Høst 2026", teachingWeeks: AUTUMN_WEEKS },
 };
 
-function entry(term: string | null): CourseTimetableEntry {
+function entry(term: string | null, weeks: string[] = ["34-40"]): CourseTimetableEntry {
   return {
     courseCode: "TDT4100",
     courseName: { nob: null, nno: null, eng: null },
     dayNumber: 2,
     startTime: "12:15",
     endTime: "14:00",
-    weeks: ["34-40"],
+    weeks,
     rooms: [],
     title: "Forelesning",
     name: null,
@@ -71,5 +77,62 @@ describe("termNote (U14 — one view, honest about which season it is)", () => {
     expect(termNote([entry("2025_HØST")], { ...OPTIONS, year: 2025 })).toBe(
       "Viser Høst 2025 — ikke undervist i Høst 2026.",
     );
+  });
+});
+
+// course-3: `?year=2026` answers with the whole catalog year — EXPH0300's 84
+// entries are 51 spring + 33 autumn — and layout.ts clusters on time alone, so
+// the union drew an Ålesund spring lecture beside a Trondheim autumn lecture as
+// a simultaneous pair.
+describe("entriesForSemester (one semester's week, not the year's)", () => {
+  const spring = entry("2026_VÅR", ["3-13", "16"]);
+  const autumn = entry("2026_HØST", ["34-45"]);
+
+  it("drops the other term's sessions from the planned semester's week", () => {
+    expect(entriesForSemester([spring, autumn], AUTUMN_WEEKS)).toEqual([autumn]);
+    expect(entriesForSemester([spring, autumn], SPRING_WEEKS)).toEqual([spring]);
+  });
+
+  it("keeps every session of the planned semester", () => {
+    const second = entry("2026_HØST", ["34-47"]);
+    expect(entriesForSemester([spring, autumn, second], AUTUMN_WEEKS)).toEqual([autumn, second]);
+  });
+
+  // Not taught in the planned semester at all: the fallback is still ONE term,
+  // so the week never mixes two, and termNote says which one it is.
+  it("falls back to the newest term when nothing is taught in the planned weeks", () => {
+    const shown = entriesForSemester([spring, autumn], [24, 25, 26]);
+    expect(shown).toEqual([autumn]);
+    expect(termNote(shown, OPTIONS)).toBe("Viser Høst 2026.");
+  });
+
+  // "VÅR" sorts after "HØST" as a string; the fallback is chronological.
+  it("ranks HØST after VÅR within a year", () => {
+    expect(entriesForSemester([autumn, spring], [24, 25, 26])).toEqual([autumn]);
+  });
+
+  it("keeps everything when upstream sends no term keys", () => {
+    const untermed = [entry(null, ["3-13"]), entry(null, ["34-45"])];
+    expect(entriesForSemester(untermed, [24, 25, 26])).toEqual(untermed);
+  });
+});
+
+// ux-7: the module fetches around data.ts, so the planner's entity decode
+// never reached this surface — TMA4400's real block label rendered
+// "Forelesning 1 MTELSYS &#38; MTTK" on /emne/TMA4400/.
+describe("decodeEntry", () => {
+  it("decodes the entities upstream ships in title and name", () => {
+    const decoded = decodeEntry({
+      ...entry("2026_HØST"),
+      title: "Forelesning 1 MTELSYS &#38; MTTK",
+      name: "Gruppe A &amp; B",
+    });
+    expect(decoded.title).toBe("Forelesning 1 MTELSYS & MTTK");
+    expect(decoded.name).toBe("Gruppe A & B");
+  });
+
+  it("keeps an untouched entry's identity", () => {
+    const plain = entry("2026_HØST");
+    expect(decodeEntry(plain)).toBe(plain);
   });
 });

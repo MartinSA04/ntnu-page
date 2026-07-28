@@ -181,7 +181,25 @@ function renderCreditReductions(reductions: CreditReduction[]): HTMLElement | nu
   return wrap;
 }
 
-export async function mountCourseDetails(code: string): Promise<void> {
+/**
+ * The details endpoint for one course, optionally pinned to a catalog year.
+ *
+ * C1/course-1: 703 of 5 470 catalog courses are carried over from last year's
+ * crawl, and `/api/course/TMA4100` (no year) 404s for every one of them while
+ * `?year=2025` returns the full payload — so those pages rendered an empty
+ * Nøkkeltall, no exam enrichment and no "Mer om emnet". The page already
+ * computes that source year for the timetable island; this passes it on.
+ *
+ * `year` is omitted for a course offered in the canonical year: the worker
+ * keys its cache on `["details", code, year]`, so a bare call and a
+ * `?year=<canonical>` call are two cache entries for one payload.
+ */
+export function detailsUrl(code: string, year?: number | null): string {
+  const path = `/api/course/${encodeURIComponent(code)}`;
+  return year == null ? path : `${path}?year=${year}`;
+}
+
+export async function mountCourseDetails(code: string, year?: number | null): Promise<void> {
   const section = document.getElementById("details-section");
   const status = section?.querySelector<HTMLElement>('[data-role="status"]');
   const body = section?.querySelector<HTMLElement>('[data-role="body"]');
@@ -189,10 +207,15 @@ export async function mountCourseDetails(code: string): Promise<void> {
   const proseWrap = section?.querySelector<HTMLElement>('[data-role="prose-wrap"]');
   if (!section || !status || !body || !proseHost || !code) return;
 
+  // Both terminal states below keep this line on screen, so they hand back
+  // the height it was holding for the facts grid (perf-1).
+  const release = () => status.removeAttribute("data-reserve");
+
   try {
-    const res = await fetch(`/api/course/${encodeURIComponent(code)}`);
+    const res = await fetch(detailsUrl(code, year));
     if (res.status === 404) {
       status.textContent = "Vi har ingen emnedetaljer for dette emnet.";
+      release();
       return;
     }
     if (!res.ok) throw new Error(`${res.status}`);
@@ -257,5 +280,6 @@ export async function mountCourseDetails(code: string): Promise<void> {
     body.hidden = false;
   } catch {
     status.textContent = "Klarte ikke å hente emnedetaljer.";
+    release();
   }
 }

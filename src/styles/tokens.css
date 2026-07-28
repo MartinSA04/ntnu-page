@@ -42,6 +42,14 @@
   --accent: #66800b;
   --accent-ink: color-mix(in srgb, var(--accent) 65%, var(--fg));
   --accent-contrast: #fffcf0;
+  /* The FILLED variant, and the only one that ever carries --accent-contrast
+     text: green-600 under #fffcf0 measures 4.39:1 — 0.11 under AA — on every
+     accent-filled control (the Studieinfo "Lagre" primary, a selected kull
+     chip, the øvinger toggle, /emner/'s city facets, the skip link) (a11y-6).
+     green-700 measures 6.03:1. Darkening --accent itself would drag links,
+     focus rings, --accent-ink and --accent-weak with it, so the fill gets its
+     own token; dark needs no shift (green-400 on Flexoki black is 6.12:1). */
+  --accent-strong: #536907;
   --accent-weak: color-mix(in srgb, var(--accent) 12%, transparent);
   --accent-ring: color-mix(in srgb, var(--accent) 45%, transparent);
 
@@ -80,9 +88,11 @@
   --wash-course-muted: 9%;
 
   /* The squared ruling (planning surfaces only — see .np-ruled).
-     --ruling-hour is the heavier every-fourth-cell rule of .np-ruled--hours:
-     at --cell = 15 minutes that is the hour line a real timetable sheet has,
-     and without it uniform squares read as texture rather than a scale. */
+     --ruling-hour is the heavier every-fourth-cell rule: at --cell = 15
+     minutes that is the hour line a real timetable sheet has, and without it
+     uniform squares read as texture rather than a scale. The week draws it
+     alone now (planner-week.css, on the rail and day columns) — the
+     `.np-ruled--hours` primitive that used to pair the two is deleted (ds-4). */
   --cell: 24px;
   --ruling-line: color-mix(in srgb, var(--border) 55%, transparent);
   --ruling-hour: color-mix(in srgb, var(--border-strong) 90%, transparent);
@@ -188,8 +198,18 @@
 
   --accent: #879a39;
   --accent-contrast: #100f0f;
+  /* Dark's fill already clears AA against near-black ink (6.12:1), and a
+     *darker* fill here would lose contrast, not gain it — so the filled
+     variant is the accent itself. */
+  --accent-strong: var(--accent);
 
-  --clash: #d14d41;
+  /* Flexoki red-300, not the light theme's mirror red-400 (#d14d41). Red is
+     the one ink the product cannot afford to whisper, and #d14d41 read 4.42:1
+     against --bg and 3.62:1 against --clash-bg — both under AA for the 13.44px
+     sentence that names which two courses collide (a11y-5). red-300 measures
+     6.30:1 on --bg, 5.66:1 on --card and 5.17:1 on --clash-bg. Still a literal
+     Flexoki swatch (DESIGN §2), and --clash-bg/--clash-edge are unchanged. */
+  --clash: #e8705f;
   --clash-bg: #3e1715;
 
   --hue-blue: #4385be;

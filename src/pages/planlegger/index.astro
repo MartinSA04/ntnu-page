@@ -266,19 +266,41 @@ const programOptionsJson = JSON.stringify(programOptions).replaceAll("<", "\\u00
     margin-bottom: var(--space-3);
   }
 
+  /* The default ink is set at ZERO specificity on purpose, and that is what
+     `:global(:where(…))` buys. Astro scopes this block by appending
+     [data-astro-cid-…], so a plain `.planner-section-sub { color: var(--muted) }`
+     here computed (0,2,0) and outranked `.np-note-clash` (0,1,0): the flagship
+     verdict "1 kollisjon denne uka" printed in the page's quietest gray in BOTH
+     themes while the no-collision state was green — the emphasis inverted
+     exactly where DESIGN's Red-Is-Collision rule says it must not be
+     (a11y-4 / ds-2). `:where()` alone is not enough: the attribute strategy
+     emits `[data-astro-cid-…]:where(.planner-section-sub)`, which is (0,1,0)
+     again and would TIE with the primitive, leaving the verdict's colour to
+     depend on which stylesheet Vite emitted first. `:global()` drops the
+     attribute, so this really is (0,0,0) and every state class below wins. */
+  :global(:where(.planner-section-sub)) {
+    color: var(--muted);
+  }
+
   .planner-section-sub {
     font-family: var(--font-sans);
     font-size: var(--text-sm);
-    color: var(--muted);
   }
 
   .planner-section-sub:empty {
     display: none;
   }
 
-  /* The verdict (U4): PRODUCT §1's primary job answered beside the kicker.
-     Accent when the week holds together, --clash when it does not — the two
-     states Green-Means-Fits and Red-Is-Collision are named for. */
+  /* The verdict (U4): PRODUCT §1's primary job answered beside the kicker,
+     in three states and three inks:
+       .is-clean       — accent, the week holds together (Green-Means-Fits)
+       .np-note-clash  — --clash, two things cannot coexist (Red-Is-Collision)
+       neither         — the muted default above: "kan ikke sjekkes — mangler
+                         timeplan for N emner". A gap is not a clash and not a
+                         pass, so it may spend neither colour (DESIGN §2:
+                         fetch errors and empty states are ink, not red).
+     `.is-clean` keeps its `:global()` because it is added from plannerApp, not
+     written in this template; it now merely has to beat :where(), not (0,2,0). */
   :global(.planner-section-sub.is-clean) {
     color: var(--accent-ink);
   }
@@ -310,30 +332,10 @@ const programOptionsJson = JSON.stringify(programOptions).replaceAll("<", "\\u00
   /* --- Weekly grid --------------------------------------------------------- */
 
   /* The week's own geometry and ink are in src/styles/planner-week.css, shared
-     with /emne/[code]/. What follows is only what this page adds to it. */
-
-  /* A4: at 390 px the week is ~200 px narrower than its content and the
-     frame's own border closes right after ONS — no fade, no scrollbar, and
-     the page itself does not scroll, so the clip reads as an edge and a
-     student can conclude they have no Thursday lecture. The mask says
-     "there is more"; #planner-scroll-hint names which days. */
-  .planner-grid-frame[data-scroll="start"] {
-    mask-image: linear-gradient(to right, #000 calc(100% - 2rem), transparent 100%);
-  }
-
-  .planner-grid-frame[data-scroll="middle"] {
-    mask-image: linear-gradient(
-      to right,
-      transparent 0,
-      #000 2rem,
-      #000 calc(100% - 2rem),
-      transparent 100%
-    );
-  }
-
-  .planner-grid-frame[data-scroll="end"] {
-    mask-image: linear-gradient(to right, transparent 0, #000 2rem);
-  }
+     with /emne/[code]/ — and so, since mob-2, is the scroll-edge mask: it used
+     to live here, which is exactly how /emne/[code]/ ended up clipping its
+     Friday column at 360 px with no fade at all. What follows is only what
+     this page adds. */
 
   .planner-scroll-hint:not([hidden]) {
     margin-bottom: var(--space-2);
@@ -483,6 +485,24 @@ const programOptionsJson = JSON.stringify(programOptions).replaceAll("<", "\\u00
     grid-column: 2;
     grid-row: 1;
     justify-self: end;
+  }
+
+  /* The per-course "Prøv igjen" (pd-5) lives in the muted meta line, and a
+     full-weight .np-btn there reads as a second primary next to the row's own
+     Dropp. So it drops the control fill and keeps everything else the
+     primitive gives it — including `min-height: var(--control-h)`, because a
+     recovery action a student can only reach on a phone must still be a real
+     tap target. Same grammar as .np-navlink: bare text, --wash on hover. */
+  :global(.planner-course-retry) {
+    margin-inline-start: calc(-1 * var(--space-2));
+    padding-inline: var(--space-2);
+    background: none;
+    color: var(--accent-ink);
+    font-size: var(--text-xs);
+  }
+
+  :global(.planner-course-retry:hover) {
+    background: var(--wash);
   }
 
   /* --- Credit gap door --------------------------------------------------- */

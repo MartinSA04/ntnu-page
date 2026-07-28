@@ -19,6 +19,35 @@
  * day, time and week it quotes.
  */
 
+/* --- State --------------------------------------------------------- */
+
+/* `hidden` is a state, not a hint — but the UA declares it at UA origin, so
+ * ANY author `display` beats it whatever the specificity. Most of the
+ * vocabulary below declares one (`.np-btn` is `inline-flex`), so
+ * `button.hidden = true` hid nothing: the add dialog painted "Legg til" +
+ * "Lagt til ✓" + "Fjern" in one row, and a suppressed "Velg fra studieplanen"
+ * stayed 160x36 and fully clickable over a plan with no study plan
+ * (copy-5 / edit-2 / modals-1 / ux-fail-8 / plan-8 — five reported symptoms,
+ * this one cause).
+ *
+ * It is `!important` because that is the only form that holds for every
+ * primitive *and* every component class composed onto one (site.css and the
+ * pages' scoped blocks both load after this file and both set `display`).
+ * The alternative was the per-component patch this replaces — site.css
+ * carried `.studieinfo-dialog [hidden]` with this exact reasoning written
+ * out, while five other call sites went unpatched.
+ *
+ * Nothing in the repo styles a `[hidden]` element to be visible (the only
+ * other `[hidden]` selectors are `:not([hidden])` layout rules, which are
+ * unaffected). Something that must stay laid out while hidden wants its own
+ * state class, not this attribute. */
+[hidden] {
+  /* biome-ignore lint/complexity/noImportantStyles: beating the UA origin is
+     the whole point — see the block comment above. Same sanctioned exception
+     base.css already carries for `.theme-snap`. */
+  display: none !important;
+}
+
 /* --- Labels & data ------------------------------------------------- */
 
 .np-kicker {
@@ -84,14 +113,23 @@
   color: var(--accent-ink);
 }
 
+/* --accent-strong, not --accent: this is a fill carrying --accent-contrast
+   text, and that pair has to clear AA (tokens.css, a11y-6). */
 .np-btn[aria-pressed="true"],
 .np-btn.is-active {
-  background: var(--accent);
+  background: var(--accent-strong);
   color: var(--accent-contrast);
 }
 
+/* A fixed --control-h box — so nothing about it shrinks. `flex: none` is the
+   load-bearing half: as a direct flex child of .site-topbar the theme toggle
+   collapsed to a 7 px sliver at 360 px and 15 px at 390 px (its glyphs are
+   grid-stacked <svg>s with no min-content of their own), which is not a tap
+   target at all — dark mode was simply unreachable on the commonest phone
+   width (mob-1). */
 .np-icon-btn {
   display: inline-flex;
+  flex: none;
   align-items: center;
   justify-content: center;
   width: var(--control-h);
@@ -219,7 +257,7 @@ button.np-tag:hover {
 }
 
 .np-toggle[aria-pressed="true"] {
-  background: var(--accent);
+  background: var(--accent-strong);
   color: var(--accent-contrast);
 }
 
@@ -247,8 +285,16 @@ button.np-tag:hover {
   outline-offset: 2px;
 }
 
+/* `align-self: stretch` is a hit-target rule, not a layout one. The field is
+   44 px tall on a coarse pointer but `align-items: center` left the input its
+   own 21 px line box in the middle, so the top and bottom 11.6 px of a control
+   that LOOKS 44 px tall did nothing on tap — a real tap at y+3 landed on
+   <body> and no keyboard appeared, with nothing on screen to explain why. The
+   field is a bare <div> with no wrapping <label>, so nothing else picked the
+   tap up (mob-7). */
 .np-field input {
   flex: 1;
+  align-self: stretch;
   min-width: 0;
   background: none;
   border: 0;
@@ -302,7 +348,9 @@ button.np-tag:hover {
 }
 
 /* Planning surface: the paper spread with squared ruling and a frame.
-   Ruling appears here and nowhere else (Ruling-Marks-The-Plan rule). */
+   Ruling appears here and nowhere else (Ruling-Marks-The-Plan rule) — and
+   since f86105b that means the homepage proof panel, not the week; the week's
+   ruling is reduced to a single hour line drawn in planner-week.css. */
 .np-frame {
   background: var(--bg);
   border: 1px solid var(--border-strong);
@@ -327,19 +375,16 @@ button.np-tag:hover {
   background-attachment: local;
 }
 
-/* Timetable ruling: a heavier line every fourth cell. At --cell = 15 minutes
-   that is the hour, and it is what turns a field of identical squares back
-   into a scale you can read a time off. */
-.np-ruled--hours {
-  background-image:
-    linear-gradient(var(--ruling-hour) 1px, transparent 1px),
-    linear-gradient(var(--ruling-line) 1px, transparent 1px),
-    linear-gradient(90deg, var(--ruling-line) 1px, transparent 1px);
-  background-size:
-    100% calc(var(--cell) * 4),
-    var(--cell) var(--cell),
-    var(--cell) var(--cell);
-}
+/* DELETED — `.np-ruled--hours`. It had zero callers anywhere in src/, e2e/ or
+   the built output while still shipping in the sitewide bundle, which is the
+   exact system debt DESIGN §5 deleted `.np-kbd`/`.np-tile`/`.np-lift` for
+   (ds-4). Worse than dead: the week retired the squared ruling in f86105b and
+   hand-rolls the surviving hour line on `.planner-grid-rail`/`.planner-grid-day`
+   (planner-week.css), anchored to the box whose top edge IS the slot grid's
+   origin — so a contributor who reached for this primitive would have got a
+   15-minute square field plus a second hour rule tiled from a different origin,
+   the ~22 px misregistration planner-week.css documents. One implementation,
+   in the file that owns the surface. */
 
 /* --- Disclosure ---------------------------------------------------- */
 

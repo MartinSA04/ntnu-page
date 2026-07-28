@@ -15,9 +15,15 @@
    the ruling, the rail and the absolutely-positioned blocks land on the same
    pixel grid.
 
-   What is NOT here: the planner's own scroll-edge mask
-   (`.planner-grid-frame[data-scroll]`) and the exam list. Those belong to
-   /planlegger/ alone and stay in its scoped block. */
+   What is NOT here: the exam list. That belongs to /planlegger/ alone and
+   stays in its scoped block. The scroll-edge mask used to be scoped there
+   too — and that is precisely how /emne/[code]/ came to clip its Friday
+   column at 360 px with no fade, no hint and no scroll offset while
+   /planlegger/ faded correctly (mob-2). It lives here now, so the two
+   surfaces cannot disagree about it again. Note the JS half is still
+   planner-only: `syncGridScroll` (plannerApp.ts) is what sets [data-scroll],
+   and until courseTimetable.ts calls an equivalent, these rules simply never
+   match on the course page. */
 
 /* No .np-frame, and no .np-ruled: the week is not a spreadsheet. It used to
    be a bordered, rounded box tiled with a 1px line every 15 minutes in BOTH
@@ -37,6 +43,35 @@
   margin-bottom: var(--space-2);
   overflow-x: auto;
   overflow-y: hidden;
+}
+
+/* A4: at ≤360 px the week is narrower than its content and the frame's edge
+   closes right after ONS — no fade, no scrollbar, and the page itself does not
+   scroll, so the clip reads as an edge and a student can conclude they have no
+   Thursday lecture. The mask says "there is more"; #planner-scroll-hint names
+   which days.
+
+   The left ramp is 3rem rather than the mask's usual 2rem because the hour
+   rail's labels sit at x 21–56 (the rail is 3rem wide, and `.planner-grid-hour`
+   is right-aligned in it): a 2rem ramp washed out the very labels the student
+   reads the grid against (mob-5). The right ramp has nothing behind it and
+   stays at 2rem. */
+.planner-grid-frame[data-scroll="start"] {
+  mask-image: linear-gradient(to right, #000 calc(100% - 2rem), transparent 100%);
+}
+
+.planner-grid-frame[data-scroll="middle"] {
+  mask-image: linear-gradient(
+    to right,
+    transparent 0,
+    #000 3rem,
+    #000 calc(100% - 2rem),
+    transparent 100%
+  );
+}
+
+.planner-grid-frame[data-scroll="end"] {
+  mask-image: linear-gradient(to right, transparent 0, #000 3rem);
 }
 
 /* The frame's own padding is the spacing; a message inside it is not prose. */
@@ -279,22 +314,44 @@
    block listing its courses instead of splitting into ~35 px slivers where
    `.planner-block-code`'s `overflow-wrap: anywhere` broke a course code one
    character per line. It has no single course, so no --dot: a neutral surface
-   carries it and each row wears its own hue dot. */
-.planner-block-pile {
+   carries it and each row wears its own hue dot.
+
+   Both selectors are doubled up on `.planner-block` on purpose. A pile whose
+   entries are ALL øvinger also carries `.is-muted`, and `.planner-block.is-muted`
+   (0,2,0) outranked a bare `.planner-block-pile` (0,1,0) — so the pile
+   resolved the hue-wash mix with `--dot` unset, which is invalid at
+   computed-value time and paints NOTHING. The result was an invisible
+   clickable region of floating text beside four solid lab blocks (week-3).
+   Qualifying makes the neutral fill win the way the mixed pile already did. */
+.planner-block.planner-block-pile {
   background: color-mix(in srgb, var(--fg) 7%, var(--card));
   gap: var(--space-1);
 }
 
-.planner-block-pile:hover {
+/* DR-1's display layer still reads quieter — with less ink, not with none.
+   `.is-muted`'s own `color: var(--muted)` is untouched. */
+.planner-block.planner-block-pile.is-muted {
+  background: color-mix(in srgb, var(--fg) 4%, var(--card));
+}
+
+.planner-block.planner-block-pile:hover,
+.planner-block.planner-block-pile.is-muted:hover {
   background: color-mix(in srgb, var(--fg) 12%, var(--card));
 }
 
+/* A deep cluster emits one row per session, which can outgrow the geometry the
+   cluster's own minutes give it. `overflow: hidden` dropped the tail with no
+   sign at all; scrolling keeps every session reachable and shows a scrollbar
+   where there is one to show (grid-1). `min-height: 0` is what lets a flex
+   item shrink below its content in the first place. */
 .planner-pile-list {
   display: flex;
   flex-direction: column;
   gap: 1px;
   min-width: 0;
-  overflow: hidden;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
 }
 
 .planner-pile-row {
@@ -305,10 +362,22 @@
 }
 
 /* The codes are the point of the pile, so they stay whole: a pile that has
-   more courses than it has room for clips the LIST, never a code mid-stroke. */
+   more courses than it has room for scrolls the LIST, never cuts a code
+   mid-stroke. On a phone that means WRAPPING the code instead — see the
+   ≤40rem block at the foot of this file, where a 56 px column cannot hold
+   seven mono characters on one line and `nowrap` here clipped every pile row
+   to "ETT" (grid-4). */
 .planner-pile-row .planner-block-code {
   overflow-wrap: normal;
   white-space: nowrap;
+}
+
+/* The session times under a code row. They reuse `.planner-block-meta`'s ink
+   and ellipsis (grid.ts builds them with that class), and the indent is what
+   sets them apart from the code rows: they line up under the code, past its
+   hue dot, so a pile reads as code → its times → next code (grid-1). */
+.planner-pile-list .planner-block-meta {
+  padding-inline-start: calc(6px + var(--gap-2));
 }
 
 /* --- Margin notes -------------------------------------------------------- */
@@ -353,4 +422,50 @@
   align-items: center;
   gap: var(--gap-2);
   text-decoration-color: color-mix(in srgb, var(--accent) 40%, transparent);
+}
+
+/* --- Phone width --------------------------------------------------------- */
+
+/* A 390 px phone gives each weekday ~57 px, and every block in it was
+   unreadable: "TMA4412" came out as "TMA" / "■441" / "2" with the hue dot
+   wedged between the first two fragments, the pile rows were hard-clipped to
+   "ETT", and the block's guaranteed second line lost characters to the
+   ellipsis (grid-3 / grid-4 / mob-3 / ux-5 / course-7).
+
+   Raising `.planner-grid`'s min-width is NOT the fix — the 21rem above is
+   REVIEW A4's adjudicated number, chosen so five day names fit rather than one
+   column hiding behind the edge mask. So the BLOCK gives ground instead: two
+   pixels of padding, one type step down, and the dot off the code line. The
+   dot is the only thing here that carries information, and it only comes off
+   the blocks that already paint their course hue as their own background —
+   piles (which have no hue of their own) and pile rows keep theirs. */
+@media (max-width: 40rem) {
+  /* 4 px a side instead of 8 buys the code ~8 px — one whole character. */
+  .planner-block {
+    padding: var(--space-1);
+  }
+
+  .planner-block-code {
+    font-size: var(--text-xs);
+  }
+
+  /* Freed: the 6 px dot plus its 4 px gap, ~a quarter of the line. */
+  .planner-block:not(.planner-block-pile) > .planner-block-tag .np-dot {
+    display: none;
+  }
+
+  /* No room to indent the times under the codes at this width — the indent
+     would cost more of "08:15–10:00" than the structure is worth. */
+  .planner-pile-list .planner-block-meta {
+    padding-inline-start: 0;
+  }
+
+  /* The pile's own rule (above) keeps codes on one line because clipping the
+     LIST is cheap when the block is wide. It is not cheap at 57 px, where
+     `nowrap` + a clipping list is exactly the mid-code cut UX-STUDY S12 was
+     fixed for. Wrapping shows the whole code on two rows instead. */
+  .planner-pile-row .planner-block-code {
+    overflow-wrap: anywhere;
+    white-space: normal;
+  }
 }
