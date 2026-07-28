@@ -5,19 +5,31 @@
   "compatibility_date": "2026-07-01",
   "compatibility_flags": ["nodejs_compat"],
   "observability": { "enabled": true },
-  // Static Astro build. Requests matching a built asset are served directly;
-  // everything else (i.e. /api/*) invokes the worker, which falls back to
-  // ASSETS.fetch for unknown paths so 404.html applies.
+  // Static Astro build.
   //
-  // Cache-Control for those direct hits comes from `public/_headers` (copied
-  // verbatim into dist/ by the build, read from the assets directory by the
-  // asset server). Without it everything — including content-hashed
-  // /_astro/* — is served `max-age=0, must-revalidate`, i.e. a 304 round-trip
-  // per asset per navigation (perf-2).
+  // `run_worker_first` is load-bearing, not an optimisation. By default the
+  // asset server answers FIRST and the worker never runs for any path that
+  // matches a built file — and `not_found_handling` answers misses with
+  // 404.html the same way. That silently disabled two worker behaviours the
+  // e2e suite asserts: `withSecurityHeaders` never reached an HTML response
+  // (sec-3), and `canonicalCoursePath`'s lowercase redirect never ran because
+  // /emne/tdt4100/ was answered as a 404 page before the worker saw it
+  // (astro-7). Routing document requests through the worker restores both;
+  // the negations keep the heavy, immutable, content-hashed files on the
+  // direct-serve path where they belong.
+  //
+  // Cache-Control comes from `public/_headers` (copied verbatim into dist/ by
+  // the build, read from the assets directory by the asset server) and
+  // survives the worker path untouched, since ASSETS.fetch returns the asset
+  // server's own response and the worker only adds security headers. Without
+  // it everything — including content-hashed /_astro/* — is served
+  // `max-age=0, must-revalidate`, i.e. a 304 round-trip per asset per
+  // navigation (perf-2).
   "assets": {
     "directory": "./dist",
     "binding": "ASSETS",
-    "not_found_handling": "404-page"
+    "not_found_handling": "404-page",
+    "run_worker_first": ["/*", "!/_astro/*", "!/data/*"]
   }
   // Not connected to Cloudflare yet. When wiring it up:
   // 1. KV cache (worker degrades to memory-only cache without it):
