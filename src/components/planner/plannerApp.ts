@@ -154,9 +154,6 @@ interface PlannerElements {
   linkNote: HTMLElement;
   creditLine: HTMLElement;
   creditNote: HTMLElement;
-  tabWeek: HTMLButtonElement;
-  tabCourses: HTMLButtonElement;
-  regions: HTMLElement;
   direction: HTMLElement;
   directionTitle: HTMLElement;
   directionNote: HTMLElement;
@@ -191,9 +188,6 @@ function getElements(): PlannerElements | null {
     linkNote: byId<HTMLElement>("planner-link-note"),
     creditLine: byId<HTMLElement>("planner-credit-line"),
     creditNote: byId<HTMLElement>("planner-credit-note"),
-    tabWeek: byId<HTMLButtonElement>("planner-tab-week"),
-    tabCourses: byId<HTMLButtonElement>("planner-tab-courses"),
-    regions: byId<HTMLElement>("planner-regions"),
     direction: byId<HTMLElement>("planner-direction"),
     directionTitle: byId<HTMLElement>("planner-direction-title"),
     directionNote: byId<HTMLElement>("planner-direction-note"),
@@ -894,25 +888,9 @@ export async function mountPlannerApp(
     if (!noPool) elements.gapButton.textContent = `Velg fra studieplanen (${pool.length})`;
   }
 
-  // --- Region tabs (narrow screens only) ---------------------------------
-
-  let activeRegion: "week" | "courses" = "week";
-
-  function renderRegions(): void {
-    elements.regions.dataset.region = activeRegion;
-    elements.tabWeek.setAttribute("aria-pressed", String(activeRegion === "week"));
-    elements.tabCourses.setAttribute("aria-pressed", String(activeRegion === "courses"));
-    const count = activeCourses(plan).length;
-    elements.tabCourses.textContent = count > 0 ? `Emner (${count})` : "Emner";
-  }
-
-  function setRegion(region: "week" | "courses"): void {
-    activeRegion = region;
-    renderRegions();
-  }
-
-  elements.tabWeek.addEventListener("click", () => setRegion("week"));
-  elements.tabCourses.addEventListener("click", () => setRegion("courses"));
+  // The Uke/Emner region tabs are gone (REWORK-2026-07-29c): they existed
+  // because a phone could not scroll past a 768 px week to reach the course
+  // list, and the transposed week is ~290 px. One column, no switch.
   elements.viewUke.addEventListener("click", () => setWeekView("uke"));
   elements.viewTavle.addEventListener("click", () => setWeekView("tavle"));
 
@@ -1984,7 +1962,6 @@ export async function mountPlannerApp(
     elements.linkNote.textContent = linkNote ?? "";
     elements.linkNote.hidden = linkNote === null;
     renderBanner();
-    renderRegions();
     renderCreditLine();
     renderDirectionQuestion();
     renderCourseRows();

@@ -33,46 +33,46 @@ const programOptionsJson = JSON.stringify(programOptions).replaceAll("<", "\\u00
 
 <Layout title="Planlegger — Semesterplan" description={description} wide>
   <div class="planner-banner">
-    <p class="np-kicker planner-kicker">Planlegger</p>
+    {/* No "Planlegger" kicker: the topbar names the page and the title answers
+        "whose plan is this" on its own. It was the first of seven uppercase
+        mono labels competing down the page. */}
     <h1 class="planner-title" id="planner-title">Semesterplan</h1>
     <p class="np-hint planner-context-line" id="planner-context-line"></p>
+
+    {/* The plan's two outputs, where the plan is identified — PRODUCT §1 makes
+        the collision verdict the primary job, and it used to be 0.84 rem of
+        muted text wedged between a kicker and a toggle. The credit total was
+        stranded in the course rail's header, four hundred pixels from the
+        thing it totals. */}
+    <p class="planner-status" id="planner-status">
+      <span class="np-data planner-credit-line" id="planner-credit-line">0 av 30 sp</span>
+      <span class="planner-verdict" id="planner-grid-status" aria-live="polite"></span>
+    </p>
+    <p class="np-hint planner-credit-note" id="planner-credit-note" hidden></p>
   </div>
 
   <p class="np-hint planner-link-note" id="planner-link-note" hidden></p>
 
   <div id="planner-main">
-    <div class="planner-tabs" id="planner-tabs" role="group" aria-label="Bytt mellom uke og emner">
-      <button
-        type="button"
-        class="np-toggle planner-tab"
-        id="planner-tab-week"
-        aria-pressed="true"
-      >
-        Uke
-      </button>
-      <button
-        type="button"
-        class="np-toggle planner-tab"
-        id="planner-tab-courses"
-        aria-pressed="false"
-      >
-        Emner
-      </button>
-    </div>
-
-    <div class="planner-regions" id="planner-regions" data-region="week">
-      <section class="planner-region planner-region-week" id="planner-region-week" aria-labelledby="planner-week-heading">
-        <div class="np-panel planner-direction" id="planner-direction" hidden>
-          <h2 class="planner-direction-title" id="planner-direction-title"></h2>
-          <p class="np-hint planner-direction-note" id="planner-direction-note"></p>
-          <div class="planner-direction-actions" id="planner-direction-actions" hidden>
-            <button type="button" class="np-btn" id="planner-direction-btn">Velg emner</button>
-          </div>
+    {/* The week runs the page's full width and the other two share the row
+        under it. Transposing the grid is what made that possible: the week is
+        ~290 px tall now instead of 768, so everything fits without a side rail
+        stealing a third of the axis — the rail was starving the grid to 864 px
+        of 1440 while its own column sat empty below the fold. It also retires
+        the Uke/Emner tabs, which existed so a phone did not have to scroll
+        past a very tall week. */}
+    <section class="planner-week" id="planner-region-week" aria-labelledby="planner-week-heading">
+      <div class="np-panel planner-direction" id="planner-direction" hidden>
+        <h2 class="planner-direction-title" id="planner-direction-title"></h2>
+        <p class="np-hint planner-direction-note" id="planner-direction-note"></p>
+        <div class="planner-direction-actions" id="planner-direction-actions" hidden>
+          <button type="button" class="np-btn" id="planner-direction-btn">Velg emner</button>
         </div>
+      </div>
 
-        <div class="planner-section-head">
-          <h2 class="np-kicker" id="planner-week-heading">Ukeplan</h2>
-          <p class="planner-section-sub" id="planner-grid-status" aria-live="polite"></p>
+      <div class="planner-section-head">
+        <h2 class="planner-section-name" id="planner-week-heading">Uke</h2>
+        <div class="planner-section-tools">
           <div class="planner-view-tabs" role="group" aria-label="Vis uka som rutenett eller liste">
             <button
               type="button"
@@ -100,23 +100,25 @@ const programOptionsJson = JSON.stringify(programOptions).replaceAll("<", "\\u00
             Vis øvinger og labber
           </button>
         </div>
-        <p class="np-hint planner-scroll-hint" id="planner-scroll-hint" hidden></p>
-        <div class="planner-grid-frame" id="planner-grid-frame"></div>
-        <div class="planner-grid-notes" id="planner-grid-notes"></div>
+      </div>
+      <p class="np-hint planner-scroll-hint" id="planner-scroll-hint" hidden></p>
+      <div class="planner-grid-frame" id="planner-grid-frame"></div>
+      <div class="planner-grid-notes" id="planner-grid-notes"></div>
+    </section>
 
+    <div class="planner-below">
+      <section class="planner-exams" aria-labelledby="planner-exam-heading">
         <div class="planner-section-head">
-          <h2 class="np-kicker" id="planner-exam-heading">Eksamener</h2>
+          <h2 class="planner-section-name" id="planner-exam-heading">Eksamener</h2>
           <p class="planner-section-sub" id="planner-exam-status" aria-live="polite"></p>
         </div>
         <div class="planner-exam-list" id="planner-exam-list-host"></div>
       </section>
 
-      <section class="planner-region planner-region-courses" id="planner-region-courses" aria-labelledby="planner-courses-heading">
+      <section class="planner-courses" id="planner-region-courses" aria-labelledby="planner-courses-heading">
         <div class="planner-section-head">
-          <h2 class="np-kicker" id="planner-courses-heading">Emner</h2>
-          <span class="np-data planner-credit-line" id="planner-credit-line">0 av 30 sp</span>
+          <h2 class="planner-section-name" id="planner-courses-heading">Emner</h2>
         </div>
-        <p class="np-hint planner-credit-note" id="planner-credit-note" hidden></p>
 
         <div class="planner-course-rows" id="planner-course-rows"></div>
 
@@ -153,8 +155,22 @@ const programOptionsJson = JSON.stringify(programOptions).replaceAll("<", "\\u00
     margin-bottom: var(--space-4);
   }
 
-  .planner-kicker {
-    margin-bottom: var(--space-1);
+  /* The plan's two outputs, on one line under the identity. Set as figures,
+     not as footnotes: PRODUCT §1 makes the verdict the page's primary job. */
+  .planner-status {
+    display: flex;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: var(--gap-2) var(--gap-4);
+    margin-top: var(--space-3);
+  }
+
+  .planner-verdict {
+    font-size: var(--text-md);
+  }
+
+  .planner-verdict:empty {
+    display: none;
   }
 
   /* The page title IS the answer to "whose plan is this" (D2/A1). The
@@ -186,63 +202,48 @@ const programOptionsJson = JSON.stringify(programOptions).replaceAll("<", "\\u00
     margin-bottom: var(--space-4);
   }
 
-  /* --- Two regions ------------------------------------------------------- */
+  /* --- Layout ------------------------------------------------------------ */
 
-  /* Tabs exist only where there isn't room for both regions; the wide
-     layout below hides them and shows Uke + Emner side by side. */
-  .planner-tabs {
-    display: flex;
-    gap: var(--gap-2);
-    margin-bottom: var(--space-4);
+  /* The week takes the page's whole width; Eksamener and Emner share the row
+     under it. This is what transposing the grid bought: the week is ~290 px
+     tall instead of 768, so a side rail is no longer the only way to see the
+     plan and the week at once — and the rail was costing the week a third of
+     its axis (864 px of 1440) while its own column ran out of content four
+     hundred pixels above the fold.
+
+     It also retires the Uke/Emner tabs. They existed because a phone could not
+     scroll past a 768 px week to reach the course list; it can scroll past
+     290 px. */
+  #planner-main {
+    display: grid;
+    gap: var(--space-7);
   }
 
-  .planner-regions {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-6);
-  }
-
-  /* Narrow: one region at a time, driven by [data-region] on the container.
-     display:none (not [hidden]) keeps the same rule from applying at wide
-     widths, where both regions are always shown. */
-  .planner-regions[data-region="week"] .planner-region-courses,
-  .planner-regions[data-region="courses"] .planner-region-week {
-    display: none;
-  }
-
-  .planner-region {
+  .planner-week,
+  .planner-exams,
+  .planner-courses {
     min-width: 0;
   }
 
+  .planner-below {
+    display: grid;
+    gap: var(--space-7);
+  }
+
   @media (min-width: 60rem) {
-    .planner-tabs {
-      display: none;
-    }
-
-    /* The week is the primary surface (§0.2) and takes every pixel the rail
-       does not need; the rail only ever holds a code, a name and a button,
-       so it wants a fixed measure rather than a fraction (D7). */
-    .planner-regions {
-      display: grid;
-      grid-template-columns: minmax(0, 1fr) 18rem;
+    .planner-below {
+      /* Exams first: they are time-ordered, so they rhyme with the week above
+         them. The course list wants a measure rather than a fraction — it only
+         ever holds a code, a name and a credit figure. */
+      grid-template-columns: minmax(0, 1fr) 22rem;
       align-items: start;
-      gap: var(--space-7);
-    }
-
-    .planner-regions[data-region="week"] .planner-region-courses,
-    .planner-regions[data-region="courses"] .planner-region-week {
-      display: block;
-    }
-
-    .planner-region-courses {
-      position: sticky;
-      top: var(--space-4);
+      gap: var(--space-8);
     }
   }
 
-  @media (min-width: 72rem) {
-    .planner-regions {
-      grid-template-columns: minmax(0, 1fr) 20rem;
+  @media (min-width: 84rem) {
+    .planner-below {
+      grid-template-columns: minmax(0, 1fr) 26rem;
     }
   }
 
@@ -276,12 +277,38 @@ const programOptionsJson = JSON.stringify(programOptions).replaceAll("<", "\\u00
 
   /* --- Section headers --------------------------------------------------- */
 
+  /* A section head is a NAME and its controls, divided by a rule — not four
+     unrelated things on one line. The week's used to carry a mono kicker, the
+     verdict, two view toggles and the øving toggle side by side, with a
+     four-hundred-pixel gap in the middle of it. */
   .planner-section-head {
     display: flex;
-    align-items: center;
-    gap: var(--gap-3);
+    align-items: baseline;
+    gap: var(--gap-3) var(--gap-4);
     flex-wrap: wrap;
     margin-bottom: var(--space-3);
+    padding-bottom: var(--space-2);
+    border-bottom: 1px solid var(--border-strong);
+  }
+
+  /* The grotesk at a real size, not 0.72 rem of tracked-out uppercase mono.
+     Four of those competed down the page and none of them was a heading;
+     Data-Is-Mono means the mono is for times, dates, codes and counts, so
+     spending it on section labels was spending the rule's meaning too. */
+  .planner-section-name {
+    font-size: var(--text-md);
+    font-weight: var(--weight-medium);
+    letter-spacing: -0.015em;
+  }
+
+  /* Controls sit at the far end of the rule, grouped, so the head reads
+     "name … tools" rather than as a row of equal-weight chips. */
+  .planner-section-tools {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: var(--gap-2) var(--gap-3);
+    margin-left: auto;
   }
 
   /* The default ink is set at ZERO specificity on purpose, and that is what
@@ -296,7 +323,7 @@ const programOptionsJson = JSON.stringify(programOptions).replaceAll("<", "\\u00
      again and would TIE with the primitive, leaving the verdict's colour to
      depend on which stylesheet Vite emitted first. `:global()` drops the
      attribute, so this really is (0,0,0) and every state class below wins. */
-  :global(:where(.planner-section-sub)) {
+  :global(:where(.planner-section-sub, .planner-verdict)) {
     color: var(--muted);
   }
 
@@ -315,13 +342,27 @@ const programOptionsJson = JSON.stringify(programOptions).replaceAll("<", "\\u00
      because that is what they change; the toggles are `.np-toggle`, so the
      pressed state is the primitive's accent fill and nothing new is invented
      for it. */
+  /* One control with two states, so it joins into a single segmented unit —
+     three separately-spaced chips in a row read as three peers, and the
+     øving toggle is not a peer of these two. It switches the layer the week
+     draws; they switch how the week is drawn. */
   .planner-view-tabs {
     display: flex;
-    gap: var(--gap-1);
+    gap: 1px;
+    background: var(--border);
+    border-radius: var(--radius-xs);
+    overflow: hidden;
   }
 
   :global(.planner-view-tab) {
-    padding-inline: var(--space-3);
+    padding-inline: var(--space-4);
+    border-radius: 0;
+  }
+
+  /* The gap that says "different kind of control" — wider than any gap inside
+     either group. */
+  .planner-section-tools {
+    gap: var(--gap-2) var(--space-5);
   }
 
   /* The verdict (U4): PRODUCT §1's primary job answered beside the kicker,
@@ -334,16 +375,12 @@ const programOptionsJson = JSON.stringify(programOptions).replaceAll("<", "\\u00
                          fetch errors and empty states are ink, not red).
      `.is-clean` keeps its `:global()` because it is added from plannerApp, not
      written in this template; it now merely has to beat :where(), not (0,2,0). */
-  :global(.planner-section-sub.is-clean) {
+  :global(.planner-section-sub.is-clean),
+  :global(.planner-verdict.is-clean) {
     color: var(--accent-ink);
   }
 
-  .planner-others-toggle {
-    margin-left: auto;
-  }
-
   .planner-credit-line {
-    margin-left: auto;
     font-size: var(--text-md);
     color: var(--muted);
     transition: color var(--dur-fast) var(--ease);
@@ -425,10 +462,14 @@ const programOptionsJson = JSON.stringify(programOptions).replaceAll("<", "\\u00
     flex-wrap: wrap;
   }
 
-  /* 9em, not 6.5 — "9. des" and a countdown hint both have to fit (D3). */
+  /* The date is this list's spine, at the same measure the week's weekday
+     names use, so the two lists share one left edge down the page: weekday |
+     bars, date | exam, code | course. It is the page's one structural rhyme.
+     9em, not 6.5 — "9. des" and a countdown hint both have to fit (D3). */
   :global(.exam-date) {
-    color: var(--muted);
+    color: var(--fg);
     font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
     width: 9em;
     flex-shrink: 0;
   }
@@ -452,10 +493,14 @@ const programOptionsJson = JSON.stringify(programOptions).replaceAll("<", "\\u00
 
   /* The connector between two dated rows — indented under where a row's own
      tag sits, so the timeline reads as one column rather than a new line. */
+  /* The connector answers "have I got time to revise", so it gets room to
+     breathe rather than a mark of its own — a rule in the date column was
+     tried and read as a stray tick beside the text, not as a continuous run. */
   :global(.exam-gap) {
     display: block;
-    padding: var(--space-1) 0 var(--space-1) calc(9em + var(--gap-3));
+    padding: var(--space-2) 0 var(--space-2) calc(9em + var(--gap-3));
   }
+
 
   :global(.exam-gap.is-tight) {
     color: var(--clash);
