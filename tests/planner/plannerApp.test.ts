@@ -1088,6 +1088,13 @@ describe("mountPlannerApp — audit repro", () => {
   });
 
   it("copy-8/ds-5: the exam gap keeps the genitive and matches its neighbours' ink", async () => {
+    // The planner index is memoised per module, and a FAILED download is
+    // memoised too — so an earlier scenario that stubbed a dead index leaves
+    // this one rendering "Fikk ikke hentet eksamensdatoene" over a perfectly
+    // good stub. Clearing it makes the test independent of its neighbours,
+    // which is what the other index-sensitive scenarios already do.
+    const { clearPlannerIndexMemo } = await import("../../src/lib/planner/data.js");
+    clearPlannerIndexMemo();
     await mount(
       {
         "/data/search-index.json": () => ({
@@ -1111,11 +1118,15 @@ describe("mountPlannerApp — audit repro", () => {
     const host = find("planner-exam-list-host");
     expect(host.textContent).toContain("7 dagers mellomrom");
     expect(host.textContent).not.toContain("7 dager mellomrom");
-    // Both day-count fragments are `.np-note` — they used to sit rows apart in
-    // two typefaces at two sizes (ds-5).
-    const counts = host.descendants().filter((e) => e.textContent.startsWith("om "));
+    // Both day-count fragments are mono (ds-5): they used to sit rows apart in
+    // two typefaces at two sizes. The connector is `.exam-gap np-data` and the
+    // countdown `.exam-away np-data` — different roles, one voice, and
+    // Data-Is-Mono is the rule that binds them.
+    const counts = host
+      .descendants()
+      .filter((e) => e.classList.contains("exam-gap") || e.classList.contains("exam-away"));
     expect(counts.length).toBeGreaterThan(0);
-    for (const el of counts) expect(el.className).toBe("np-note");
+    for (const el of counts) expect(el.className).toContain("np-data");
   });
 
   it("app-5: a late bundle from the previous semester cannot overwrite the new one", async () => {

@@ -36,7 +36,9 @@ export function formatCredits(total: number): string {
   return `${formatCreditNumber(total)} av 30 sp`;
 }
 
-const MONTH_ABBR = [
+/** Month names as `formatShortDate` prints them — shared so the exam band
+ *  and the dates under it cannot disagree about what a month is called. */
+export const MONTH_ABBR = [
   "jan",
   "feb",
   "mar",

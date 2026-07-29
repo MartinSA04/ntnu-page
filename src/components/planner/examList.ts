@@ -1,20 +1,33 @@
 /**
- * EKSAMENER — the exam list (PRODUCT.md DR-3, rework Task 9). Replaces the
- * ribbon's horizontal date axis + hue dots with a chronological list: one
- * `.exam-row` per dated exam and a `.exam-gap` connector between consecutive
- * rows naming the whole-day gap ("5 dagers mellomrom", tight ink under two
- * days, a same-day pair collapsing to "samme dag"). Dateless exams stay
- * listed, never dropped, as `.exam-dateless` rows. Sourced from catalog
- * `ExamDate` via the planner index (`examsFromIndex`); the scraped
- * `CourseExam` list is used for exactly one thing, telling an ordinary
- * sitting from a deferred one (see `collectExamInputs`).
+ * EKSAMENER — the exam section (PRODUCT.md DR-3). Two things, in this order
+ * (REWORK-2026-07-29c): a **month band** that shows the shape of the exam
+ * period at a glance, and under it a **list** whose only rule runs down its
+ * own margin.
  *
- * The list is ALL there is. It used to be preceded by its own ruled frame
- * holding a summary kicker ("5 eksamener over 26 dager"), which restated in
- * prose what four dated rows underneath it already showed. Both are gone —
- * this module now writes into one host element, and a message (nothing
- * found, nothing published) renders in that same host rather than in a box
- * of its own.
+ * The section exists to answer "how brutal is December", not "when is my
+ * exam" — and everything that answers it was already in the model and set in
+ * the smallest, greyest type on the page: the whole-day gap to the next exam,
+ * a `tight` flag under two days, a `sameDay` flag. The date, the one thing a
+ * student cannot change, was the largest.
+ *
+ * So the gap carries the weight now, and it is drawn as a *distance* rather
+ * than a *division*. Three gaps used to draw nine horizontal rules — each
+ * connector had a border above it, a border below it and a bar through the
+ * middle — and a rule across a list divides it in two. The one rule left is
+ * vertical: exams are knots on it (the same mark as the course list's dot, so
+ * a colour means one thing everywhere) and the gaps hang between them.
+ *
+ * A same-day pair gets no connector — zero distance is not a distance. The
+ * band splits that day into both courses' hues with a collision ring, and
+ * `clashLines` names both courses in words underneath, because neither the
+ * split nor the ring survives a screen reader, a printout or colour blindness.
+ *
+ * Sourced from catalog `ExamDate` via the planner index (`examsFromIndex`);
+ * the scraped `CourseExam` list is used for exactly one thing, telling an
+ * ordinary sitting from a deferred one (see `collectExamInputs`). Dateless
+ * exams stay listed, never dropped, as `.exam-dateless` rows. A message
+ * (nothing found, nothing published) renders in the same host rather than in
+ * a box of its own.
  *
  * The sort/gap/tight/sameDay/countdown math itself lives in the pure,
  * unit-tested `buildExamList` (examSchedule.ts) — this module is DOM-only.
@@ -33,7 +46,7 @@ import {
   type ExamListInput,
   type ExamListRow,
 } from "../../lib/planner/examSchedule.js";
-import { dot, el, formatShortDate } from "./dom.js";
+import { el, formatShortDate, MONTH_ABBR } from "./dom.js";
 import type { PlanCourseState } from "./types.js";
 
 /**
@@ -155,34 +168,123 @@ export function renderExamMessage(
   return result;
 }
 
-/** The course chip a row wears — DESIGN §5's `.np-tag`, hue dot + mono code. */
-function examCodeTag(code: string, hueVar: string): HTMLElement {
-  const tag = el("span", "exam-code np-tag");
-  tag.append(dot(hueVar));
-  tag.append(el("span", "np-data", code));
-  return tag;
+/**
+ * The month band (REWORK-2026-07-29c): one row per month the exam period
+ * touches, one cell per day, exam days printed in the course's own hue.
+ *
+ * It answers the question the list answers slowly — *how clustered is this* —
+ * before a single date is read, and it costs about 40 px. Weekends carry a
+ * heavier ground so the week rhythm reads, which is what makes a cluster look
+ * like a cluster rather than like four evenly-spaced marks.
+ */
+function examBand(rows: ExamListRow[], hueByCode: Map<string, string>): HTMLElement | null {
+  const dated = rows.filter((r) => r.date);
+  const first = dated[0];
+  const last = dated[dated.length - 1];
+  if (!first || !last) return null;
+
+  const byDate = new Map<string, ExamListRow[]>();
+  for (const row of dated) byDate.set(row.date, [...(byDate.get(row.date) ?? []), row]);
+
+  const band = el("div", "exam-band");
+  band.setAttribute("aria-hidden", "true");
+
+  let year = Number(first.date.slice(0, 4));
+  let month = Number(first.date.slice(5, 7));
+  const lastYear = Number(last.date.slice(0, 4));
+  const lastMonth = Number(last.date.slice(5, 7));
+  // A guard, not a belt: an exam period spanning more than a year would be
+  // upstream nonsense, and an unbounded loop over it would hang the page.
+  for (let guard = 0; guard < 24; guard++) {
+    const row = el("div", "exam-band-row");
+    row.append(el("span", "exam-band-name np-data", MONTH_ABBR[month - 1] ?? ""));
+    const days = el("div", "exam-band-days");
+    const inMonth = new Date(Date.UTC(year, month, 0)).getUTCDate();
+    for (let day = 1; day <= 31; day++) {
+      if (day > inMonth) {
+        days.append(el("span", "exam-band-day is-void"));
+        continue;
+      }
+      const iso = `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+      const weekday = new Date(`${iso}T00:00:00Z`).getUTCDay();
+      const cell = el(
+        "span",
+        `exam-band-day${weekday === 0 || weekday === 6 ? " is-weekend" : ""}`,
+      );
+      const on = byDate.get(iso);
+      if (on) {
+        cell.classList.add("is-exam");
+        if (on.length > 1) cell.classList.add("is-clash");
+        cell.style.background = dayFill(on, hueByCode);
+      }
+      days.append(cell);
+    }
+    row.append(days);
+    band.append(row);
+    if (year === lastYear && month === lastMonth) break;
+    month += 1;
+    if (month > 12) {
+      month = 1;
+      year += 1;
+    }
+  }
+  return band;
 }
 
-/** One dated row: weekday + short date, the course's tag, its vurderingsform,
- * and — only on the first upcoming exam — a countdown from today.
+/**
+ * The fill for one day cell. One exam is a solid printed hue; several are the
+ * same hues split into equal hard-edged bands, in code order so the same pair
+ * always splits the same way.
+ *
+ * A colliding day is NOT a flat red square. Red says "something collides
+ * here" and throws away the one fact a student would act on — *which two* —
+ * so the hues stay and the collision is marked by a ring instead
+ * (`.is-clash` in the stylesheet). A ring is a different KIND of mark from a
+ * fill, which is what lets it out-shout five hues without erasing them
+ * (Red-Is-Collision).
+ */
+function dayFill(rows: ExamListRow[], hueByCode: Map<string, string>): string {
+  const ink = (code: string): string =>
+    `color-mix(in srgb, var(${hueByCode.get(code) ?? "--hue-blue"}) var(--block-mix), var(--block-base))`;
+  const codes = [...new Set(rows.map((r) => r.code))].sort();
+  const [only] = codes;
+  if (codes.length === 1 && only) return ink(only);
+  const step = 100 / codes.length;
+  const stops = codes
+    .map((code, i) => `${ink(code)} ${(i * step).toFixed(2)}% ${((i + 1) * step).toFixed(2)}%`)
+    .join(", ");
+  return `linear-gradient(90deg, ${stops})`;
+}
+
+/**
+ * One dated row: the date in the left margin, then a knot on the list's single
+ * vertical rule carrying the course, its vurderingsform and — on the first
+ * upcoming exam only — a countdown.
+ *
+ * The knot is the same mark as the course list's `.np-dot`, so a colour means
+ * one thing wherever it appears.
  *
  * The vurderingsform ("Skriftlig skoleeksamen", "Mappevurdering") used to sit
  * in the Emner course row, where it was one clause of a run-on meta line about
  * a course. It is exam material and this is the exam section
  * (REWORK-2026-07-29 D6): here it is the fact that tells a student whether a
- * date on the list is something to revise for or something to hand in. */
+ * date on the list is something to revise for or something to hand in.
+ */
 function examRow(row: ExamListRow, hueVar: string, scheme: string | null): HTMLLIElement {
   const item = el("li", "exam-row");
-  item.append(el("span", "exam-date np-data", `${row.weekday} ${formatShortDate(row.date)}`));
-  item.append(examCodeTag(row.code, hueVar));
-  if (scheme) item.append(el("span", "exam-scheme np-hint", scheme));
+  const date = el("span", "exam-date np-data");
+  date.append(el("span", "exam-weekday", row.weekday));
+  date.append(formatShortDate(row.date));
+  item.append(date);
+
+  const what = el("span", "exam-what");
+  what.style.setProperty("--dot", `var(${hueVar})`);
+  what.append(el("span", "exam-code np-data", row.code));
+  if (scheme) what.append(el("span", "exam-form", scheme));
   if (row.daysFromToday !== null) {
-    // `.np-note`, not `.np-hint`: "om 119 dager" is a verbless data fragment,
-    // the same kind of thing as the "16 dagers mellomrom" connector two rows
-    // below it — and it used to render in a different typeface at a different
-    // size from it, inside one list (ds-5, DESIGN §3).
-    item.append(el("span", "np-note", daysFromTodayText(row.daysFromToday)));
+    what.append(el("span", "exam-away np-data", daysFromTodayText(row.daysFromToday)));
   }
+  item.append(what);
   return item;
 }
 
@@ -195,23 +297,51 @@ function daysFromTodayText(days: number): string {
 }
 
 /**
- * The connector between two consecutive dated rows. `row.gapToNext === 0` is
- * the reliable same-day signal for THIS connector specifically — `row.sameDay`
- * can also be true because of the row's relationship with the PREVIOUS row,
- * which says nothing about the gap to the next one.
+ * The distance to the next exam, hung on the rule between two knots.
+ *
+ * It is a distance, not a division — which is why it is no longer a row with a
+ * border above it, a border below it and a bar through the middle. Three gaps
+ * used to draw nine horizontal rules; the list's only rule now runs *along* it.
+ *
+ * `row.gapToNext === 0` is the reliable same-day signal for THIS connector
+ * specifically — `row.sameDay` can also be true because of the row's
+ * relationship with the PREVIOUS row, which says nothing about the gap to the
+ * next one. A same-day pair gets no connector at all: it is named in words
+ * under the list instead (`clashLine`), because zero distance is not a
+ * distance.
  */
-function examGap(row: ExamListRow): HTMLLIElement {
-  if (row.gapToNext === 0) {
-    return el("li", "exam-gap np-note-clash", "samme dag");
-  }
-  const gap = row.gapToNext ?? 0;
+function examGap(row: ExamListRow): HTMLLIElement | null {
+  if (row.gapToNext === null || row.gapToNext === 0) return null;
   // Genitive: a measure phrase modifying a noun takes it in bokmål — "sju
   // dagers mellomrom", "én dags mellomrom" — and PRODUCT.md:145 writes the
   // product's own example that way ("fra 2 til 5 dagers mellomrom") (copy-8).
-  const text = gap === 1 ? "1 dags mellomrom" : `${gap} dagers mellomrom`;
-  const item = el("li", "exam-gap np-note", row.tight ? `${text} · tett` : text);
+  const text = row.gapToNext === 1 ? "1 dags mellomrom" : `${row.gapToNext} dagers mellomrom`;
+  const item = el("li", "exam-gap np-data", row.tight ? `${text} · tett` : text);
   if (row.tight) item.classList.add("is-tight");
   return item;
+}
+
+/**
+ * One sentence per colliding date, naming both courses.
+ *
+ * The split cell in the band and the red ring around it are the fast read; this
+ * is the one that survives a screen reader, a printout and colour blindness.
+ * Red-Is-Collision requires the copy to name both things, not just mark them.
+ */
+function clashLines(rows: ExamListRow[]): HTMLElement[] {
+  const byDate = new Map<string, ExamListRow[]>();
+  for (const row of rows) byDate.set(row.date, [...(byDate.get(row.date) ?? []), row]);
+  const out: HTMLElement[] = [];
+  for (const [date, list] of byDate) {
+    if (list.length < 2) continue;
+    const codes = [...new Set(list.map((r) => r.code))];
+    const names = codes.length === 2 ? codes.join(" og ") : codes.join(", ");
+    const line = el("p", "exam-clash np-note-clash");
+    line.append(`${names} er samme dag — `);
+    line.append(el("span", "np-data", `${list[0]?.weekday ?? ""} ${formatShortDate(date)}`));
+    out.push(line);
+  }
+  return out;
 }
 
 /** One "dato ikke satt" row (DR-3) — kept, not dropped, so the course isn't
@@ -219,9 +349,13 @@ function examGap(row: ExamListRow): HTMLLIElement {
  *  deferred lands, so the kont filter never reads as "no exam" (exams-1). */
 function datelessRow(code: string, hueVar: string, scheme: string | null): HTMLLIElement {
   const item = el("li", "exam-row exam-dateless");
-  item.append(examCodeTag(code, hueVar));
-  if (scheme) item.append(el("span", "exam-scheme np-hint", scheme));
-  item.append(el("span", "np-note", "dato ikke satt"));
+  item.append(el("span", "exam-date np-data", "—"));
+  const what = el("span", "exam-what");
+  what.style.setProperty("--dot", `var(${hueVar})`);
+  what.append(el("span", "exam-code np-data", code));
+  if (scheme) what.append(el("span", "exam-form", scheme));
+  what.append(el("span", "exam-away np-data", "dato ikke satt"));
+  item.append(what);
   return item;
 }
 
@@ -275,18 +409,24 @@ export function renderExamList(
   }
 
   const list = el("ul", "exam-list");
-  model.rows.forEach((row, i) => {
+  for (const row of model.rows) {
     list.append(
       examRow(row, hueByCode.get(row.code) ?? "--hue-blue", schemeByCode.get(row.code) ?? null),
     );
-    if (i < model.rows.length - 1) list.append(examGap(row));
-  });
+    // No connector after the last row, and none across a same-day pair —
+    // `examGap` returns null for both.
+    const gap = examGap(row);
+    if (gap) list.append(gap);
+  }
   for (const code of model.dateless) {
     list.append(
       datelessRow(code, hueByCode.get(code) ?? "--hue-blue", schemeByCode.get(code) ?? null),
     );
   }
-  listHost.replaceChildren(list);
+
+  // Band first: the shape of the period, then the dates that make it up.
+  const band = examBand(model.rows, hueByCode);
+  listHost.replaceChildren(...(band ? [band] : []), list, ...clashLines(model.rows));
 
   // How many exam rows actually share their day with another (`sameDay` is set
   // on EVERY row of a same-date cluster) — so the caller's verdict reads "3

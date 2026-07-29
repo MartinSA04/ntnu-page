@@ -448,62 +448,177 @@ const programOptionsJson = JSON.stringify(programOptions).replaceAll("<", "\\u00
     margin-bottom: var(--space-6);
   }
 
+  /* --- The month band (REWORK-2026-07-29c) ------------------------------- */
+
+  /* One row per month, one cell per day. It answers "how clustered is this"
+     before a date is read, for about 40 px. */
+  :global(.exam-band) {
+    display: grid;
+    gap: var(--gap-1);
+    margin-bottom: var(--space-4);
+  }
+
+  :global(.exam-band-row) {
+    display: grid;
+    grid-template-columns: 2.4rem minmax(0, 1fr);
+    align-items: center;
+    gap: 0 var(--gap-3);
+  }
+
+  :global(.exam-band-name) {
+    font-size: var(--text-xs);
+    letter-spacing: var(--tracking);
+    text-transform: uppercase;
+    color: var(--faint);
+    text-align: right;
+  }
+
+  :global(.exam-band-days) {
+    display: grid;
+    grid-template-columns: repeat(31, minmax(0, 1fr));
+    gap: 2px;
+  }
+
+  :global(.exam-band-day) {
+    height: 13px;
+    background: var(--card);
+    border-radius: 1px;
+  }
+
+  /* The weekend ground is what makes a cluster look like a cluster rather than
+     four evenly-spaced marks — one tonal step was invisible at 9 px. */
+  :global(.exam-band-day.is-weekend) {
+    background: color-mix(in srgb, var(--fg) 15%, var(--card));
+  }
+
+  /* Days past the end of a short month: nothing there, not an empty day. */
+  :global(.exam-band-day.is-void) {
+    background: transparent;
+  }
+
+  /* A colliding day keeps BOTH courses' hues (examList.ts sets the split fill
+     inline) and takes a ring instead of a red fill. A flat red square says
+     "something collides" and throws away the fact you would act on — which
+     two. The ring is a different KIND of mark from a fill, which is what lets
+     it out-shout five hues without erasing them (Red-Is-Collision). */
+  :global(.exam-band-day.is-clash) {
+    box-shadow: 0 0 0 1px var(--clash);
+  }
+
+  /* --- The list: one rule, and it runs along the list -------------------- */
+
+  /* Three gaps used to draw NINE horizontal rules — each connector had a
+     border above, a border below and a bar through the middle. A rule across a
+     list divides it; a gap is not a division between two exams, it is the
+     distance between them, and distance runs along the list. So the only rule
+     left is vertical, the exams are knots on it, and the gaps hang between
+     them. */
   :global(.exam-list) {
+    --exam-date-col: 6.5rem;
+    --exam-knot: 20px;
+    position: relative;
     list-style: none;
     max-width: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  :global(.exam-list)::before {
+    content: "";
+    position: absolute;
+    left: calc(var(--exam-date-col) + var(--gap-4) + 3px);
+    top: 1.1em;
+    bottom: 1.1em;
+    width: 1px;
+    background: var(--border-strong);
   }
 
   :global(.exam-row) {
-    display: flex;
-    align-items: center;
-    gap: var(--gap-3);
-    padding: var(--space-2) 0;
-    border-bottom: 1px solid var(--border);
-    flex-wrap: wrap;
+    display: grid;
+    grid-template-columns: var(--exam-date-col) minmax(0, 1fr);
+    align-items: baseline;
+    gap: 0 var(--gap-4);
+    padding: var(--space-1) 0;
   }
 
-  /* The date is this list's spine, at the same measure the week's weekday
-     names use, so the two lists share one left edge down the page: weekday |
-     bars, date | exam, code | course. It is the page's one structural rhyme.
-     9em, not 6.5 — "9. des" and a countdown hint both have to fit (D3). */
   :global(.exam-date) {
-    color: var(--fg);
-    font-size: var(--text-sm);
+    text-align: right;
+    font-size: var(--text-md);
     font-weight: var(--weight-medium);
-    width: 9em;
-    flex-shrink: 0;
+    letter-spacing: -0.02em;
+  }
+
+  :global(.exam-weekday) {
+    font-size: var(--text-xs);
+    font-weight: var(--weight-normal);
+    color: var(--faint);
+    margin-inline-end: var(--gap-1);
+  }
+
+  :global(.exam-what) {
+    position: relative;
+    display: flex;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 0 var(--gap-2);
+    min-width: 0;
+    padding-inline-start: var(--exam-knot);
+  }
+
+  /* The knot: the same mark as the course list's own dot, so a colour means
+     one thing wherever it appears. */
+  :global(.exam-what)::before {
+    content: "";
+    position: absolute;
+    inset-inline-start: 0;
+    top: 0.35em;
+    width: 7px;
+    height: 7px;
+    background: var(--dot);
   }
 
   :global(.exam-code) {
-    display: inline-flex;
-    align-items: center;
-    gap: var(--gap-2);
     font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
   }
 
-  /* Vurderingsform (D6): the fact that tells a student whether a date on this
-     list is something to revise for or something to hand in. It moved here
-     from the Emner course row, where it was one clause of a run-on line about
-     a course. `min-width: 0` so a long scheme wraps inside the row rather than
-     pushing the countdown off the end. */
-  :global(.exam-scheme) {
+  /* Vurderingsform (D6): whether a date is something to revise for or
+     something to hand in. */
+  :global(.exam-form) {
     min-width: 0;
-    flex: 1 1 auto;
+    font-size: var(--text-sm);
+    color: var(--muted);
   }
 
-  /* The connector between two dated rows — indented under where a row's own
-     tag sits, so the timeline reads as one column rather than a new line. */
-  /* The connector answers "have I got time to revise", so it gets room to
-     breathe rather than a mark of its own — a rule in the date column was
-     tried and read as a stray tick beside the text, not as a continuous run. */
+  :global(.exam-away) {
+    margin-inline-start: auto;
+    font-size: var(--text-xs);
+    color: var(--faint);
+    white-space: nowrap;
+  }
+
+  /* The distance, hung on the rule between two knots. */
   :global(.exam-gap) {
-    display: block;
-    padding: var(--space-2) 0 var(--space-2) calc(9em + var(--gap-3));
+    padding: var(--space-1) 0 var(--space-1)
+      calc(var(--exam-date-col) + var(--gap-4) + var(--exam-knot));
+    font-size: var(--text-xs);
+    color: var(--faint);
   }
-
 
   :global(.exam-gap.is-tight) {
     color: var(--clash);
+    font-weight: var(--weight-medium);
+  }
+
+  :global(.exam-dateless) :global(.exam-date) {
+    color: var(--faint);
+  }
+
+  /* Named in words, because the split cell and the ring are the fast read but
+     neither survives a screen reader, a printout or colour blindness. */
+  :global(.exam-clash) {
+    margin: var(--space-3) 0 0;
+    padding-inline-start: calc(var(--exam-date-col) + var(--gap-4) + var(--exam-knot));
   }
 
   /* --- Course rows ------------------------------------------------------- */
