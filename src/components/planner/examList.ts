@@ -312,11 +312,18 @@ function daysFromTodayText(days: number): string {
  */
 function examGap(row: ExamListRow): HTMLLIElement | null {
   if (row.gapToNext === null || row.gapToNext === 0) return null;
-  // Genitive: a measure phrase modifying a noun takes it in bokmål — "sju
-  // dagers mellomrom", "én dags mellomrom" — and PRODUCT.md:145 writes the
-  // product's own example that way ("fra 2 til 5 dagers mellomrom") (copy-8).
-  const text = row.gapToNext === 1 ? "1 dags mellomrom" : `${row.gapToNext} dagers mellomrom`;
-  const item = el("li", "exam-gap np-data", row.tight ? `${text} · tett` : text);
+  // LESEDAGER, not the distance between the dates. Exams on the 15th and the
+  // 17th are two days apart and leave exactly one day to revise — you sit an
+  // exam on both of the others — so "2 dagers mellomrom" overstated the room by
+  // a whole day. It is also the word students use for it.
+  //
+  // The genitive "dagers mellomrom" needed (copy-8) does not arise: "lesedager"
+  // is a plain plural noun, not a measure phrase modifying one. And no "· tett"
+  // suffix any more — "ingen lesedager" already says the tight case outright,
+  // in the unit the reader cares about.
+  const days = row.readingDays ?? 0;
+  const text = days === 0 ? "ingen lesedager" : days === 1 ? "1 lesedag" : `${days} lesedager`;
+  const item = el("li", "exam-gap np-data", text);
   if (row.tight) item.classList.add("is-tight");
   return item;
 }

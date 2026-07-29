@@ -33,7 +33,24 @@ export interface ExamListRow {
   weekday: string;
   /** Whole days to the NEXT row; `null` on the last dated row. */
   gapToNext: number | null;
-  /** `gapToNext !== null && gapToNext <= 2`. */
+  /**
+   * **Lesedager** — the free days BETWEEN two exams, both exam days excluded.
+   * `null` on the last dated row, and never negative.
+   *
+   * This, not `gapToNext`, is what a student is actually asking. Exams on the
+   * 15th and the 17th are two days apart and give you exactly **one** day to
+   * revise, because you are sitting an exam on both of the others; quoting "2
+   * dager" there overstates the room by a whole day. Consecutive days give
+   * zero, which is a real and worth-saying answer.
+   *
+   * `gapToNext` stays because the two are different questions — the distance
+   * between the dates is what the band and any date arithmetic want.
+   */
+  readingDays: number | null;
+  /**
+   * One reading day or none — the same threshold as before (`gapToNext <= 2`),
+   * re-expressed in the unit the list now quotes.
+   */
   tight: boolean;
   /** Shares its date with another row (their connector gap is 0). */
   sameDay: boolean;
@@ -101,6 +118,7 @@ export function buildExamList(exams: ExamListInput[], todayIso: string): ExamLis
     date: exam.date,
     weekday: WEEKDAYS[new Date(toUtcTime(exam.date)).getUTCDay()] ?? "",
     gapToNext: null,
+    readingDays: null,
     tight: false,
     sameDay: false,
     daysFromToday: null,
@@ -114,6 +132,10 @@ export function buildExamList(exams: ExamListInput[], todayIso: string): ExamLis
 
     const gap = dayDiff(current.date, next.date);
     current.gapToNext = gap;
+    // Both exam days come off the distance: a gap of 1 (consecutive) is zero
+    // reading days, a gap of 2 is one. Clamped at zero so a same-day pair
+    // reports none rather than minus one.
+    current.readingDays = Math.max(0, gap - 1);
     current.tight = gap <= 2;
     if (gap === 0) {
       current.sameDay = true;

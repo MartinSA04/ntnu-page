@@ -267,3 +267,40 @@ describe("buildExamList", () => {
     expect(model.rows[0]?.weekday).toBe("to");
   });
 });
+
+describe("readingDays — the days you actually get to revise", () => {
+  const on = (code: string, date: string) => ({ code, date });
+
+  it("both exam days come off the distance", () => {
+    // The user's own case: exams on the 15th and the 17th are two days apart
+    // and leave exactly ONE day to read, because the other two are exam days.
+    const model = buildExamList([on("A", "2026-12-15"), on("B", "2026-12-17")], "2026-11-01");
+    expect(model.rows[0]?.gapToNext).toBe(2);
+    expect(model.rows[0]?.readingDays).toBe(1);
+  });
+
+  it("consecutive days leave none", () => {
+    const model = buildExamList([on("A", "2026-12-15"), on("B", "2026-12-16")], "2026-11-01");
+    expect(model.rows[0]?.readingDays).toBe(0);
+    expect(model.rows[0]?.tight).toBe(true);
+  });
+
+  it("a same-day pair reports none, never minus one", () => {
+    const model = buildExamList([on("A", "2026-12-15"), on("B", "2026-12-15")], "2026-11-01");
+    expect(model.rows[0]?.gapToNext).toBe(0);
+    expect(model.rows[0]?.readingDays).toBe(0);
+  });
+
+  it("the last dated row has no next, so no reading days", () => {
+    const model = buildExamList([on("A", "2026-12-15")], "2026-11-01");
+    expect(model.rows[0]?.readingDays).toBeNull();
+  });
+
+  it("tight is still one reading day or none", () => {
+    // Same threshold as the old `gapToNext <= 2`, re-expressed: a three-day
+    // distance is two reading days and is not tight.
+    const model = buildExamList([on("A", "2026-12-15"), on("B", "2026-12-18")], "2026-11-01");
+    expect(model.rows[0]?.readingDays).toBe(2);
+    expect(model.rows[0]?.tight).toBe(false);
+  });
+});

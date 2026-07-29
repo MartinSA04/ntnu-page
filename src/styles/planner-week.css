@@ -296,6 +296,71 @@
   z-index: 0;
 }
 
+/* --- The time readout (REWORK-2026-07-29e) -------------------------------- */
+
+/* The ruler labels whole hours, and a bar no longer prints its own start time
+   — that trade is what bought the bar its width. So the axis needs somewhere
+   to be read to the minute: a hairline that follows the pointer, with the
+   time under it. Mouse only (see `wirePointer`). */
+.planner-grid-pointer {
+  position: absolute;
+  top: 22px;
+  bottom: 0;
+  width: 1px;
+  background: color-mix(in srgb, var(--fg) 42%, transparent);
+  pointer-events: none;
+  z-index: 4;
+}
+
+.planner-grid-pointer[hidden] {
+  display: none;
+}
+
+/* On the ruler's own line, so the readout replaces the hour figures rather
+   than floating over the week. */
+.planner-grid-pointer-time {
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 0 var(--space-1);
+  font-size: var(--text-xs);
+  font-variant-numeric: tabular-nums;
+  color: var(--bg);
+  background: var(--fg);
+  border-radius: var(--radius-xs);
+  white-space: nowrap;
+}
+
+/* The moment. Faint through the whole week, because the hour is the same hour
+   on every row; solid across today's, where it is literally true. */
+.planner-grid-now {
+  position: absolute;
+  top: 22px;
+  bottom: 0;
+  /* --planner-x is a unitless 0–100, so this stays length arithmetic: a
+     percentage divided by a percentage is not something to rely on. */
+  left: calc(var(--planner-spine) + (100% - var(--planner-spine) - 16px) * var(--planner-x) / 100);
+  width: 1px;
+  background: color-mix(in srgb, var(--accent) 30%, transparent);
+  pointer-events: none;
+  z-index: 3;
+}
+
+.planner-grid-now[hidden] {
+  display: none;
+}
+
+.planner-grid-now.is-today::after {
+  content: "";
+  position: absolute;
+  left: -1px;
+  top: calc(var(--planner-now-top) - 22px);
+  height: var(--planner-now-height);
+  width: 2px;
+  background: var(--accent);
+}
+
 /* --- The strike-in (D4) --------------------------------------------------- */
 
 /* Plays once, on a view switch only — `renderGrid` adds `is-striking` when the

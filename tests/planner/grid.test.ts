@@ -307,6 +307,8 @@ class ShimEl {
     this.children = [...nodes];
   }
   addEventListener() {}
+  offsetTop = 0;
+  offsetHeight = 0;
   focus() {}
   scrollIntoView() {}
   /** Depth-first walk — the shim has no selector engine. */
@@ -318,6 +320,15 @@ class ShimEl {
   }
   find(className: string): ShimEl[] {
     return [...this.walk()].filter((n) => n.classes.has(className));
+  }
+  /**
+   * Class selectors only, and deliberately so. `renderGrid` reaches for this
+   * to wire the time readout and place the now marker; anything richer would
+   * be a selector engine, which this shim is explicitly not.
+   */
+  querySelector(sel: string): ShimEl | null {
+    if (!sel.startsWith(".")) return null;
+    return this.find(sel.slice(1).split("[")[0] ?? "")[0] ?? null;
   }
 }
 

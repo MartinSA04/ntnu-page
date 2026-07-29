@@ -1088,7 +1088,7 @@ describe("mountPlannerApp — audit repro", () => {
     expect(frame.dataset.scroll).toBe("start");
   });
 
-  it("copy-8/ds-5: the exam gap keeps the genitive and matches its neighbours' ink", async () => {
+  it("ds-5: the exam gap counts reading days and matches its neighbours' ink", async () => {
     // The planner index is memoised per module, and a FAILED download is
     // memoised too — so an earlier scenario that stubbed a dead index leaves
     // this one rendering "Fikk ikke hentet eksamensdatoene" over a perfectly
@@ -1117,8 +1117,11 @@ describe("mountPlannerApp — audit repro", () => {
       },
     );
     const host = find("planner-exam-list-host");
-    expect(host.textContent).toContain("7 dagers mellomrom");
-    expect(host.textContent).not.toContain("7 dager mellomrom");
+    // The connector quotes LESEDAGER, not the distance: 7. and 14. December are
+    // seven days apart and leave six days to revise, because the seventh is
+    // spent sitting the first exam.
+    expect(host.textContent).toContain("6 lesedager");
+    expect(host.textContent).not.toContain("7 lesedager");
     // Both day-count fragments are mono (ds-5): they used to sit rows apart in
     // two typefaces at two sizes. The connector is `.exam-gap np-data` and the
     // countdown `.exam-away np-data` — different roles, one voice, and

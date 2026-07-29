@@ -63,7 +63,7 @@ import {
   renderExamList,
   renderExamMessage,
 } from "./examList.js";
-import { type GridRenderResult, renderGrid, renderGridMessage } from "./grid.js";
+import { type GridRenderResult, renderGrid, renderGridMessage, syncNowMarker } from "./grid.js";
 import {
   type ClassifiedCourse,
   findProgramPlan,
@@ -938,6 +938,12 @@ export async function mountPlannerApp(
   // The Uke/Emner region tabs are gone (REWORK-2026-07-29c): they existed
   // because a phone could not scroll past a 768 px week to reach the course
   // list, and the transposed week is ~290 px. One column, no switch.
+  // The now marker is placed at render time, but a planner is a page people
+  // leave open — so it is nudged every minute rather than left to drift. One
+  // element moves; nothing re-renders.
+  const nowTimer = setInterval(() => syncNowMarker(elements.gridFrame), 60_000);
+  lifeSignal.addEventListener("abort", () => clearInterval(nowTimer));
+
   elements.viewUke.addEventListener("click", () => setWeekView("uke"));
   elements.viewTavle.addEventListener("click", () => setWeekView("tavle"));
 

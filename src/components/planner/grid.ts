@@ -544,6 +544,10 @@ function buildGridShell(
   const grid = el("div", "planner-grid");
   grid.style.setProperty("--planner-span", String(span));
   grid.style.setProperty("--planner-hours", String(Math.round(span / 60)));
+  // Read back by the pointer readout and the now marker, which have to turn a
+  // pixel into a time and cannot re-derive the clamp the render chose.
+  grid.setAttribute("data-min", String(minMinutes));
+  grid.setAttribute("data-span", String(span));
   // role="group", not "img": the grid holds focusable blocks (each with its own
   // aria-label), and "img" would strip them from the accessibility tree.
   grid.setAttribute("role", "group");
@@ -565,6 +569,7 @@ function buildGridShell(
   const dayFields = new Map<number, HTMLElement>();
   for (let day = 1; day <= dayCount; day++) {
     const row = el("div", "planner-grid-row");
+    row.setAttribute("data-day", String(day));
     if (day === todayNumber) row.setAttribute("data-today", "");
 
     // A real word, not an abbreviation: the spine has the width for it, and
@@ -581,7 +586,96 @@ function buildGridShell(
     dayFields.set(day, field);
   }
 
+  // The readout that makes the axis legible to the minute. The ruler labels
+  // whole hours only, and a bar no longer prints its own start time — which is
+  // the trade that bought the bar its width — so without this there is nowhere
+  // on the surface to learn that a lecture starts 08:15 rather than 08:00.
+  const pointer = el("div", "planner-grid-pointer");
+  pointer.hidden = true;
+  pointer.setAttribute("aria-hidden", "true");
+  pointer.append(el("span", "planner-grid-pointer-time np-data"));
+  grid.append(pointer);
+
+  // "Now", drawn once through the whole week: faint everywhere so the hour
+  // reads across every day, solid in today's row where it is literal.
+  const now = el("div", "planner-grid-now");
+  now.hidden = true;
+  now.setAttribute("aria-hidden", "true");
+  grid.append(now);
+
   return { element: grid, dayFields };
+}
+
+/** Minutes → "HH:MM", the one place a readout formats a clock. */
+function clockLabel(minutes: number): string {
+  const m = Math.max(0, Math.round(minutes));
+  return `${String(Math.floor(m / 60) % 24).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`;
+}
+
+/**
+ * Places the "now" marker, or hides it when the moment is outside the drawn
+ * week. Exported because it has to be re-run on a timer: a line that says
+ * "now" and means "an hour ago" is worse than no line, and re-rendering the
+ * whole week every minute to move one element would be absurd.
+ */
+export function syncNowMarker(frame: HTMLElement, at: Date = new Date()): void {
+  const grid = frame.querySelector<HTMLElement>(".planner-grid");
+  const marker = grid?.querySelector<HTMLElement>(".planner-grid-now");
+  if (!grid || !marker) return;
+  const min = Number(grid.getAttribute("data-min"));
+  const span = Number(grid.getAttribute("data-span"));
+  const jsDay = at.getDay();
+  const dayNumber = jsDay === 0 ? 7 : jsDay;
+  const minutes = at.getHours() * 60 + at.getMinutes();
+  const row = grid.querySelector<HTMLElement>(`.planner-grid-row[data-day="${dayNumber}"]`);
+  if (!Number.isFinite(min) || !Number.isFinite(span) || minutes < min || minutes > min + span) {
+    marker.hidden = true;
+    return;
+  }
+  marker.hidden = false;
+  marker.style.setProperty("--planner-x", String(((minutes - min) / span) * 100));
+  // Solid only where it is literally true. A weekend, or a day the week does
+  // not draw, still gets the faint line — the hour is the same hour.
+  marker.classList.toggle("is-today", row !== null);
+  if (row) {
+    marker.style.setProperty("--planner-now-top", `${row.offsetTop}px`);
+    marker.style.setProperty("--planner-now-height", `${row.offsetHeight}px`);
+  }
+}
+
+/**
+ * Wires the hover readout: a hairline that follows the pointer across the time
+ * axis with the minute under it.
+ *
+ * Mouse only. A finger covers the very pixel the readout is about, and a line
+ * that appears under a tap and stays there reads as a selection nobody made.
+ */
+function wirePointer(grid: HTMLElement, minMinutes: number, span: number): void {
+  const pointer = grid.querySelector<HTMLElement>(".planner-grid-pointer");
+  const time = pointer?.querySelector<HTMLElement>(".planner-grid-pointer-time");
+  const field = grid.querySelector<HTMLElement>(".planner-grid-field");
+  if (!pointer || !time || !field) return;
+
+  grid.addEventListener("pointermove", (event) => {
+    if (event.pointerType !== "mouse") return;
+    const box = field.getBoundingClientRect();
+    const gridBox = grid.getBoundingClientRect();
+    const ratio = (event.clientX - box.left) / box.width;
+    if (ratio < 0 || ratio > 1) {
+      pointer.hidden = true;
+      return;
+    }
+    pointer.hidden = false;
+    pointer.style.left = `${event.clientX - gridBox.left}px`;
+    // Rounded to five minutes: the axis cannot be read more finely than that
+    // at any width the week is drawn at, and a jittering unit figure invites a
+    // precision the geometry does not have.
+    time.textContent = clockLabel(Math.round((minMinutes + ratio * span) / 5) * 5);
+  });
+
+  grid.addEventListener("pointerleave", () => {
+    pointer.hidden = true;
+  });
 }
 
 // --- Blocks ---------------------------------------------------------------
@@ -1096,6 +1190,8 @@ export function renderGrid(
   // below are what drive `flash`, resolving each entry to its bar through
   // `nodeByEntry`.
   frame.replaceChildren(shell.element);
+  wirePointer(shell.element, minMinutes, span);
+  syncNowMarker(frame);
 
   // Margin notes: one per collision slot, not one per pair — a 3-way clash is
   // one Thursday afternoon to fix, and reporting it three times inflates the
