@@ -256,14 +256,36 @@ user of it is expected to actually exist.
 ## 6. Motion
 
 One easing (`--ease`), `--dur-fast` (110ms) for state, `--dur` (190ms) for
-surfaces, `--dur-flash` for arrival marks. Transform/opacity/color only —
-no exceptions remain (the one that used to exist, `.np-lift`'s shadow
-transition, is gone with the primitive). Theme flips are instant
-(`.theme-snap` zeroes transitions for one frame). Reduced motion zeroes all
-duration tokens globally *for CSS transitions* — the one scripted motion
-outside them (the conflict-note `scrollIntoView`) checks
-`prefers-reduced-motion` directly and falls back to `"auto"` (A5). No
-entrance choreography.
+surfaces, `--dur-flash` for arrival marks. Transform/opacity/color only,
+with one bounded exception below. Theme flips are instant (`.theme-snap`
+zeroes transitions for one frame). No entrance choreography for arriving
+data — a re-render caused by a fetch, a group pick or a plan edit draws
+straight.
+
+**The week is the exception, and only under a deliberate switch.** Two
+controls change how the week is drawn rather than what is in it — Uke ⇄
+Liste, and «vis øvinger og labber» — and both animate, because a student who
+pressed one of them is asking to see the same plan differently and needs to
+be able to follow it there.
+
+- Uke ⇄ Liste redraws, so it plays the strike-in: a clip-path wipe from the
+  left, staggered in reading order (`.is-striking`).
+- The øving toggle does not redraw. One layer arrives or leaves, so what
+  stays travels, what arrives strikes in after the space is made, and what
+  leaves wipes out before the space closes (`layerMotion.ts`,
+  REWORK-2026-07-29g). Replaying the strike-in here would claim that
+  lectures which did not change had changed.
+
+Travelling is what breaks the transform-only rule: the week's grid animates
+`left`, `width`, `top` and `min-height`, because a bar's width **is** its
+duration and a `scaleX` FLIP would squash the course code inside it for the
+length of the move. It is bounded to ~50 elements of one surface on an
+explicit press. The list half is flow layout and stays on `transform`.
+
+Reduced motion zeroes all duration tokens globally *for CSS transitions*.
+Scripted motion is not covered by that and asks the media query directly:
+the conflict-note `scrollIntoView` falls back to `"auto"` (A5), and the
+layer change skips its whole choreography.
 
 ## 7. Voice & copy
 

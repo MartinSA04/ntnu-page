@@ -594,6 +594,42 @@ test("week: the øving layer shows picked groups, not the whole cohort's", async
   ).toBeVisible();
 });
 
+test("week: the øving toggle moves the layer and leaves nothing behind", async ({ page }) => {
+  // REWORK-2026-07-29g. The toggle used to tear the week down and rebuild it
+  // on one frame; it now travels what stays, strikes in what arrives and wipes
+  // out what leaves. What can actually break in the field is the scaffolding:
+  // a stuck `is-settling` freezes every bar's geometry mid-transition, and an
+  // orphaned ghost is a bar that is not in the plan.
+  await page.goto("/planlegger/#26h;MTDT.2026;");
+  const grid = page.locator("#planner-grid-frame .planner-grid");
+  await expect(page.locator("#planner-grid-frame .planner-block").first()).toBeVisible({
+    timeout: 45_000,
+  });
+  // Settled, not merely painted: the bundles land one by one and the bar
+  // count is still climbing on the frame the first one appears.
+  await expect(page.locator(".planner-grid-spine").first()).toBeVisible();
+  await page.waitForTimeout(2_000);
+
+  for (const view of ["uke", "tavle"] as const) {
+    await page.click(view === "uke" ? "#planner-view-uke" : "#planner-view-tavle");
+    const host = view === "uke" ? grid : page.locator(".planner-board");
+    await expect(host).toBeVisible();
+    const lectures = await page.locator("#planner-grid-frame .planner-block").count();
+
+    await page.click("#planner-others-toggle");
+    await expect(host).not.toHaveClass(/is-settling/, { timeout: 5_000 });
+    await expect(page.locator(".planner-motion-ghost")).toHaveCount(0);
+
+    await page.click("#planner-others-toggle");
+    // Back to exactly the lectures we started from — the ghosts of the layer
+    // that just left are gone, not merely invisible.
+    await expect(host).not.toHaveClass(/is-settling|is-closing/, { timeout: 5_000 });
+    await expect(page.locator(".planner-motion-ghost")).toHaveCount(0);
+    if (view === "uke")
+      await expect(page.locator("#planner-grid-frame .planner-block")).toHaveCount(lectures);
+  }
+});
+
 test("course page: the grade figure renders from DBH", async ({ page }) => {
   await page.goto("/emne/TDT4100/");
   const grid = page.locator("#grades-section .grades-grid");

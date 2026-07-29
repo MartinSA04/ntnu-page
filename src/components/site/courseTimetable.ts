@@ -28,6 +28,7 @@ import { hueForIndex } from "../../lib/planner/hues.js";
 import { entriesInSemester } from "../../lib/planner/schedule.js";
 import { el } from "../planner/dom.js";
 import { renderGrid } from "../planner/grid.js";
+import { beginLayerChange } from "../planner/layerMotion.js";
 import type { PlanCourseState } from "../planner/types.js";
 
 /** The planner's entry shape plus the `term` field only this page reads. */
@@ -298,7 +299,12 @@ export async function mountCourseTimetable(
   toggle.addEventListener("click", () => {
     const next = toggle.getAttribute("aria-pressed") !== "true";
     toggle.setAttribute("aria-pressed", String(next));
+    // The same button on /planlegger/ moves the layer rather than rebuilding
+    // the week (REWORK-2026-07-29g). It is one control; it cannot behave two
+    // ways depending on which page it is on.
+    const settle = beginLayerChange(frame, next ? "reveal" : "hide");
     draw(next);
+    settle();
   });
 
   draw(false);

@@ -71,6 +71,7 @@ import {
   renderGridMessage,
   syncNowMarker,
 } from "./grid.js";
+import { beginLayerChange } from "./layerMotion.js";
 import {
   type ClassifiedCourse,
   findProgramPlan,
@@ -2268,7 +2269,13 @@ export async function mountPlannerApp(
   elements.othersToggle.addEventListener("click", () => {
     showOthers = !showOthers;
     elements.othersToggle.setAttribute("aria-pressed", String(showOthers));
+    // One layer arriving or leaving, not a new week: what was already on
+    // screen travels, what changed is what moves (REWORK-2026-07-29g). The
+    // snapshot has to be taken before the re-render tears the subtree down —
+    // hence the two calls around it rather than a flag passed into the render.
+    const settle = beginLayerChange(elements.gridFrame, showOthers ? "reveal" : "hide");
     renderGridAndExams();
+    settle();
   });
 
   /**

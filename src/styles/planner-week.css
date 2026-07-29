@@ -382,6 +382,104 @@
   animation-delay: calc(var(--planner-strike, 0) * 55ms);
 }
 
+/* --- The layer change (REWORK-2026-07-29g) -------------------------------- */
+
+/* «Vis øvinger og labber» is not a new week — it is one layer arriving or
+   leaving — so it may not replay the strike-in above. What was already there
+   TRAVELS instead, and only the layer itself is drawn.
+
+   These are the only transitions in the project on layout properties, which
+   DESIGN §6 otherwise rules out. The reason is the bar: its width IS its
+   duration, and a transform-based FLIP would have to reach that width with
+   `scaleX`, which squashes the course code inside it for the length of the
+   move. Animating `left`/`width`/`top` keeps the type crisp and lets the day
+   rules glide with their rows instead of snapping. It is bounded to the ~50
+   elements of one week, on an explicit toggle, and `layerMotion.ts` skips the
+   whole choreography under `prefers-reduced-motion`.
+
+   `--planner-x`/`-w`/`-lane`/`-lanes`/`-hours` are what the script rewinds;
+   everything below is the CSS those properties already feed. */
+.planner-grid.is-settling .planner-block,
+.planner-grid.is-settling .planner-clash-zone,
+.planner-grid.is-settling .planner-grid-tick,
+.planner-grid.is-settling .planner-grid-now {
+  transition:
+    left var(--dur) var(--ease),
+    width var(--dur) var(--ease),
+    top var(--dur) var(--ease),
+    filter var(--dur-fast) var(--ease);
+}
+
+.planner-grid.is-settling .planner-grid-now::after {
+  transition:
+    top var(--dur) var(--ease),
+    height var(--dur) var(--ease);
+}
+
+.planner-grid.is-settling .planner-grid-field {
+  transition:
+    min-height var(--dur) var(--ease),
+    background-size var(--dur) var(--ease);
+}
+
+/* Closing up waits for what is leaving to be gone. Opening does not wait for
+   anything — the space has to exist before a bar can land in it. */
+.planner-grid.is-settling.is-closing .planner-block,
+.planner-grid.is-settling.is-closing .planner-clash-zone,
+.planner-grid.is-settling.is-closing .planner-grid-tick,
+.planner-grid.is-settling.is-closing .planner-grid-now,
+.planner-grid.is-settling.is-closing .planner-grid-field {
+  transition-delay: var(--dur-fast);
+}
+
+/* The arriving layer, struck in with the view switch's own wipe — after the
+   room for it has been made. A ruler tick or a newly needed Saturday row is
+   not a session and gets the quieter fade. */
+@keyframes planner-arrive {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.planner-grid .is-arriving,
+.planner-board .is-arriving {
+  animation: planner-arrive var(--dur) var(--ease) backwards;
+  animation-delay: calc(var(--dur) * 0.8 + var(--planner-arrive, 0) * 32ms);
+}
+
+.planner-grid .planner-block.is-arriving,
+.planner-board .planner-board-row.is-arriving {
+  animation-name: planner-strike;
+  animation-duration: calc(var(--dur) * 1.6);
+}
+
+/* What left, put back where it was so it can leave visibly — the strike-in run
+   backwards, ending clipped away. `forwards` holds that last frame until the
+   script sweeps the layer up. */
+.planner-motion-ghosts {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 5;
+}
+
+/* Qualified to match the `.is-arriving` rules above rather than sit under
+   them: a bar revealed on the previous toggle still carries `is-arriving`
+   when it becomes a ghost, and at (0,1,0) this lost to it — the departing bar
+   played the ENTRANCE on its way out. `layerMotion.ts` strips the mark now;
+   this is the half that makes the collision impossible rather than merely
+   avoided. */
+.planner-grid .planner-motion-ghost,
+.planner-board .planner-motion-ghost {
+  position: absolute;
+  margin: 0;
+  animation: planner-strike var(--dur-fast) var(--ease) reverse forwards;
+}
+
 /* --- Margin notes -------------------------------------------------------- */
 
 .planner-grid-notes {
@@ -432,6 +530,9 @@
    here narrows with the viewport — which is exactly why it exists beside the
    grid rather than instead of it. */
 .planner-board {
+  /* Positioned so a departing row can be hung back over the list at the
+     coordinates it held (`.planner-motion-ghosts`). */
+  position: relative;
   max-width: 52rem;
   /* Centred: the list is much narrower than the week above it, and left-
      aligned it read as if it had come loose from the section. */
@@ -595,6 +696,22 @@ button.planner-board-row:hover {
 .planner-board.is-striking .planner-board-row {
   animation: planner-strike calc(var(--dur) * 1.8) var(--ease) backwards;
   animation-delay: calc(var(--planner-strike, 0) * 45ms);
+}
+
+/* The list is flow layout with no geometry in properties, so its half of the
+   layer change is a plain FLIP: `layerMotion.ts` writes the difference into
+   `transform` and lets it go. Translation only — a row does not change size
+   between the two states, so there is nothing here to squash and the transform
+   restriction in DESIGN §6 holds. `background` stays in the list or the row
+   loses its hover for the length of the move. */
+.planner-board.is-settling [data-motion-key] {
+  transition:
+    transform var(--dur) var(--ease),
+    background var(--dur-fast) var(--ease);
+}
+
+.planner-board.is-settling.is-closing [data-motion-key] {
+  transition-delay: var(--dur-fast);
 }
 
 @media (max-width: 40rem) {

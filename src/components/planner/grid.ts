@@ -567,6 +567,11 @@ function buildGridShell(
   rulerTrack.setAttribute("aria-hidden", "true");
   for (let hour = Math.ceil(minMinutes / 60); hour <= Math.floor(maxMinutes / 60); hour++) {
     const tick = el("span", "planner-grid-tick np-data", String(hour).padStart(2, "0"));
+    // The hour is the tick's identity across a re-render: when the øving layer
+    // stretches the axis, 10:00 has to travel to its new percentage rather
+    // than be replaced by a different element that happens to say "10"
+    // (layerMotion.ts).
+    tick.setAttribute("data-hour", String(hour));
     tick.style.setProperty("--planner-x", `${((hour * 60 - minMinutes) / span) * 100}%`);
     rulerTrack.append(tick);
   }

@@ -169,6 +169,9 @@ export function renderBoard(
 
   const dayCount = entries.some((e) => e.dayNumber === 6) ? 6 : 5;
   let strike = 0;
+  // Occurrence counter behind `motionKey` — see there for why a session needs
+  // an identity that outlives the re-render.
+  const keySeen = new Map<string, number>();
 
   for (let day = 1; day <= dayCount; day++) {
     const items = entries
@@ -176,6 +179,7 @@ export function renderBoard(
       .sort((a, b) => minutesOf(a.startTime) - minutesOf(b.startTime));
 
     const head = el("div", "planner-board-day");
+    head.setAttribute("data-motion-key", `day-${day}`);
     if (day === options.todayNumber) head.setAttribute("data-today", "");
     head.append(el("h3", "planner-board-dayname", dayName(day)));
     const minutes = items.reduce(
@@ -192,7 +196,9 @@ export function renderBoard(
     board.append(head);
 
     if (items.length === 0) {
-      board.append(el("p", "planner-board-free np-hint", "Ingen undervisning."));
+      const free = el("p", "planner-board-free np-hint", "Ingen undervisning.");
+      free.setAttribute("data-motion-key", `free-${day}`);
+      board.append(free);
       continue;
     }
 
@@ -202,17 +208,24 @@ export function renderBoard(
     // things you have to choose between.
     const clashing = items.filter((e) => e.clash);
     const group = clashing.length > 1 ? el("div", "planner-board-clash") : board;
-    if (group !== board) board.append(group);
+    if (group !== board) {
+      group.setAttribute("data-motion-key", `clash-${day}`);
+      board.append(group);
+    }
 
     for (const entry of items) {
-      group.append(buildRow(entry, strike++, options.onBlockClick));
+      group.append(buildRow(entry, strike++, motionKey(entry, keySeen), options.onBlockClick));
     }
 
     if (clashing.length > 1) {
       const codes = [...new Set(clashing.map((e) => e.courseCode))];
-      group.append(
-        el("p", "planner-board-clash-note np-data", `${codes.join(" / ")} overlapper — velg én`),
+      const note = el(
+        "p",
+        "planner-board-clash-note np-data",
+        `${codes.join(" / ")} overlapper — velg én`,
       );
+      note.setAttribute("data-motion-key", `clash-note-${day}`);
+      group.append(note);
     }
   }
 
@@ -220,12 +233,38 @@ export function renderBoard(
   return { rowCount: entries.length };
 }
 
+/**
+ * The identity a row keeps across a re-render, so `layerMotion` can tell a
+ * session that MOVED from one that arrived.
+ *
+ * It has to be built from the session itself rather than from its position:
+ * revealing the øving layer inserts rows between the lectures, so every index
+ * below the first insertion changes while the sessions do not. The occurrence
+ * counter covers the one case the facts do not separate — a course publishing
+ * two identical parallels at the same hour — and is stable because the layer
+ * filter removes rows without reordering them.
+ */
+function motionKey(entry: BoardEntry, seen: Map<string, number>): string {
+  const base = [
+    entry.courseCode,
+    entry.dayNumber,
+    entry.startTime,
+    entry.endTime,
+    entry.label,
+  ].join("|");
+  const nth = seen.get(base) ?? 0;
+  seen.set(base, nth + 1);
+  return `${base}#${nth}`;
+}
+
 function buildRow(
   entry: BoardEntry,
   strike: number,
+  key: string,
   onBlockClick?: BoardRenderOptions["onBlockClick"],
 ): HTMLElement {
   const row = el(onBlockClick ? "button" : "div", "planner-board-row");
+  row.setAttribute("data-motion-key", key);
   row.style.setProperty("--planner-strike", String(strike));
   if (row instanceof HTMLButtonElement) row.type = "button";
 

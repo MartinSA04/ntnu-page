@@ -251,6 +251,7 @@ class ShimEl {
   title = "";
   hidden = false;
   offsetWidth = 0;
+  id = "";
   constructor(readonly tagName: string) {}
   classList = {
     add: (...names: string[]) => {
@@ -354,11 +355,17 @@ afterEach(() => {
 });
 
 /** Renders one plan into a fresh frame and hands back the frame. */
-function draw(courses: PlanCourseState[], narrow: boolean): ShimEl {
+function draw(courses: PlanCourseState[], narrow: boolean, showOthers = false): ShimEl {
   uninstall = installShim(narrow);
   const frame = new ShimEl("DIV");
   const notes = new ShimEl("DIV");
-  renderGrid(frame as unknown as HTMLElement, notes as unknown as HTMLElement, courses, false, {});
+  renderGrid(
+    frame as unknown as HTMLElement,
+    notes as unknown as HTMLElement,
+    courses,
+    showOthers,
+    {},
+  );
   return frame;
 }
 describe("renderGrid: the transposed shell (REWORK-2026-07-29b D1)", () => {
@@ -516,5 +523,49 @@ describe("renderGrid: the collision is one zone per day (D4)", () => {
         false,
       ).find("planner-clash-zone"),
     ).toHaveLength(0);
+  });
+});
+
+/* --- What the layer change stands on (REWORK-2026-07-29g) ---------------- */
+
+describe("identity across the øving toggle", () => {
+  // One lecture and one øving group. A course offering exactly ONE non-lecture
+  // group counts as picked, which is what puts the øving on screen at all when
+  // the layer is revealed (collectEntries' `soleGroup`).
+  const courses = [
+    state({
+      code: "TMA4400",
+      bundle: bundleFromEntries([
+        entry("Forelesning"),
+        entry("Øving gruppe 1", { dayNumber: 2, startTime: "14:15", endTime: "16:00" }),
+      ]),
+    }),
+  ];
+
+  test("a lecture keeps its DOM id when the layer is revealed", () => {
+    // `layerMotion` matches survivors by this id and nothing else: if it moved
+    // when the øving layer arrived, every bar in the week would be treated as
+    // a newcomer and the toggle would replay the whole grid — the entrance
+    // choreography the layer change exists to avoid.
+    const lectureOnly = draw(courses, false)
+      .find("planner-block")
+      .map((b) => b.id);
+    const bothLayers = draw(courses, false, true)
+      .find("planner-block")
+      .map((b) => b.id);
+    expect(lectureOnly).toHaveLength(1);
+    expect(bothLayers).toHaveLength(2);
+    expect(bothLayers).toContain(lectureOnly[0]);
+  });
+
+  test("an hour tick carries the hour it marks", () => {
+    // The tick's identity across a re-render is its hour, not its position:
+    // revealing øvinger stretches the axis, and 10:00 has to travel to its new
+    // percentage rather than be replaced by a different element saying "10".
+    const ticks = draw(courses, false, true).find("planner-grid-tick");
+    expect(ticks.map((t) => t.getAttribute("data-hour"))).toEqual(
+      ticks.map((t) => String(Number(t.textContent))),
+    );
+    expect(ticks.length).toBeGreaterThan(1);
   });
 });
