@@ -54,8 +54,9 @@ import {
   parsePlanHash,
 } from "../../lib/planner/store.js";
 import { type AddCourseDeps, type AddCourseHandle, mountAddCourse } from "./addCourse.js";
+import { renderBoard } from "./board.js";
 import { type CourseSettingsContext, mountCourseSettings } from "./courseSettings.js";
-import { dayName, el, formatCreditNumber, formatCredits, formatShortDate } from "./dom.js";
+import { el, formatCreditNumber, formatCredits, formatShortDate } from "./dom.js";
 import {
   collectExamInputs,
   type ExamRenderResult,
@@ -117,6 +118,36 @@ const FULL_LOAD_CREDITS = 30;
 /** The grid's hour rail, in px (`3rem` in the page's `.planner-grid`). Kept in view when scrolling to today. */
 const RAIL_WIDTH_PX = 48;
 
+/** The two week views (REWORK-2026-07-29b D2). */
+export type WeekView = "uke" | "tavle";
+
+const WEEK_VIEW_KEY = "np:weekView";
+
+/**
+ * The remembered view. A preference, not plan state: it lives in
+ * localStorage rather than in the hash, so it follows the student across
+ * their own visits without riding along on a link they share.
+ *
+ * Storage can throw (Safari private mode) and can hold anything (a hand-edited
+ * value, an older build's vocabulary), so both directions are total: an
+ * unrecognised value reads as the grid rather than as a blank week.
+ */
+function loadWeekView(): WeekView {
+  try {
+    return localStorage.getItem(WEEK_VIEW_KEY) === "tavle" ? "tavle" : "uke";
+  } catch {
+    return "uke";
+  }
+}
+
+function saveWeekView(view: WeekView): void {
+  try {
+    localStorage.setItem(WEEK_VIEW_KEY, view);
+  } catch {
+    // A student who cannot persist the choice still gets to make it.
+  }
+}
+
 interface PlannerElements {
   title: HTMLElement;
   contextLine: HTMLElement;
@@ -132,7 +163,8 @@ interface PlannerElements {
   directionActions: HTMLElement;
   directionButton: HTMLButtonElement;
   othersToggle: HTMLButtonElement;
-  dayStrip: HTMLElement;
+  viewUke: HTMLButtonElement;
+  viewTavle: HTMLButtonElement;
   scrollHint: HTMLElement;
   gridFrame: HTMLElement;
   gridNotes: HTMLElement;
@@ -168,7 +200,8 @@ function getElements(): PlannerElements | null {
     directionActions: byId<HTMLElement>("planner-direction-actions"),
     directionButton: byId<HTMLButtonElement>("planner-direction-btn"),
     othersToggle: byId<HTMLButtonElement>("planner-others-toggle"),
-    dayStrip: byId<HTMLElement>("planner-day-strip"),
+    viewUke: byId<HTMLButtonElement>("planner-view-uke"),
+    viewTavle: byId<HTMLButtonElement>("planner-view-tavle"),
     scrollHint: byId<HTMLElement>("planner-scroll-hint"),
     gridFrame: byId<HTMLElement>("planner-grid-frame"),
     gridNotes: byId<HTMLElement>("planner-grid-notes"),
@@ -574,19 +607,30 @@ export async function mountPlannerApp(
   let indexByCodeMemo: Map<string, PlannerIndexCourse> | null = null;
   let showOthers = false;
   /**
-   * The weekday the grid expands to full width, or `null` for the whole week
-   * (REWORK-2026-07-29 D4). Deliberately NOT persisted — not in the hash, not
-   * in storage: it is a way of looking at the plan, not part of it, and a
-   * shared link that opened on someone else's Thursday would be a worse
-   * answer to "here is my week" than the week itself.
+   * Which of the two week views is on screen (REWORK-2026-07-29b D2).
+   *
+   * Deliberately NOT in the hash: it is how you are looking at the plan, not
+   * what you are looking at, and a shared link that forced the recipient into
+   * a list because the sender happened to be on a phone would be a worse
+   * answer to "here is my week" than the week itself. It IS remembered in
+   * localStorage, because a student who prefers the list prefers it every
+   * time.
    */
-  let focusDay: number | null = null;
+  let weekView: WeekView = loadWeekView();
   /**
-   * What the grid on screen is currently showing, so the next render can
-   * animate from it (`GridRenderOptions.previousFocusDay`). Distinct from
-   * `focusDay`, which is already the *target* by the time a render runs.
+   * Set by a view switch and consumed by the next render, which is the only
+   * render allowed to play the strike-in. A plan edit re-renders the week too,
+   * and replaying the animation there would be entrance choreography.
    */
-  let renderedFocusDay: number | null = null;
+  let pendingViewAnimation = false;
+  /**
+   * Where `renderGrid` builds a grid nobody will see, while Tavla is on
+   * screen. The grid is still the single owner of the margin notes, the
+   * conflict count and the honest-verdict logic; only its geometry is
+   * redundant in list view, and eight detached bars is a cheaper price than a
+   * second implementation of "what could this week not draw".
+   */
+  const discardHost = document.createElement("div");
   let periodCourses: PeriodCourses | null = null;
   let studyPlanFetchToken = 0;
   /** `true` once a study plan is loaded but has no period for this semester (B4). */
@@ -869,51 +913,40 @@ export async function mountPlannerApp(
 
   elements.tabWeek.addEventListener("click", () => setRegion("week"));
   elements.tabCourses.addEventListener("click", () => setRegion("courses"));
+  elements.viewUke.addEventListener("click", () => setWeekView("uke"));
+  elements.viewTavle.addEventListener("click", () => setWeekView("tavle"));
 
-  // --- Week ⇄ day (REWORK-2026-07-29 D4) ----------------------------------
+  // --- Uke ⇄ Tavla (REWORK-2026-07-29b D2) --------------------------------
 
   /**
-   * Switches the week between the five-day spread and one expanded day.
+   * Switches which of the two views draws the week.
    *
-   * Only the grid is re-rendered: the exam list, the credit line and the
-   * course rows are the same whichever day is on screen, and rebuilding them
-   * would throw away the student's scroll position for a change they did not
-   * ask those surfaces to make.
+   * Only the week is re-rendered: the exam list, the credit line and the
+   * course rows say the same thing in both views, and rebuilding them would
+   * throw away the student's scroll position for a change they did not ask
+   * those surfaces to make.
    */
-  function setFocusDay(day: number | null): void {
-    if (focusDay === day) return;
-    focusDay = day;
+  function setWeekView(view: WeekView): void {
+    if (weekView === view) return;
+    weekView = view;
+    saveWeekView(view);
+    pendingViewAnimation = true;
     renderGridAndExams();
   }
 
-  /**
-   * `Uke · Man · Tir …` above the grid — the entrance the day headers
-   * duplicate for a student already looking at a day, and the only way *back*
-   * to the week that does not require finding the header of the day you
-   * happen to be on.
-   *
-   * `dayCount` is the grid's OWN count (`GridRenderResult.dayCount`), not a
-   * second copy of its Saturday rule here, so the strip can never offer a day
-   * the grid has no column for. A message branch reports 0 — the week has
-   * nothing to look at one day of, so the strip goes away entirely rather than
-   * offering six buttons over a sentence.
-   */
-  function renderDayStrip(dayCount: number): void {
-    elements.dayStrip.replaceChildren();
-    elements.dayStrip.hidden = dayCount === 0;
-    if (dayCount === 0) return;
-    const makeButton = (label: string, ariaLabel: string, target: number | null): void => {
-      const button = el("button", "np-toggle planner-day-btn", label);
-      button.type = "button";
-      button.setAttribute("aria-label", ariaLabel);
-      button.setAttribute("aria-pressed", String(focusDay === target));
-      button.addEventListener("click", () => setFocusDay(target));
-      elements.dayStrip.append(button);
-    };
-    makeButton("Uke", "Vis hele uka", null);
-    for (let day = 1; day <= dayCount; day++) {
-      makeButton(dayName(day).slice(0, 3), `Vis bare ${dayName(day)}`, day);
+  function renderViewTabs(): void {
+    for (const [button, view] of [
+      [elements.viewUke, "uke"],
+      [elements.viewTavle, "tavle"],
+    ] as const) {
+      button.setAttribute("aria-pressed", String(weekView === view));
     }
+  }
+
+  /** Today as a weekday number (1 = mandag), or `null` at the weekend. */
+  function todayWeekday(): number | null {
+    const day = new Date().getDay();
+    return day >= 1 && day <= 6 ? day : null;
   }
 
   // --- Programme / kull / retning / semester: the studieinfo modal --------
@@ -1682,41 +1715,42 @@ export async function mountPlannerApp(
           card.append(change);
         });
       }
+    } else if (weekView === "tavle") {
+      // Tavla renders into the same frame from the same states — it is a view
+      // of the plan, not a second plan (REWORK-2026-07-29b D2). The grid's own
+      // margin notes still belong under it: which courses we could not draw and
+      // which parallels are a guess are facts about the week, not about how it
+      // is being drawn, so `renderGrid` is still the one that owns them.
+      gridResult = renderGrid(discardHost, elements.gridNotes, filteredStates, showOthers, {
+        loading: anyLoading,
+        pendingChoiceMessage: question?.weekMessage ?? null,
+      });
+      renderBoard(
+        elements.gridFrame,
+        filteredStates,
+        currentSemester()?.teachingWeeks ?? [],
+        showOthers,
+        {
+          todayNumber: todayWeekday(),
+          animate: pendingViewAnimation,
+          onBlockClick: (detail) => openCourseSettings(detail.code),
+        },
+      );
     } else {
       gridResult = renderGrid(elements.gridFrame, elements.gridNotes, filteredStates, showOthers, {
         loading: anyLoading,
         pendingChoiceMessage: question?.weekMessage ?? null,
-        focusDay,
-        previousFocusDay: renderedFocusDay,
-        onDayFocus: (day) => setFocusDay(focusDay === day ? null : day),
-        onBlockClick: (detail) => {
-          // A pile has no single course to open settings for — its `code` is
-          // the cluster's codes joined " · ". It is also the grid saying "too
-          // dense to read here", so it expands its own day, where the column
-          // is wide enough to split the cluster into real blocks (D5).
-          if (detail.code.includes(" · ")) {
-            setFocusDay(detail.dayNumber);
-            return;
-          }
-          openCourseSettings(detail.code);
-        },
+        todayNumber: todayWeekday(),
+        animate: pendingViewAnimation,
+        onBlockClick: (detail) => openCourseSettings(detail.code),
       });
     }
-    // What the NEXT render animates from — set on every path, including the
-    // message branches. A frame replaced by a sentence has no columns to
-    // expand, so the grid that comes back after it should simply appear in
-    // whatever state it is in rather than animating out of one the student
-    // never saw.
-    renderedFocusDay = focusDay;
-    // A focus the grid refused (a Saturday that is no longer taught) is not a
-    // state the strip may keep asserting — `renderGrid` fell back to the week,
-    // so the strip has to say the week too.
-    const drawnDays = gridResult?.dayCount ?? 0;
-    if (focusDay !== null && drawnDays > 0 && focusDay > drawnDays) {
-      focusDay = null;
-      renderedFocusDay = null;
-    }
-    renderDayStrip(drawnDays);
+    // The strike-in plays once, on the render a view switch caused — never on
+    // the re-render a group pick or a plan edit causes. Replaying the whole
+    // week because one checkbox moved is exactly the entrance choreography
+    // DESIGN §6 forbids, and it is also just irritating.
+    pendingViewAnimation = false;
+    renderViewTabs();
 
     // B7a: the grid can reveal the muted øving layer on its own when nothing
     // classifies as a lecture. The toggle has to say so, or it lies about

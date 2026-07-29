@@ -1,35 +1,51 @@
 /**
- * UKEPLAN — the weekly spread (PRODUCT.md §0/DR-1). An unboxed surface ruled
- * only at the hour, CSS grid Mon–Fri (+Sat only if data demands), 15-min rows clamped
- * to the data's actual time range. Lectures render by default; the caller
- * passes `showOthers` (driven by the page's "Vis øvinger og labber" toggle)
- * to additionally render øving/lab/seminar blocks — muted (reduced ink, hue
- * dot only, never red) and never considered for collisions. Only
- * lecture×lecture overlaps get the clash edge; `.np-note-clash` margin notes
- * below link to and flash the blocks.
+ * UKEPLAN — the weekly spread (PRODUCT.md §0/DR-1). **Days are rows and time
+ * is the horizontal axis** (REWORK-2026-07-29b D1): one row per weekday, its
+ * name in the left spine, its sessions as bars along a labelled hour ruler.
+ *
+ * That orientation is the whole design, and it is arithmetic rather than
+ * taste. A day COLUMN is ~150 px and cannot get wider — there are five of
+ * them. A day ROW is the full page width, so a 1 t 45 lecture is 22 % of it
+ * instead of a sliver, and overlapping sessions stack downward into lanes
+ * where vertical space is free. Every rule the old vertical grid needed to
+ * survive its own narrowness — the two-column cap, the phone cap, the pile
+ * block that swallowed anything deeper — is deleted rather than tuned.
+ *
+ * It also relocates what a bar has to say. The axis above it is labelled and
+ * the bar starts at its own minute, so a start time printed inside the bar
+ * would be the same fact twice; the width that frees goes to `room ·
+ * activity` — what it is, rather than when it is.
  *
  * Legibility is a correctness property here, not polish (REVIEW.md U1/U3, and
  * the REWORK mandate's "render simultaneous courses properly"). Overlap is a
- * *supported* state — people deliberately take colliding courses — so the
- * surface stays readable at the week's ~106 px weekday width by these rules,
- * in this order:
+ * *supported* state — people deliberately take colliding courses — and what
+ * keeps it readable is now:
  *
  *   1. each course renders only its *selected* group set — the programme's
- *      own lecture parallel by default (`applyGroupSelection`), so the pile
+ *      own lecture parallel by default (`applyGroupSelection`), so the week
  *      is what the student actually attends, not every section overlaid;
  *   2. identical parallel slots that survive that filter collapse to one
- *      block ("Lab · 4 grupper") — DR-1 concedes they are indistinguishable;
+ *      bar ("Lab · 4 grupper") — DR-1 concedes they are indistinguishable;
  *   3. an all-day non-lecture drop-in window becomes a band behind the day
- *      rather than a full-height column that squeezes everything else;
- *   4. `layoutDay` packs the rest into side-by-side columns; a cluster deeper
- *      than the column cap (2, or 1 below 40rem — `maxColumnsForViewport`)
- *      collapses whole into ONE pile block naming each of its courses,
- *      instead of splitting into unreadable slivers. Both a block and a pile
- *      open the popover via `onBlockClick`.
+ *      rather than a lane that pushes every real session down a row;
+ *   4. `layoutDay` packs the rest into lanes, uncapped (`LANE_CAP`). A bar
+ *      opens that course's settings via `onBlockClick`.
+ *
+ * Lectures render by default; `showOthers` (the page's "Vis øvinger og
+ * labber" toggle) additionally renders øving/lab/seminar bars — muted, never
+ * red, never fed to the conflict engine. Only lecture×lecture overlaps mark a
+ * collision, and it is drawn as ONE zone per day across the minutes that
+ * actually overlap; `.np-note-clash` margin notes below link to and flash the
+ * bars.
+ *
+ * `renderBoard` (board.ts) is the second view of this same data, for the
+ * widths and the media where a bar whose meaning is its width says nothing.
  *
  * The øving/lab layer additionally shows only groups the student has PICKED —
  * a service course publishes a dozen, and drawing them all made the toggle a
- * switch between "my week" and "the cohort's week". See `renderGrid`.
+ * switch between "my week" and "the cohort's week" (`visibleLayer`, which
+ * board.ts shares so the two views can never disagree about what is in the
+ * week).
  *
  * What the week does NOT do is answer for teaching it never saw. Every course
  * carries a `TimetableOutcome` from the fetch (data.ts), and `planGaps` turns
@@ -58,7 +74,7 @@ import {
   groupOptions,
   resolveLectureDefaults,
 } from "../../lib/planner/groups.js";
-import { type LayoutInput, layoutDay, MAX_COLUMNS } from "../../lib/planner/layout.js";
+import { type LayoutInput, layoutDay } from "../../lib/planner/layout.js";
 import { parseWeeks, type ScheduleEntry } from "../../lib/planner/schedule.js";
 import { dayName, dot, el, weekLabel } from "./dom.js";
 import type { PlanCourseState } from "./types.js";
@@ -71,65 +87,33 @@ const SKELETON_END_HOUR = 16;
 /** Weekdays the skeleton draws before it knows whether Saturday is needed. */
 const SKELETON_DAYS = 5;
 
-/** A non-lecture window at least this long is a drop-in band, not a column (U1). */
+/** A non-lecture window at least this long is a drop-in band, not a lane (U1). */
 const ALL_DAY_MINUTES = 5 * 60;
-/** Below this height a block only has room for its code + room·time — name/weeks move to the popover. */
-const COMPACT_BLOCK_MINUTES = 90;
-
 /**
- * Phone width, spelled exactly as `planner-week.css`'s own
- * `@media (max-width: 40rem)` blocks so the two cannot disagree about where a
- * phone starts. It is the width at which `.planner-grid` drops to
- * `min-width: 21rem` (REVIEW A4), i.e. ~56 px per day column.
- */
-const NARROW_VIEWPORT_QUERY = "(max-width: 40rem)";
-
-/**
- * How many side-by-side columns a cluster may take before it piles.
+ * Below this DURATION a bar carries its course code and nothing else.
  *
- * One below 40rem: half a 56 px day column is 27 px, and at that width
- * `.planner-block-code` broke "FRA1010" into seven one-character lines
- * (grid-3, measured at 390x844). No type step fits a 7-character mono code in
- * 27 px, so a 2-deep cluster piles instead — one readable block that names
- * both sessions beats two unreadable slivers, which is the same trade
- * `MAX_COLUMNS` already makes at 3. No `matchMedia` (a non-browser host)
- * means the desktop cap, i.e. the behaviour before this rule existed.
+ * Time is the horizontal axis now (REWORK-2026-07-29b D1), so a session's
+ * minutes are its *width*: 45 minutes is ~9 % of an eight-hour axis, about
+ * 100 px on a laptop, which holds a seven-character code and no more. Above an
+ * hour there is room for the activity and the room beside it. This used to be
+ * a height rule at 90 minutes, back when a block was a narrow vertical sliver
+ * and the extra lines clipped mid-word.
  */
-function maxColumnsForViewport(): number {
-  return globalThis.matchMedia?.(NARROW_VIEWPORT_QUERY).matches === true ? 1 : MAX_COLUMNS;
-}
+const COMPACT_BLOCK_MINUTES = 60;
 
 /**
- * The cap for the ONE day a focused view expands (REWORK-2026-07-29 D4).
+ * Lanes a day's row may stack before … nothing. There is no cap.
  *
- * The whole reason `MAX_COLUMNS` is 2 is arithmetic on a ~106 px weekday: a
- * third column is ~35 px, at which `.planner-block-code` breaks a course code
- * one character per line. A focused day is the width of the entire grid — at
- * least 34rem by `.planner-grid`'s own `min-width`, so a quarter of it is
- * ~130 px, four times the width that forced the pile in the first place. The
- * pile exists to keep the week readable; in the day view there is room, and
- * the cluster the week collapsed is exactly what the student came here to
- * read (D5).
+ * The old cap existed because a cluster deeper than two could not be split
+ * across a ~150 px day column without breaking course codes one character per
+ * line (grid-3), so anything deeper collapsed into a pile. Transposing the
+ * axes deletes the problem rather than managing it: a lane is a row of
+ * vertical space, vertical space is free, and a session's *width* now comes
+ * from its duration instead of from how many things it collides with. So
+ * `layoutDay` is called uncapped and can never return `piled` — the pile block
+ * and every rule that fed it are gone (REWORK-2026-07-29b D1).
  */
-const DAY_MAX_COLUMNS = 4;
-
-/**
- * The grid's `grid-template-columns`: the 3rem hour rail, then one track per
- * day. In the week every day is `1fr`; in a focused day the chosen one takes
- * `1fr` and the rest go to `0fr`.
- *
- * The track COUNT is identical either way, and that is the point — a CSS
- * transition on `grid-template-columns` can only interpolate between two lists
- * of the same length, which is what makes the expansion a two-line CSS
- * transition rather than a scripted FLIP (D7).
- */
-function columnTemplate(dayCount: number, focusDay: number | null): string {
-  const tracks: string[] = ["3rem"];
-  for (let day = 1; day <= dayCount; day++) {
-    tracks.push(focusDay === null || focusDay === day ? "1fr" : "0fr");
-  }
-  return tracks.join(" ");
-}
+const LANE_CAP = Number.POSITIVE_INFINITY;
 
 interface GridEntry extends ScheduleEntry {
   hueVar: string;
@@ -213,30 +197,18 @@ export interface GridRenderOptions {
    */
   showAllGroups?: boolean;
   /**
-   * Expand one weekday to the full width of the grid and collapse the rest to
-   * nothing (REWORK-2026-07-29 D4). `null`/omitted is the ordinary week.
-   *
-   * This is NOT a different renderer. `.planner-grid` is
-   * `grid-template-columns: 3rem repeat(var(--planner-days), 1fr)` and every
-   * block is absolutely positioned from `--planner-row-start × --cell`, so
-   * vertical geometry does not depend on how many days are visible: focusing
-   * a day changes horizontal track sizes and nothing else, and each block
-   * keeps the exact `top` and `height` it had in the week.
+   * The weekday to mark as today (1 = mandag), so its row carries the spine at
+   * full ink while the rest of the week recedes. `null`/omitted marks none —
+   * `/emne/[code]/`'s reference week is nobody's particular Tuesday.
    */
-  focusDay?: number | null;
+  todayNumber?: number | null;
   /**
-   * What the grid was showing before this render, so the fresh element can be
-   * appended carrying the OLD column template and flipped to the new one on
-   * the next frame — which is what gives the CSS transition on
-   * `grid-template-columns` two states to run between (D7). Pass the same
-   * value as `focusDay` (or omit it) to render without animating.
+   * Stagger the bars in left-to-right on this render (REWORK-2026-07-29b D4).
+   * Set by a view switch, never by a re-render caused by a group pick or a
+   * plan edit: replaying the whole week because one checkbox moved is exactly
+   * the entrance choreography DESIGN §6 forbids.
    */
-  previousFocusDay?: number | null;
-  /**
-   * Makes the day headers real buttons that focus their own day. Omitted on
-   * `/emne/[code]/`, whose week is a static reference figure.
-   */
-  onDayFocus?: (day: number) => void;
+  animate?: boolean;
 }
 
 export interface GridRenderResult {
@@ -256,13 +228,6 @@ export interface GridRenderResult {
   mutedLayerAutoRevealed: boolean;
   /** Cells drawn (after merging and collapsing) — 0 in every message branch. */
   blockCount: number;
-  /**
-   * Day columns the grid drew: 6 only when something is taught on a Saturday,
-   * 0 in every message branch. The caller's day strip is built from this
-   * rather than from its own second copy of the Saturday rule, so the strip
-   * can never offer a day the grid has no column for (REWORK-2026-07-29 D4).
-   */
-  dayCount: number;
   /** Which branch rendered. Only `"grid"` carries meaningful counts. */
   state: "grid" | "empty" | "loading" | "pending-choice";
   /**
@@ -549,164 +514,129 @@ function renderSkeleton(frame: HTMLElement, notesHost: HTMLElement): void {
 
 interface GridShell {
   element: HTMLElement;
-  dayColumns: Map<number, HTMLElement>;
+  /** One lane container per weekday — where that day's bars are appended. */
+  dayFields: Map<number, HTMLElement>;
 }
 
 /**
- * The empty week: hour rail, day headers, day columns. Headers are children
- * of the *grid* on their own first row, not of the day columns (U2) — a block
- * is absolutely positioned from its column's top, so a header inside the
- * column is painted over by any entry starting at the grid's first hour, and
- * a week grid without day names is not a week grid.
+ * The empty week: an hour ruler across the top, then one row per weekday —
+ * the day's name in the left spine, its lanes in the field beside it
+ * (REWORK-2026-07-29b D1).
  *
- * Row 1 spans the rail too (see `railHeader` below), so the whole header row
- * can be made sticky in one rule once the frame becomes a vertical scroller.
+ * The spine is the signature and it is load-bearing, not decoration: at
+ * display size with the current day at full ink and the rest of the week
+ * receding, it is how a student finds their row without reading. Three
+ * letters of `.np-kicker` in a 3rem column did not do that.
+ *
+ * `--planner-span` is the axis's own length in minutes. Every bar's `left` and
+ * `width` are percentages of it, so the ruler's ticks and the bars share one
+ * coordinate system by construction — there is no second place where a time
+ * becomes a position.
  */
 function buildGridShell(
   minMinutes: number,
   maxMinutes: number,
   dayCount: number,
   ariaLabel: string,
-  focus?: { focusDay?: number | null; onDayFocus?: (day: number) => void },
+  todayNumber: number | null = null,
 ): GridShell {
-  const totalRows = Math.ceil((maxMinutes - minMinutes) / ROW_MINUTES);
-  const focusDay = focus?.focusDay ?? null;
+  const span = Math.max(ROW_MINUTES, maxMinutes - minMinutes);
   const grid = el("div", "planner-grid");
-  grid.style.setProperty("--planner-rows", String(totalRows));
-  grid.style.setProperty("--planner-days", String(dayCount));
-  grid.style.gridTemplateColumns = columnTemplate(dayCount, focusDay);
-  if (focusDay !== null) grid.dataset.view = "day";
+  grid.style.setProperty("--planner-span", String(span));
+  grid.style.setProperty("--planner-hours", String(Math.round(span / 60)));
   // role="group", not "img": the grid holds focusable blocks (each with its own
   // aria-label), and "img" would strip them from the accessibility tree.
   grid.setAttribute("role", "group");
   grid.setAttribute("aria-label", ariaLabel);
 
-  const onDayFocus = focus?.onDayFocus;
+  // The ruler. Its figures sit ON their tick rather than floating above the
+  // field — the tick is what ties a number to a position.
+  const ruler = el("div", "planner-grid-ruler");
+  const rulerTrack = el("div", "planner-grid-ruler-track");
+  rulerTrack.setAttribute("aria-hidden", "true");
+  for (let hour = Math.ceil(minMinutes / 60); hour <= Math.floor(maxMinutes / 60); hour++) {
+    const tick = el("span", "planner-grid-tick np-data", String(hour).padStart(2, "0"));
+    tick.style.setProperty("--planner-x", `${((hour * 60 - minMinutes) / span) * 100}%`);
+    rulerTrack.append(tick);
+  }
+  ruler.append(rulerTrack);
+  grid.append(ruler);
+
+  const dayFields = new Map<number, HTMLElement>();
   for (let day = 1; day <= dayCount; day++) {
-    const label = dayName(day);
-    if (onDayFocus) {
-      // A header is a button only where focusing a day is a thing the surface
-      // does — `/emne/[code]/`'s week is a static figure and passes no
-      // handler, and a control that answers no click is the exact wart cpc-4
-      // removed from the blocks there.
-      const header = el("button", "planner-grid-day-header np-kicker", label.slice(0, 3));
-      header.type = "button";
-      header.style.setProperty("--planner-day", String(day));
-      // The visible text is a three-letter abbreviation; the accessible name
-      // says the whole word and what pressing it does. Pressing the focused
-      // day's own header is the way back out — the same control, toggled — so
-      // a student who focused a day by mistake does not have to find a
-      // different button to undo it.
-      header.setAttribute(
-        "aria-label",
-        focusDay === day ? `Vis hele uka igjen` : `Vis bare ${label}`,
-      );
-      header.setAttribute("aria-pressed", String(focusDay === day));
-      header.addEventListener("click", () => onDayFocus(day));
-      grid.append(header);
-      continue;
-    }
-    const header = el("div", "planner-grid-day-header np-kicker", label.slice(0, 3));
-    header.style.setProperty("--planner-day", String(day));
-    grid.append(header);
+    const row = el("div", "planner-grid-row");
+    if (day === todayNumber) row.setAttribute("data-today", "");
+
+    // A real word, not an abbreviation: the spine has the width for it, and
+    // "mandag" is a sentence fragment, so it is the grotesk, not the mono
+    // (Data-Is-Mono cuts the other way here).
+    row.append(el("div", "planner-grid-spine", dayName(day)));
+
+    // Bars are absolutely positioned against this box, so it — not the grid —
+    // has to be the positioned ancestor, or every day's bars would resolve
+    // their percentages against the whole week and land in the same strip.
+    const field = el("div", "planner-grid-field");
+    row.append(field);
+    grid.append(row);
+    dayFields.set(day, field);
   }
 
-  // A sixth (or seventh) header cell over the hour rail. It says nothing —
-  // there is no name for the rail column — and is `aria-hidden`, but the row
-  // has to be complete for `.planner-grid-day-header` to go `position: sticky`
-  // in a vertically scrolling frame: without it column 1 is a background-less
-  // band through which the hour labels slide up behind the day names (week-7).
-  // `--planner-day: 0` puts it at `grid-column: calc(0 + 1)`, i.e. the rail's
-  // own column, so it needs no placement rule of its own. Appended AFTER the
-  // day names on purpose: plannerApp's `scrollToToday` indexes
-  // `.planner-grid-day-header` by weekday, and a rail cell in front of them
-  // would shift every day by one.
-  const railHeader = el("div", "planner-grid-day-header planner-grid-rail-header");
-  railHeader.style.setProperty("--planner-day", "0");
-  railHeader.setAttribute("aria-hidden", "true");
-  grid.append(railHeader);
-
-  const rail = el("div", "planner-grid-rail");
-  for (let hour = minMinutes / 60; hour <= maxMinutes / 60; hour++) {
-    const label = el("div", "planner-grid-hour np-data", `${String(hour).padStart(2, "0")}:00`);
-    label.style.setProperty(
-      "--planner-row-start",
-      String((hour * 60 - minMinutes) / ROW_MINUTES + 1),
-    );
-    rail.append(label);
-  }
-  grid.append(rail);
-
-  // Blocks are appended *inside* their own day's column — `.planner-block` is
-  // absolutely positioned relative to its nearest positioned ancestor, and
-  // `.planner-grid-day` is that ancestor. Appending them straight onto
-  // `.planner-grid` (as a former version of this code did) makes every day's
-  // blocks position against the whole grid's width, collapsing all weekdays
-  // into the same horizontal strip.
-  const dayColumns = new Map<number, HTMLElement>();
-  for (let day = 1; day <= dayCount; day++) {
-    const col = el("div", "planner-grid-day");
-    col.style.setProperty("--planner-day", String(day));
-    grid.append(col);
-    dayColumns.set(day, col);
-  }
-
-  return { element: grid, dayColumns };
+  return { element: grid, dayFields };
 }
 
 // --- Blocks ---------------------------------------------------------------
 
 interface BlockGeometry {
   minMinutes: number;
-  /** Overlap window to paint the clash band over, in absolute minutes. */
+  /** The axis's length in minutes — every bar's x/width is a fraction of it. */
+  span: number;
+  /** Overlap window this entry falls inside, in absolute minutes. */
   clashWindow: { start: number; end: number } | null;
 }
 
+/**
+ * Places a bar on the time axis: `left`/`width` as percentages of the day's
+ * own span, `--planner-lane` for which stacked lane it sits in.
+ *
+ * Percentages, not pixels, because the axis is fluid — the same grid has to
+ * hold up from a 22rem phone to a 90rem desktop, and a bar that resolved its
+ * position against a fixed cell size would drift off its own hour tick at
+ * every width but the one it was measured at.
+ */
 function positionBlock(
   block: HTMLElement,
   startMinutes: number,
   endMinutes: number,
   minMinutes: number,
-  column: number,
-  columnCount: number,
+  span: number,
+  lane: number,
 ): void {
-  const startRow = Math.round((startMinutes - minMinutes) / ROW_MINUTES) + 1;
-  const endRow = Math.round((endMinutes - minMinutes) / ROW_MINUTES) + 1;
-  block.style.setProperty("--planner-row-start", String(startRow));
-  block.style.setProperty("--planner-row-end", String(endRow));
-  block.style.setProperty("--planner-col", String(column));
-  block.style.setProperty("--planner-col-count", String(columnCount));
+  block.style.setProperty("--planner-x", `${((startMinutes - minMinutes) / span) * 100}%`);
+  block.style.setProperty("--planner-w", `${((endMinutes - startMinutes) / span) * 100}%`);
+  block.style.setProperty("--planner-lane", String(lane));
 }
 
 /**
- * The overlap band (D9): `--clash-bg` over the minutes that actually collide,
- * with the solid `--clash-edge` rule down the block's inline start. A hatch
- * over the whole block reads at the same weight as a hue wash; a solid edge
- * plus a filled band is categorically different ink, which is what
- * Red-Is-Collision is for.
+ * The collision, drawn once per day rather than once per block: a zone cut
+ * through every lane in the row across exactly the minutes that overlap,
+ * edged in `--clash` on both sides (REWORK-2026-07-29b D4).
+ *
+ * It is the only element in the week that crosses lanes, which is precisely
+ * what a collision is — two things in one moment. The old per-block band
+ * could only shade its own bar, so a three-way clash read as three unrelated
+ * stripes; and on a solid printed bar a translucent red wash just muddies the
+ * hue instead of out-shouting it, which Red-Is-Collision requires.
  */
-function appendClashBand(
-  block: HTMLElement,
-  blockStart: number,
-  blockEnd: number,
+function buildClashZone(
   window: { start: number; end: number },
-): void {
-  const start = Math.max(blockStart, window.start);
-  const end = Math.min(blockEnd, window.end);
-  if (end <= start) return;
-  const band = el("span", "planner-block-clash-band");
-  band.setAttribute("aria-hidden", "true");
-  band.style.setProperty("--planner-band-start", String((start - blockStart) / ROW_MINUTES));
-  band.style.setProperty("--planner-band-end", String((end - blockStart) / ROW_MINUTES));
-  block.prepend(band);
-}
-
-/** The course chip every block wears — DESIGN §5's `.np-tag`, at the in-grid size. */
-function courseTag(hueVar: string, code: string): HTMLElement {
-  const tag = el("span", "np-tag np-tag--sm planner-block-tag");
-  tag.append(dot(hueVar));
-  tag.append(el("span", "planner-block-code np-data", code));
-  return tag;
+  minMinutes: number,
+  span: number,
+): HTMLElement {
+  const zone = el("span", "planner-clash-zone");
+  zone.setAttribute("aria-hidden", "true");
+  zone.style.setProperty("--planner-x", `${((window.start - minMinutes) / span) * 100}%`);
+  zone.style.setProperty("--planner-w", `${((window.end - window.start) / span) * 100}%`);
+  return zone;
 }
 
 /** The activity/group label a block shows — merged parallels count themselves. */
@@ -744,8 +674,7 @@ function blockDetailFor(entry: GridEntry): BlockDetail {
 function buildBlock(
   entry: GridEntry,
   geometry: BlockGeometry,
-  column: number,
-  columnCount: number,
+  lane: number,
   partnerCodes: string[],
   onBlockClick?: GridRenderOptions["onBlockClick"],
 ): HTMLButtonElement {
@@ -760,7 +689,7 @@ function buildBlock(
 
   const startMinutes = timeToMinutes(entry.startTime);
   const endMinutes = timeToMinutes(entry.endTime);
-  positionBlock(block, startMinutes, endMinutes, geometry.minMinutes, column, columnCount);
+  positionBlock(block, startMinutes, endMinutes, geometry.minMinutes, geometry.span, lane);
   block.setAttribute("aria-label", blockAriaLabel(entry, partnerCodes));
 
   const label = groupLabel(entry);
@@ -769,226 +698,24 @@ function buildBlock(
     .filter(Boolean)
     .join(" · ");
 
-  // Two-line minimum (§5): the FULL course code, never truncated, then
-  // `room · start`. The activity name and week range are extra lines the
-  // block only earns above ~90 min — below that they clip mid-word, and the
-  // popover carries them anyway.
-  block.append(courseTag(entry.hueVar, entry.courseCode));
-  block.append(el("span", "planner-block-meta np-data", metaLine(entry)));
+  // One line, and the code is the half that may never be cut. The bar no
+  // longer prints its own start time: the axis above it is labelled and the
+  // bar begins at its own minute, so a time inside the bar would be the same
+  // fact said twice. That is what frees the width for `activity · room` —
+  // what it is, rather than when it is (REWORK-2026-07-29b D1).
+  block.append(el("span", "planner-block-code np-data", entry.courseCode));
   if (durationMinutes(entry) >= COMPACT_BLOCK_MINUTES) {
-    block.append(el("span", "planner-block-name", label));
-    if (entry.weeksLabel) block.append(el("span", "planner-block-weeks np-data", entry.weeksLabel));
+    // Room FIRST: the bar has room for one of the two and the ellipsis eats
+    // whatever is last, so the fact a student is walking somewhere to find out
+    // survives and the activity label is what gets cut (the same reasoning as
+    // week-4, re-aimed now that the axis carries the time).
+    const what = [entry.rooms, label].filter(Boolean).join(" · ");
+    if (what) block.append(el("span", "planner-block-what", what));
   }
 
-  if (geometry.clashWindow) {
-    appendClashBand(block, startMinutes, endMinutes, geometry.clashWindow);
-  }
   if (onBlockClick)
     block.addEventListener("click", () => onBlockClick(blockDetailFor(entry), block));
   return block;
-}
-
-/** The structural subset of a pile member its labels are built from. */
-interface PileMember {
-  courseCode: string;
-  startTime: string;
-  endTime: string;
-}
-
-/** Everything a pile says about itself, in one place so the block and the popover agree. */
-export interface PileSummary {
-  /** Distinct course codes, first-session-first. */
-  codes: string[];
-  /** "5 aktiviteter" — sessions, not courses. */
-  activities: string;
-  /** The block's caption: "2 emner · 5 aktiviteter", or just the activities for one course. */
-  meta: string;
-  /** Every session timed: "ETT1101 08:15–10:00 og 09:15–10:00; ETT1102 08:15–11:00". */
-  sessions: string;
-  /** The same, grouped: one row per course, its times in start order. */
-  byCourse: { code: string; times: string[] }[];
-}
-
-/**
- * What a pile is allowed to claim. Three findings meet here:
- *
- *  - grid-1: the pile printed one row per distinct COURSE and the cluster's
- *    earliest start, so four of five days on a prefilled BERGO week were
- *    identical featureless slabs reading "2 emner · 08:15" over nine real
- *    sessions. Every session is named and timed now.
- *  - copy-1/grid-5: the two counts wore each other's nouns — "1 emner",
- *    "1 aktiviteter samtidig". Courses count as emner, sessions as
- *    aktiviteter, and a single-course pile drops the course count entirely:
- *    it is one course's own overlapping sessions, not a pile of courses.
- *  - grid-2: nothing says "samtidig" any more. A cluster is a *chain* of
- *    overlaps (A–B, B–C, with A and C free of each other) and the week is a
- *    composite of every teaching week, so two members can be a month apart —
- *    ETT1101's Tuesday lectures run weeks 33-34, 37-42, ETT1102's 35-36. What
- *    the pile can honestly say is that they share one rute; the times say the
- *    rest.
- *
- * `sessions` names the course on every row only when there is more than one —
- * a single-course pile has its code above the list already.
- */
-export function pileSummary(members: PileMember[]): PileSummary {
-  const byCourse: { code: string; times: string[] }[] = [];
-  for (const member of members) {
-    const time = `${member.startTime}–${member.endTime}`;
-    const row = byCourse.find((r) => r.code === member.courseCode);
-    if (row) row.times.push(time);
-    else byCourse.push({ code: member.courseCode, times: [time] });
-  }
-  const codes = byCourse.map((r) => r.code);
-  const activities = `${members.length} ${members.length === 1 ? "aktivitet" : "aktiviteter"}`;
-  const single = codes.length === 1;
-  return {
-    codes,
-    activities,
-    // The plural of "emne" needs no branch in the multi-course arm: one
-    // course takes the other one.
-    meta: single ? activities : `${codes.length} emner · ${activities}`,
-    sessions: single
-      ? joinList(byCourse[0]?.times ?? [])
-      : byCourse.map((r) => `${r.code} ${joinList(r.times)}`).join("; "),
-    byCourse,
-  };
-}
-
-/**
- * ONE block for a whole cluster that would need more than `MAX_COLUMNS`
- * columns — the pile. It spans the cluster's own start→end at full day width
- * and lists every session it holds, so nothing is hidden and no code is
- * squeezed into a 35 px sliver.
- *
- * This replaces the "+N til" chip, which showed the first two columns and
- * reduced everything behind them to a count. A count is the one thing a
- * student cannot act on: "+3 til" does not say whether the pile contains the
- * lecture they came for. Clicking still opens the popover with every entry.
- *
- * Each course's code sits on its own row and its session times on the rows
- * below it: a ~106 px weekday has no room for a code and a start–end range
- * side by side, and the code is the one thing that must never be clipped.
- */
-function buildPileBlock(
-  entries: GridEntry[],
-  geometry: BlockGeometry,
-  onBlockClick?: GridRenderOptions["onBlockClick"],
-): HTMLButtonElement {
-  const start = Math.min(...entries.map((e) => timeToMinutes(e.startTime)));
-  const end = Math.max(...entries.map((e) => timeToMinutes(e.endTime)));
-
-  const block = el("button", "planner-block planner-block-pile");
-  block.type = "button";
-  block.id = `planner-pile-${entries[0]?.ordinal ?? 0}`;
-  positionBlock(block, start, end, geometry.minMinutes, 0, 1);
-
-  // A pile is only muted when every entry in it is: one lecture in the pile
-  // means the pile carries a session the student is expected to attend.
-  if (entries.every((e) => !e.isLecture)) block.classList.add("is-muted");
-  if (geometry.clashWindow) {
-    block.classList.add("is-clash");
-    appendClashBand(block, start, end, geometry.clashWindow);
-  }
-
-  const summary = pileSummary(entries);
-  const hueByCode = new Map(entries.map((e) => [e.courseCode, e.hueVar]));
-  const single = summary.codes.length === 1;
-  const soleCode = single ? summary.codes[0] : undefined;
-
-  // One course's own overlapping sessions are not a pile of courses: the
-  // block wears that course's tag exactly like a single block does (grid-5).
-  if (soleCode) block.append(courseTag(hueByCode.get(soleCode) ?? "", soleCode));
-  block.append(el("span", "planner-block-meta np-data", summary.meta));
-
-  const list = el("span", "planner-pile-list");
-  for (const row of summary.byCourse) {
-    if (!single) {
-      const head = el("span", "planner-pile-row");
-      head.append(dot(hueByCode.get(row.code) ?? ""));
-      head.append(el("span", "planner-block-code np-data", row.code));
-      list.append(head);
-    }
-    for (const time of row.times) list.append(el("span", "planner-block-meta np-data", time));
-  }
-  block.append(list);
-
-  const detail = pileDetail(entries);
-  block.title = [detail.timeLabel, detail.rooms, detail.weeksLabel].filter(Boolean).join(" · ");
-  block.setAttribute(
-    "aria-label",
-    `${soleCode ? `${soleCode}, ` : ""}${summary.activities} i samme rute, ${dayName(entries[0]?.dayNumber ?? 1)}: ${summary.sessions}`,
-  );
-  if (onBlockClick) block.addEventListener("click", () => onBlockClick(detail, block));
-  return block;
-}
-
-/**
- * Synthetic click material for a pile: its entries, codes joined " · "
- * (plannerApp keys the day-view routing off that separator — a pile has no
- * single course to open settings for, so clicking it expands its day
- * instead, REWORK-2026-07-29 D5). `timeLabel` lists every session rather than
- * the cluster's outer span — this used to be the pile's only escape hatch and
- * it answered "tirsdag 08:15–12:00" for nine different sessions (grid-1).
- */
-function pileDetail(entries: GridEntry[]): BlockDetail {
-  const first = entries[0];
-  const codes = [...new Set(entries.map((e) => e.courseCode))].join(" · ");
-  const names = [...new Set(entries.map((e) => e.courseName))].join(" · ");
-  const rooms = [...new Set(entries.flatMap((e) => e.rooms.split(", ")))]
-    .filter(Boolean)
-    .join(", ");
-  const weeks = [...new Set(entries.flatMap((e) => e.weeksNumbers))].sort((a, b) => a - b);
-  return {
-    code: codes,
-    name: names,
-    entryName: null,
-    dayNumber: first?.dayNumber ?? 1,
-    timeLabel: `${dayName(first?.dayNumber ?? 1)} · ${pileSummary(entries).sessions}`,
-    rooms,
-    weeksLabel: weekLabel(weeks),
-    isLecture: entries.some((e) => e.isLecture),
-  };
-}
-
-/**
- * Runs the week ⇄ day expansion (REWORK-2026-07-29 D7).
- *
- * `renderGrid` rebuilds the grid element from scratch every render, and a
- * node that was never in the document has no "from" value for a CSS
- * transition to start at — appending it already carrying the target template
- * would just snap. So the fresh element is painted once with the template it
- * is coming FROM, and flipped to its own on the next frame; `transition:
- * grid-template-columns` in planner-week.css does the rest.
- *
- * Two frames, not one: the first `requestAnimationFrame` runs before the
- * style has been computed for the newly connected node in some engines, and
- * setting both values inside a single frame is coalesced into no transition
- * at all. Reading `offsetWidth` in between is the same forced-reflow trick
- * `flash` already uses a few lines below.
- *
- * Nothing happens when the focus did not change (the common case: every
- * re-render caused by a group pick, a plan edit or a semester switch), or on
- * a host without `requestAnimationFrame`, where the grid simply appears in
- * its final state.
- */
-function animateFocusChange(
-  grid: HTMLElement,
-  dayCount: number,
-  previousFocusDay: number | null,
-  focusDay: number | null,
-): void {
-  if (previousFocusDay === focusDay) return;
-  const from = columnTemplate(dayCount, previousFocusDay);
-  const to = columnTemplate(dayCount, focusDay);
-  if (from === to) return;
-  if (typeof globalThis.requestAnimationFrame !== "function") return;
-  grid.style.gridTemplateColumns = from;
-  globalThis.requestAnimationFrame(() => {
-    void grid.offsetWidth;
-    globalThis.requestAnimationFrame(() => {
-      grid.style.gridTemplateColumns = to;
-    });
-  });
 }
 
 function blockId(entry: GridEntry): string {
@@ -1146,7 +873,6 @@ export function renderGrid(
       conflictPairCount: 0,
       mutedLayerAutoRevealed: false,
       blockCount: 0,
-      dayCount: 0,
       state,
       incompleteCourses,
       partial: loading || incompleteCourses.length > 0,
@@ -1176,7 +902,6 @@ export function renderGrid(
       conflictPairCount: 0,
       mutedLayerAutoRevealed: false,
       blockCount: 0,
-      dayCount: 0,
       state: "loading",
       incompleteCourses,
       partial: true,
@@ -1259,82 +984,67 @@ export function renderGrid(
 
   const hasSaturday = entries.some((e) => e.dayNumber === 6);
   const dayCount = hasSaturday ? 6 : 5;
-
-  // A focus day past the days this week actually draws (a Saturday focus that
-  // survived a plan change into a Mon–Fri week) would collapse every column to
-  // 0fr and paint an empty grid — fall back to the week rather than to nothing.
-  const focusDay =
-    options.focusDay != null && options.focusDay >= 1 && options.focusDay <= dayCount
-      ? options.focusDay
-      : null;
+  const span = Math.max(ROW_MINUTES, maxMinutes - minMinutes);
 
   frame.removeAttribute("aria-busy");
   const shell = buildGridShell(
     minMinutes,
     maxMinutes,
     dayCount,
-    focusDay === null
-      ? "Ukeplan med timeplanblokker for emnene i planen"
-      : `Timeplanblokker for ${dayName(focusDay)}`,
-    { focusDay, onDayFocus: options.onDayFocus },
+    "Ukeplan med timeplanblokker for emnene i planen",
+    options.todayNumber ?? null,
   );
+  if (options.animate) shell.element.classList.add("is-striking");
 
-  // Every rendered entry resolves to the element that represents it — a
-  // piled entry resolves to its pile. Conflict notes flash through this map
-  // rather than through getElementById (C5b).
+  // Every rendered entry resolves to the element that represents it.
+  // Conflict notes flash through this map rather than through
+  // getElementById (C5b).
   const nodeByEntry = new Map<ScheduleEntry, HTMLElement>();
-  const geometryBase = { minMinutes };
-  // Measured once per render, not per day: every day column is the same width.
-  const weekColumnCap = maxColumnsForViewport();
+  const geometryBase = { minMinutes, span };
   let blockCount = 0;
+  /** Stagger index — one continuous count across the week, so the bars strike
+   *  in reading order rather than restarting on every row. */
+  let strikeIndex = 0;
 
   for (let day = 1; day <= dayCount; day++) {
-    const column = shell.dayColumns.get(day);
-    if (!column) continue;
+    const field = shell.dayFields.get(day);
+    if (!field) continue;
     const dayEntries = entries.filter((e) => e.dayNumber === day);
-    // The expanded day is the width of the whole grid, so it can carry the
-    // side-by-side columns a 106 px weekday cannot (DAY_MAX_COLUMNS). The
-    // collapsed days keep the week's cap: they are behind `overflow: hidden`
-    // at 0fr, and packing them wide would only cost work nobody can see.
-    const columnCap = day === focusDay ? DAY_MAX_COLUMNS : weekColumnCap;
 
-    // All-day drop-in windows sit behind the day as a band; letting them take
-    // a column is what turns a Monday with one 08:00–18:00 lab into slivers.
+    // A day's collision zone is drawn once, behind its bars, spanning every
+    // lane. Appended FIRST so the bars paint over it — the zone marks the
+    // minutes, the bars stay legible.
+    const dayClash = clashWindowFor(dayEntries);
+    if (dayClash) field.append(buildClashZone(dayClash, minMinutes, span));
+
+    // All-day drop-in windows sit behind the day as a band; letting one take a
+    // lane is what turns a Monday with an 08:00–18:00 lab into a slab that
+    // pushes every real session down a row.
     const bands = dayEntries.filter(isBandEntry);
     for (const entry of bands) {
-      const block = buildBlock(
-        entry,
-        { ...geometryBase, clashWindow: null },
-        0,
-        1,
-        [],
-        options.onBlockClick,
-      );
+      const block = buildBlock(entry, { ...geometryBase, clashWindow: null }, 0, [], undefined);
       nodeByEntry.set(entry, block);
-      column.append(block);
+      field.append(block);
       blockCount++;
     }
 
-    // Everything else is column-packed by layoutDay: up to `columnCap`
-    // overlapping sessions get distinct side-by-side columns (overlap is
-    // supported, both stay readable), and a cluster that would need more
-    // collapses whole into ONE pile block naming its courses. The cap is 1 on
-    // a phone — see `maxColumnsForViewport` (grid-3).
+    // Everything else is lane-packed by layoutDay, uncapped: overlapping
+    // sessions stack downward and every one of them stays full width and
+    // readable. There is no pile any more — see LANE_CAP.
     const packable = dayEntries.filter((e) => !isBandEntry(e));
     const layoutInput: LayoutInput[] = packable.map((e) => ({
       id: blockId(e),
       start: timeToMinutes(e.startTime),
       end: timeToMinutes(e.endTime),
     }));
-    const slotById = new Map(layoutDay(layoutInput, columnCap).map((slot) => [slot.id, slot]));
+    const slotById = new Map(layoutDay(layoutInput, LANE_CAP).map((slot) => [slot.id, slot]));
 
-    // The cluster partition comes from `layoutDay`'s own `slot.cluster`, not
-    // from a second copy of its clustering rule here: the two agreed
-    // character for character, but only one of them had tests, and the day
-    // one edit made them disagree two entries would draw at identical
-    // geometry with one hiding the other (tests-6). Members keep start order
-    // so the pile lists its sessions in the order they happen.
-    const clusters = new Map<number, GridEntry[]>();
+    // How tall this row has to be: the deepest cluster in it. Rows are not a
+    // uniform height, and that is the honest shape of a week — a Monday with a
+    // collision genuinely occupies more of the page than an empty Friday.
+    const laneCount = Math.max(1, ...[...slotById.values()].map((s) => s.col + 1));
+    field.style.setProperty("--planner-lanes", String(laneCount));
+
     for (const entry of [...packable].sort(
       (a, b) =>
         timeToMinutes(a.startTime) - timeToMinutes(b.startTime) ||
@@ -1343,54 +1053,24 @@ export function renderGrid(
     )) {
       const slot = slotById.get(blockId(entry));
       if (!slot) continue;
-      const members = clusters.get(slot.cluster);
-      if (members) members.push(entry);
-      else clusters.set(slot.cluster, [entry]);
-    }
-
-    for (const cluster of [...clusters.entries()].sort(([a], [b]) => a - b).map(([, m]) => m)) {
-      // `layoutDay` piles a cluster all-or-nothing, so the first member's
-      // verdict is the cluster's.
-      const first = cluster[0];
-      const piled = first !== undefined && slotById.get(blockId(first))?.piled === true;
-
-      if (piled) {
-        const pile = buildPileBlock(
-          cluster,
-          { ...geometryBase, clashWindow: clashWindowFor(cluster) },
-          options.onBlockClick,
-        );
-        // Every entry resolves to the pile (C5b), so a conflict note still
-        // flashes the block its courses are actually drawn in.
-        for (const entry of cluster) nodeByEntry.set(entry, pile);
-        column.append(pile);
-        blockCount++;
-        continue;
-      }
-
-      for (const entry of cluster) {
-        const slot = slotById.get(blockId(entry));
-        if (!slot) continue;
-        const entryClash = clashWindowFor([entry]);
-        const partnerCodes = [
-          ...new Set(
-            (groupsByEntry.get(entry) ?? [])
-              .flatMap((g) => g.codes)
-              .filter((code) => code !== entry.courseCode),
-          ),
-        ];
-        const block = buildBlock(
-          entry,
-          { ...geometryBase, clashWindow: entryClash },
-          slot.col,
-          slot.cols,
-          partnerCodes,
-          options.onBlockClick,
-        );
-        nodeByEntry.set(entry, block);
-        column.append(block);
-        blockCount++;
-      }
+      const partnerCodes = [
+        ...new Set(
+          (groupsByEntry.get(entry) ?? [])
+            .flatMap((g) => g.codes)
+            .filter((code) => code !== entry.courseCode),
+        ),
+      ];
+      const block = buildBlock(
+        entry,
+        { ...geometryBase, clashWindow: clashWindowFor([entry]) },
+        slot.col,
+        partnerCodes,
+        options.onBlockClick,
+      );
+      block.style.setProperty("--planner-strike", String(strikeIndex++));
+      nodeByEntry.set(entry, block);
+      field.append(block);
+      blockCount++;
     }
   }
 
@@ -1412,11 +1092,10 @@ export function renderGrid(
   };
 
   // Blocks own their click now (a single block opens the course-settings
-  // modal, a pile expands its day — see `GridRenderOptions.onBlockClick`); the
-  // conflict-note links below are what drive `flash`, resolving each entry to
-  // its block or pile through `nodeByEntry`.
+  // modal — see `GridRenderOptions.onBlockClick`); the conflict-note links
+  // below are what drive `flash`, resolving each entry to its bar through
+  // `nodeByEntry`.
   frame.replaceChildren(shell.element);
-  animateFocusChange(shell.element, dayCount, options.previousFocusDay ?? null, focusDay);
 
   // Margin notes: one per collision slot, not one per pair — a 3-way clash is
   // one Thursday afternoon to fix, and reporting it three times inflates the
@@ -1552,7 +1231,6 @@ export function renderGrid(
     conflictPairCount: conflicts.length,
     mutedLayerAutoRevealed,
     blockCount,
-    dayCount,
     state: "grid",
     incompleteCourses,
     partial: loading || incompleteCourses.length > 0,

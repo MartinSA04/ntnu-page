@@ -237,7 +237,8 @@ const IDS = [
   "planner-direction-actions",
   "planner-direction-btn",
   "planner-others-toggle",
-  "planner-day-strip",
+  "planner-view-uke",
+  "planner-view-tavle",
   "planner-scroll-hint",
   "planner-grid-frame",
   "planner-grid-notes",
@@ -1158,19 +1159,27 @@ describe("mountPlannerApp — audit repro", () => {
     const mounted = mountPlannerApp(SEMESTERS_TWO as never, [], undefined);
     await new Promise((r) => setTimeout(r, 0));
 
+    // A bar no longer prints its own start time — the axis above it does
+    // (REWORK-2026-07-29b D1) — so the slot a block stands for is read off its
+    // accessible name, which still spells the day and the hours out loud.
+    const slots = (): string =>
+      find("planner-grid-frame")
+        .querySelectorAll(".planner-block")
+        .map((b) => b.getAttribute("aria-label") ?? "")
+        .join(" | ");
+
     // The student switches term before the first fetch settles.
     createPlanStore("26h").setSemester("27v");
     for (let i = 0; i < 10; i++) await new Promise((r) => setTimeout(r, 0));
-    expect(find("planner-grid-frame").textContent).toContain("14:15");
+    expect(slots()).toContain("14:15");
 
     // …and only then does 26h's timetable arrive.
     release2026();
     await mounted;
     for (let i = 0; i < 20; i++) await new Promise((r) => setTimeout(r, 0));
 
-    const frame = find("planner-grid-frame");
-    expect(frame.textContent).toContain("14:15");
-    expect(frame.textContent).not.toContain("08:15");
+    expect(slots()).toContain("14:15");
+    expect(slots()).not.toContain("08:15");
   });
 
   // KNOAND/MTPROD: NTNU publishes no study plan at all. The modal now saves

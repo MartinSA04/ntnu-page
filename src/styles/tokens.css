@@ -87,6 +87,26 @@
   --wash-course-hover: 26%;
   --wash-course-muted: 9%;
 
+  /* Block ink (REWORK-2026-07-29b D4). The week's bars are PRINTED colour with
+     the code knocked out of them, not a tint of the paper: five 18 % washes on
+     warm paper read as five tones of beige that neither identify a course nor
+     recede behind the collision ink, which is the single thing four design
+     rounds kept failing on.
+
+     --block-mix is how far the hue is pulled toward --block-base before it
+     becomes the fill. On light paper the Flexoki 600s need deepening to carry
+     paper-coloured text (every one of the six clears 5:1 at 14 %); on Flexoki
+     black the 400s are already luminous, so the mix is 0 and the text goes to
+     near-black instead. The percentages live here, not as finished colours,
+     because --dot is set per block and a custom property resolves its var()s
+     where it is declared. */
+  --block-mix: 86%;
+  --block-base: #100f0f;
+  --on-block: #fffcf0;
+  /* An øving/lab bar is the same colour at a fraction of the ink — reduced,
+     never red, per DR-1's display layer. */
+  --block-muted: 26%;
+
   /* The squared ruling (planning surfaces only — see .np-ruled).
      --ruling-hour is the heavier every-fourth-cell rule: at --cell = 15
      minutes that is the hour line a real timetable sheet has, and without it
@@ -227,6 +247,13 @@
   --wash-course: 8%;
   --wash-course-hover: 14%;
   --wash-course-muted: 4%;
+
+  /* The Flexoki 400s are already luminous on black paper — no deepening, and
+     the knocked-out text goes to near-black instead of to paper. */
+  --block-mix: 100%;
+  --block-base: #cecdc3;
+  --on-block: #100f0f;
+  --block-muted: 30%;
 
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.35);
   --shadow: 0 3px 10px rgba(0, 0, 0, 0.4), 0 1px 3px rgba(0, 0, 0, 0.3);

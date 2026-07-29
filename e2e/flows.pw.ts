@@ -154,7 +154,7 @@ test("share: a program-less link clears the profile chip", async ({ page }) => {
   await expect(page.locator("#studieinfo-chip")).not.toContainText("MTDT");
 });
 
-test("overlap: two colliding courses render side by side, both readable", async ({ page }) => {
+test("overlap: two colliding courses stack, both full width and readable", async ({ page }) => {
   // MTDT 2026's obligatory TDT4109 collides with a manually added TDT4120 —
   // the exact clash the old suite's clash-preview (ekstraemne) test verified.
   await page.goto("/planlegger/#26h;MTDT.2026;%2BTDT4120");
@@ -171,15 +171,24 @@ test("overlap: two colliding courses render side by side, both readable", async 
   const clashBlocks = page.locator('.planner-block[aria-label*="kolliderer med"]');
   await expect(clashBlocks).toHaveCount(2, { timeout: 30_000 });
 
+  // REWORK-2026-07-29b D1: they no longer split a column between them — they
+  // take a lane each and keep their full width, which is their duration. The
+  // old assertion was `--planner-col-count === "2"`, i.e. "each got half".
   const blocks = await clashBlocks.all();
+  const lanes = new Set<string>();
   for (const block of blocks) {
-    const colCount = await block.evaluate((el) => el.style.getPropertyValue("--planner-col-count"));
-    expect(colCount).toBe("2");
+    lanes.add(await block.evaluate((el) => el.style.getPropertyValue("--planner-lane")));
     const box = await block.boundingBox();
-    expect(box?.width ?? 0).toBeGreaterThan(8);
+    // A colliding bar is now as wide as any other bar of the same length —
+    // 8 px was the floor when two of them shared one 150 px weekday.
+    expect(box?.width ?? 0).toBeGreaterThan(40);
     const codeText = (await block.locator(".planner-block-code").textContent())?.trim() ?? "";
     expect(codeText).not.toBe("");
   }
+  expect(lanes.size).toBe(2);
+
+  // And exactly one zone marks the minutes they share.
+  await expect(page.locator(".planner-clash-zone")).toHaveCount(1);
 });
 
 test("verdict: a failed timetable fetch refuses the check instead of clearing it", async ({
@@ -418,7 +427,7 @@ test("one control opens studieinfo, and semester lives only inside it", async ({
   await expect(page.locator("#studieinfo-semester-select")).toBeVisible();
 });
 
-test("week: three overlapping lectures draw one pile, not three slivers", async ({
+test("week: three overlapping lectures stack into three lanes, no pile", async ({
   page,
   context,
 }) => {
@@ -449,57 +458,91 @@ test("week: three overlapping lectures draw one pile, not three slivers", async 
 
   await page.goto(`/planlegger/#26h;-;${codes.map((c) => `%2B${c}`).join(",")}`);
 
-  const pile = page.locator(".planner-block-pile");
-  await expect(pile).toHaveCount(1, { timeout: 30_000 });
-  // Every course is NAMED in the pile — the retired "+N til" chip reduced the
-  // ones it hid to a bare count, which is the one thing you cannot act on.
-  for (const code of codes) await expect(pile).toContainText(code);
-  await expect(pile).toContainText("3 emner");
-
-  // And no sliver: the three are not split into ~35px columns.
-  await expect(page.locator("#planner-grid-frame .planner-block")).toHaveCount(1);
-
-  // REWORK-2026-07-29 D5: the pile is the grid saying "too dense to read
-  // here", so clicking it expands its own day — where the column is the width
-  // of the whole grid and the cluster splits into real side-by-side blocks
-  // instead of a slab of text. It used to open a popover with no group picker
-  // and no actions, which was a dead end dressed as a control.
-  await pile.click();
-  await expect(page.locator(".planner-grid[data-view='day']")).toBeVisible();
+  // REWORK-2026-07-29b D1: transposing the axes deletes the pile rather than
+  // managing it. Three simultaneous lectures are three full-width bars stacked
+  // in three lanes of Monday's row — vertical space is free, and a bar's width
+  // is its duration rather than its share of a 150 px column.
+  await expect(page.locator("#planner-grid-frame .planner-block")).toHaveCount(3, {
+    timeout: 30_000,
+  });
   await expect(page.locator(".planner-block-pile")).toHaveCount(0);
-  await expect(page.locator("#planner-grid-frame .planner-block")).toHaveCount(codes.length);
-  // Each is now its own block, and each opens that course's settings.
+  for (const code of codes) {
+    await expect(page.locator(".planner-block-code", { hasText: code })).toHaveCount(1);
+  }
+
+  // All three sit in Monday, each in its own lane — three distinct offsets.
+  const monday = page.locator(".planner-grid-row").first();
+  await expect(monday.locator(".planner-block")).toHaveCount(3);
+  const bars = await monday.locator(".planner-block").all();
+  const tops = await Promise.all(bars.map(async (b) => (await b.boundingBox())?.y ?? 0));
+  expect(new Set(tops).size).toBe(3);
+
+  // A three-way collision is ONE zone across the minutes they share, not three
+  // competing marks — the mark belongs to the moment, not to any one course.
+  await expect(monday.locator(".planner-clash-zone")).toHaveCount(1);
+
+  // Each bar opens that course's settings.
   await page.locator("#planner-grid-frame .planner-block").first().click();
   await expect(page.locator("#planner-course-settings")).toBeVisible();
 });
 
-test("day view: the strip expands one day and comes back to the week", async ({ page }) => {
+test("week: Rutenett and Liste show the same week two ways", async ({ page }) => {
   await page.goto("/planlegger/#26h;MTDT.2026;");
   await expect(gridBlocks(page).first()).toBeVisible({ timeout: 45_000 });
 
-  const grid = page.locator(".planner-grid");
-  const strip = page.locator("#planner-day-strip");
-  await expect(strip).toBeVisible();
+  const bars = await gridBlocks(page).count();
+  expect(bars).toBeGreaterThan(0);
 
-  // Every weekday the grid drew gets a button, plus "Uke" — never more.
-  const dayColumns = await page.locator(".planner-grid-day").count();
-  await expect(strip.locator("button")).toHaveCount(dayColumns + 1);
+  await page.click("#planner-view-tavle");
+  await expect(page.locator(".planner-board")).toBeVisible();
+  await expect(page.locator("#planner-view-tavle")).toHaveAttribute("aria-pressed", "true");
+  // Same plan, same group narrowing, same øving toggle — so the same session
+  // count. 57 rows against 7 bars is what shipped when the list ignored the
+  // toggle and listed every published lab group.
+  await expect(page.locator(".planner-board-row")).toHaveCount(bars);
+  await expect(page.locator(".planner-grid")).toHaveCount(0);
 
-  await strip.locator("button", { hasText: "Tir" }).click();
-  await expect(grid).toHaveAttribute("data-view", "day");
-  await expect(strip.locator("button", { hasText: "Tir" })).toHaveAttribute(
-    "aria-pressed",
-    "true",
-  );
-  // The collapsed days are 0fr tracks — the expanded one has the width.
-  const tuesday = page.locator(".planner-grid-day").nth(1);
-  const monday = page.locator(".planner-grid-day").nth(0);
-  expect((await tuesday.boundingBox())?.width ?? 0).toBeGreaterThan(
-    (await monday.boundingBox())?.width ?? 0,
-  );
+  // A row opens the same settings modal a bar does.
+  await page.locator(".planner-board-row").first().click();
+  await expect(page.locator("#planner-course-settings")).toBeVisible();
+  await page.keyboard.press("Escape");
 
-  await strip.locator("button", { hasText: "Uke" }).click();
-  await expect(grid).not.toHaveAttribute("data-view", "day");
+  // The choice survives a reload, because it is a preference rather than plan
+  // state — it is deliberately NOT in the shared hash.
+  await page.reload();
+  await expect(page.locator(".planner-board")).toBeVisible({ timeout: 45_000 });
+
+  await page.click("#planner-view-uke");
+  await expect(page.locator(".planner-grid")).toBeVisible();
+  await expect(page.locator(".planner-board")).toHaveCount(0);
+});
+
+test("landing page: Nå answers with the room, not a course count", async ({ page }) => {
+  // REWORK-2026-07-29b D3. The plan is seeded through the planner (the store is
+  // per-origin localStorage), then the landing page is asked what it shows.
+  await page.goto("/planlegger/#26h;MTDT.2026;");
+  await expect(gridBlocks(page).first()).toBeVisible({ timeout: 45_000 });
+
+  await page.goto("/");
+  const now = page.locator("#home-now");
+  await expect(now).toBeVisible({ timeout: 45_000 });
+
+  // A room, set as the display figure — never the old "5 emner" sentence.
+  const room = page.locator("#home-now-room");
+  await expect(room).not.toBeEmpty();
+  const size = await room.evaluate((el) => Number.parseFloat(getComputedStyle(el).fontSize));
+  expect(size).toBeGreaterThan(28);
+
+  // The list under it has real columns. Built in JS, so a scoped Astro rule
+  // would never reach it and the row would collapse to "ons 10:15EXPH0300".
+  const rows = page.locator("#home-now-next li");
+  if ((await rows.count()) > 0) {
+    await expect(rows.first()).toHaveCSS("display", "grid");
+  }
+
+  // The page stops introducing itself once it has an answer.
+  await expect(page.locator("#home-pitch")).toHaveClass(/is-secondary/);
+  await expect(page.locator("#home-resume")).toBeHidden();
 });
 
 test("week: the øving layer shows picked groups, not the whole cohort's", async ({ page }) => {

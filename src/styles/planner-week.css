@@ -8,12 +8,12 @@
    page is how the two drift apart — and did: the page copy grew the np-tag
    and .planner-block-code rules while this one kept an older cluster gap.
 
-   Geometry contract with grid.ts: `.planner-grid` is a CSS grid whose first
-   column is the hour rail and whose first ROW is the day-name header (U2 —
-   headers used to live inside the day column and any 08:00 block painted over
-   them). Rows below the header are one 15-minute slot each, sized to --cell so
-   the ruling, the rail and the absolutely-positioned blocks land on the same
-   pixel grid.
+   Geometry contract with grid.ts (REWORK-2026-07-29b D1): `.planner-grid` is a
+   stack of day ROWS, each `[spine | field]`, with an hour ruler above them.
+   Time runs horizontally, so a bar's `left` and `width` are percentages of the
+   day's visible span and its `top` is its lane. The ruler's ticks use the same
+   percentages, which is what keeps a figure over its own minute at every width
+   — there is no second place where a time becomes a position.
 
    What is NOT here: the exam list. That belongs to /planlegger/ alone and
    stays in its scoped block. The scroll-edge mask used to be scoped there
@@ -89,380 +89,232 @@
   margin: 0;
 }
 
+/* --- The week: days as rows, time as the axis (REWORK-2026-07-29b D1) ----- */
+
+/* `--planner-span` is the visible day's length in minutes, written by
+   `buildGridShell`. Every bar's `left`/`width` and every hour tick is a
+   percentage of it, so a time becomes a position in exactly one place and the
+   ruler cannot drift off the bars at any width. */
 .planner-grid {
+  --planner-spine: clamp(5.5rem, 11vw, 9.5rem);
+  --planner-lane-h: 34px;
+  --planner-bar-h: 28px;
   position: relative;
-  display: grid;
-  /* 3rem rail = two whole --cell columns, so the day columns start on a
-     ruling boundary (D4). */
-  grid-template-columns: 3rem repeat(var(--planner-days), 1fr);
-  /* Row 1 is the day-name header row; rows 2..N are 15-min slots sized to the
-     ruling's --cell so the grid-row-based rail and the absolutely positioned
-     blocks land on the same pixel grid. (`repeat(var(--x), …)` is not valid
-     CSS, which is why row 1 is the only explicit row.) */
-  grid-template-rows: auto;
-  grid-auto-rows: var(--cell);
-  /* The tablet band, where the planner's rail already costs 18rem of a ~57rem
-     column: 34rem is the widest the week can be without scrolling there. */
-  min-width: 34rem;
-  /* Week ⇄ day (REWORK-2026-07-29 D4/D7). Focusing a day rewrites this
-     property alone — the chosen track goes to 1fr, every other day to 0fr —
-     and the track COUNT is identical either way, which is what makes the
-     property interpolable and the whole expansion a CSS transition rather
-     than a scripted FLIP. `grid.ts` writes both templates inline; see
-     `columnTemplate`/`animateFocusChange` there.
-
-     Nothing moves vertically: blocks are absolutely positioned from
-     `--planner-row-start × --cell`, which no day count touches. This is the
-     one place the planner runs a layout transition rather than DESIGN §6's
-     transform/opacity — by explicit user instruction, 2026-07-29. Reduced
-     motion still zeroes --dur globally, so it degrades to an instant swap. */
-  transition: grid-template-columns var(--dur) var(--ease);
+  /* Eight hours across needs room to stay legible: below this the frame
+     scrolls sideways rather than squeezing a lecture into 40 px. The old
+     34rem/21rem pair sized five COLUMNS; this sizes one axis. */
+  min-width: 40rem;
+  padding-inline-end: 16px;
 }
 
-/* A collapsing day is a 0fr track; its blocks and its name have to be clipped
-   by it rather than spilling across the day that is expanding. NOT scoped to
-   [data-view="day"]: the day→week direction animates on a grid that carries no
-   such attribute (it is coming back to the week), and it needs the clip just
-   as much on the way out. */
-.planner-grid-day,
-.planner-grid-day-header {
-  overflow: hidden;
-}
-
-/* Five day names still have to fit on a phone, or the edge mask is hiding a
-   column the student never knew existed (A4). */
+/* Below 40rem the axis simply scrolls. Course codes stay whole — which is the
+   trade the transposition buys and the vertical grid could not: there, nothing
+   scrolled and every code broke instead (grid-3). */
 @media (max-width: 40rem) {
   .planner-grid {
-    min-width: 21rem;
+    min-width: 32rem;
+    --planner-spine: 4.25rem;
+    --planner-lane-h: 30px;
+    --planner-bar-h: 26px;
   }
 }
 
-/* D7's number, from the first width where it fits without introducing a
-   horizontal scroll of its own. */
-@media (min-width: 64rem) {
-  .planner-grid {
-    min-width: 40rem;
-  }
-}
-
-/* The loading shell claims nothing about the plan; it only holds the height. */
 .planner-grid.is-skeleton {
   opacity: 0.5;
 }
 
-/* Headers are grid children on row 1, not children of the day column — an
-   08:00 block used to paint straight over them (U2). */
-.planner-grid-day-header {
-  grid-row: 1;
-  grid-column: calc(var(--planner-day) + 1);
-  text-align: center;
-  padding-bottom: var(--space-1);
+/* --- The ruler ----------------------------------------------------------- */
+
+.planner-grid-ruler {
+  display: grid;
+  grid-template-columns: var(--planner-spine) minmax(0, 1fr);
 }
 
-/* The day name is also the control that expands its day (D4). Ink-Before-
-   Chrome, and harder here than usual: this row must keep reading as a row of
-   day NAMES, not as a second toggle strip stacked under the real one. So it is
-   flat at rest with only a hover wash — and the expanded day gets ink, never a
-   fill. An `aria-pressed` fill was tried and is what a 1fr column does with
-   it: a full-width green slab across the top of the week, restating what the
-   strip four pixels above already says. */
-button.planner-grid-day-header {
-  appearance: none;
-  border: 0;
-  background: transparent;
-  color: inherit;
-  font: inherit;
-  letter-spacing: inherit;
-  text-transform: inherit;
-  border-radius: var(--radius-xs);
-  cursor: pointer;
-  transition: background var(--dur-fast) var(--ease);
+.planner-grid-ruler-track {
+  grid-column: 2;
+  position: relative;
+  height: 22px;
 }
 
-button.planner-grid-day-header:hover {
-  background: var(--wash);
+/* The figure sits ON its tick rather than floating above the field: the tick
+   is what ties a number to a position, and without it the hour labels are a
+   row of digits that happen to be near the right place. */
+.planner-grid-tick {
+  position: absolute;
+  left: var(--planner-x);
+  top: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  transform: translateX(-50%);
+  font-size: var(--text-xs);
+  color: var(--muted);
 }
 
-button.planner-grid-day-header[aria-pressed="true"] {
-  color: var(--accent-ink);
+.planner-grid-tick::after {
+  content: "";
+  width: 1px;
+  height: 6px;
+  background: var(--ruling-line);
 }
 
-/* The hour ruling — the ONLY ruling left, and the thing a student reads a
-   time off. It hangs on the rail and the day columns rather than on the
-   frame, because those are the two boxes whose top edge IS the slot grid's
-   origin (`grid-row: 2`, i.e. the first 15-minute row).
+/* --- A day --------------------------------------------------------------- */
 
-   The frame is not. Its content box starts at the day-NAME header row, which
-   is `auto`-height, so a background tiled from there landed ~22 px — nearly a
-   quarter hour — above the hour it claimed to mark, drifting the labels out
-   of step with their own lines. (The old np-ruled tiling had the same origin
-   and the same error; a 15-minute grid just hid it better than a lone hour
-   line does.) Anchoring here means the line is at the hour by construction,
-   with no offset to keep in sync. Rail + day columns are adjacent, so the
-   hairlines read as one line across the week. */
-.planner-grid-rail,
-.planner-grid-day {
-  /* --cell is a 15-minute slot, so an hour is four of them. */
-  background-image: linear-gradient(var(--ruling-hour) 1px, transparent 1px);
-  background-size: 100% calc(var(--cell) * 4);
+.planner-grid-row {
+  display: grid;
+  grid-template-columns: var(--planner-spine) minmax(0, 1fr);
+  border-top: 1px solid var(--border);
 }
 
-/* Ruling-Marks-The-Plan (D5): a loading shell is not a plan, so it gets the
-   geometry without the ruling. Message/empty branches never build a grid at
-   all, so they have no lines to strip. */
-.planner-grid.is-skeleton .planner-grid-rail,
-.planner-grid.is-skeleton .planner-grid-day {
+.planner-grid-row:last-child {
+  border-bottom: 1px solid var(--border);
+}
+
+/* The spine — the week's typographic event, and load-bearing: at display size
+   with today at full ink and the rest of the week receding, it is how a
+   student finds their row without reading it. A weekday is a word, so it is
+   the grotesk; Data-Is-Mono governs times and codes, not names. */
+.planner-grid-spine {
+  display: flex;
+  align-items: flex-start;
+  padding: 12px var(--gap-4) 12px 0;
+  font-size: clamp(1.05rem, 2.6vw, 1.7rem);
+  font-weight: var(--weight-bold);
+  line-height: 1;
+  letter-spacing: -0.03em;
+  color: color-mix(in srgb, var(--fg) 34%, transparent);
+}
+
+.planner-grid-row[data-today] .planner-grid-spine {
+  color: var(--fg);
+}
+
+/* The hour ruling, turned 90° with the axis. It is still the only ruling the
+   week has (DESIGN §4) — it just runs the way time now runs. */
+.planner-grid-field {
+  position: relative;
+  min-height: calc(var(--planner-lanes, 1) * var(--planner-lane-h) + 12px);
+  padding: 6px 0;
+  background-image: linear-gradient(to right, var(--ruling-hour) 1px, transparent 1px);
+  background-size: calc(100% / var(--planner-hours, 8)) 100%;
+}
+
+.planner-grid.is-skeleton .planner-grid-field {
   background-image: none;
 }
 
-.planner-grid-rail {
-  grid-column: 1;
-  grid-row: 2 / span var(--planner-rows);
-  position: relative;
+.planner-grid-row[data-today] .planner-grid-field {
+  background-color: color-mix(in srgb, var(--accent) 5%, transparent);
 }
 
-.planner-grid-hour {
-  position: absolute;
-  /* Same pixel math as .planner-block's top — the rail is a positioned box,
-     so grid-row placement doesn't apply to its absolute children. */
-  top: calc((var(--planner-row-start) - 1) * var(--cell));
-  right: var(--gap-2);
-  transform: translateY(-0.5em);
-  color: var(--faint);
-  font-size: var(--text-xs);
-}
+/* --- A bar --------------------------------------------------------------- */
 
-.planner-grid-day {
-  grid-row: 2 / span var(--planner-rows);
-  grid-column: calc(var(--planner-day) + 1);
-  position: relative;
-}
-
-/* --- Blocks -------------------------------------------------------------- */
-
+/* Printed colour with the code knocked out of it (D4). The 18 % wash this
+   replaces gave five mid-tones that neither identified a course nor receded
+   behind the collision ink. */
 .planner-block {
   position: absolute;
-  z-index: 1;
-  inset-inline: calc(var(--planner-col, 0) * (100% / var(--planner-col-count, 1)))
-    calc(
-      (var(--planner-col-count, 1) - var(--planner-col, 0) - 1) *
-      (100% / var(--planner-col-count, 1))
-    );
-  top: calc((var(--planner-row-start) - 1) * var(--cell));
-  height: calc((var(--planner-row-end) - var(--planner-row-start)) * var(--cell));
+  left: var(--planner-x);
+  width: var(--planner-w);
+  top: calc(6px + var(--planner-lane, 0) * var(--planner-lane-h));
+  height: var(--planner-bar-h);
   display: flex;
-  flex-direction: column;
-  gap: 2px;
-  /* So the code line can break rather than force the block wider than its
-     column (its inline size is fixed by the column split above). */
+  align-items: center;
+  gap: var(--gap-2);
   min-width: 0;
-  padding: var(--space-1) var(--space-2);
-  margin: 0 1px;
-  /* The per-course hue wash carries identity in BOTH themes (T14: on light
-     paper the old 8% mix read as one flat gray-beige across every course).
-     --wash-course is tuned per theme in tokens.css; the collision ink stays a
-     categorically different, louder mark (Red-Is-Collision), untouched. */
-  background: color-mix(in srgb, var(--dot) var(--wash-course), var(--card));
-  border-radius: var(--radius-xs);
+  padding: 0 var(--space-2);
   overflow: hidden;
+  white-space: nowrap;
   text-align: left;
+  /* Instrument corners: a timetable bar is a printed rule, not a pill. */
+  border-radius: 0;
+  background: color-mix(in srgb, var(--dot) var(--block-mix), var(--block-base));
+  color: var(--on-block);
   cursor: pointer;
-  transition: background var(--dur-fast) var(--ease);
+  transition: filter var(--dur-fast) var(--ease);
 }
 
-/* cpc-4: `renderGrid` emits a `<button>` per block and wires a click only when
-   its caller supplies `onBlockClick`. /emne/[code]/ has nothing to hand it, so
-   every block there was a pointer-cursored, hover-lit control that answered no
-   click — 24 of them on EXPH0300. `courseTimetable.ts` marks that frame
-   `data-static`; the cursor comes off here, and every hover wash below is
-   scoped to a frame that actually handles a click, so the wash keeps meaning
-   "this responds to you" rather than becoming decoration. (The tab stops are
-   removed on the JS side, where the buttons are built.) */
 .planner-grid-frame[data-static] .planner-block {
   cursor: default;
 }
 
 .planner-grid-frame:not([data-static]) .planner-block:hover {
-  background: color-mix(in srgb, var(--dot) var(--wash-course-hover), var(--card));
+  filter: brightness(1.12);
 }
 
-/* An all-day drop-in window is a backdrop for the day, not a column in it. */
+/* DR-1's display layer reads quieter with less ink, never with red: an
+   øving/lab keeps its hue at a fraction of the fill and takes the page's own
+   ink for its text. */
+.planner-block.is-muted {
+  background: color-mix(in srgb, var(--dot) var(--block-muted), var(--card));
+  color: var(--fg);
+}
+
+/* An all-day drop-in window is a backdrop for the day, not a bar in it. */
 .planner-block.is-band {
   z-index: 0;
+  top: 4px;
+  bottom: 4px;
+  height: auto;
+  opacity: 0.5;
 }
 
-/* Øving/lab display layer (DR-1): reduced ink, hue dot only, never red. */
-.planner-block.is-muted {
-  background: color-mix(in srgb, var(--dot) var(--wash-course-muted), var(--card));
+.planner-block-code {
+  flex: none;
+  font-weight: var(--weight-medium);
+  font-size: var(--text-xs);
+}
+
+.planner-block-what {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: var(--text-xs);
+  color: color-mix(in srgb, var(--on-block) 72%, transparent);
+}
+
+.planner-block.is-muted .planner-block-what {
   color: var(--muted);
 }
 
-.planner-grid-frame:not([data-static]) .planner-block.is-muted:hover {
-  background: color-mix(in srgb, var(--dot) var(--wash-course), var(--card));
-}
+/* --- The collision ------------------------------------------------------- */
 
-/* D9: a solid inline-start rule, not a hatch. A 45° hatch over the whole
-   block reads at the same weight as a hue wash; a solid edge plus a filled
-   band over the colliding minutes is categorically different ink. */
-.planner-block.is-clash {
-  box-shadow: var(--clash-edge);
-}
-
-/* The overlap itself, not the whole block: the block is a real session, only
-   part of it is contested. */
-.planner-block-clash-band {
+/* One zone per day, cut through every lane across exactly the overlapping
+   minutes — the only element in the week that crosses lanes, which is what a
+   collision is. Red-Is-Collision: a different KIND of mark from a hue fill, so
+   it wins on sight without competing with five saturated bars. */
+.planner-clash-zone {
   position: absolute;
-  inset-inline: 0;
-  top: calc(var(--planner-band-start) * var(--cell));
-  height: calc((var(--planner-band-end) - var(--planner-band-start)) * var(--cell));
-  background: var(--clash-bg);
+  left: var(--planner-x);
+  width: var(--planner-w);
+  top: 2px;
+  bottom: 2px;
+  background: color-mix(in srgb, var(--clash) 14%, transparent);
+  border-inline: 2px solid var(--clash);
   pointer-events: none;
   z-index: 0;
 }
 
-/* Every real line of the block sits above the band; the band is the only
-   child that must not. One rule instead of a position:relative on each. */
-.planner-block > span:not(.planner-block-clash-band) {
-  position: relative;
-  z-index: 1;
+/* --- The strike-in (D4) --------------------------------------------------- */
+
+/* Plays once, on a view switch only — `renderGrid` adds `is-striking` when the
+   caller passes `animate`, and the caller only passes it for that. Reduced
+   motion zeroes --dur globally, and the fill-mode is `backwards`, so at 0 s
+   the bars are simply present. */
+@keyframes planner-strike {
+  from {
+    clip-path: inset(0 100% 0 0);
+  }
+  to {
+    clip-path: inset(0 0 0 0);
+  }
 }
 
-.planner-block-tag {
-  align-self: flex-start;
-  max-width: 100%;
-}
-
-/* The tag keeps the primitive's dot size, gap and mono weight, but not its
-   surface: a --card chip inside an already hue-washed block is chrome on
-   chrome. The exam list's chip sits on --bg and keeps its background. */
-.planner-block .np-tag {
-  background: transparent;
-  padding-inline: 0;
-}
-
-/* The full course code, never truncated (§5): it may WRAP inside a narrow
-   column ("TDT4110" → two rows) but it is never cut with an ellipsis, so the
-   student always reads which course a block is.
-
-   course-7 asked for `break-word` here instead of `anywhere`, on the reading
-   that it "wraps only at real break opportunities". It does not: both keywords
-   break an otherwise-unbreakable word that does not fit, and they differ only
-   in whether that break counts toward min-content sizing — which a block whose
-   inline size is fixed by `inset-inline` above never consults. Measured in
-   Chromium on this stylesheet at 320/360/390/640/1280 px, both one- and
-   two-column clusters: the two keywords give identical width, line count and
-   overflow in every case. What actually fixed the three-line "TDT"/"410"/"0"
-   is the ≤40rem block at the foot of this file (one line, 40,3 px at 390 px)
-   plus `maxColumnsForViewport` piling 2-deep clusters at phone width. Don't
-   swap the keyword expecting a rendering change; there isn't one. */
-.planner-block-code {
-  min-width: 0;
-  font-size: var(--text-sm);
-  font-weight: var(--weight-medium);
-  overflow-wrap: anywhere;
-}
-
-/* The one collision mark that survives at a 34 px block height. */
-.planner-block.is-clash .planner-block-code {
-  text-decoration: underline wavy var(--clash);
-  text-underline-offset: 2px;
-}
-
-/* The guaranteed second line: room · start time (Data-Is-Mono). */
-.planner-block-meta {
-  font-size: var(--text-xs);
-  color: var(--muted);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-/* Extra lines a tall block earns: the activity/group label, then week range. */
-.planner-block-name {
-  font-size: var(--text-xs);
-  line-height: var(--leading-snug);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-}
-
-.planner-block-weeks {
-  font-size: var(--text-xs);
-  color: var(--muted);
-}
-
-/* --- Pile block (a cluster deeper than MAX_COLUMNS) ---------------------- */
-
-/* When three or more sessions overlap, the cluster draws as ONE full-width
-   block listing its courses instead of splitting into ~35 px slivers where
-   `.planner-block-code`'s `overflow-wrap: anywhere` broke a course code one
-   character per line. It has no single course, so no --dot: a neutral surface
-   carries it and each row wears its own hue dot.
-
-   Both selectors are doubled up on `.planner-block` on purpose. A pile whose
-   entries are ALL øvinger also carries `.is-muted`, and `.planner-block.is-muted`
-   (0,2,0) outranked a bare `.planner-block-pile` (0,1,0) — so the pile
-   resolved the hue-wash mix with `--dot` unset, which is invalid at
-   computed-value time and paints NOTHING. The result was an invisible
-   clickable region of floating text beside four solid lab blocks (week-3).
-   Qualifying makes the neutral fill win the way the mixed pile already did. */
-.planner-block.planner-block-pile {
-  background: color-mix(in srgb, var(--fg) 7%, var(--card));
-  gap: var(--space-1);
-}
-
-/* DR-1's display layer still reads quieter — with less ink, not with none.
-   `.is-muted`'s own `color: var(--muted)` is untouched. */
-.planner-block.planner-block-pile.is-muted {
-  background: color-mix(in srgb, var(--fg) 4%, var(--card));
-}
-
-.planner-grid-frame:not([data-static]) .planner-block.planner-block-pile:hover,
-.planner-grid-frame:not([data-static]) .planner-block.planner-block-pile.is-muted:hover {
-  background: color-mix(in srgb, var(--fg) 12%, var(--card));
-}
-
-/* A deep cluster emits one row per session, which can outgrow the geometry the
-   cluster's own minutes give it. `overflow: hidden` dropped the tail with no
-   sign at all; scrolling keeps every session reachable and shows a scrollbar
-   where there is one to show (grid-1). `min-height: 0` is what lets a flex
-   item shrink below its content in the first place. */
-.planner-pile-list {
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-  min-width: 0;
-  min-height: 0;
-  overflow-x: hidden;
-  overflow-y: auto;
-}
-
-.planner-pile-row {
-  display: flex;
-  align-items: center;
-  gap: var(--gap-2);
-  min-width: 0;
-}
-
-/* The codes are the point of the pile, so they stay whole: a pile that has
-   more courses than it has room for scrolls the LIST, never cuts a code
-   mid-stroke. On a phone that means WRAPPING the code instead — see the
-   ≤40rem block at the foot of this file, where a 56 px column cannot hold
-   seven mono characters on one line and `nowrap` here clipped every pile row
-   to "ETT" (grid-4). */
-.planner-pile-row .planner-block-code {
-  overflow-wrap: normal;
-  white-space: nowrap;
-}
-
-/* The session times under a code row. They reuse `.planner-block-meta`'s ink
-   and ellipsis (grid.ts builds them with that class), and the indent is what
-   sets them apart from the code rows: they line up under the code, past its
-   hue dot, so a pile reads as code → its times → next code (grid-1). */
-.planner-pile-list .planner-block-meta {
-  padding-inline-start: calc(6px + var(--gap-2));
+.planner-grid.is-striking .planner-block,
+.planner-grid.is-striking .planner-clash-zone {
+  animation: planner-strike calc(var(--dur) * 1.8) var(--ease) backwards;
+  animation-delay: calc(var(--planner-strike, 0) * 55ms);
 }
 
 /* --- Margin notes -------------------------------------------------------- */
@@ -509,48 +361,189 @@ button.planner-grid-day-header[aria-pressed="true"] {
   text-decoration-color: color-mix(in srgb, var(--accent) 40%, transparent);
 }
 
-/* --- Phone width --------------------------------------------------------- */
+/* --- TAVLA — the list view (REWORK-2026-07-29b D2) ------------------------ */
 
-/* A 390 px phone gives each weekday ~57 px, and every block in it was
-   unreadable: "TMA4412" came out as "TMA" / "■441" / "2" with the hue dot
-   wedged between the first two fragments, the pile rows were hard-clipped to
-   "ETT", and the block's guaranteed second line lost characters to the
-   ellipsis (grid-3 / grid-4 / mob-3 / ux-5 / course-7).
+/* A departure board. Nothing here is positioned by its duration, so nothing
+   here narrows with the viewport — which is exactly why it exists beside the
+   grid rather than instead of it. */
+.planner-board {
+  max-width: 52rem;
+  padding-inline-start: 18px;
+}
 
-   Raising `.planner-grid`'s min-width is NOT the fix — the 21rem above is
-   REVIEW A4's adjudicated number, chosen so five day names fit rather than one
-   column hiding behind the edge mask. So the BLOCK gives ground instead: two
-   pixels of padding, one type step down, and the dot off the code line. The
-   dot is the only thing here that carries information, and it only comes off
-   the blocks that already paint their course hue as their own background —
-   piles (which have no hue of their own) and pile rows keep theirs. */
+.planner-board-day {
+  display: flex;
+  align-items: baseline;
+  gap: var(--gap-3);
+  margin-top: var(--space-6);
+  padding-bottom: var(--space-2);
+  border-bottom: 1px solid var(--border-strong);
+}
+
+.planner-board-day:first-child {
+  margin-top: 0;
+}
+
+/* The same spine voice as the grid's, so the two views read as one product. */
+.planner-board-dayname {
+  margin: 0;
+  font-size: clamp(1.05rem, 2.6vw, 1.55rem);
+  font-weight: var(--weight-bold);
+  line-height: 1;
+  letter-spacing: -0.03em;
+  color: color-mix(in srgb, var(--fg) 40%, transparent);
+}
+
+.planner-board-day[data-today] .planner-board-dayname {
+  color: var(--fg);
+}
+
+.planner-board-sum {
+  margin-inline-start: auto;
+  font-size: var(--text-xs);
+  color: var(--faint);
+}
+
+/* Two numeral columns framing the line: the departure at the left margin, the
+   room at the right. They are the two facts a student is here for. */
+.planner-board-row {
+  display: grid;
+  grid-template-columns: 5.5rem minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0 var(--gap-6);
+  width: 100%;
+  padding: var(--space-3) 0;
+  border: 0;
+  border-bottom: 1px solid var(--border);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease);
+}
+
+button.planner-board-row:hover {
+  background: var(--wash);
+}
+
+.planner-board-time {
+  display: grid;
+  gap: 1px;
+}
+
+.planner-board-from {
+  font-size: var(--text-md);
+  font-weight: var(--weight-medium);
+  line-height: 1;
+  letter-spacing: -0.03em;
+}
+
+.planner-board-to {
+  font-size: var(--text-xs);
+  line-height: 1;
+  color: var(--faint);
+}
+
+.planner-board-what {
+  min-width: 0;
+}
+
+.planner-board-name {
+  display: flex;
+  align-items: center;
+  gap: var(--gap-2);
+  min-width: 0;
+  font-size: var(--text-base);
+  font-weight: var(--weight-medium);
+  letter-spacing: -0.01em;
+}
+
+.planner-board-course {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.planner-board-sub {
+  margin-top: 2px;
+  font-size: var(--text-xs);
+  color: var(--muted);
+}
+
+.planner-board-room {
+  font-size: var(--text-md);
+  font-weight: var(--weight-medium);
+  line-height: 1;
+  letter-spacing: -0.03em;
+  text-align: right;
+  white-space: nowrap;
+}
+
+/* "Digital undervisning" is a sentence wearing a room's clothes: at the
+   display size it wraps and knocks the two numeral columns out of alignment,
+   which is the one thing this view cannot afford. */
+.planner-board-room.is-long {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-normal);
+  letter-spacing: 0;
+  color: var(--muted);
+  white-space: normal;
+  max-width: 9rem;
+}
+
+/* The collision is a bracket in the margin joining the two departures it
+   applies to — not a filled row, which reads as an error state rather than as
+   two things you have to choose between. */
+.planner-board-clash {
+  position: relative;
+  padding-inline-start: 18px;
+  margin-inline-start: -18px;
+}
+
+.planner-board-clash::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: var(--space-2);
+  bottom: var(--space-6);
+  width: 2px;
+  background: var(--clash);
+}
+
+.planner-board-clash-note {
+  padding: var(--space-2) 0 0;
+  margin: 0;
+  font-size: var(--text-xs);
+  color: var(--clash);
+}
+
+.planner-board-free {
+  padding: var(--space-3) 0;
+  margin: 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.planner-board.is-striking .planner-board-row {
+  animation: planner-strike calc(var(--dur) * 1.8) var(--ease) backwards;
+  animation-delay: calc(var(--planner-strike, 0) * 45ms);
+}
+
 @media (max-width: 40rem) {
-  /* 4 px a side instead of 8 buys the code ~8 px — one whole character. */
-  .planner-block {
-    padding: var(--space-1);
+  .planner-board {
+    padding-inline-start: 14px;
   }
 
-  .planner-block-code {
-    font-size: var(--text-xs);
+  .planner-board-row {
+    grid-template-columns: 4.5rem minmax(0, 1fr);
+    gap: 2px var(--gap-3);
   }
 
-  /* Freed: the 6 px dot plus its 4 px gap, ~a quarter of the line. */
-  .planner-block:not(.planner-block-pile) > .planner-block-tag .np-dot {
-    display: none;
-  }
-
-  /* No room to indent the times under the codes at this width — the indent
-     would cost more of "08:15–10:00" than the structure is worth. */
-  .planner-pile-list .planner-block-meta {
-    padding-inline-start: 0;
-  }
-
-  /* The pile's own rule (above) keeps codes on one line because clipping the
-     LIST is cheap when the block is wide. It is not cheap at 57 px, where
-     `nowrap` + a clipping list is exactly the mid-code cut UX-STUDY S12 was
-     fixed for. Wrapping shows the whole code on two rows instead. */
-  .planner-pile-row .planner-block-code {
-    overflow-wrap: anywhere;
-    white-space: normal;
+  /* The room drops under the name rather than off the row: at 390 px a third
+     column costs more than the alignment it buys. */
+  .planner-board-room {
+    grid-column: 2;
+    text-align: left;
+    font-size: var(--text-sm);
   }
 }

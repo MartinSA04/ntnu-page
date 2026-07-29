@@ -73,6 +73,24 @@ const programOptionsJson = JSON.stringify(programOptions).replaceAll("<", "\\u00
         <div class="planner-section-head">
           <h2 class="np-kicker" id="planner-week-heading">Ukeplan</h2>
           <p class="planner-section-sub" id="planner-grid-status" aria-live="polite"></p>
+          <div class="planner-view-tabs" role="group" aria-label="Vis uka som rutenett eller liste">
+            <button
+              type="button"
+              class="np-toggle planner-view-tab"
+              id="planner-view-uke"
+              aria-pressed="true"
+            >
+              Rutenett
+            </button>
+            <button
+              type="button"
+              class="np-toggle planner-view-tab"
+              id="planner-view-tavle"
+              aria-pressed="false"
+            >
+              Liste
+            </button>
+          </div>
           <button
             type="button"
             class="np-toggle planner-others-toggle"
@@ -81,14 +99,6 @@ const programOptionsJson = JSON.stringify(programOptions).replaceAll("<", "\\u00
           >
             Vis øvinger og labber
           </button>
-        </div>
-        <div
-          class="planner-day-strip"
-          id="planner-day-strip"
-          role="group"
-          aria-label="Vis hele uka eller én dag"
-          hidden
-        >
         </div>
         <p class="np-hint planner-scroll-hint" id="planner-scroll-hint" hidden></p>
         <div class="planner-grid-frame" id="planner-grid-frame"></div>
@@ -299,25 +309,19 @@ const programOptionsJson = JSON.stringify(programOptions).replaceAll("<", "\\u00
     display: none;
   }
 
-  /* --- Week ⇄ day strip (REWORK-2026-07-29 D4) ---------------------------- */
+  /* --- Rutenett ⇄ Liste (REWORK-2026-07-29b D2) --------------------------- */
 
-  /* `Uke · Man · Tir …` — the way into one expanded day, and the only way back
-     to the week that does not require finding the header of the day you are
-     already on. It sits directly above the grid because it is about the grid;
-     the toggles are `.np-toggle`, so the pressed state is the primitive's
-     accent fill and nothing new is invented for it. */
-  .planner-day-strip:not([hidden]) {
+  /* Two views of one week. They sit in the section head beside the verdict
+     because that is what they change; the toggles are `.np-toggle`, so the
+     pressed state is the primitive's accent fill and nothing new is invented
+     for it. */
+  .planner-view-tabs {
     display: flex;
-    flex-wrap: wrap;
     gap: var(--gap-1);
-    margin-bottom: var(--space-2);
   }
 
-  /* Six or seven toggles have to fit a phone rail, so they lose the primitive's
-     generous inline padding and keep its height — a control a student switches
-     days with is a real tap target at every width. */
-  :global(.planner-day-btn) {
-    padding-inline: var(--space-2);
+  :global(.planner-view-tab) {
+    padding-inline: var(--space-3);
   }
 
   /* The verdict (U4): PRODUCT §1's primary job answered beside the kicker,

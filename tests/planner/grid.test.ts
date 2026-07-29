@@ -1,8 +1,6 @@
 import { afterEach, describe, expect, test } from "vitest";
 import {
   lectureLessCourses,
-  metaLine,
-  pileSummary,
   planGaps,
   renderGrid,
   unresolvedLectureChoices,
@@ -230,68 +228,6 @@ describe("unresolvedLectureChoices (edit-4, ux-1)", () => {
   });
 });
 
-describe("pileSummary (grid-1, grid-2, grid-5, copy-1)", () => {
-  const session = (courseCode: string, startTime: string, endTime: string) => ({
-    courseCode,
-    startTime,
-    endTime,
-  });
-
-  test("every session is named and timed — not one row per course", () => {
-    // BERGO kull 2026, tirsdag: the pile said "2 emner · 08:15" over these.
-    const summary = pileSummary([
-      session("ETT1101", "08:15", "10:00"),
-      session("ETT1102", "08:15", "11:00"),
-      session("ETT1101", "10:15", "11:00"),
-    ]);
-    expect(summary.codes).toEqual(["ETT1101", "ETT1102"]);
-    expect(summary.byCourse).toEqual([
-      { code: "ETT1101", times: ["08:15–10:00", "10:15–11:00"] },
-      { code: "ETT1102", times: ["08:15–11:00"] },
-    ]);
-    expect(summary.sessions).toBe("ETT1101 08:15–10:00 og 10:15–11:00; ETT1102 08:15–11:00");
-  });
-
-  test("courses count as emner, sessions as aktiviteter", () => {
-    const summary = pileSummary([
-      session("ETT1101", "08:15", "10:00"),
-      session("ETT1102", "08:15", "11:00"),
-      session("ETT1101", "10:15", "11:00"),
-    ]);
-    expect(summary.meta).toBe("2 emner · 3 aktiviteter");
-    expect(summary.activities).toBe("3 aktiviteter");
-  });
-
-  test("one course's own overlapping sessions are not '1 emner'", () => {
-    // /emne/EXPH0300/ rendered 17 piles, every one captioned "1 emner · 08:15".
-    const summary = pileSummary([
-      session("EXPH0300", "08:15", "10:00"),
-      session("EXPH0300", "08:15", "12:00"),
-      session("EXPH0300", "09:15", "11:00"),
-    ]);
-    expect(summary.meta).toBe("3 aktiviteter");
-    expect(summary.meta).not.toContain("emner");
-    // The code sits above the list, so the rows carry times alone.
-    expect(summary.sessions).toBe("08:15–10:00, 08:15–12:00 og 09:15–11:00");
-  });
-
-  test("the activity noun branches (no '1 aktiviteter')", () => {
-    expect(pileSummary([session("ETT1101", "08:15", "10:00")]).activities).toBe("1 aktivitet");
-  });
-});
-
-describe("metaLine (week-4)", () => {
-  test("the start time comes first, so the room is what the ellipsis eats", () => {
-    expect(metaLine({ rooms: "Digital undervisning", startTime: "12:15" })).toBe(
-      "12:15 · Digital undervisning",
-    );
-  });
-
-  test("no room, still a time", () => {
-    expect(metaLine({ rooms: "", startTime: "08:15" })).toBe("08:15");
-  });
-});
-
 /* --- The DOM half ------------------------------------------------------
  *
  * Two of `renderGrid`'s decisions are not expressible in the pure helpers
@@ -414,41 +350,54 @@ function draw(courses: PlanCourseState[], narrow: boolean): ShimEl {
   renderGrid(frame as unknown as HTMLElement, notes as unknown as HTMLElement, courses, false, {});
   return frame;
 }
-
-describe("renderGrid: the header row (week-7)", () => {
+describe("renderGrid: the transposed shell (REWORK-2026-07-29b D1)", () => {
   const courses = [state({ code: "TMA4400", bundle: bundleFromEntries([entry("Forelesning")]) })];
 
-  test("row 1 spans the hour rail, so a sticky header can cover the full width", () => {
-    const headers = draw(courses, false).find("planner-grid-day-header");
-    // Five weekdays plus the rail cell — without the rail cell, column 1 is a
-    // background-less band the hour labels slide through while scrolling.
-    expect(headers).toHaveLength(6);
-    const rail = headers.filter((h) => h.classes.has("planner-grid-rail-header"));
-    expect(rail).toHaveLength(1);
-    expect(rail[0]?.props.get("--planner-day")).toBe("0");
-    expect(rail[0]?.textContent).toBe("");
-    // It names nothing, so it must not be announced as a column either.
-    expect(rail[0]?.getAttribute("aria-hidden")).toBe("true");
+  test("days are rows with a spine, not columns with a three-letter header", () => {
+    const frame = draw(courses, false);
+    const rows = frame.find("planner-grid-row");
+    expect(rows).toHaveLength(5);
+    // The spine carries the whole word: it is the page's typographic event and
+    // the thing a student finds their row by, not a label.
+    expect(frame.find("planner-grid-spine").map((s) => s.textContent)).toEqual([
+      "mandag",
+      "tirsdag",
+      "onsdag",
+      "torsdag",
+      "fredag",
+    ]);
+    // Every day has somewhere to append bars, empty ones included.
+    expect(frame.find("planner-grid-field")).toHaveLength(5);
   });
 
-  test("the day names still come first, so scrollToToday's index is unmoved", () => {
-    // plannerApp.ts's scrollToToday reads `.planner-grid-day-header` by
-    // weekday ordinal; a rail cell in front of them would scroll to Sunday.
-    const headers = draw(courses, false).find("planner-grid-day-header");
-    expect(headers.slice(0, 5).map((h) => h.textContent)).toEqual([
-      "man",
-      "tir",
-      "ons",
-      "tor",
-      "fre",
-    ]);
-    expect(headers[5]?.classes.has("planner-grid-rail-header")).toBe(true);
+  test("the ruler ties each hour figure to its own position on the axis", () => {
+    const ticks = draw(courses, false).find("planner-grid-tick");
+    expect(ticks.length).toBeGreaterThan(1);
+    // First tick at 0 %, last at 100 % — the axis spans exactly the clamped
+    // range, so a bar's percentage and a tick's percentage mean the same thing.
+    expect(ticks[0]?.props.get("--planner-x")).toBe("0%");
+    expect(ticks[ticks.length - 1]?.props.get("--planner-x")).toBe("100%");
+  });
+
+  test("today's row is marked so the spine can carry it at full ink", () => {
+    uninstall = installShim(false);
+    const frame = new ShimEl("DIV");
+    renderGrid(
+      frame as unknown as HTMLElement,
+      new ShimEl("DIV") as unknown as HTMLElement,
+      courses,
+      false,
+      { todayNumber: 3 },
+    );
+    const marked = frame.find("planner-grid-row").filter((r) => r.attrs.has("data-today"));
+    expect(marked).toHaveLength(1);
+    expect(marked[0]?.find("planner-grid-spine")[0]?.textContent).toBe("onsdag");
   });
 });
 
-describe("renderGrid: the phone column cap (grid-3)", () => {
-  // Two overlapping Monday sessions: two readable columns on a desktop day
-  // column, two 27 px slivers of one-character-per-line code on a phone.
+describe("renderGrid: overlap stacks into lanes and never piles (D1)", () => {
+  // The exact case that used to pile: two overlapping Monday sessions, which
+  // at a 150 px day column could not be split without breaking course codes.
   const overlapping = [
     state({
       code: "FRA1010",
@@ -459,21 +408,102 @@ describe("renderGrid: the phone column cap (grid-3)", () => {
     }),
   ];
 
-  test("splits into two columns above 40rem", () => {
-    const frame = draw(overlapping, false);
+  const laneCheck = (narrow: boolean): void => {
+    const frame = draw(overlapping, narrow);
     const blocks = frame.find("planner-block");
     expect(blocks).toHaveLength(2);
-    expect(blocks[0]?.props.get("--planner-col-count")).toBe("2");
+    expect(blocks[0]?.props.get("--planner-lane")).toBe("0");
+    expect(blocks[1]?.props.get("--planner-lane")).toBe("1");
+    // The pile is gone as a concept — there is no width left to run out of.
     expect(frame.find("planner-block-pile")).toHaveLength(0);
+    // Both bars keep their own start, which is what a lane cannot express.
+    expect(blocks[0]?.props.get("--planner-x")).not.toBe(blocks[1]?.props.get("--planner-x"));
+  };
+
+  test("stacks at desktop width", () => laneCheck(false));
+
+  // The whole point of transposing: the phone gets the SAME two readable bars,
+  // where the vertical grid collapsed them into one slab of text (grid-3).
+  test("stacks identically at phone width", () => laneCheck(true));
+
+  test("the row reserves the depth its lanes need", () => {
+    const field = draw(overlapping, false).find("planner-grid-field")[0];
+    expect(field?.props.get("--planner-lanes")).toBe("2");
+  });
+});
+
+describe("renderGrid: a bar's geometry is its time (D1)", () => {
+  test("x and width are percentages of the day's own span", () => {
+    // A single 10:15–12:00 session clamps the axis to 10:00–12:00, so the bar
+    // starts an eighth of the way in and runs to the end.
+    const frame = draw(
+      [
+        state({
+          code: "TMA4400",
+          bundle: bundleFromEntries([
+            entry("Forelesning", { startTime: "10:15", endTime: "12:00" }),
+          ]),
+        }),
+      ],
+      false,
+    );
+    const block = frame.find("planner-block")[0];
+    expect(block?.props.get("--planner-x")).toBe("12.5%");
+    expect(block?.props.get("--planner-w")).toBe("87.5%");
   });
 
-  test("piles into one block at 40rem and below", () => {
-    const frame = draw(overlapping, true);
-    const piles = frame.find("planner-block-pile");
-    expect(piles).toHaveLength(1);
-    expect(piles[0]?.props.get("--planner-col-count")).toBe("1");
-    // Nothing is dropped: the pile names both sessions it stands for.
-    expect(piles[0]?.textContent).toContain("10:15");
-    expect(piles[0]?.textContent).toContain("11:15");
+  test("a bar carries its code, and its activity only when there is room", () => {
+    const short = draw(
+      [
+        state({
+          code: "TDT4109",
+          bundle: bundleFromEntries([
+            entry("Digital forelesning", { startTime: "12:15", endTime: "13:00" }),
+          ]),
+        }),
+      ],
+      false,
+    );
+    // 45 minutes is ~100 px of axis — the code, and nothing that would clip.
+    expect(short.find("planner-block-code")).toHaveLength(1);
+    expect(short.find("planner-block-what")).toHaveLength(0);
+  });
+});
+
+describe("renderGrid: the collision is one zone per day (D4)", () => {
+  const clashing = [
+    state({
+      code: "TMA4412",
+      bundle: bundleFromEntries([
+        entry("Forelesning", { courseCode: "TMA4412", startTime: "08:15", endTime: "10:00" }),
+      ]),
+    }),
+    state({
+      code: "TDT4136",
+      bundle: bundleFromEntries([
+        entry("Forelesning", { courseCode: "TDT4136", startTime: "09:15", endTime: "11:00" }),
+      ]),
+    }),
+  ];
+
+  test("one zone, spanning exactly the minutes that overlap", () => {
+    const frame = draw(clashing, false);
+    const zones = frame.find("planner-clash-zone");
+    // Not one per block: the mark belongs to the moment, not to either course.
+    expect(zones).toHaveLength(1);
+    // 08:00–11:00 axis (180 min); the 09:15–10:00 overlap starts 75 min in and
+    // runs 45 — the zone is the minutes, not a whole-block tint.
+    expect(zones[0]?.props.get("--planner-x")).toBe(`${(75 / 180) * 100}%`);
+    expect(zones[0]?.props.get("--planner-w")).toBe("25%");
+    expect(zones[0]?.getAttribute("aria-hidden")).toBe("true");
+  });
+
+  test("a clean week draws no zone at all", () => {
+    expect(
+      draw(
+        [state({ code: "TMA4400", bundle: bundleFromEntries([entry("Forelesning")]) })],
+        false,
+      ).find("planner-clash-zone"),
+    ).toHaveLength(0);
   });
 });

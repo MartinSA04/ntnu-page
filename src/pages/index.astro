@@ -11,18 +11,36 @@ const seasonWord = isAutumn ? "høsten" : "våren";
 ---
 
 <Layout title="Semesterplan — planlegg semesteret ved NTNU" description={description}>
-  <p class="np-kicker home-kicker">Semesterplan</p>
-  <h1 class="home-title">Se timeplanen din for {seasonWord}.</h1>
-  <p class="np-hint home-subcopy">
-    Velg studieprogram og kull i planleggeren, så vises ukeplanen med en gang — en uoffisiell
-    side, ikke laget av NTNU.
-  </p>
+  {/* The returning student's answer, when there is one to give: which room,
+      right now. It renders above the pitch and replaces it — a page that
+      already knows your week should not open by explaining what it is
+      (REWORK-2026-07-29b D3). `hidden` until the plan says otherwise, so a
+      first-time visitor never sees an empty frame. */}
+  <section class="home-now" id="home-now" aria-labelledby="home-now-label" hidden>
+    <a class="home-now-link" href="/planlegger/" id="home-now-link">
+      <span class="np-kicker home-now-label" id="home-now-label"></span>
+      <span class="home-now-room np-data" id="home-now-room"></span>
+      <span class="home-now-course" id="home-now-course"></span>
+      <span class="np-note home-now-sub" id="home-now-sub"></span>
+      <span class="home-now-bar" id="home-now-bar" aria-hidden="true"><span></span></span>
+    </a>
+    <ul class="home-now-next" id="home-now-next"></ul>
+  </section>
 
-  <a class="np-btn home-cta" href="/planlegger/">Åpne planleggeren</a>
+  <div class="home-pitch" id="home-pitch">
+    <p class="np-kicker home-kicker">Semesterplan</p>
+    <h1 class="home-title">Se timeplanen din for {seasonWord}.</h1>
+    <p class="np-hint home-subcopy">
+      Velg studieprogram og kull i planleggeren, så vises ukeplanen med en gang — en uoffisiell
+      side, ikke laget av NTNU.
+    </p>
 
-  <p class="home-resume np-hint" id="home-resume" hidden>
-    <a href="/planlegger/" id="home-resume-link"></a>
-  </p>
+    <a class="np-btn home-cta" href="/planlegger/">Åpne planleggeren</a>
+
+    <p class="home-resume np-hint" id="home-resume" hidden>
+      <a href="/planlegger/" id="home-resume-link"></a>
+    </p>
+  </div>
 
   <div class="home-proof">
     <div class="np-frame np-ruled home-proof-frame" aria-hidden="true">
@@ -64,6 +82,145 @@ const seasonWord = isAutumn ? "høsten" : "våren";
   .home-resume a {
     color: var(--accent-ink);
   }
+  /* --- Nå (REWORK-2026-07-29b D3) ---------------------------------------- */
+
+  .home-now[hidden] {
+    display: none;
+  }
+
+  .home-now {
+    margin-bottom: var(--space-7);
+  }
+
+  /* The whole card is the door to the planner — one target, no button
+     competing with it, and nothing inside it that is separately clickable. */
+  .home-now-link {
+    display: grid;
+    gap: var(--space-1);
+    padding-bottom: var(--space-4);
+    border-bottom: 1px solid var(--border-strong);
+    color: inherit;
+    text-decoration: none;
+  }
+
+  .home-now-link:hover .home-now-room {
+    color: var(--accent-ink);
+  }
+
+  .home-now-label {
+    color: var(--accent-ink);
+  }
+
+  /* The room, set as display type: the one fact you are walking somewhere to
+     find out. Nothing else on this page is this size. */
+  .home-now-room {
+    font-size: clamp(3.5rem, 15vw, 7rem);
+    font-weight: var(--weight-medium);
+    line-height: 0.85;
+    letter-spacing: -0.05em;
+    transition: color var(--dur-fast) var(--ease);
+  }
+
+  /* "Realfagbygget A" is a sentence wearing a room's clothes — it steps down
+     rather than wrapping across three lines of display type. */
+  .home-now-room.is-long {
+    font-size: clamp(1.8rem, 6vw, 3rem);
+    letter-spacing: -0.03em;
+  }
+
+  .home-now-room.is-none {
+    color: var(--faint);
+  }
+
+  .home-now-course {
+    margin-top: var(--space-2);
+    font-size: var(--text-md);
+    font-weight: var(--weight-medium);
+    letter-spacing: -0.01em;
+  }
+
+  .home-now-sub {
+    color: var(--muted);
+  }
+
+  .home-now-bar {
+    height: 3px;
+    margin-top: var(--space-3);
+    background: var(--card-nested);
+  }
+
+  .home-now-bar[hidden] {
+    display: none;
+  }
+
+  .home-now-bar > span {
+    display: block;
+    height: 100%;
+    background: var(--accent);
+  }
+
+  .home-now-next {
+    list-style: none;
+    max-width: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  /* :global() because these rows are BUILT IN JS. Astro scopes a page block by
+     stamping a data attribute on the elements it compiled, and a node created
+     at runtime never gets one — so a scoped `.home-now-next li` matches nothing
+     and the list collapses into "ons 10:15EXPH0300 · Seminargruppe 7". */
+  :global(.home-now-next li) {
+    display: grid;
+    grid-template-columns: 6.5rem minmax(0, 1fr) auto;
+    gap: 0 var(--gap-3);
+    align-items: baseline;
+    padding: var(--space-2) 0;
+    border-bottom: 1px solid var(--border);
+    font-size: var(--text-sm);
+  }
+
+  :global(.home-now-when) {
+    color: var(--muted);
+    font-size: var(--text-xs);
+  }
+
+  :global(.home-now-what) {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--muted);
+  }
+
+  :global(.home-now-where) {
+    font-size: var(--text-xs);
+  }
+
+  /* Once the page has an answer it stops introducing itself: the pitch drops
+     to a footnote rather than disappearing, because the CTA is still the way
+     to a plan you want to change. */
+  .home-pitch.is-secondary .home-title {
+    font-size: var(--text-md);
+    font-weight: var(--weight-medium);
+  }
+
+  .home-pitch.is-secondary .home-kicker,
+  .home-pitch.is-secondary .home-subcopy,
+  .home-pitch.is-secondary .home-resume {
+    display: none;
+  }
+
+  @media (max-width: 40rem) {
+    :global(.home-now-next li) {
+      grid-template-columns: 5rem minmax(0, 1fr);
+    }
+
+    :global(.home-now-where) {
+      grid-column: 2;
+    }
+  }
+
   .home-proof {
     margin-top: var(--space-7);
     display: flex;
@@ -102,9 +259,11 @@ const seasonWord = isAutumn ? "høsten" : "våren";
 <script>
   import { onPage } from "../lib/pageLifecycle.ts";
   import { createPlanStore } from "../lib/planner/store.ts";
+  import { loadWeekSessions, nowVerdict, weekMinutes } from "../components/site/now.ts";
   import semestersData from "../../data/semesters.json";
 
   const defaultSemesterId = semestersData.current?.id ?? "";
+  const DAYS = ["mandag", "tirsdag", "onsdag", "torsdag", "fredag", "lørdag", "søndag"];
 
   // Per page-load, not per module: ClientRouter evaluates this module once,
   // so wiring at top level left the resume line frozen at whatever it read
@@ -134,5 +293,125 @@ const seasonWord = isAutumn ? "høsten" : "våren";
 
     renderResume();
     signal.addEventListener("abort", store.onPlanChange(renderResume));
+
+    // --- Nå (REWORK-2026-07-29b D3) ---------------------------------------
+
+    const nowEl = document.getElementById("home-now") as HTMLElement | null;
+    if (!nowEl) return;
+    const el = (id: string) => document.getElementById(id) as HTMLElement | null;
+    const semester =
+      semestersData.semesters.find((s) => s.id === store.loadPlan().semesterId) ??
+      semestersData.current;
+    if (!semester) return;
+
+    /**
+     * One in-flight load at a time, and only the newest one may paint: a plan
+     * change while the timetables are still arriving would otherwise let the
+     * old week's answer land on top of the new one — the same shape as the
+     * planner's own app-5.
+     */
+    let token = 0;
+
+    async function renderNow(): Promise<void> {
+      const mine = ++token;
+      const plan = store.loadPlan();
+      if (plan.courses.filter((c) => !c.dropped).length === 0) {
+        if (nowEl) nowEl.hidden = true;
+        return;
+      }
+      const sessions = await loadWeekSessions(plan, semester.id, semester.teachingWeeks ?? []);
+      if (mine !== token || signal.aborted || !nowEl) return;
+
+      const verdict = nowVerdict(sessions, weekMinutes(new Date()));
+      // Nothing to answer with (no timetables yet, or a course-less plan): the
+      // resume line above is still true, so the page keeps that and says
+      // nothing here rather than showing an empty card.
+      if (verdict.kind === "empty") {
+        nowEl.hidden = true;
+        return;
+      }
+      nowEl.hidden = false;
+
+      const pitch = el("home-pitch");
+      const label = el("home-now-label");
+      const room = el("home-now-room");
+      const course = el("home-now-course");
+      const sub = el("home-now-sub");
+      const bar = el("home-now-bar");
+      const next = el("home-now-next");
+      const link = el("home-now-link") as HTMLAnchorElement | null;
+      if (!label || !room || !course || !sub || !bar || !next || !link) return;
+
+      // The page has an answer, so it stops introducing itself.
+      if (pitch) pitch.classList.add("is-secondary");
+
+      if (verdict.kind === "done") {
+        label.textContent = "Denne uka";
+        room.textContent = "—";
+        room.classList.add("is-none");
+        course.textContent = "Ingenting mer denne uka.";
+        sub.textContent = "";
+        bar.hidden = true;
+        next.replaceChildren();
+        link.setAttribute("aria-label", "Ingenting mer denne uka — åpne planleggeren");
+        return;
+      }
+
+      const s = verdict.session;
+      const running = verdict.kind === "running";
+      label.textContent = running ? "Nå" : "Neste";
+      room.textContent = s.room || "—";
+      room.classList.toggle("is-none", !s.room);
+      // The room is the display figure, so a building name that is really a
+      // sentence steps down rather than wrapping across three lines.
+      // Only a real building name steps down; ordinary codes ("R1", "A3-138")
+      // keep the display size, which is the whole point of the figure.
+      room.classList.toggle("is-long", s.room.length > 8 || /\s/.test(s.room));
+      course.textContent = `${s.code} · ${s.courseName}`;
+      sub.textContent = [
+        s.activity,
+        `${DAYS[s.dayNumber - 1] ?? ""} ${s.startTime}–${s.endTime}`.trim(),
+        // A lab across four rooms says so here, where a count fits; the figure
+        // above stays one word.
+        s.roomsExtra > 0 ? `+${s.roomsExtra} rom` : "",
+      ]
+        .filter(Boolean)
+        .join(" · ");
+
+      bar.hidden = !running;
+      if (running) {
+        const fill = bar.firstElementChild as HTMLElement | null;
+        if (fill) fill.style.width = `${Math.round(verdict.progress * 100)}%`;
+        label.textContent = `Nå · ${verdict.minutesLeft} min igjen`;
+      }
+      link.setAttribute(
+        "aria-label",
+        `${running ? "Pågår nå" : "Neste time"}: ${s.code}, rom ${s.room || "ikke satt"} — åpne planleggeren`,
+      );
+
+      next.replaceChildren();
+      for (const item of verdict.rest) {
+        const li = document.createElement("li");
+        const when = document.createElement("span");
+        when.className = "np-data home-now-when";
+        when.textContent = `${DAYS[item.dayNumber - 1]?.slice(0, 3) ?? ""} ${item.startTime}`;
+        const what = document.createElement("span");
+        what.className = "home-now-what";
+        what.textContent = `${item.code} · ${item.activity}`;
+        const where = document.createElement("span");
+        where.className = "np-data home-now-where";
+        where.textContent = item.room;
+        li.append(when, what, where);
+        next.append(li);
+      }
+    }
+
+    void renderNow();
+    signal.addEventListener(
+      "abort",
+      store.onPlanChange(() => {
+        void renderNow();
+      }),
+    );
   });
 </script>
