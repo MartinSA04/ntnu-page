@@ -38,6 +38,24 @@ import { expect, type Page, test } from "@playwright/test";
  */
 
 const courseRows = (page: Page) => page.locator("#planner-course-rows .planner-course-row");
+
+/**
+ * Opens a course's settings the way the UI now does it: a bar in the week
+ * opens the READ popover for that session, and "Innstillinger" in it is the
+ * way through to the editor (REWORK-2026-07-29f). Clicking a bar no longer
+ * opens the modal directly.
+ */
+async function settingsFromBlock(page: Page, block = gridBlocks(page).first()): Promise<void> {
+  await block.click();
+  const popover = page.locator("#planner-block-popover");
+  await expect(popover).toBeVisible();
+  await popover.locator("button", { hasText: "Innstillinger" }).click();
+  await expect(page.locator("#planner-course-settings")).toBeVisible();
+}
+
+/** The course list's row is inert; its settings button is the target. */
+const courseSettingsBtn = (page: Page, code: string) =>
+  page.locator(`#planner-course-rows .planner-course-open[data-code="${code}"]`);
 const gridBlocks = (page: Page) => page.locator("#planner-grid-frame .planner-block");
 
 /**
@@ -234,9 +252,8 @@ test("groups: switching parallel updates the grid and survives the URL", async (
   // Default: Forelesningsparallell 1, Friday 08:15–10:00.
   await expect(block).toHaveAttribute("aria-label", /fredag/i);
 
-  await block.click();
+  await settingsFromBlock(page, block);
   const settings = page.locator("#planner-course-settings");
-  await expect(settings).toBeVisible();
   const parallel2Row = settings.locator(".course-settings-group-row", {
     hasText: "Forelesningsparallell 2",
   });
@@ -279,7 +296,7 @@ test("groups: a non-default parallel renders with a programme set", async ({ pag
   await expect(courseRows(page)).toHaveCount(5, { timeout: 30_000 });
   await expect(tmaBlocks().first()).toBeVisible({ timeout: 45_000 });
 
-  await tmaBlocks().first().click();
+  await settingsFromBlock(page, tmaBlocks().first());
   const settings = page.locator("#planner-course-settings");
   await expect(settings).toBeVisible();
   const foreignRow = settings.locator(".course-settings-group-row", {
@@ -311,10 +328,9 @@ test("groups: the picker lists this semester's groups, not the whole year's", as
   await page.goto("/planlegger/#26h;MTDT.2026;");
   const exphBlock = gridBlocks(page).filter({ hasText: "EXPH0300" }).first();
   await expect(exphBlock).toBeVisible({ timeout: 45_000 });
-  await exphBlock.click();
+  await settingsFromBlock(page, exphBlock);
 
   const settings = page.locator("#planner-course-settings");
-  await expect(settings).toBeVisible();
   const groupRows = settings.locator(".course-settings-group-row");
 
   // Every Ålesund session of this course — the five seminar groups and
@@ -353,8 +369,7 @@ test("course settings: closes from its own button, not just Esc", async ({ page 
   await expect(gridBlocks(page)).toHaveCount(1, { timeout: 30_000 });
   const settings = page.locator("#planner-course-settings");
 
-  await gridBlocks(page).first().click();
-  await expect(settings).toBeVisible();
+  await settingsFromBlock(page);
 
   const close = settings.locator(".course-settings-close");
   await expect(close).toBeVisible();
@@ -362,8 +377,7 @@ test("course settings: closes from its own button, not just Esc", async ({ page 
   await expect(settings).toBeHidden();
 
   // And it reopens afterwards — closing must not leave the dialog wedged.
-  await gridBlocks(page).first().click();
-  await expect(settings).toBeVisible();
+  await settingsFromBlock(page);
 });
 
 test("course settings: never offers a picker with only one option", async ({ page }) => {
@@ -383,8 +397,7 @@ test("course settings: never offers a picker with only one option", async ({ pag
   const blocks = await gridBlocks(page).count();
   expect(blocks).toBeGreaterThan(0);
   for (let i = 0; i < blocks; i++) {
-    await gridBlocks(page).nth(i).click();
-    await expect(settings).toBeVisible();
+    await settingsFromBlock(page, gridBlocks(page).nth(i));
     // Zero (nothing to choose) or two-plus (a real choice) — never one.
     expect(await radios.count()).not.toBe(1);
     expect(await checkboxes.count()).not.toBe(1);
@@ -398,7 +411,7 @@ test("course settings: never offers a picker with only one option", async ({ pag
   // The retired "Vis alle grupper" button called setSelection([]), which is
   // groups.ts's encoding for "apply the programme default" — it narrowed the
   // week instead of widening it, exactly contradicting its label.
-  await gridBlocks(page).first().click();
+  await settingsFromBlock(page);
   await expect(settings.locator("button", { hasText: "Vis alle grupper" })).toHaveCount(0);
 });
 
@@ -482,9 +495,11 @@ test("week: three overlapping lectures stack into three lanes, no pile", async (
   // competing marks — the mark belongs to the moment, not to any one course.
   await expect(monday.locator(".planner-clash-zone")).toHaveCount(1);
 
-  // Each bar opens that course's settings.
+  // Each bar opens its own session popover, naming the slot it stands for.
   await page.locator("#planner-grid-frame .planner-block").first().click();
-  await expect(page.locator("#planner-course-settings")).toBeVisible();
+  const popover = page.locator("#planner-block-popover");
+  await expect(popover).toBeVisible();
+  await expect(popover).toContainText("08:15");
 });
 
 test("week: Rutenett and Liste show the same week two ways", async ({ page }) => {
@@ -503,9 +518,9 @@ test("week: Rutenett and Liste show the same week two ways", async ({ page }) =>
   await expect(page.locator(".planner-board-row")).toHaveCount(bars);
   await expect(page.locator(".planner-grid")).toHaveCount(0);
 
-  // A row opens the same settings modal a bar does.
+  // A row opens the same session popover a bar does.
   await page.locator(".planner-board-row").first().click();
-  await expect(page.locator("#planner-course-settings")).toBeVisible();
+  await expect(page.locator("#planner-block-popover")).toBeVisible();
   await page.keyboard.press("Escape");
 
   // The choice survives a reload, because it is a preference rather than plan
@@ -570,9 +585,13 @@ test("week: the øving layer shows picked groups, not the whole cohort's", async
     expect(text).not.toContain("har 1 gruppe");
   }
 
+  // A note asks "which group is mine", which is an edit — so it opens the
+  // picker directly, unlike a bar, which asks "what is this session".
   await notes.first().click();
   await expect(page.locator("#planner-course-settings")).toBeVisible();
-  await expect(page.locator("#planner-course-settings .course-settings-group-row").first()).toBeVisible();
+  await expect(
+    page.locator("#planner-course-settings .course-settings-group-row").first(),
+  ).toBeVisible();
 });
 
 test("course page: the grade figure renders from DBH", async ({ page }) => {
@@ -768,7 +787,8 @@ test("drop and restore a programme course", async ({ page }) => {
   // place of §0.3's one.
   const settings = page.locator("#planner-course-settings");
   const row = courseRows(page).filter({ hasText: code }).first();
-  await row.click();
+  await courseSettingsBtn(page, code).click();
+  await expect(settings).toBeVisible();
   await settings.locator(".course-settings-action", { hasText: "Dropp" }).click();
 
   // Still listed — a dropped programme course never disappears — but off the
@@ -778,7 +798,7 @@ test("drop and restore a programme course", async ({ page }) => {
   await expect(gridBlocks(page).filter({ hasText: code })).toHaveCount(0);
   expect(page.url()).toContain(`-${code}`);
 
-  await row.click();
+  await courseSettingsBtn(page, code).click();
   await settings.locator(".course-settings-action", { hasText: "Legg tilbake" }).click();
   await expect(gridBlocks(page).filter({ hasText: code }).first()).toBeVisible({
     timeout: 30_000,
@@ -798,18 +818,18 @@ test("dropping from a block's settings keeps focus in the document", async ({ pa
   const code = (await gridBlocks(page).first().locator(".planner-block-code").textContent())?.trim() ?? "";
   expect(code).not.toBe("");
 
-  await gridBlocks(page).first().click();
+  await settingsFromBlock(page);
   const settings = page.locator("#planner-course-settings");
-  await expect(settings).toBeVisible();
   await settings.locator(".course-settings-action", { hasText: "Dropp" }).click();
   await expect(settings).toBeHidden();
 
-  // The block that opened the dialog is gone, so the browser's own restore is
-  // a no-op — the course's own row catches focus instead, and it reopens this
-  // dialog, so the undo is one keystroke away.
+  // Whatever opened the dialog is gone — the bar was replaced by the re-render
+  // and the popover it opened was closed on the way through — so the browser's
+  // own restore is a no-op. The course's own row is where focus lands, on the
+  // settings button that reopens the dialog, so the undo is one keystroke away.
   const row = courseRows(page).filter({ hasText: code }).first();
   await expect(row).toHaveClass(/is-dropped/);
-  await expect(row).toBeFocused();
+  await expect(courseSettingsBtn(page, code)).toBeFocused();
   expect(await page.evaluate(() => document.activeElement?.tagName ?? "")).not.toBe("BODY");
 });
 

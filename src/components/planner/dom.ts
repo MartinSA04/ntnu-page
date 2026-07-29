@@ -14,6 +14,36 @@ export function el<K extends keyof HTMLElementTagNameMap>(
   return node;
 }
 
+/**
+ * Lucide's `settings-2` (https://lucide.dev — ISC), inline.
+ *
+ * `Icon.astro` owns the set, but an Astro component cannot be reached from a
+ * module that builds its DOM at runtime — so the one glyph the course rows
+ * need lives here. Keep the two in step if the set changes.
+ */
+export function settingsIcon(): SVGSVGElement {
+  const NS = "http://www.w3.org/2000/svg";
+  const svg = document.createElementNS(NS, "svg");
+  svg.setAttribute("viewBox", "0 0 24 24");
+  svg.setAttribute("fill", "none");
+  svg.setAttribute("stroke", "currentColor");
+  svg.setAttribute("stroke-width", "2");
+  svg.setAttribute("stroke-linecap", "round");
+  svg.setAttribute("aria-hidden", "true");
+  svg.setAttribute("focusable", "false");
+  for (const [tag, attrs] of [
+    ["path", { d: "M20 7h-9" }],
+    ["path", { d: "M14 17H5" }],
+    ["circle", { cx: "17", cy: "17", r: "3" }],
+    ["circle", { cx: "7", cy: "7", r: "3" }],
+  ] as const) {
+    const node = document.createElementNS(NS, tag);
+    for (const [k, v] of Object.entries(attrs)) node.setAttribute(k, String(v));
+    svg.append(node);
+  }
+  return svg;
+}
+
 /** A `.np-dot` square carrying a course hue via the `--dot` custom property. */
 export function dot(hueVar: string): HTMLSpanElement {
   const span = el("span", "np-dot");

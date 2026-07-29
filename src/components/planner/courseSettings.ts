@@ -186,17 +186,19 @@ export function mountCourseSettings(store: PlanStore, signal: AbortSignal): Cour
    * Tab restarts at the skip link (audit a11y-3, which the popover fixed by
    * hand and which came straight back when this became a modal — e2e caught it).
    *
-   * The course's own row in the Emner list is the honest landing place: it is
-   * the surface that still shows the course, and it reopens this dialog, so the
-   * undo is one keystroke away. The week frame is the last resort for a manual
-   * course whose row is gone too.
+   * The course's own settings BUTTON in the Emner list is the honest landing
+   * place: that row still shows the course, and the button reopens this dialog,
+   * so the undo is one keystroke away. The button, not the row — the row is
+   * inert now and `focus()` on it would be the same silent no-op this exists to
+   * avoid. The week frame is the last resort for a manual course whose row is
+   * gone too.
    */
   function restoreFocus(): void {
     if (invoker?.isConnected) return; // the browser's own restore is correct
     const code = current?.code;
     const row = code
       ? document.querySelector<HTMLElement>(
-          `#planner-course-rows .planner-course-row[data-code="${CSS.escape(code)}"]`,
+          `#planner-course-rows .planner-course-open[data-code="${CSS.escape(code)}"]`,
         )
       : null;
     if (row) {

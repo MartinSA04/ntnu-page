@@ -585,3 +585,116 @@
 .course-settings-link:hover {
   color: var(--accent-ink);
 }
+
+/* --- Session popover (REWORK-2026-07-29f) ------------------------------
+   What a bar in the week says when you click it: the facts the bar could not
+   fit, anchored to the bar. A READ surface — the course-settings modal is one
+   button away, but it is no longer what a click on a session opens.
+
+   Non-modal (`show()`, not `showModal()`), so the week stays visible behind
+   it and clicking another bar re-targets the same card. Desktop pins it under
+   the anchor via inline top/left from blockPopover.ts; below 60rem it becomes
+   a bottom sheet, because a floating card that size either clips against an
+   edge or covers the whole viewport. */
+.block-popover {
+  position: fixed;
+  z-index: 40;
+  margin: 0;
+  width: min(20rem, calc(100vw - 2 * var(--space-4)));
+  max-width: calc(100vw - 2 * var(--space-4));
+  max-height: min(70vh, 28rem);
+  overflow-y: auto;
+  padding: var(--space-4);
+  color: var(--fg);
+  box-shadow: var(--shadow-lg);
+}
+
+/* MUST stay qualified on [open]: the UA hides a closed dialog with
+   `dialog:not([open]) { display: none }`, and an author `display` beats a UA
+   one regardless of specificity — an unqualified `display: grid` here would
+   park an empty card on screen from first paint. */
+.block-popover[open] {
+  display: grid;
+  gap: var(--space-2);
+}
+
+@media (max-width: 59.9375rem) {
+  .block-popover {
+    inset-inline: 0;
+    bottom: 0;
+    top: auto;
+    left: 0;
+    width: auto;
+    max-width: none;
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  }
+}
+
+.block-popover-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--gap-3);
+}
+
+.block-popover-title {
+  display: flex;
+  align-items: center;
+  gap: var(--gap-2);
+  min-width: 0;
+  font-size: var(--text-md);
+}
+
+.block-popover-close {
+  flex-shrink: 0;
+  margin: calc(-1 * var(--space-1)) calc(-1 * var(--space-1)) 0 0;
+}
+
+.block-popover-name {
+  margin: 0;
+  color: var(--muted);
+}
+
+/* One fact per line, labelled. At this width a run-on "Forelesning · 08:15–
+   10:00 · R1 · uke 34–47" is the same wall of text the bar was truncating. */
+.block-popover-facts {
+  display: grid;
+  grid-template-columns: 3.2rem minmax(0, 1fr);
+  gap: var(--space-1) var(--gap-3);
+  margin: var(--space-1) 0 0;
+}
+
+.block-popover-label {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  letter-spacing: var(--tracking);
+  text-transform: uppercase;
+  color: var(--faint);
+}
+
+.block-popover-value {
+  margin: 0;
+  font-size: var(--text-sm);
+  overflow-wrap: anywhere;
+}
+
+.block-popover-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--gap-3);
+  margin-top: var(--space-1);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--border);
+}
+
+.block-popover-link {
+  font-size: var(--text-sm);
+  color: var(--muted);
+  text-decoration: none;
+}
+
+.block-popover-link:hover {
+  color: var(--accent-ink);
+}

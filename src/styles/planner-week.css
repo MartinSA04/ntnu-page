@@ -433,6 +433,9 @@
    grid rather than instead of it. */
 .planner-board {
   max-width: 52rem;
+  /* Centred: the list is much narrower than the week above it, and left-
+     aligned it read as if it had come loose from the section. */
+  margin-inline: auto;
   padding-inline-start: 18px;
 }
 
@@ -599,16 +602,28 @@ button.planner-board-row:hover {
     padding-inline-start: 14px;
   }
 
+  /* The room KEEPS the right column on a phone. Dropping it under the name was
+     tried and it buried the one fact you are looking at the list for on the way
+     out of the door; the course name gives up the width instead. */
   .planner-board-row {
-    grid-template-columns: 4.5rem minmax(0, 1fr);
-    gap: 2px var(--gap-3);
+    grid-template-columns: 3.9rem minmax(0, 1fr) auto;
+    gap: 0 var(--gap-3);
   }
 
-  /* The room drops under the name rather than off the row: at 390 px a third
-     column costs more than the alignment it buys. */
-  .planner-board-room {
-    grid-column: 2;
-    text-align: left;
+  .planner-board-from {
     font-size: var(--text-sm);
+  }
+
+  .planner-board-name {
+    font-size: var(--text-sm);
+  }
+
+  .planner-board-room {
+    font-size: var(--text-sm);
+  }
+
+  .planner-board-room.is-long {
+    max-width: 5.5rem;
+    font-size: var(--text-xs);
   }
 }

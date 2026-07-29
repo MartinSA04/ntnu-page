@@ -203,6 +203,13 @@ export interface GridRenderOptions {
    */
   todayNumber?: number | null;
   /**
+   * A margin note naming a course whose groups were narrowed on a guess was
+   * clicked. Distinct from `onBlockClick` because the two ask different
+   * questions: a bar asks "what is this session", a note asks "which group is
+   * mine" — and only the second is an edit.
+   */
+  onChoiceClick?: (code: string) => void;
+  /**
    * Stagger the bars in left-to-right on this render (REWORK-2026-07-29b D4).
    * Set by a view switch, never by a re-render caused by a group pick or a
    * plan edit: replaying the whole week because one checkbox moved is exactly
@@ -1300,21 +1307,13 @@ export function renderGrid(
       link.append(el("span", "np-data", note.code));
       link.append(note.text);
       link.setAttribute("aria-label", note.aria);
-      if (options.onBlockClick) {
-        const detail: BlockDetail = {
-          code: note.code,
-          // A margin note is about a whole course, not a slot — there is no
-          // day to expand, and the caller never reads this for a single code
-          // anyway (it routes on the " · " separator a pile puts in `code`).
-          dayNumber: 0,
-          name: note.name,
-          entryName: null,
-          timeLabel: "",
-          rooms: "",
-          weeksLabel: "",
-          isLecture: false,
-        };
-        link.addEventListener("click", () => options.onBlockClick?.(detail, link));
+      // A margin note is about a whole COURSE — "TMA4400 har fire parallellar,
+      // vel di" — so it opens the group picker, not the session popover a bar
+      // opens. They used to share `onBlockClick`, which sent a note asking you
+      // to choose a group to a read-only card about one session.
+      if (options.onChoiceClick) {
+        const code = note.code;
+        link.addEventListener("click", () => options.onChoiceClick?.(code));
       }
       item.append(link);
       list.append(item);

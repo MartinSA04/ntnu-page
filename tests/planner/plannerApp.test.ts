@@ -282,6 +282,10 @@ function installDom(): void {
     documentElement: new FakeEl("html"),
     activeElement: null as FakeEl | null,
     createElement: (tag: string) => new FakeEl(tag),
+    // The course rows build an inline SVG for their settings control, so the
+    // shim has to answer the namespaced constructor too. Namespace ignored:
+    // nothing here asserts on it, and a FakeEl is all the render path touches.
+    createElementNS: (_ns: string, tag: string) => new FakeEl(tag),
     getElementById: (id: string) =>
       byId.get(id) ?? body.descendants().find((e) => e.id === id) ?? null,
     querySelector: (s: string) => body.querySelector(s),
@@ -803,9 +807,11 @@ describe("mountPlannerApp — audit repro", () => {
     expect(rows.textContent).toContain("se detaljer");
     expect(rows.textContent).not.toContain("fikk ikke hentet");
 
-    const row = rows.descendants().find((e) => e.dataset.code === "TMA4400");
-    expect(row).toBeDefined();
-    row?.click();
+    const open = rows
+      .descendants()
+      .find((e) => e.classList.contains("planner-course-open") && e.dataset.code === "TMA4400");
+    expect(open).toBeDefined();
+    open?.click();
 
     const dialog = body.querySelector(".course-settings");
     expect(dialog?.open).toBe(true);
@@ -835,8 +841,10 @@ describe("mountPlannerApp — audit repro", () => {
     const rows = find("planner-course-rows");
     expect(rows.textContent).toContain("se detaljer");
 
-    const row = rows.descendants().find((e) => e.dataset.code === "TMA4100");
-    row?.click();
+    rows
+      .descendants()
+      .find((e) => e.classList.contains("planner-course-open") && e.dataset.code === "TMA4100")
+      ?.click();
     const dialog = body.querySelector(".course-settings");
     expect(dialog?.textContent).toContain("Ikke undervist i 2026 — sist undervist 2025");
     expect(dialog?.textContent).not.toContain("Fikk ikke hentet");
@@ -903,9 +911,11 @@ describe("mountPlannerApp — audit repro", () => {
     // The row carries no Dropp of its own any more (D3 relaxed §0.3's "one tap
     // to restore" to two) — it opens the settings modal, and the verb is there.
     const rows = find("planner-course-rows");
-    const row = rows.descendants().find((e) => e.dataset.code === "TDT4136");
-    expect(row).toBeDefined();
-    row?.click();
+    const openBtn = rows
+      .descendants()
+      .find((e) => e.classList.contains("planner-course-open") && e.dataset.code === "TDT4136");
+    expect(openBtn).toBeDefined();
+    openBtn?.click();
 
     const dialog = body.querySelector(".course-settings");
     const dropp = dialog
@@ -922,8 +932,12 @@ describe("mountPlannerApp — audit repro", () => {
     expect(dropped?.className).toContain("is-dropped");
     expect(rows.textContent).toContain("droppet");
 
-    // …and the way back is the same row, now offering the reverse verb.
-    dropped?.click();
+    // …and the way back is the same row's settings button, now offering the
+    // reverse verb.
+    rows
+      .descendants()
+      .find((e) => e.classList.contains("planner-course-open") && e.dataset.code === "TDT4136")
+      ?.click();
     const reopened = body.querySelector(".course-settings");
     expect(
       reopened?.descendants().find((e) => e.getAttribute("aria-label") === "Legg tilbake TDT4136"),

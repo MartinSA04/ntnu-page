@@ -281,10 +281,16 @@ function examRow(row: ExamListRow, hueVar: string, scheme: string | null): HTMLL
   what.style.setProperty("--dot", `var(${hueVar})`);
   what.append(el("span", "exam-code np-data", row.code));
   if (scheme) what.append(el("span", "exam-form", scheme));
-  if (row.daysFromToday !== null) {
-    what.append(el("span", "exam-away np-data", daysFromTodayText(row.daysFromToday)));
-  }
   item.append(what);
+
+  // A CELL of the row, not a wrapping tail inside `.exam-what` — as a flex
+  // sibling of the course name it wrapped onto its own line on a phone and
+  // landed between the exam and its own reading-day connector, which read as
+  // if the countdown belonged to the gap. It is a fact about *when*, so on a
+  // narrow screen it sits under the date it counts to.
+  if (row.daysFromToday !== null) {
+    item.append(el("span", "exam-away np-data", daysFromTodayText(row.daysFromToday)));
+  }
   return item;
 }
 
@@ -361,8 +367,8 @@ function datelessRow(code: string, hueVar: string, scheme: string | null): HTMLL
   what.style.setProperty("--dot", `var(${hueVar})`);
   what.append(el("span", "exam-code np-data", code));
   if (scheme) what.append(el("span", "exam-form", scheme));
-  what.append(el("span", "exam-away np-data", "dato ikke satt"));
   item.append(what);
+  item.append(el("span", "exam-away np-data", "dato ikke satt"));
   return item;
 }
 

@@ -54,16 +54,23 @@ import {
   parsePlanHash,
 } from "../../lib/planner/store.js";
 import { type AddCourseDeps, type AddCourseHandle, mountAddCourse } from "./addCourse.js";
+import { mountBlockPopover } from "./blockPopover.js";
 import { renderBoard } from "./board.js";
 import { type CourseSettingsContext, mountCourseSettings } from "./courseSettings.js";
-import { el, formatCreditNumber, formatCredits, formatShortDate } from "./dom.js";
+import { el, formatCreditNumber, formatCredits, formatShortDate, settingsIcon } from "./dom.js";
 import {
   collectExamInputs,
   type ExamRenderResult,
   renderExamList,
   renderExamMessage,
 } from "./examList.js";
-import { type GridRenderResult, renderGrid, renderGridMessage, syncNowMarker } from "./grid.js";
+import {
+  type BlockDetail,
+  type GridRenderResult,
+  renderGrid,
+  renderGridMessage,
+  syncNowMarker,
+} from "./grid.js";
 import {
   type ClassifiedCourse,
   findProgramPlan,
@@ -363,6 +370,26 @@ export async function mountPlannerApp(
     lifeSignal,
   );
   const courseSettings = mountCourseSettings(store, lifeSignal);
+  // A click in the week asks "what is this session", not "let me edit this
+  // course" — so it opens a read popover anchored to the bar, which carries a
+  // way through to the editor rather than being it (REWORK-2026-07-29f).
+  const blockPopover = mountBlockPopover(openCourseSettings, lifeSignal);
+
+  /** Opens the session popover for a clicked bar or board row. */
+  function openBlockPopover(detail: BlockDetail, anchor: HTMLElement): void {
+    const state = courseStates.get(detail.code);
+    const course = plan.courses.find((c) => c.code === detail.code);
+    blockPopover.showFor(
+      {
+        detail,
+        hueVar: state?.hueVar ?? "--muted",
+        courseName: state?.bundle?.details?.courseName ?? course?.name ?? detail.name,
+        source: course?.source ?? "manual",
+        dropped: course?.dropped === true,
+      },
+      anchor,
+    );
+  }
 
   /**
    * The material the course-settings modal opens on, for one course code.
@@ -1267,13 +1294,15 @@ export async function mountPlannerApp(
     for (const course of ordered) {
       const state = courseStates.get(course.code);
       const isDropped = course.source === "program" && course.dropped === true;
-      const row = el("button", `planner-course-row${isDropped ? " is-dropped" : ""}`);
-      row.type = "button";
+      // A row is not a control. It was a full-width `<button>`, which gave the
+      // whole thing a pointer cursor and a hover wash while showing nothing
+      // that looked pressable — so the affordance was a promise the row's
+      // appearance never made. The row is inert now and carries ONE explicit
+      // target: a settings button at its end.
+      const row = el("div", `planner-course-row${isDropped ? " is-dropped" : ""}`);
       row.dataset.code = course.code;
       const details = state?.bundle?.details;
       const name = details?.courseName ?? course.name;
-      row.setAttribute("aria-label", `Innstillinger for ${course.code} ${name}`);
-      row.addEventListener("click", () => openCourseSettings(course.code));
 
       // The chip is the week's own bar at label size: printed hue, code knocked
       // out of it. A course therefore looks the same in the grid, in the exam
@@ -1316,8 +1345,23 @@ export async function mountPlannerApp(
         const credits = state ? creditsOf(state) : (course.credits ?? null);
         if (credits != null) {
           row.append(el("span", "planner-course-sp np-data", `${formatCreditNumber(credits)} sp`));
+        } else {
+          // The column still has to exist, or the settings button jumps left on
+          // the one row whose credits are unknown.
+          row.append(el("span", "planner-course-sp"));
         }
       }
+
+      // The row's ONE target. It was the row itself, which gave the whole thing
+      // a pointer cursor and a hover wash while showing nothing that looked
+      // pressable — an affordance the row's appearance never promised.
+      const open = el("button", "np-icon-btn planner-course-open");
+      open.type = "button";
+      open.dataset.code = course.code;
+      open.setAttribute("aria-label", `Innstillinger for ${course.code} ${name}`);
+      open.append(settingsIcon());
+      open.addEventListener("click", () => openCourseSettings(course.code));
+      row.append(open);
 
       elements.courseRows.append(row);
     }
@@ -1772,7 +1816,7 @@ export async function mountPlannerApp(
         {
           todayNumber: todayWeekday(),
           animate: pendingViewAnimation,
-          onBlockClick: (detail) => openCourseSettings(detail.code),
+          onBlockClick: openBlockPopover,
         },
       );
     } else {
@@ -1781,7 +1825,8 @@ export async function mountPlannerApp(
         pendingChoiceMessage: question?.weekMessage ?? null,
         todayNumber: todayWeekday(),
         animate: pendingViewAnimation,
-        onBlockClick: (detail) => openCourseSettings(detail.code),
+        onBlockClick: openBlockPopover,
+        onChoiceClick: openCourseSettings,
       });
     }
     // The strike-in plays once, on the render a view switch caused — never on
