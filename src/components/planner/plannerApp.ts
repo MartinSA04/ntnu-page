@@ -154,6 +154,7 @@ interface PlannerElements {
   linkNote: HTMLElement;
   creditLine: HTMLElement;
   creditNote: HTMLElement;
+  creditStrip: HTMLElement;
   direction: HTMLElement;
   directionTitle: HTMLElement;
   directionNote: HTMLElement;
@@ -188,6 +189,7 @@ function getElements(): PlannerElements | null {
     linkNote: byId<HTMLElement>("planner-link-note"),
     creditLine: byId<HTMLElement>("planner-credit-line"),
     creditNote: byId<HTMLElement>("planner-credit-note"),
+    creditStrip: byId<HTMLElement>("planner-credit-strip"),
     direction: byId<HTMLElement>("planner-direction"),
     directionTitle: byId<HTMLElement>("planner-direction-title"),
     directionNote: byId<HTMLElement>("planner-direction-note"),
@@ -798,7 +800,52 @@ export async function mountPlannerApp(
     };
   }
 
+  /**
+   * The load strip: the semester's 30 credits as a track, each counted course a
+   * segment in its own printed hue, its width its own credits
+   * (REWORK-2026-07-29d).
+   *
+   * It does for credits what the exam band does for the exam period — answers
+   * the section's own question before a row is read — so the two sections end
+   * up the same shape, and a colour means one thing in three places: the bar in
+   * the week, the cell in the band, the segment here.
+   *
+   * Only what the TOTAL counts: an off-semester course is excluded from the
+   * figure (DR-10), so drawing it in the strip would make the segments and the
+   * number disagree. A 0 sp course cannot be drawn in a strip about credits at
+   * all — it is a real course and it is in the list; it is simply not a load.
+   */
+  function renderCreditStrip(): void {
+    const counted = orderedActiveStates().filter(
+      (state) => !isOffSemester(state) && (creditsOf(state) ?? 0) > 0,
+    );
+    elements.creditStrip.replaceChildren();
+    elements.creditStrip.hidden = counted.length === 0;
+    if (counted.length === 0) return;
+
+    const track = el("div", "planner-load-track");
+    let total = 0;
+    for (const state of counted) {
+      const credits = creditsOf(state) ?? 0;
+      total += credits;
+      const seg = el("span", "planner-load-seg");
+      seg.style.flexGrow = String(credits);
+      seg.style.setProperty("--dot", `var(${state.hueVar})`);
+      seg.title = `${state.course.code} · ${formatCreditNumber(credits)} sp`;
+      track.append(seg);
+    }
+    // The gap to a full load is drawn as empty track, not as another segment:
+    // it is the absence of a course, and it must not read as one.
+    if (total < FULL_LOAD_CREDITS) {
+      const rest = el("span", "planner-load-rest");
+      rest.style.flexGrow = String(FULL_LOAD_CREDITS - total);
+      track.append(rest);
+    }
+    elements.creditStrip.append(track);
+  }
+
   function renderCreditLine(): void {
+    renderCreditStrip();
     const summary = creditSummary();
     if (summary.loading) {
       elements.creditLine.textContent = "henter …";
@@ -1222,41 +1269,49 @@ export async function mountPlannerApp(
       row.setAttribute("aria-label", `Innstillinger for ${course.code} ${name}`);
       row.addEventListener("click", () => openCourseSettings(course.code));
 
-      const head = el("span", "planner-course-row-head");
-      if (state && !isDropped) {
-        const dotEl = el("span", "np-dot");
-        dotEl.style.setProperty("--dot", `var(${state.hueVar})`);
-        head.append(dotEl);
-      }
-      head.append(el("span", "np-data", course.code));
-      row.append(head);
+      // The chip is the week's own bar at label size: printed hue, code knocked
+      // out of it. A course therefore looks the same in the grid, in the exam
+      // band and here, and the colour is learned once. A dropped course keeps
+      // the chip's shape and loses its fill (CSS), so the row reads as switched
+      // off rather than as missing.
+      const chip = el("span", "planner-course-chip np-data", course.code);
+      if (state) chip.style.setProperty("--dot", `var(${state.hueVar})`);
+      row.append(chip);
 
-      row.append(el("span", "planner-course-row-name", name));
+      const nameCell = el("span", "planner-course-name");
+      nameCell.append(el("span", "planner-course-title", name));
+      row.append(nameCell);
 
-      const meta = el("span", "planner-course-row-meta");
+      // Right-aligned in its own column so the figures stack into something a
+      // student can add up by eye — which is the whole reason this list quotes
+      // credits at all.
       if (isDropped) {
         // The one status a row still says for itself: a dropped course is
         // excluded from the week, the credits and the exams, so a grayed row
         // with no explanation is a course that looks broken (§0.3).
-        meta.append(el("span", "np-note", "droppet"));
+        row.append(el("span", "planner-course-sp np-data", "droppet"));
       } else {
-        const credits = state ? creditsOf(state) : (course.credits ?? null);
-        if (credits != null) {
-          meta.append(el("span", "np-data", `${formatCreditNumber(credits)} sp`));
-        }
-        // A course the week cannot draw gets ONE mark here, not the sentence —
-        // the sentence is in the modal this row opens. Without the mark a
-        // course that is silently missing from the week looks like every other
-        // row (crawler-3/S13/pd-5).
+        // A course the week cannot draw gets ONE mark, not the sentence — the
+        // sentence is in the modal this row opens. Without it a course that is
+        // silently missing from the week looks like every other row
+        // (crawler-3/S13/pd-5).
+        //
+        // It goes UNDER THE NAME, not in the credit column. Putting it there
+        // was tried and it ate the figure: a flagged course showed "se
+        // detaljer" where its credits belong, so the one course whose credits
+        // you might question was the one course that would not quote them.
         const needsAttention =
           notTaughtIn(course.code) !== null ||
           (state !== undefined && isOffSemester(state)) ||
           (state?.bundle?.errors.length ?? 0) > 0;
         if (needsAttention) {
-          meta.append(el("span", "np-note planner-course-row-flag", "se detaljer"));
+          nameCell.append(el("span", "planner-course-flag np-data", "se detaljer"));
+        }
+        const credits = state ? creditsOf(state) : (course.credits ?? null);
+        if (credits != null) {
+          row.append(el("span", "planner-course-sp np-data", `${formatCreditNumber(credits)} sp`));
         }
       }
-      row.append(meta);
 
       elements.courseRows.append(row);
     }

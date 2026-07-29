@@ -66,9 +66,10 @@ async function settledVerdict(page: Page, timeout = 45_000): Promise<string> {
   return text;
 }
 
-/** The course code of each row, read from the row's own `.np-data` head span (never its meta/credits spans). */
+/** The course code of each row, read from its printed chip — never from the
+ *  credit column, which is `.np-data` too. */
 function courseCodesOf(page: Page): Promise<string[]> {
-  return page.locator("#planner-course-rows .planner-course-row-head .np-data").allTextContents();
+  return page.locator("#planner-course-rows .planner-course-chip").allTextContents();
 }
 
 test("onboarding: modal → programme + kull + retning → a full week", async ({ page }) => {
