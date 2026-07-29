@@ -237,6 +237,7 @@ const IDS = [
   "planner-direction-actions",
   "planner-direction-btn",
   "planner-others-toggle",
+  "planner-day-strip",
   "planner-scroll-hint",
   "planner-grid-frame",
   "planner-grid-notes",
@@ -255,11 +256,6 @@ const IDS = [
 
 let byId: Map<string, FakeEl>;
 let body: FakeEl;
-/** The shim's `document`, for the handful of assertions that read `activeElement`. */
-function activeElement(): FakeEl | null {
-  return (globalThis as unknown as { document: { activeElement: FakeEl | null } }).document
-    .activeElement;
-}
 let replaceStateCalls: { state: unknown; url: string }[] = [];
 let winListeners: Map<string, ((e: unknown) => void)[]> = new Map();
 let planStorage: Map<string, string>;
@@ -783,7 +779,7 @@ describe("mountPlannerApp — audit repro", () => {
     expect(planStorage.get("np:plans") ?? "").not.toContain("TDT4136");
   });
 
-  it("pd-5: a failed course row carries its own Prøv igjen", async () => {
+  it("pd-5: a failed course's settings carry its own Prøv igjen", async () => {
     await mount(
       {
         "/data/search-index.json": () => ({ year: 2026, courses: [] }),
@@ -800,14 +796,26 @@ describe("mountPlannerApp — audit repro", () => {
       },
       "#26h;-;%2BTDT4109,%2BTMA4400",
     );
+    // REWORK-2026-07-29 D2/D1: the row itself is identity plus one mark that
+    // there is something to read; the sentence and the retry live in the
+    // settings modal the row opens.
     const rows = find("planner-course-rows");
-    const buttons = rows
-      .descendants()
+    expect(rows.textContent).toContain("se detaljer");
+    expect(rows.textContent).not.toContain("fikk ikke hentet");
+
+    const row = rows.descendants().find((e) => e.dataset.code === "TMA4400");
+    expect(row).toBeDefined();
+    row?.click();
+
+    const dialog = body.querySelector(".course-settings");
+    expect(dialog?.open).toBe(true);
+    const buttons = dialog
+      ?.descendants()
       .filter((e) => e.tagName === "BUTTON" && e.textContent === "Prøv igjen");
-    expect(buttons.length).toBe(1);
-    // copy-2: nothing in the rail is upstream English.
-    expect(rows.textContent).toContain("fikk ikke hentet timeplan: NTNU svarte ikke");
-    expect(rows.textContent).not.toMatch(/Not found|Failed to fetch|boom|Internal/);
+    expect(buttons?.length).toBe(1);
+    // copy-2: nothing on the surface is upstream English.
+    expect(dialog?.textContent).toContain("Fikk ikke hentet timeplan: NTNU svarte ikke");
+    expect(dialog?.textContent).not.toMatch(/Not found|Failed to fetch|boom|Internal/);
   });
 
   it("crawler-3: a course this year's catalog does not carry says so, not 'fikk ikke hentet'", async () => {
@@ -822,9 +830,16 @@ describe("mountPlannerApp — audit repro", () => {
       },
       "#26h;-;%2BTMA4100",
     );
+    // The row flags that there is something to read; the sentence itself is in
+    // the settings modal (D2).
     const rows = find("planner-course-rows");
-    expect(rows.textContent).toContain("ikke undervist i 2026 · sist undervist 2025");
-    expect(rows.textContent).not.toContain("fikk ikke hentet");
+    expect(rows.textContent).toContain("se detaljer");
+
+    const row = rows.descendants().find((e) => e.dataset.code === "TMA4100");
+    row?.click();
+    const dialog = body.querySelector(".course-settings");
+    expect(dialog?.textContent).toContain("Ikke undervist i 2026 — sist undervist 2025");
+    expect(dialog?.textContent).not.toContain("Fikk ikke hentet");
   });
 
   it("app-3: the link note stops naming a semester after the student switches", async () => {
@@ -850,7 +865,7 @@ describe("mountPlannerApp — audit repro", () => {
     expect(note.hidden).toBe(true);
   });
 
-  it("app-4: Dropp leaves focus on the same course's Legg tilbake", async () => {
+  it("app-4/D3: Dropp lives in the course's settings, and the row says it is dropped", async () => {
     await mount(
       {
         "/data/search-index.json": () => ({ year: 2026, courses: [] }),
@@ -885,16 +900,34 @@ describe("mountPlannerApp — audit repro", () => {
       },
       "#26h;MTDT.2026;",
     );
+    // The row carries no Dropp of its own any more (D3 relaxed §0.3's "one tap
+    // to restore" to two) — it opens the settings modal, and the verb is there.
     const rows = find("planner-course-rows");
-    const dropp = rows.descendants().find((e) => e.getAttribute("aria-label") === "Dropp TDT4136");
+    const row = rows.descendants().find((e) => e.dataset.code === "TDT4136");
+    expect(row).toBeDefined();
+    row?.click();
+
+    const dialog = body.querySelector(".course-settings");
+    const dropp = dialog
+      ?.descendants()
+      .find((e) => e.getAttribute("aria-label") === "Dropp TDT4136");
     expect(dropp).toBeDefined();
-    dropp?.focus();
     dropp?.click();
     for (let i = 0; i < 5; i++) await new Promise((r) => setTimeout(r, 0));
 
-    // The row was rebuilt around the pressed button; focus used to fall to <body>.
-    const active = activeElement();
-    expect(active?.getAttribute("aria-label")).toBe("Legg tilbake TDT4136");
+    // The action closes the modal (the course it edits is no longer on screen)
+    // and the row stays, grayed and saying so — §0.3's visible, reversible drop.
+    expect(dialog?.open).toBe(false);
+    const dropped = rows.descendants().find((e) => e.dataset.code === "TDT4136");
+    expect(dropped?.className).toContain("is-dropped");
+    expect(rows.textContent).toContain("droppet");
+
+    // …and the way back is the same row, now offering the reverse verb.
+    dropped?.click();
+    const reopened = body.querySelector(".course-settings");
+    expect(
+      reopened?.descendants().find((e) => e.getAttribute("aria-label") === "Legg tilbake TDT4136"),
+    ).toBeDefined();
   });
 
   it("store-4: a reload from the hash keeps the study plan's credits on disk", async () => {

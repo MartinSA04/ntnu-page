@@ -461,20 +461,20 @@
   align-self: flex-start;
 }
 
-/* --- Block popover (Task 8) -------------------------------------------
-   Non-modal <dialog> (.show(), not .showModal()) so the grid stays
-   interactive behind it — there is no ::backdrop to style here. Desktop
-   pins it near the clicked block via inline top/left set in popover.ts;
-   below 60rem (plannerApp's own side-by-side/tab-switch cutoff) it becomes
-   a bottom sheet instead, since a floating card that size would either
-   clip against an edge or cover the whole phone viewport. */
-.planner-popover {
-  position: fixed;
-  z-index: 40;
-  margin: 0;
-  width: min(22rem, calc(100vw - 2 * var(--space-4)));
+/* --- Course settings (REWORK-2026-07-29 D1) ----------------------------
+   The one surface a planned course is configured on, opened from a course
+   row in the Emner list and from any block in the week or day view.
+
+   A real modal, unlike the anchored popover it replaces: centered by the UA,
+   so the grid re-rendering underneath a group pick can no longer knock it out
+   of position, and Esc/backdrop/focus-return are native. That is why there is
+   no inline top/left here and no bottom-sheet branch — the same centered card
+   works at every width, it just gets narrower. */
+.course-settings {
+  margin: auto;
+  width: min(26rem, calc(100vw - 2 * var(--space-4)));
   max-width: calc(100vw - 2 * var(--space-4));
-  max-height: min(70vh, 32rem);
+  max-height: min(80vh, 40rem);
   overflow-y: auto;
   padding: var(--space-4);
   color: var(--fg);
@@ -484,59 +484,62 @@
 /* MUST stay qualified on [open]. The UA stylesheet hides a closed dialog with
    `dialog:not([open]) { display: none }`, but an author `display` declaration
    beats a UA one regardless of specificity — so an unqualified `display: flex`
-   here pinned the popover on screen permanently. Esc, outside-click and the ×
-   all really did call `dialog.close()`; the box just never went away, which is
-   what made the popover read as impossible to close. Below 60rem it was worse
-   still: an empty bottom sheet parked across the foot of the viewport from
-   first paint, before any block had been clicked. */
-.planner-popover[open] {
+   here would pin the card on screen permanently, which is exactly how the
+   popover this replaces once read as impossible to close. */
+.course-settings[open] {
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
 }
 
-@media (max-width: 59.9375rem) {
-  .planner-popover {
-    inset-inline: 0;
-    bottom: 0;
-    top: auto;
-    left: 0;
-    width: auto;
-    max-width: none;
-    max-height: min(70vh, 32rem);
-    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
-  }
+.course-settings::backdrop {
+  background: color-mix(in srgb, var(--fg) 32%, transparent);
 }
 
 /* Title and its close button on one line — the button never wraps below the
    title, and a long "TDT4100 · Objektorientert programmering" never pushes it
    off the edge. */
-.planner-popover-head {
+.course-settings-head {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
   gap: var(--gap-3);
 }
 
-.planner-popover-title {
+.course-settings-title {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: var(--gap-2);
   min-width: 0;
+  font-size: var(--text-md);
   overflow-wrap: anywhere;
 }
 
-.planner-popover-close {
+.course-settings-name {
+  font-weight: var(--weight-normal);
+  color: var(--muted);
+}
+
+.course-settings-close {
   flex-shrink: 0;
   /* Nudged into the frame's own padding so the × sits on the corner rather
      than indented from it. */
   margin: calc(-1 * var(--space-1)) calc(-1 * var(--space-1)) 0 0;
 }
 
-.planner-popover-groups {
+.course-settings-facts,
+.course-settings-note {
+  margin: 0;
+}
+
+.course-settings-groups {
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
 }
 
-.planner-popover-group-list {
+.course-settings-group-list {
   display: flex;
   flex-direction: column;
   gap: var(--space-1);
@@ -547,7 +550,7 @@
    input, a 24.8 px pitch between "Mattelab 1" and "Mattelab 2" on a touch
    screen where every other control is 44 (mob-6). The token already carries
    the touch value, so no media query is needed. */
-.planner-popover-group-row {
+.course-settings-group-row {
   display: flex;
   align-items: center;
   gap: var(--gap-2);
@@ -556,17 +559,14 @@
   cursor: pointer;
 }
 
-.planner-popover-group-row input {
+.course-settings-group-row input {
   flex: none;
   width: 1.15rem;
   height: 1.15rem;
   accent-color: var(--accent);
 }
 
-/* Wraps because a PILE's popover puts one "Gå til emnesiden" link per course
-   in this row, and three of them overflowed the bottom sheet sideways below
-   60rem. Harmless for the ordinary course popover's [button, link] pair. */
-.planner-popover-actions {
+.course-settings-actions {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -576,12 +576,12 @@
   border-top: 1px solid var(--border);
 }
 
-.planner-popover-link {
+.course-settings-link {
   font-size: var(--text-sm);
   color: var(--muted);
   text-decoration: none;
 }
 
-.planner-popover-link:hover {
+.course-settings-link:hover {
   color: var(--accent-ink);
 }

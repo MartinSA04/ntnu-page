@@ -54,15 +54,15 @@ import {
   parsePlanHash,
 } from "../../lib/planner/store.js";
 import { type AddCourseDeps, type AddCourseHandle, mountAddCourse } from "./addCourse.js";
-import { el, formatCreditNumber, formatCredits, formatShortDate } from "./dom.js";
+import { type CourseSettingsContext, mountCourseSettings } from "./courseSettings.js";
+import { dayName, el, formatCreditNumber, formatCredits, formatShortDate } from "./dom.js";
 import {
   collectExamInputs,
   type ExamRenderResult,
   renderExamList,
   renderExamMessage,
 } from "./examList.js";
-import { type BlockDetail, type GridRenderResult, renderGrid, renderGridMessage } from "./grid.js";
-import { type BlockPopoverContext, mountBlockPopover } from "./popover.js";
+import { type GridRenderResult, renderGrid, renderGridMessage } from "./grid.js";
 import {
   type ClassifiedCourse,
   findProgramPlan,
@@ -132,6 +132,7 @@ interface PlannerElements {
   directionActions: HTMLElement;
   directionButton: HTMLButtonElement;
   othersToggle: HTMLButtonElement;
+  dayStrip: HTMLElement;
   scrollHint: HTMLElement;
   gridFrame: HTMLElement;
   gridNotes: HTMLElement;
@@ -167,6 +168,7 @@ function getElements(): PlannerElements | null {
     directionActions: byId<HTMLElement>("planner-direction-actions"),
     directionButton: byId<HTMLButtonElement>("planner-direction-btn"),
     othersToggle: byId<HTMLButtonElement>("planner-others-toggle"),
+    dayStrip: byId<HTMLElement>("planner-day-strip"),
     scrollHint: byId<HTMLElement>("planner-scroll-hint"),
     gridFrame: byId<HTMLElement>("planner-grid-frame"),
     gridNotes: byId<HTMLElement>("planner-grid-notes"),
@@ -320,26 +322,42 @@ export async function mountPlannerApp(
   const lifeSignal = signal ?? new AbortController().signal;
 
   // The studieinfo modal owns all four plan choices (programme/kull/retning/
-  // semester); the block popover owns per-block group selection. Both hang off
-  // the single store this app owns — one mount each. The modal opens from the
+  // semester); the course-settings modal owns everything per-course — group
+  // selection AND drop/remove (REWORK-2026-07-29 D1/D3). Both hang off the
+  // single store this app owns — one mount each. Studieinfo opens from the
   // banner "Endre" button, the week's studieretning question, every empty-state
   // button, the OPEN_STUDIEINFO event (Layout chip) and the `?studieinfo` query
-  // param handled at the end of mount.
+  // param handled at the end of mount; course settings from a course row and
+  // from any block in the week or day view.
   const studieinfo = mountStudieinfo(
     { store, semesters, programOptions, defaultSemesterId },
     lifeSignal,
   );
-  const popover = mountBlockPopover(store, lifeSignal);
+  const courseSettings = mountCourseSettings(store, lifeSignal);
 
   /**
-   * The material a clicked block hands the popover.
+   * The material the course-settings modal opens on, for one course code.
+   *
+   * Keyed by CODE, not by a clicked block: both entrances — a course row in
+   * the Emner list and a block in the week/day grid — reach the same course
+   * the same way, and the row has no block to hand over (REWORK-2026-07-29
+   * D1). That is the point of the rewrite: a course whose sessions were
+   * swallowed by a pile, or which has no timetable at all, is now reachable.
+   *
+   * A course with no timetable yet still opens: it has no group picker, but it
+   * does have credits, its status notes and its drop/remove action, and those
+   * are exactly what a student wants from a course the week cannot draw. So
+   * does a DROPPED programme course, which has no `PlanCourseState` at all
+   * (`syncCourseStates` tracks the active courses only) — and it has to, since
+   * "Legg tilbake" is now the modal's job (D3). `null` comes back only for a
+   * code that is not in the plan at all.
    *
    * The picker lists the groups this student could plausibly be in, not every
    * group the course publishes all year: this semester's weeks, and — for the
    * øving/lab layer — the programme's own sections. EXPH0300 for an MTTK
    * student listed 44 rows across Trondheim, Gjøvik and Ålesund, which on a
-   * phone put the popover's own Dropp/emneside actions ~1 000 px below the fold
-   * behind seminar groups in another city; it now lists 17 (groups-4/groups-3).
+   * phone put the Dropp/emneside actions ~1 000 px below the fold behind
+   * seminar groups in another city; it now lists 17 (groups-4/groups-3).
    * `entriesForProgram` is a no-op for a course that never names the
    * programme, so an ordinary course still lists everything it has.
    *
@@ -347,27 +365,50 @@ export async function mountPlannerApp(
    * narrowing says — an explicit pick beats the programme filter in
    * `applyGroupSelection` (groups.ts), so the control that unticks it has to
    * stay reachable.
-   *
-   * A pile's joined codes (`"TDT4100 · TMA4100"`, real course codes never
-   * contain " · ") match no single course — that gets the `kind: "info"`
-   * context instead (Task 12): the popover still opens with the pile's own
-   * facts, just without a group section or dropp/fjern actions, neither of
-   * which means anything for a joint pile of courses. A `null` timetable
-   * (bundle not loaded yet) still returns `null` — no popover — same as before.
    */
-  function buildPopoverContext(
-    detail: BlockDetail,
-    states: PlanCourseState[],
-  ): BlockPopoverContext | null {
-    const state = states.find((s) => s.course.code === detail.code);
+  function buildCourseSettingsContext(code: string): CourseSettingsContext | null {
+    const course = plan.courses.find((c) => c.code === code);
+    if (!course) return null;
+    const state = courseStates.get(code) ?? null;
+
+    // The status sentences the course row used to concatenate into one
+    // run-on meta line (D2). They live here now, one per line.
+    const notes: string[] = [];
+    const stale = notTaughtIn(code);
+    if (stale) {
+      notes.push(`Ikke undervist i ${stale.year} — sist undervist ${stale.lastYear}.`);
+    } else if (state) {
+      if (isOffSemester(state)) notes.push("Undervises ikke i valgt semester.");
+      // `errors` is Norwegian on both sides of the colon (data.ts's
+      // `failureMessage`); the raw upstream English lives on `.detail` and is
+      // never rendered (copy-2).
+      for (const error of state.bundle?.errors ?? []) notes.push(`Fikk ikke hentet ${error}.`);
+    }
+    const failed = !stale && (state?.bundle?.errors.length ?? 0) > 0;
+
+    const base = {
+      code,
+      name: state?.bundle?.details?.courseName ?? course.name,
+      // A dropped course has no state and therefore no assigned hue — it is
+      // excluded from the week, the credit total and the exam list, which is
+      // what the hue ramp indexes. The dot still has to resolve to a colour.
+      hueVar: state?.hueVar ?? "--muted",
+      credits: state ? creditsOf(state) : (course.credits ?? null),
+      source: course.source,
+      dropped: course.dropped === true,
+      notes,
+      onRetry: failed ? () => retryCourse(code) : null,
+    };
+
     const timetable = state?.bundle?.timetable;
     if (!state || !timetable) {
-      return detail.code.includes(" · ") ? { kind: "info", detail } : null;
+      return { ...base, groups: [], selected: course.groups ?? [], defaults: [] };
     }
+
     // `defaults` is read off exactly the set the GRID narrows — the week's
     // entries, programme narrowing left to `applyGroupSelection` (groups.ts) —
     // so the picker's ticked default is the block on screen. Its LENGTH also
-    // decides radios vs checkboxes in the popover, so it must stay
+    // decides radios vs checkboxes, so it must stay
     // `resolveLectureDefaults(...).keys` verbatim (groups-2/groups-3).
     // `resolved` travels with it so the picker can stop labelling a
     // provisional pick "(din parallell)" — for BDIGSEC/EXPH0300 the week draws
@@ -393,8 +434,7 @@ export async function mountPlannerApp(
         .map((o) => o.key),
     );
     return {
-      kind: "course",
-      detail,
+      ...base,
       // From the YEAR's options, so a pick made for another semester (or one
       // upstream has since retitled) is still listed and can be unticked.
       groups: groupOptions(timetable).filter(
@@ -405,9 +445,13 @@ export async function mountPlannerApp(
       selected,
       defaults: lectures.keys,
       resolved: lectures.resolved,
-      source: state.course.source,
-      dropped: state.course.dropped === true,
     };
+  }
+
+  /** Opens the settings modal for one course, from either entrance. */
+  function openCourseSettings(code: string): void {
+    const ctx = buildCourseSettingsContext(code);
+    if (ctx) courseSettings.showFor(ctx);
   }
 
   /** One line explaining what we did with a link we could not honour (C4). */
@@ -529,6 +573,20 @@ export async function mountPlannerApp(
   /** Lazy by-code lookup over the raw index (`offeredYears` etc.). Reset with the index. */
   let indexByCodeMemo: Map<string, PlannerIndexCourse> | null = null;
   let showOthers = false;
+  /**
+   * The weekday the grid expands to full width, or `null` for the whole week
+   * (REWORK-2026-07-29 D4). Deliberately NOT persisted — not in the hash, not
+   * in storage: it is a way of looking at the plan, not part of it, and a
+   * shared link that opened on someone else's Thursday would be a worse
+   * answer to "here is my week" than the week itself.
+   */
+  let focusDay: number | null = null;
+  /**
+   * What the grid on screen is currently showing, so the next render can
+   * animate from it (`GridRenderOptions.previousFocusDay`). Distinct from
+   * `focusDay`, which is already the *target* by the time a render runs.
+   */
+  let renderedFocusDay: number | null = null;
   let periodCourses: PeriodCourses | null = null;
   let studyPlanFetchToken = 0;
   /** `true` once a study plan is loaded but has no period for this semester (B4). */
@@ -812,6 +870,52 @@ export async function mountPlannerApp(
   elements.tabWeek.addEventListener("click", () => setRegion("week"));
   elements.tabCourses.addEventListener("click", () => setRegion("courses"));
 
+  // --- Week ⇄ day (REWORK-2026-07-29 D4) ----------------------------------
+
+  /**
+   * Switches the week between the five-day spread and one expanded day.
+   *
+   * Only the grid is re-rendered: the exam list, the credit line and the
+   * course rows are the same whichever day is on screen, and rebuilding them
+   * would throw away the student's scroll position for a change they did not
+   * ask those surfaces to make.
+   */
+  function setFocusDay(day: number | null): void {
+    if (focusDay === day) return;
+    focusDay = day;
+    renderGridAndExams();
+  }
+
+  /**
+   * `Uke · Man · Tir …` above the grid — the entrance the day headers
+   * duplicate for a student already looking at a day, and the only way *back*
+   * to the week that does not require finding the header of the day you
+   * happen to be on.
+   *
+   * `dayCount` is the grid's OWN count (`GridRenderResult.dayCount`), not a
+   * second copy of its Saturday rule here, so the strip can never offer a day
+   * the grid has no column for. A message branch reports 0 — the week has
+   * nothing to look at one day of, so the strip goes away entirely rather than
+   * offering six buttons over a sentence.
+   */
+  function renderDayStrip(dayCount: number): void {
+    elements.dayStrip.replaceChildren();
+    elements.dayStrip.hidden = dayCount === 0;
+    if (dayCount === 0) return;
+    const makeButton = (label: string, ariaLabel: string, target: number | null): void => {
+      const button = el("button", "np-toggle planner-day-btn", label);
+      button.type = "button";
+      button.setAttribute("aria-label", ariaLabel);
+      button.setAttribute("aria-pressed", String(focusDay === target));
+      button.addEventListener("click", () => setFocusDay(target));
+      elements.dayStrip.append(button);
+    };
+    makeButton("Uke", "Vis hele uka", null);
+    for (let day = 1; day <= dayCount; day++) {
+      makeButton(dayName(day).slice(0, 3), `Vis bare ${dayName(day)}`, day);
+    }
+  }
+
   // --- Programme / kull / retning / semester: the studieinfo modal --------
   //
   // All four plan choices live in the one studieinfo modal, and exactly one
@@ -1067,20 +1171,22 @@ export async function mountPlannerApp(
   // --- Render: EMNER course rows ------------------------------------------
 
   /**
-   * Whose row action to re-focus after the next `renderCourseRows` (app-4).
-   * Dropp/Legg tilbake/Fjern all write to the store, which re-renders the rail
-   * and `replaceChildren`s away the very button that was just activated — so
-   * keyboard focus fell to `<body>` with nothing announced, and the "one tap
-   * back" §0.3 promises was a full tab cycle away. popover.ts restores focus
-   * the same way after its own edits.
-   */
-  let pendingFocusCode: string | null = null;
-
-  /**
    * The plan itself, and nothing else: courses being taken, plus programme
-   * courses the student dropped (grayed, one tap back — §0.3). The study
-   * plan's choice pool deliberately does *not* live here; at 30–60 rows it
-   * would bury the six courses this list exists to show.
+   * courses the student dropped (grayed — §0.3). The study plan's choice pool
+   * deliberately does *not* live here; at 30–60 rows it would bury the six
+   * courses this list exists to show.
+   *
+   * A row is identity and nothing else — hue dot, code, name, credits
+   * (REWORK-2026-07-29 D2). What it used to also carry has moved:
+   * vurderingsform to the exam list (D6), and the run-on status line, the
+   * retry and the Dropp/Fjern button into the settings modal the whole row now
+   * opens (D1/D3). "Which parallel am I in" was considered for this line and
+   * cut by the user: once it is set, nobody looks at it again.
+   *
+   * The row is a `<button>`, so it is one tab stop with one action, and
+   * `pendingFocusCode` — the dance that put focus back on a row action the
+   * rebuild had just destroyed (app-4) — is gone with the action itself. A
+   * drop now happens inside a modal that closes onto its own invoker.
    */
   function renderCourseRows(): void {
     elements.courseRows.replaceChildren();
@@ -1097,7 +1203,13 @@ export async function mountPlannerApp(
     for (const course of ordered) {
       const state = courseStates.get(course.code);
       const isDropped = course.source === "program" && course.dropped === true;
-      const row = el("div", `planner-course-row${isDropped ? " is-dropped" : ""}`);
+      const row = el("button", `planner-course-row${isDropped ? " is-dropped" : ""}`);
+      row.type = "button";
+      row.dataset.code = course.code;
+      const details = state?.bundle?.details;
+      const name = details?.courseName ?? course.name;
+      row.setAttribute("aria-label", `Innstillinger for ${course.code} ${name}`);
+      row.addEventListener("click", () => openCourseSettings(course.code));
 
       const head = el("span", "planner-course-row-head");
       if (state && !isDropped) {
@@ -1108,101 +1220,34 @@ export async function mountPlannerApp(
       head.append(el("span", "np-data", course.code));
       row.append(head);
 
-      const details = state?.bundle?.details;
-      row.append(el("span", "planner-course-row-name", details?.courseName ?? course.name));
-
-      // "Fjern" used to label both a reversible programme drop and an outright
-      // delete. §0.3's verb for the reversible one is "Dropp" (D3).
-      const isProgram = course.source === "program";
-      const label = isProgram ? (isDropped ? "Legg tilbake" : "Dropp") : "Fjern";
-      const action = el("button", "np-btn planner-course-remove", label);
-      action.type = "button";
-      action.setAttribute("aria-label", `${label} ${course.code}`);
-      // The rebuilt row's own button is found by code, not by the aria-label
-      // (which flips Dropp ⇄ Legg tilbake) — popover.ts still matches the
-      // label suffix for its fallback, so both stay.
-      action.dataset.code = course.code;
-      if (isProgram) {
-        action.addEventListener("click", () => {
-          pendingFocusCode = course.code;
-          if (isDropped) store.restoreCourse(course.code);
-          else store.dropCourse(course.code);
-        });
-      } else {
-        action.addEventListener("click", () => {
-          pendingFocusCode = course.code;
-          store.removeCourse(course.code);
-        });
-      }
-      row.append(action);
+      row.append(el("span", "planner-course-row-name", name));
 
       const meta = el("span", "planner-course-row-meta");
       if (isDropped) {
-        meta.append(el("span", undefined, "droppet — fortsatt en del av programmet"));
+        // The one status a row still says for itself: a dropped course is
+        // excluded from the week, the credits and the exams, so a grayed row
+        // with no explanation is a course that looks broken (§0.3).
+        meta.append(el("span", "np-note", "droppet"));
       } else {
         const credits = state ? creditsOf(state) : (course.credits ?? null);
         if (credits != null) {
           meta.append(el("span", "np-data", `${formatCreditNumber(credits)} sp`));
         }
-        meta.append(el("span", undefined, isProgram ? "fra programmet" : "lagt til selv"));
-        if (details?.assessmentScheme) {
-          meta.append(el("span", undefined, details.assessmentScheme));
-        }
-        if (state && isOffSemester(state)) {
-          meta.append(el("span", undefined, "undervises ikke i valgt semester"));
-        }
-        // A course the catalog does not list for this year has nothing to
-        // fetch: `/api/course/TMA4100` 404s and the row used to print the
-        // failure as if the network had blinked. Say the true thing instead,
-        // in the same words /emne/[code]/ uses (crawler-3/S13).
-        const stale = notTaughtIn(course.code);
-        if (stale) {
-          meta.append(
-            el(
-              "span",
-              undefined,
-              `ikke undervist i ${stale.year} · sist undervist ${stale.lastYear}`,
-            ),
-          );
-        } else {
-          // `errors` is Norwegian on both sides of the colon (data.ts's
-          // `failureMessage`); the raw upstream English lives on `.detail` and
-          // is never rendered (copy-2).
-          for (const error of state?.bundle?.errors ?? []) {
-            meta.append(el("span", undefined, `fikk ikke hentet ${error}`));
-          }
-          // A transient blip used to be terminal for the session: the memo held
-          // the failed bundle and the only retry was mounted in a fallback
-          // branch a partial failure never reaches (pd-5). The failed bundle is
-          // no longer memoised, so resetting this one state really refetches.
-          if ((state?.bundle?.errors.length ?? 0) > 0) {
-            const retry = el("button", "np-btn planner-course-retry", "Prøv igjen");
-            retry.type = "button";
-            retry.setAttribute("aria-label", `Prøv å hente ${course.code} på nytt`);
-            retry.addEventListener("click", () => retryCourse(course.code));
-            meta.append(retry);
-          }
+        // A course the week cannot draw gets ONE mark here, not the sentence —
+        // the sentence is in the modal this row opens. Without the mark a
+        // course that is silently missing from the week looks like every other
+        // row (crawler-3/S13/pd-5).
+        const needsAttention =
+          notTaughtIn(course.code) !== null ||
+          (state !== undefined && isOffSemester(state)) ||
+          (state?.bundle?.errors.length ?? 0) > 0;
+        if (needsAttention) {
+          meta.append(el("span", "np-note planner-course-row-flag", "se detaljer"));
         }
       }
       row.append(meta);
 
       elements.courseRows.append(row);
-    }
-
-    // The rail was rebuilt around the button the student just pressed — put
-    // focus back on that course's action, which is now the *reverse* verb
-    // ("Legg tilbake TDT4136"), so the undo §0.3 promises is under the cursor
-    // rather than at the top of the document (app-4). A removed manual course
-    // has no row left; focus then stays where the browser put it.
-    if (pendingFocusCode !== null) {
-      const code = pendingFocusCode;
-      pendingFocusCode = null;
-      // `Array.from`, not a spread — no `DOM.Iterable` in the Node typecheck
-      // pass (see `scrollToToday`).
-      const actions = Array.from(
-        elements.courseRows.querySelectorAll<HTMLButtonElement>(".planner-course-remove"),
-      );
-      actions.find((button) => button.dataset.code === code)?.focus();
     }
   }
 
@@ -1641,14 +1686,37 @@ export async function mountPlannerApp(
       gridResult = renderGrid(elements.gridFrame, elements.gridNotes, filteredStates, showOthers, {
         loading: anyLoading,
         pendingChoiceMessage: question?.weekMessage ?? null,
-        onBlockClick: (detail, anchor) => {
-          // Unfiltered `states` (not `filteredStates`): the popover lists ALL
-          // of a course's groups — see buildPopoverContext.
-          const ctx = buildPopoverContext(detail, states);
-          if (ctx) popover.showFor(ctx, anchor);
+        focusDay,
+        previousFocusDay: renderedFocusDay,
+        onDayFocus: (day) => setFocusDay(focusDay === day ? null : day),
+        onBlockClick: (detail) => {
+          // A pile has no single course to open settings for — its `code` is
+          // the cluster's codes joined " · ". It is also the grid saying "too
+          // dense to read here", so it expands its own day, where the column
+          // is wide enough to split the cluster into real blocks (D5).
+          if (detail.code.includes(" · ")) {
+            setFocusDay(detail.dayNumber);
+            return;
+          }
+          openCourseSettings(detail.code);
         },
       });
     }
+    // What the NEXT render animates from — set on every path, including the
+    // message branches. A frame replaced by a sentence has no columns to
+    // expand, so the grid that comes back after it should simply appear in
+    // whatever state it is in rather than animating out of one the student
+    // never saw.
+    renderedFocusDay = focusDay;
+    // A focus the grid refused (a Saturday that is no longer taught) is not a
+    // state the strip may keep asserting — `renderGrid` fell back to the week,
+    // so the strip has to say the week too.
+    const drawnDays = gridResult?.dayCount ?? 0;
+    if (focusDay !== null && drawnDays > 0 && focusDay > drawnDays) {
+      focusDay = null;
+      renderedFocusDay = null;
+    }
+    renderDayStrip(drawnDays);
 
     // B7a: the grid can reveal the muted øving layer on its own when nothing
     // classifies as a lecture. The toggle has to say so, or it lies about

@@ -1,5 +1,9 @@
 import { describe, expect, test } from "vitest";
-import { lecturesAreExclusive, nextSelection } from "../../src/components/planner/popover.js";
+import {
+  lecturesAreExclusive,
+  nextSelection,
+  pickableGroups,
+} from "../../src/components/planner/courseSettings.js";
 import type { TimetableEntry } from "../../src/lib/planner/data.js";
 import {
   applyGroupSelection,
@@ -8,13 +12,17 @@ import {
 } from "../../src/lib/planner/groups.js";
 
 /**
- * The popover itself is DOM code with no vitest environment to mount it in —
+ * The modal itself is DOM code with no vitest environment to mount it in —
  * its rendering and focus behaviour are covered by e2e/flows.pw.ts. What IS
  * testable, and what has twice deleted real teaching from the week, is the
  * write path: which keys the picker stores when the student toggles one
- * option. Those two pure functions are exported for exactly this, and the last
+ * option. These pure functions are exported for exactly this, and the last
  * suite feeds their output straight into `applyGroupSelection` — the seam
  * where a picker decision becomes a week.
+ *
+ * They moved from `popover.ts` to `courseSettings.ts` unchanged in
+ * REWORK-2026-07-29 (the surface around them became a real modal opened from
+ * two places); this file moved with them.
  */
 
 const LECTURES = new Set(["forelesning-1-mtdt", "forelesning-2-mtdt", "plenumsregning"]);
@@ -34,6 +42,36 @@ describe("lecturesAreExclusive", () => {
 
   test("several default keys are one provisional pick per family — still not one choice", () => {
     expect(lecturesAreExclusive(["forelesning-1-mtdt", "plenumsregning"])).toBe(false);
+  });
+});
+
+describe("pickableGroups", () => {
+  const option = (key: string, kind: "lecture" | "other") => ({
+    key,
+    label: key,
+    kind: kind === "lecture" ? ("lecture" as const) : ("other" as const),
+    entryCount: 1,
+  });
+
+  test("the two kinds are counted separately", () => {
+    // One parallel and two øving groups: the lone parallel is not a choice, so
+    // it draws no dead radio above the checkboxes that are.
+    const { lectures, others } = pickableGroups([
+      option("forelesningsparallell-1", "lecture"),
+      option("mattelab-1", "other"),
+      option("mattelab-2", "other"),
+    ]);
+    expect(lectures).toEqual([]);
+    expect(others.map((o) => o.key)).toEqual(["mattelab-1", "mattelab-2"]);
+  });
+
+  test("a single option of either kind is not something to choose between", () => {
+    const { lectures, others } = pickableGroups([
+      option("forelesningsparallell-1", "lecture"),
+      option("øvingsgruppe-1", "other"),
+    ]);
+    expect(lectures).toEqual([]);
+    expect(others).toEqual([]);
   });
 });
 
@@ -118,7 +156,7 @@ describe("nextSelection — lecture layer", () => {
       exclusive: false,
     });
     expect(next).toEqual(["mattelab-1"]);
-    expect(next.some((key) => LECTURES.has(key))).toBe(false);
+    expect(next.some((key: string) => LECTURES.has(key))).toBe(false);
   });
 
   test("a stored pick for the other layer survives every lecture edit", () => {
@@ -130,7 +168,7 @@ describe("nextSelection — lecture layer", () => {
       checked: true,
       exclusive: false,
     });
-    expect(next.filter((key) => OTHERS.has(key))).toEqual(["mattelab-1", "mattelab-2"]);
+    expect(next.filter((key: string) => OTHERS.has(key))).toEqual(["mattelab-1", "mattelab-2"]);
   });
 });
 

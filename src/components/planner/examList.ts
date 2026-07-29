@@ -163,12 +163,19 @@ function examCodeTag(code: string, hueVar: string): HTMLElement {
   return tag;
 }
 
-/** One dated row: weekday + short date, the course's tag, and — only on the
- * first upcoming exam — a countdown from today. */
-function examRow(row: ExamListRow, hueVar: string): HTMLLIElement {
+/** One dated row: weekday + short date, the course's tag, its vurderingsform,
+ * and — only on the first upcoming exam — a countdown from today.
+ *
+ * The vurderingsform ("Skriftlig skoleeksamen", "Mappevurdering") used to sit
+ * in the Emner course row, where it was one clause of a run-on meta line about
+ * a course. It is exam material and this is the exam section
+ * (REWORK-2026-07-29 D6): here it is the fact that tells a student whether a
+ * date on the list is something to revise for or something to hand in. */
+function examRow(row: ExamListRow, hueVar: string, scheme: string | null): HTMLLIElement {
   const item = el("li", "exam-row");
   item.append(el("span", "exam-date np-data", `${row.weekday} ${formatShortDate(row.date)}`));
   item.append(examCodeTag(row.code, hueVar));
+  if (scheme) item.append(el("span", "exam-scheme np-hint", scheme));
   if (row.daysFromToday !== null) {
     // `.np-note`, not `.np-hint`: "om 119 dager" is a verbless data fragment,
     // the same kind of thing as the "16 dagers mellomrom" connector two rows
@@ -210,9 +217,10 @@ function examGap(row: ExamListRow): HTMLLIElement {
 /** One "dato ikke satt" row (DR-3) — kept, not dropped, so the course isn't
  *  silently missing. Also where a course whose only sittings this semester are
  *  deferred lands, so the kont filter never reads as "no exam" (exams-1). */
-function datelessRow(code: string, hueVar: string): HTMLLIElement {
+function datelessRow(code: string, hueVar: string, scheme: string | null): HTMLLIElement {
   const item = el("li", "exam-row exam-dateless");
   item.append(examCodeTag(code, hueVar));
+  if (scheme) item.append(el("span", "exam-scheme np-hint", scheme));
   item.append(el("span", "np-note", "dato ikke satt"));
   return item;
 }
@@ -233,6 +241,12 @@ export function renderExamList(
   }
 
   const hueByCode = new Map(courses.map((c) => [c.course.code, c.hueVar]));
+  // Vurderingsform per course (D6). `null` where the bundle has not landed or
+  // the catalog does not say — an absent scheme is simply not printed, never
+  // guessed at.
+  const schemeByCode = new Map(
+    courses.map((c) => [c.course.code, c.bundle?.details?.assessmentScheme ?? null]),
+  );
   const inputs = collectExamInputs(courses, semesterId, index, window);
 
   if (inputs.length === 0) {
@@ -249,7 +263,9 @@ export function renderExamList(
     // one line saying no date is set rather than dropping them silently.
     const list = el("ul", "exam-list");
     for (const code of model.dateless) {
-      list.append(datelessRow(code, hueByCode.get(code) ?? "--hue-blue"));
+      list.append(
+        datelessRow(code, hueByCode.get(code) ?? "--hue-blue", schemeByCode.get(code) ?? null),
+      );
     }
     listHost.replaceChildren(
       el("p", "exam-empty np-hint", "Ingen eksamensdatoer satt ennå for emnene i planen."),
@@ -260,11 +276,15 @@ export function renderExamList(
 
   const list = el("ul", "exam-list");
   model.rows.forEach((row, i) => {
-    list.append(examRow(row, hueByCode.get(row.code) ?? "--hue-blue"));
+    list.append(
+      examRow(row, hueByCode.get(row.code) ?? "--hue-blue", schemeByCode.get(row.code) ?? null),
+    );
     if (i < model.rows.length - 1) list.append(examGap(row));
   });
   for (const code of model.dateless) {
-    list.append(datelessRow(code, hueByCode.get(code) ?? "--hue-blue"));
+    list.append(
+      datelessRow(code, hueByCode.get(code) ?? "--hue-blue", schemeByCode.get(code) ?? null),
+    );
   }
   listHost.replaceChildren(list);
 

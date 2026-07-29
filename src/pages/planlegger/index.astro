@@ -82,6 +82,14 @@ const programOptionsJson = JSON.stringify(programOptions).replaceAll("<", "\\u00
             Vis øvinger og labber
           </button>
         </div>
+        <div
+          class="planner-day-strip"
+          id="planner-day-strip"
+          role="group"
+          aria-label="Vis hele uka eller én dag"
+          hidden
+        >
+        </div>
         <p class="np-hint planner-scroll-hint" id="planner-scroll-hint" hidden></p>
         <div class="planner-grid-frame" id="planner-grid-frame"></div>
         <div class="planner-grid-notes" id="planner-grid-notes"></div>
@@ -291,6 +299,27 @@ const programOptionsJson = JSON.stringify(programOptions).replaceAll("<", "\\u00
     display: none;
   }
 
+  /* --- Week ⇄ day strip (REWORK-2026-07-29 D4) ---------------------------- */
+
+  /* `Uke · Man · Tir …` — the way into one expanded day, and the only way back
+     to the week that does not require finding the header of the day you are
+     already on. It sits directly above the grid because it is about the grid;
+     the toggles are `.np-toggle`, so the pressed state is the primitive's
+     accent fill and nothing new is invented for it. */
+  .planner-day-strip:not([hidden]) {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--gap-1);
+    margin-bottom: var(--space-2);
+  }
+
+  /* Six or seven toggles have to fit a phone rail, so they lose the primitive's
+     generous inline padding and keep its height — a control a student switches
+     days with is a real tap target at every width. */
+  :global(.planner-day-btn) {
+    padding-inline: var(--space-2);
+  }
+
   /* The verdict (U4): PRODUCT §1's primary job answered beside the kicker,
      in three states and three inks:
        .is-clean       — accent, the week holds together (Green-Means-Fits)
@@ -407,6 +436,16 @@ const programOptionsJson = JSON.stringify(programOptions).replaceAll("<", "\\u00
     font-size: var(--text-sm);
   }
 
+  /* Vurderingsform (D6): the fact that tells a student whether a date on this
+     list is something to revise for or something to hand in. It moved here
+     from the Emner course row, where it was one clause of a run-on line about
+     a course. `min-width: 0` so a long scheme wraps inside the row rather than
+     pushing the countdown off the end. */
+  :global(.exam-scheme) {
+    min-width: 0;
+    flex: 1 1 auto;
+  }
+
   /* The connector between two dated rows — indented under where a row's own
      tag sits, so the timeline reads as one column rather than a new line. */
   :global(.exam-gap) {
@@ -426,23 +465,41 @@ const programOptionsJson = JSON.stringify(programOptions).replaceAll("<", "\\u00
     margin-bottom: var(--space-3);
   }
 
-  /* Three columns (code · name · button) is one column too many for a 20 rem
-     rail. D7 correctly gave the week the width it was missing, which left the
-     name sharing a line with "Dropp" on 130 px: "Informasjonsteknologi,
-     grunnkurs" ran under the button and "Examen philosophicum for
-     naturvitenskap og teknologi" broke into five one-word lines. So the row
-     is two columns — identity and the one verb on the top line, which is the
-     pair a student scans — and the name takes the rail's full measure on its
-     own line below. Nothing is taken back from the week. */
+  /* The whole row is the control that opens the course's settings
+     (REWORK-2026-07-29 D1) — one tab stop, one action, and no button competing
+     with it for the 20 rem rail's width. Two columns: identity plus credits on
+     the top line, which is the pair a student scans, and the name on the rail's
+     full measure below. ("Informasjonsteknologi, grunnkurs" ran under the old
+     Dropp button on 130 px, and "Examen philosophicum for naturvitenskap og
+     teknologi" broke into five one-word lines.)
+
+     Ink-Before-Chrome: a `<button>` here keeps none of the UA's chrome and none
+     of `.np-btn`'s fill — it is a row that answers, and the hairline under it
+     is structure, not a border on a control. */
   :global(.planner-course-row) {
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto;
     align-items: baseline;
     column-gap: var(--gap-3);
     row-gap: var(--space-1);
+    width: 100%;
     padding: var(--space-3) var(--space-2);
+    appearance: none;
+    border: 0;
     border-bottom: 1px solid var(--border);
-    transition: color var(--dur-fast) var(--ease);
+    border-radius: 0;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    text-align: start;
+    cursor: pointer;
+    transition:
+      color var(--dur-fast) var(--ease),
+      background var(--dur-fast) var(--ease);
+  }
+
+  :global(.planner-course-row:hover) {
+    background: var(--wash);
   }
 
   :global(.planner-course-row.is-dropped) {
@@ -472,37 +529,27 @@ const programOptionsJson = JSON.stringify(programOptions).replaceAll("<", "\\u00
     overflow-wrap: anywhere;
   }
 
+  /* Credits (and the one attention mark) ride on the row's top line, opposite
+     the code — the two figures a student scans down the rail. Everything else
+     the meta line used to carry is in the settings modal now (D2/D6). */
   :global(.planner-course-row-meta) {
-    grid-column: 1 / -1;
+    grid-column: 2;
+    grid-row: 1;
+    justify-self: end;
     display: flex;
     flex-wrap: wrap;
-    gap: var(--gap-3);
+    align-items: baseline;
+    gap: var(--gap-2);
     color: var(--muted);
     font-size: var(--text-xs);
   }
 
-  :global(.planner-course-remove) {
-    grid-column: 2;
-    grid-row: 1;
-    justify-self: end;
-  }
-
-  /* The per-course "Prøv igjen" (pd-5) lives in the muted meta line, and a
-     full-weight .np-btn there reads as a second primary next to the row's own
-     Dropp. So it drops the control fill and keeps everything else the
-     primitive gives it — including `min-height: var(--control-h)`, because a
-     recovery action a student can only reach on a phone must still be a real
-     tap target. Same grammar as .np-navlink: bare text, --wash on hover. */
-  :global(.planner-course-retry) {
-    margin-inline-start: calc(-1 * var(--space-2));
-    padding-inline: var(--space-2);
-    background: none;
+  /* "se detaljer" — the one mark a row makes about itself, for a course the
+     week cannot draw (not taught this year, off-semester, or a failed fetch).
+     Accent ink, because it is an invitation to open the row, not a warning:
+     Red-Is-Collision keeps red for two things that cannot coexist. */
+  :global(.planner-course-row-flag) {
     color: var(--accent-ink);
-    font-size: var(--text-xs);
-  }
-
-  :global(.planner-course-retry:hover) {
-    background: var(--wash);
   }
 
   /* --- Credit gap door --------------------------------------------------- */

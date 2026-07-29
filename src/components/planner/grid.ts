@@ -99,6 +99,38 @@ function maxColumnsForViewport(): number {
   return globalThis.matchMedia?.(NARROW_VIEWPORT_QUERY).matches === true ? 1 : MAX_COLUMNS;
 }
 
+/**
+ * The cap for the ONE day a focused view expands (REWORK-2026-07-29 D4).
+ *
+ * The whole reason `MAX_COLUMNS` is 2 is arithmetic on a ~106 px weekday: a
+ * third column is ~35 px, at which `.planner-block-code` breaks a course code
+ * one character per line. A focused day is the width of the entire grid — at
+ * least 34rem by `.planner-grid`'s own `min-width`, so a quarter of it is
+ * ~130 px, four times the width that forced the pile in the first place. The
+ * pile exists to keep the week readable; in the day view there is room, and
+ * the cluster the week collapsed is exactly what the student came here to
+ * read (D5).
+ */
+const DAY_MAX_COLUMNS = 4;
+
+/**
+ * The grid's `grid-template-columns`: the 3rem hour rail, then one track per
+ * day. In the week every day is `1fr`; in a focused day the chosen one takes
+ * `1fr` and the rest go to `0fr`.
+ *
+ * The track COUNT is identical either way, and that is the point — a CSS
+ * transition on `grid-template-columns` can only interpolate between two lists
+ * of the same length, which is what makes the expansion a two-line CSS
+ * transition rather than a scripted FLIP (D7).
+ */
+function columnTemplate(dayCount: number, focusDay: number | null): string {
+  const tracks: string[] = ["3rem"];
+  for (let day = 1; day <= dayCount; day++) {
+    tracks.push(focusDay === null || focusDay === day ? "1fr" : "0fr");
+  }
+  return tracks.join(" ");
+}
+
 interface GridEntry extends ScheduleEntry {
   hueVar: string;
   /** The course's proper name (for the block popover), distinct from `name`. */
@@ -123,13 +155,19 @@ interface GridEntry extends ScheduleEntry {
 
 /**
  * What a clicked block (or pile) hands its listener — the material for the
- * block popover (§5). A pile's `code` is its courses' codes joined with
- * " · " (plannerApp reads that separator to pick the whole-pile popover);
- * a single block's is one course code.
+ * course-settings modal (REWORK-2026-07-29 D1). A pile's `code` is its
+ * courses' codes joined with " · " (plannerApp reads that separator to route
+ * the click to the day view instead); a single block's is one course code.
  */
 export interface BlockDetail {
   /** Course code, or the pile's codes joined with " · ". */
   code: string;
+  /**
+   * The weekday the block sits in (1 = mandag). A pile carries its cluster's
+   * day, which is what lets the caller route a pile click to that day's
+   * expanded view — a pile has no single course to open settings for (D5).
+   */
+  dayNumber: number;
   /** Course name (the proper name), or joined names for a pile. */
   name: string;
   /** The activity/group label ("Forelesningsparallell 2"), when the block is one entry. */
@@ -174,6 +212,31 @@ export interface GridRenderOptions {
    * all). `/planlegger/`'s own render never sets this.
    */
   showAllGroups?: boolean;
+  /**
+   * Expand one weekday to the full width of the grid and collapse the rest to
+   * nothing (REWORK-2026-07-29 D4). `null`/omitted is the ordinary week.
+   *
+   * This is NOT a different renderer. `.planner-grid` is
+   * `grid-template-columns: 3rem repeat(var(--planner-days), 1fr)` and every
+   * block is absolutely positioned from `--planner-row-start × --cell`, so
+   * vertical geometry does not depend on how many days are visible: focusing
+   * a day changes horizontal track sizes and nothing else, and each block
+   * keeps the exact `top` and `height` it had in the week.
+   */
+  focusDay?: number | null;
+  /**
+   * What the grid was showing before this render, so the fresh element can be
+   * appended carrying the OLD column template and flipped to the new one on
+   * the next frame — which is what gives the CSS transition on
+   * `grid-template-columns` two states to run between (D7). Pass the same
+   * value as `focusDay` (or omit it) to render without animating.
+   */
+  previousFocusDay?: number | null;
+  /**
+   * Makes the day headers real buttons that focus their own day. Omitted on
+   * `/emne/[code]/`, whose week is a static reference figure.
+   */
+  onDayFocus?: (day: number) => void;
 }
 
 export interface GridRenderResult {
@@ -193,6 +256,13 @@ export interface GridRenderResult {
   mutedLayerAutoRevealed: boolean;
   /** Cells drawn (after merging and collapsing) — 0 in every message branch. */
   blockCount: number;
+  /**
+   * Day columns the grid drew: 6 only when something is taught on a Saturday,
+   * 0 in every message branch. The caller's day strip is built from this
+   * rather than from its own second copy of the Saturday rule, so the strip
+   * can never offer a day the grid has no column for (REWORK-2026-07-29 D4).
+   */
+  dayCount: number;
   /** Which branch rendered. Only `"grid"` carries meaningful counts. */
   state: "grid" | "empty" | "loading" | "pending-choice";
   /**
@@ -497,18 +567,46 @@ function buildGridShell(
   maxMinutes: number,
   dayCount: number,
   ariaLabel: string,
+  focus?: { focusDay?: number | null; onDayFocus?: (day: number) => void },
 ): GridShell {
   const totalRows = Math.ceil((maxMinutes - minMinutes) / ROW_MINUTES);
+  const focusDay = focus?.focusDay ?? null;
   const grid = el("div", "planner-grid");
   grid.style.setProperty("--planner-rows", String(totalRows));
   grid.style.setProperty("--planner-days", String(dayCount));
+  grid.style.gridTemplateColumns = columnTemplate(dayCount, focusDay);
+  if (focusDay !== null) grid.dataset.view = "day";
   // role="group", not "img": the grid holds focusable blocks (each with its own
   // aria-label), and "img" would strip them from the accessibility tree.
   grid.setAttribute("role", "group");
   grid.setAttribute("aria-label", ariaLabel);
 
+  const onDayFocus = focus?.onDayFocus;
   for (let day = 1; day <= dayCount; day++) {
-    const header = el("div", "planner-grid-day-header np-kicker", dayName(day).slice(0, 3));
+    const label = dayName(day);
+    if (onDayFocus) {
+      // A header is a button only where focusing a day is a thing the surface
+      // does — `/emne/[code]/`'s week is a static figure and passes no
+      // handler, and a control that answers no click is the exact wart cpc-4
+      // removed from the blocks there.
+      const header = el("button", "planner-grid-day-header np-kicker", label.slice(0, 3));
+      header.type = "button";
+      header.style.setProperty("--planner-day", String(day));
+      // The visible text is a three-letter abbreviation; the accessible name
+      // says the whole word and what pressing it does. Pressing the focused
+      // day's own header is the way back out — the same control, toggled — so
+      // a student who focused a day by mistake does not have to find a
+      // different button to undo it.
+      header.setAttribute(
+        "aria-label",
+        focusDay === day ? `Vis hele uka igjen` : `Vis bare ${label}`,
+      );
+      header.setAttribute("aria-pressed", String(focusDay === day));
+      header.addEventListener("click", () => onDayFocus(day));
+      grid.append(header);
+      continue;
+    }
+    const header = el("div", "planner-grid-day-header np-kicker", label.slice(0, 3));
     header.style.setProperty("--planner-day", String(day));
     grid.append(header);
   }
@@ -628,11 +726,12 @@ export function metaLine(entry: { rooms: string; startTime: string }): string {
   return [entry.startTime, entry.rooms].filter(Boolean).join(" · ");
 }
 
-/** The popover material for a single block. */
+/** The course-settings material for a single block. */
 function blockDetailFor(entry: GridEntry): BlockDetail {
   const label = groupLabel(entry);
   return {
     code: entry.courseCode,
+    dayNumber: entry.dayNumber,
     name: entry.courseName,
     entryName: label || null,
     timeLabel: `${dayName(entry.dayNumber)} ${entry.startTime}–${entry.endTime}`,
@@ -824,11 +923,12 @@ function buildPileBlock(
 }
 
 /**
- * Synthetic popover material for a pile: its entries, codes joined " · "
- * (plannerApp keys the whole-pile popover off that separator). `timeLabel`
- * lists every session rather than the cluster's outer span — the popover was
- * the pile's only escape hatch and it answered "tirsdag 08:15–12:00" for nine
- * different sessions (grid-1).
+ * Synthetic click material for a pile: its entries, codes joined " · "
+ * (plannerApp keys the day-view routing off that separator — a pile has no
+ * single course to open settings for, so clicking it expands its day
+ * instead, REWORK-2026-07-29 D5). `timeLabel` lists every session rather than
+ * the cluster's outer span — this used to be the pile's only escape hatch and
+ * it answered "tirsdag 08:15–12:00" for nine different sessions (grid-1).
  */
 function pileDetail(entries: GridEntry[]): BlockDetail {
   const first = entries[0];
@@ -842,11 +942,53 @@ function pileDetail(entries: GridEntry[]): BlockDetail {
     code: codes,
     name: names,
     entryName: null,
+    dayNumber: first?.dayNumber ?? 1,
     timeLabel: `${dayName(first?.dayNumber ?? 1)} · ${pileSummary(entries).sessions}`,
     rooms,
     weeksLabel: weekLabel(weeks),
     isLecture: entries.some((e) => e.isLecture),
   };
+}
+
+/**
+ * Runs the week ⇄ day expansion (REWORK-2026-07-29 D7).
+ *
+ * `renderGrid` rebuilds the grid element from scratch every render, and a
+ * node that was never in the document has no "from" value for a CSS
+ * transition to start at — appending it already carrying the target template
+ * would just snap. So the fresh element is painted once with the template it
+ * is coming FROM, and flipped to its own on the next frame; `transition:
+ * grid-template-columns` in planner-week.css does the rest.
+ *
+ * Two frames, not one: the first `requestAnimationFrame` runs before the
+ * style has been computed for the newly connected node in some engines, and
+ * setting both values inside a single frame is coalesced into no transition
+ * at all. Reading `offsetWidth` in between is the same forced-reflow trick
+ * `flash` already uses a few lines below.
+ *
+ * Nothing happens when the focus did not change (the common case: every
+ * re-render caused by a group pick, a plan edit or a semester switch), or on
+ * a host without `requestAnimationFrame`, where the grid simply appears in
+ * its final state.
+ */
+function animateFocusChange(
+  grid: HTMLElement,
+  dayCount: number,
+  previousFocusDay: number | null,
+  focusDay: number | null,
+): void {
+  if (previousFocusDay === focusDay) return;
+  const from = columnTemplate(dayCount, previousFocusDay);
+  const to = columnTemplate(dayCount, focusDay);
+  if (from === to) return;
+  if (typeof globalThis.requestAnimationFrame !== "function") return;
+  grid.style.gridTemplateColumns = from;
+  globalThis.requestAnimationFrame(() => {
+    void grid.offsetWidth;
+    globalThis.requestAnimationFrame(() => {
+      grid.style.gridTemplateColumns = to;
+    });
+  });
 }
 
 function blockId(entry: GridEntry): string {
@@ -1004,6 +1146,7 @@ export function renderGrid(
       conflictPairCount: 0,
       mutedLayerAutoRevealed: false,
       blockCount: 0,
+      dayCount: 0,
       state,
       incompleteCourses,
       partial: loading || incompleteCourses.length > 0,
@@ -1033,6 +1176,7 @@ export function renderGrid(
       conflictPairCount: 0,
       mutedLayerAutoRevealed: false,
       blockCount: 0,
+      dayCount: 0,
       state: "loading",
       incompleteCourses,
       partial: true,
@@ -1116,12 +1260,23 @@ export function renderGrid(
   const hasSaturday = entries.some((e) => e.dayNumber === 6);
   const dayCount = hasSaturday ? 6 : 5;
 
+  // A focus day past the days this week actually draws (a Saturday focus that
+  // survived a plan change into a Mon–Fri week) would collapse every column to
+  // 0fr and paint an empty grid — fall back to the week rather than to nothing.
+  const focusDay =
+    options.focusDay != null && options.focusDay >= 1 && options.focusDay <= dayCount
+      ? options.focusDay
+      : null;
+
   frame.removeAttribute("aria-busy");
   const shell = buildGridShell(
     minMinutes,
     maxMinutes,
     dayCount,
-    "Ukeplan med timeplanblokker for emnene i planen",
+    focusDay === null
+      ? "Ukeplan med timeplanblokker for emnene i planen"
+      : `Timeplanblokker for ${dayName(focusDay)}`,
+    { focusDay, onDayFocus: options.onDayFocus },
   );
 
   // Every rendered entry resolves to the element that represents it — a
@@ -1130,13 +1285,18 @@ export function renderGrid(
   const nodeByEntry = new Map<ScheduleEntry, HTMLElement>();
   const geometryBase = { minMinutes };
   // Measured once per render, not per day: every day column is the same width.
-  const columnCap = maxColumnsForViewport();
+  const weekColumnCap = maxColumnsForViewport();
   let blockCount = 0;
 
   for (let day = 1; day <= dayCount; day++) {
     const column = shell.dayColumns.get(day);
     if (!column) continue;
     const dayEntries = entries.filter((e) => e.dayNumber === day);
+    // The expanded day is the width of the whole grid, so it can carry the
+    // side-by-side columns a 106 px weekday cannot (DAY_MAX_COLUMNS). The
+    // collapsed days keep the week's cap: they are behind `overflow: hidden`
+    // at 0fr, and packing them wide would only cost work nobody can see.
+    const columnCap = day === focusDay ? DAY_MAX_COLUMNS : weekColumnCap;
 
     // All-day drop-in windows sit behind the day as a band; letting them take
     // a column is what turns a Monday with one 08:00–18:00 lab into slivers.
@@ -1251,10 +1411,12 @@ export function renderGrid(
     first?.focus({ preventScroll: true });
   };
 
-  // Blocks own their click now (it opens the popover via onBlockClick); the
+  // Blocks own their click now (a single block opens the course-settings
+  // modal, a pile expands its day — see `GridRenderOptions.onBlockClick`); the
   // conflict-note links below are what drive `flash`, resolving each entry to
-  // its block or overflow chip through `nodeByEntry`.
+  // its block or pile through `nodeByEntry`.
   frame.replaceChildren(shell.element);
+  animateFocusChange(shell.element, dayCount, options.previousFocusDay ?? null, focusDay);
 
   // Margin notes: one per collision slot, not one per pair — a 3-way clash is
   // one Thursday afternoon to fix, and reporting it three times inflates the
@@ -1326,7 +1488,7 @@ export function renderGrid(
 
   // Nothing a narrowing withheld is hidden silently: one line per course we
   // narrowed on a guess or on nothing, and clicking it opens that course's
-  // picker (the same popover a block opens).
+  // picker (the same settings modal a block opens).
   //
   // The lecture lines come first and are NOT gated on the øving toggle: an
   // unresolved lecture parallel is drawn provisionally (groups.ts picks one
@@ -1366,6 +1528,10 @@ export function renderGrid(
       if (options.onBlockClick) {
         const detail: BlockDetail = {
           code: note.code,
+          // A margin note is about a whole course, not a slot — there is no
+          // day to expand, and the caller never reads this for a single code
+          // anyway (it routes on the " · " separator a pile puts in `code`).
+          dayNumber: 0,
           name: note.name,
           entryName: null,
           timeLabel: "",
@@ -1386,6 +1552,7 @@ export function renderGrid(
     conflictPairCount: conflicts.length,
     mutedLayerAutoRevealed,
     blockCount,
+    dayCount,
     state: "grid",
     incompleteCourses,
     partial: loading || incompleteCourses.length > 0,

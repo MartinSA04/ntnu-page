@@ -225,9 +225,9 @@ test("groups: switching parallel updates the grid and survives the URL", async (
   await expect(block).toHaveAttribute("aria-label", /fredag/i);
 
   await block.click();
-  const popover = page.locator("#planner-popover");
-  await expect(popover).toBeVisible();
-  const parallel2Row = popover.locator(".planner-popover-group-row", {
+  const settings = page.locator("#planner-course-settings");
+  await expect(settings).toBeVisible();
+  const parallel2Row = settings.locator(".course-settings-group-row", {
     hasText: "Forelesningsparallell 2",
   });
   await expect(parallel2Row).toBeVisible();
@@ -270,9 +270,9 @@ test("groups: a non-default parallel renders with a programme set", async ({ pag
   await expect(tmaBlocks().first()).toBeVisible({ timeout: 45_000 });
 
   await tmaBlocks().first().click();
-  const popover = page.locator("#planner-popover");
-  await expect(popover).toBeVisible();
-  const foreignRow = popover.locator(".planner-popover-group-row", {
+  const settings = page.locator("#planner-course-settings");
+  await expect(settings).toBeVisible();
+  const foreignRow = settings.locator(".course-settings-group-row", {
     hasText: "Forelesning 2 MTBYGG",
   });
   await expect(foreignRow).toBeVisible();
@@ -303,16 +303,16 @@ test("groups: the picker lists this semester's groups, not the whole year's", as
   await expect(exphBlock).toBeVisible({ timeout: 45_000 });
   await exphBlock.click();
 
-  const popover = page.locator("#planner-popover");
-  await expect(popover).toBeVisible();
-  const groupRows = popover.locator(".planner-popover-group-row");
+  const settings = page.locator("#planner-course-settings");
+  await expect(settings).toBeVisible();
+  const groupRows = settings.locator(".course-settings-group-row");
 
   // Every Ålesund session of this course — the five seminar groups and
   // "Forelesningsparallell 3 Ålesund" — is taught in weeks 3-17, so none of it
   // belongs to a Høst plan. The picker is built from the SEMESTER's entries now
   // (the øving layer additionally narrowed to the programme's own sections).
   await expect(
-    popover.locator(".planner-popover-group-row", { hasText: "Ålesund" }),
+    settings.locator(".course-settings-group-row", { hasText: "Ålesund" }),
   ).toHaveCount(0);
   // A bound, not an exact count: the audit measured 44 rows here, of which ~15
   // were drawable. The number depends on live tagging, so this pins the order
@@ -329,40 +329,41 @@ test("groups: the picker lists this semester's groups, not the whole year's", as
   // "Forelesningsparallell 3 Gjøvik" runs weeks 34-45, so it is a real autumn
   // option for a Trondheim student who wants it.
   await expect(
-    popover.locator(".planner-popover-group-row", { hasText: "Forelesningsparallell 3 Gjøvik" }),
+    settings.locator(".course-settings-group-row", { hasText: "Forelesningsparallell 3 Gjøvik" }),
   ).toHaveCount(1);
 });
 
-test("popover: closes from its own button, not just Esc", async ({ page }) => {
-  // A non-modal <dialog> gets no free dismissal, and below 60rem the popover
-  // is a full-bleed bottom sheet where the outside-click target is a sliver
-  // of screen. Before the × existed there was no visible way out at all.
+test("course settings: closes from its own button, not just Esc", async ({ page }) => {
+  // Inherited from the popover this replaced, where a non-modal <dialog> got
+  // no free dismissal at all. `showModal()` gives Esc and a backdrop back, but
+  // the × stays: on touch there is no Esc, and a backdrop tap is not a gesture
+  // a student should have to guess at.
   await page.goto("/planlegger/#26h;-;%2BTDT4110");
 
   await expect(gridBlocks(page)).toHaveCount(1, { timeout: 30_000 });
-  const popover = page.locator("#planner-popover");
+  const settings = page.locator("#planner-course-settings");
 
   await gridBlocks(page).first().click();
-  await expect(popover).toBeVisible();
+  await expect(settings).toBeVisible();
 
-  const close = popover.locator(".planner-popover-close");
+  const close = settings.locator(".course-settings-close");
   await expect(close).toBeVisible();
   await close.click();
-  await expect(popover).toBeHidden();
+  await expect(settings).toBeHidden();
 
   // And it reopens afterwards — closing must not leave the dialog wedged.
   await gridBlocks(page).first().click();
-  await expect(popover).toBeVisible();
+  await expect(settings).toBeVisible();
 });
 
-test("popover: never offers a picker with only one option", async ({ page }) => {
+test("course settings: never offers a picker with only one option", async ({ page }) => {
   // The group section used to be gated on `groups.length > 1` across BOTH
   // kinds, so a course with one lecture parallel and two øving groups drew a
   // lone dead radio. The invariant is per-kind and data-independent: a
   // control the student cannot use to choose differently is never rendered.
-  const popover = page.locator("#planner-popover");
-  const radios = popover.locator('.planner-popover-group-row input[type="radio"]');
-  const checkboxes = popover.locator('.planner-popover-group-row input[type="checkbox"]');
+  const settings = page.locator("#planner-course-settings");
+  const radios = settings.locator('.course-settings-group-row input[type="radio"]');
+  const checkboxes = settings.locator('.course-settings-group-row input[type="checkbox"]');
 
   // TDT4110 (3 numbered parallels) and TDT4109 (a single lecture entry) —
   // opposite ends of the gate, both loaded at once.
@@ -373,16 +374,22 @@ test("popover: never offers a picker with only one option", async ({ page }) => 
   expect(blocks).toBeGreaterThan(0);
   for (let i = 0; i < blocks; i++) {
     await gridBlocks(page).nth(i).click();
-    await expect(popover).toBeVisible();
+    await expect(settings).toBeVisible();
     // Zero (nothing to choose) or two-plus (a real choice) — never one.
     expect(await radios.count()).not.toBe(1);
     expect(await checkboxes.count()).not.toBe(1);
+    // The surface is a real modal now (REWORK-2026-07-29 D1), so its backdrop
+    // owns every pointer event until it closes — the next block is not
+    // clickable through it the way it was through the old non-modal popover.
+    await page.keyboard.press("Escape");
+    await expect(settings).toBeHidden();
   }
 
   // The retired "Vis alle grupper" button called setSelection([]), which is
   // groups.ts's encoding for "apply the programme default" — it narrowed the
   // week instead of widening it, exactly contradicting its label.
-  await expect(popover.locator("button", { hasText: "Vis alle grupper" })).toHaveCount(0);
+  await gridBlocks(page).first().click();
+  await expect(settings.locator("button", { hasText: "Vis alle grupper" })).toHaveCount(0);
 });
 
 test("one control opens studieinfo, and semester lives only inside it", async ({ page }) => {
@@ -452,9 +459,47 @@ test("week: three overlapping lectures draw one pile, not three slivers", async 
   // And no sliver: the three are not split into ~35px columns.
   await expect(page.locator("#planner-grid-frame .planner-block")).toHaveCount(1);
 
-  // The pile opens the popover, so its contents stay reachable.
+  // REWORK-2026-07-29 D5: the pile is the grid saying "too dense to read
+  // here", so clicking it expands its own day — where the column is the width
+  // of the whole grid and the cluster splits into real side-by-side blocks
+  // instead of a slab of text. It used to open a popover with no group picker
+  // and no actions, which was a dead end dressed as a control.
   await pile.click();
-  await expect(page.locator("#planner-popover")).toBeVisible();
+  await expect(page.locator(".planner-grid[data-view='day']")).toBeVisible();
+  await expect(page.locator(".planner-block-pile")).toHaveCount(0);
+  await expect(page.locator("#planner-grid-frame .planner-block")).toHaveCount(codes.length);
+  // Each is now its own block, and each opens that course's settings.
+  await page.locator("#planner-grid-frame .planner-block").first().click();
+  await expect(page.locator("#planner-course-settings")).toBeVisible();
+});
+
+test("day view: the strip expands one day and comes back to the week", async ({ page }) => {
+  await page.goto("/planlegger/#26h;MTDT.2026;");
+  await expect(gridBlocks(page).first()).toBeVisible({ timeout: 45_000 });
+
+  const grid = page.locator(".planner-grid");
+  const strip = page.locator("#planner-day-strip");
+  await expect(strip).toBeVisible();
+
+  // Every weekday the grid drew gets a button, plus "Uke" — never more.
+  const dayColumns = await page.locator(".planner-grid-day").count();
+  await expect(strip.locator("button")).toHaveCount(dayColumns + 1);
+
+  await strip.locator("button", { hasText: "Tir" }).click();
+  await expect(grid).toHaveAttribute("data-view", "day");
+  await expect(strip.locator("button", { hasText: "Tir" })).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
+  // The collapsed days are 0fr tracks — the expanded one has the width.
+  const tuesday = page.locator(".planner-grid-day").nth(1);
+  const monday = page.locator(".planner-grid-day").nth(0);
+  expect((await tuesday.boundingBox())?.width ?? 0).toBeGreaterThan(
+    (await monday.boundingBox())?.width ?? 0,
+  );
+
+  await strip.locator("button", { hasText: "Uke" }).click();
+  await expect(grid).not.toHaveAttribute("data-view", "day");
 });
 
 test("week: the øving layer shows picked groups, not the whole cohort's", async ({ page }) => {
@@ -482,8 +527,8 @@ test("week: the øving layer shows picked groups, not the whole cohort's", async
   }
 
   await notes.first().click();
-  await expect(page.locator("#planner-popover")).toBeVisible();
-  await expect(page.locator("#planner-popover .planner-popover-group-row").first()).toBeVisible();
+  await expect(page.locator("#planner-course-settings")).toBeVisible();
+  await expect(page.locator("#planner-course-settings .course-settings-group-row").first()).toBeVisible();
 });
 
 test("course page: the grade figure renders from DBH", async ({ page }) => {
@@ -674,8 +719,13 @@ test("drop and restore a programme course", async ({ page }) => {
 
   const code = (await gridBlocks(page).first().locator(".planner-block-code").textContent())?.trim() ?? "";
   expect(code).not.toBe("");
+  // REWORK-2026-07-29 D3: the row IS the control, and the verb is inside the
+  // settings modal it opens — two taps, which the user explicitly allowed in
+  // place of §0.3's one.
+  const settings = page.locator("#planner-course-settings");
   const row = courseRows(page).filter({ hasText: code }).first();
-  await row.locator(".planner-course-remove").click();
+  await row.click();
+  await settings.locator(".course-settings-action", { hasText: "Dropp" }).click();
 
   // Still listed — a dropped programme course never disappears — but off the
   // grid, out of the credits, and marked in the shareable URL.
@@ -684,20 +734,19 @@ test("drop and restore a programme course", async ({ page }) => {
   await expect(gridBlocks(page).filter({ hasText: code })).toHaveCount(0);
   expect(page.url()).toContain(`-${code}`);
 
-  const restore = row.locator(".planner-course-remove");
-  await expect(restore).toHaveText("Legg tilbake");
-  await restore.click();
+  await row.click();
+  await settings.locator(".course-settings-action", { hasText: "Legg tilbake" }).click();
   await expect(gridBlocks(page).filter({ hasText: code }).first()).toBeVisible({
     timeout: 30_000,
   });
 });
 
-test("dropping from the block popover keeps focus inside the week", async ({ page }) => {
-  // a11y-3: "Dropp" destroys the block that opened the popover, and the close
-  // handler then called focus() on a detached node — a silent no-op that left
-  // focus on <body>, outside a deliberately NON-modal dialog, so the next Tab
-  // restarted at the skip link. The course's own row toggle is the honest
-  // landing place: it is the same drop, so it also undoes it.
+test("dropping from a block's settings keeps focus in the document", async ({ page }) => {
+  // a11y-3, re-aimed: "Dropp" destroys the block that opened the surface, and
+  // the old non-modal popover then called focus() on a detached node — a
+  // silent no-op that dropped focus to <body> with nothing to catch it, so the
+  // next Tab restarted at the skip link. `showModal()` restores focus to the
+  // invoker itself, so the fix is now the platform's; this guards the outcome.
   await page.goto("/planlegger/#26h;MTDT.2026;");
   await expect(courseRows(page)).toHaveCount(5, { timeout: 30_000 });
   await expect(gridBlocks(page).first()).toBeVisible({ timeout: 45_000 });
@@ -706,15 +755,17 @@ test("dropping from the block popover keeps focus inside the week", async ({ pag
   expect(code).not.toBe("");
 
   await gridBlocks(page).first().click();
-  const popover = page.locator("#planner-popover");
-  await expect(popover).toBeVisible();
-  await popover.locator(".planner-popover-action", { hasText: "Dropp" }).click();
-  await expect(popover).toBeHidden();
+  const settings = page.locator("#planner-course-settings");
+  await expect(settings).toBeVisible();
+  await settings.locator(".course-settings-action", { hasText: "Dropp" }).click();
+  await expect(settings).toBeHidden();
 
+  // The block that opened the dialog is gone, so the browser's own restore is
+  // a no-op — the course's own row catches focus instead, and it reopens this
+  // dialog, so the undo is one keystroke away.
   const row = courseRows(page).filter({ hasText: code }).first();
   await expect(row).toHaveClass(/is-dropped/);
-  await expect(row.locator(".planner-course-remove")).toBeFocused();
-  // Belt and braces: whatever holds focus, it must not be the document body.
+  await expect(row).toBeFocused();
   expect(await page.evaluate(() => document.activeElement?.tagName ?? "")).not.toBe("BODY");
 });
 
