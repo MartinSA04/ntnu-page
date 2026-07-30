@@ -1249,3 +1249,50 @@ test("the layer leaves in the reverse of the order it arrived in", async ({ page
   expect(depart).toEqual([...depart].sort((a, b) => b - a));
   expect(Math.max(...depart)).toBe(depart.length - 1);
 });
+
+test("the row height animates with the layer instead of snapping", async ({ page }) => {
+  // REWORK-2026-07-30h. `--planner-bands` feeds the field's min-height and was
+  // never added to the motion snapshot, so a row whose height changed only
+  // because a drop-in strip appeared or left had nothing rewound: the new
+  // height was already in place before the transition was switched on. The row
+  // snapped on the first frame while every bar around it animated.
+  //
+  // TDT4120 publishes Øvingsveiledning 08:15-14:00 every weekday, which is
+  // exactly that case: revealing the layer adds a strip and grows the row.
+  await page.goto("/planlegger/#26h;-;%2BTDT4120,%2BTMA4412");
+  await expect(gridBlocks(page).first()).toBeVisible({ timeout: 45_000 });
+  await page.locator("#planner-others-toggle").click();
+  await expect(page.locator(".planner-note-groups").first()).toBeVisible({ timeout: 20_000 });
+  await page.locator(".planner-note-groups").first().click();
+  const groups = page.locator("#planner-course-settings .course-settings-group-row");
+  await expect(groups.first()).toBeVisible();
+  for (const row of await groups.all()) await row.locator("input").check();
+  await page.keyboard.press("Escape");
+  await page.waitForTimeout(1500);
+
+  const rowH = () =>
+    page
+      .locator("#planner-grid-frame .planner-grid-row")
+      .first()
+      .evaluate((el: HTMLElement) => Math.round(el.getBoundingClientRect().height));
+
+  const tall = await rowH();
+
+  // Hiding: the row must still be tall while the bars are wiping out, and
+  // short once everything has settled.
+  await page.locator("#planner-others-toggle").click();
+  await page.waitForTimeout(120);
+  expect(await rowH()).toBe(tall);
+  await page.waitForTimeout(1200);
+  const short = await rowH();
+  expect(short).toBeLessThan(tall);
+
+  // Revealing: the space opens FIRST, so the row is already growing at 120 ms
+  // — but it has not arrived, which is what proves it is a transition and not
+  // a snap.
+  await page.locator("#planner-others-toggle").click();
+  await page.waitForTimeout(60);
+  const midway = await rowH();
+  expect(midway).toBeGreaterThan(short);
+  expect(midway).toBeLessThan(tall);
+});

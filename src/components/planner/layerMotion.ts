@@ -199,7 +199,20 @@ function release(
 const BLOCK_PROPS = ["--planner-x", "--planner-w", "--planner-lane"];
 const ZONE_PROPS = ["--planner-x", "--planner-w"];
 const TICK_PROPS = ["--planner-x"];
-const FIELD_PROPS = ["--planner-lanes"];
+/**
+ * BOTH of the properties the row's height is computed from.
+ *
+ * `--planner-bands` arrived with the drop-in strip (REWORK-2026-07-30c) and
+ * was never added here, so a row whose height changed only because a strip
+ * appeared or left had nothing rewound: the new height was already in place
+ * before the transition was switched on, and the row snapped on the first
+ * frame while the bars animated around it. That is the whole of "the rows
+ * collapse the instant I deselect" (REWORK-2026-07-30h).
+ *
+ * Anything else the field's `min-height` learns to read has to be listed here
+ * too, or it will snap in exactly the same way and for the same reason.
+ */
+const FIELD_PROPS = ["--planner-lanes", "--planner-bands"];
 const NOW_PROPS = ["--planner-x", "--planner-now-top", "--planner-now-height"];
 const GRID_PROPS = ["--planner-hours"];
 

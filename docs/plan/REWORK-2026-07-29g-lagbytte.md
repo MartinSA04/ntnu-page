@@ -81,6 +81,29 @@ And the close waits for the *last* wipe rather than the first:
 which is exactly when the last one finishes. "What is leaving is gone before
 the space closes" now holds for all of them, not just the earliest.
 
+## D3c — And the row height has to be in the snapshot (2026-07-30h)
+
+Reversing the stagger made the real bug visible rather than causing it: the
+rows snapped to their new height on the first frame, in **both** directions,
+while every bar animated around them.
+
+`--planner-bands` feeds the field's `min-height` and arrived with the drop-in
+strip (REWORK-2026-07-30c), but was never added to `FIELD_PROPS`. So a row
+whose height changed only because a strip appeared or left had nothing rewound
+— the new height was already in place before the transition was switched on.
+It was invisible until the departures were spread over 270 ms, at which point
+a snap at the end of them is the only thing you can see.
+
+Measured on TDT4120's øvingsveiledning row after the fix:
+
+| | row height |
+| --- | --- |
+| hide | 71 px held until 270 ms (the last wipe), then 71 → 48 → 45 |
+| reveal | 45 → 69 → 71 over the first 160 ms, then the arrivals |
+
+Anything else the field's `min-height` learns to read has to go in
+`FIELD_PROPS` too, or it will snap for exactly this reason.
+
 ## D3 — What leaves
 
 Elements that disappear are out of the DOM before anything can animate them.
