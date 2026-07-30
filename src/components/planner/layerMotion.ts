@@ -181,6 +181,7 @@ function release(
   setTimeout(() => {
     host.classList.remove("is-settling", "is-closing");
     host.style.removeProperty("--planner-departs");
+    host.style.removeProperty("height");
     ghosts?.remove();
     for (const node of Array.from(host.querySelectorAll<HTMLElement>(".is-arriving")))
       clearArrival(node);
@@ -325,6 +326,7 @@ function beginWeekChange(frame: HTMLElement, grid: HTMLElement, change: LayerCha
 
 function beginListChange(frame: HTMLElement, board: HTMLElement, change: LayerChange): SettleLayer {
   const origin = board.getBoundingClientRect();
+  const wasTall = origin.height;
   const before = new Map<string, { node: HTMLElement; box: Box }>();
   for (const node of Array.from(board.querySelectorAll<HTMLElement>("[data-motion-key]"))) {
     const key = node.getAttribute("data-motion-key");
@@ -373,8 +375,26 @@ function beginListChange(frame: HTMLElement, board: HTMLElement, change: LayerCh
         .map(([, entry]) => ({ node: entry.node, box: entry.box })),
     );
 
+    // The list's own height, which FLIP cannot carry (REWORK-2026-07-30i).
+    //
+    // The week animates `min-height` per row, so its total height follows. A
+    // list has no such property: rows are in normal flow, so removing them
+    // makes the container short on the same frame the render lands, and the
+    // exam list and the course list underneath jump before a single row has
+    // moved. `transform` on the survivors cannot fix that — a translated row
+    // occupies its original box as far as layout is concerned.
+    //
+    // So the box is pinned to what it was, released to what it is, and handed
+    // back to the stylesheet when the choreography is over. Measured here
+    // rather than declared, because a list's height is its content.
+    const isTall = next.getBoundingClientRect().height;
+    if (Math.round(wasTall) !== Math.round(isTall)) {
+      next.style.height = `${wasTall}px`;
+    }
+
     release(next, change, ghosts, () => {
       for (const node of moved) node.style.removeProperty("transform");
+      if (next.style.height) next.style.height = `${isTall}px`;
     });
   };
 }

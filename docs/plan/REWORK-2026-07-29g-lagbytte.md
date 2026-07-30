@@ -104,6 +104,25 @@ Measured on TDT4120's øvingsveiledning row after the fix:
 Anything else the field's `min-height` learns to read has to go in
 `FIELD_PROPS` too, or it will snap for exactly this reason.
 
+## D3d — The list has to carry its own height (2026-07-30i)
+
+The same symptom in the other view, and a different cause. The week animates
+`min-height` per row, so its total height follows for free. A list has no such
+property: rows are in normal flow, so removing them makes the container short
+on the frame the render lands, and the exam list and the course list
+underneath jump before a single row has moved.
+
+FLIP cannot reach it — a translated row still occupies its original box as far
+as layout is concerned, so the survivors glide while the box around them has
+already snapped.
+
+So the box is pinned to what it was, released to what it is on the same clock
+as everything else, and handed back to the stylesheet when the choreography is
+over. Measured rather than declared, because a list's height is its content.
+
+Measured on the MTDT list: revealing grows 829 → 979 px over the first 160 ms
+with no delay; hiding holds 979 until 142 ms — the last wipe — then closes.
+
 ## D3 — What leaves
 
 Elements that disappear are out of the DOM before anything can animate them.

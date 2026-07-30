@@ -795,6 +795,18 @@ button.planner-board-row:hover {
    between the two states, so there is nothing here to squash and the transform
    restriction in DESIGN §6 holds. `background` stays in the list or the row
    loses its hover for the length of the move. */
+/* The list box itself travels too — see `beginListChange`. Without it the
+   container is short on the frame the render lands and everything under the
+   week jumps before a row has moved. */
+.planner-board.is-settling {
+  overflow: hidden;
+  transition: height var(--dur) var(--ease);
+}
+
+.planner-board.is-settling.is-closing {
+  transition-delay: calc(var(--planner-departs, 0) * 32ms + var(--dur-fast));
+}
+
 .planner-board.is-settling [data-motion-key] {
   transition:
     transform var(--dur) var(--ease),

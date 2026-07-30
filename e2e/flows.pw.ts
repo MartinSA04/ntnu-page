@@ -1296,3 +1296,44 @@ test("the row height animates with the layer instead of snapping", async ({ page
   expect(midway).toBeGreaterThan(short);
   expect(midway).toBeLessThan(tall);
 });
+
+test("the list's own height animates too, so nothing under it jumps", async ({ page }) => {
+  // REWORK-2026-07-30i. The week animates `min-height` per row, so its total
+  // height follows. A list has no such property: rows are in normal flow, so
+  // removing them makes the container short on the frame the render lands, and
+  // the exam list and the course list underneath jump before a single row has
+  // moved. FLIP cannot carry it — a translated row still occupies its original
+  // box as far as layout is concerned.
+  await page.goto("/planlegger/#26h;MTDT.2026;");
+  await expect(gridBlocks(page).first()).toBeVisible({ timeout: 45_000 });
+  await page.locator("#planner-view-tavle").click();
+  const board = page.locator("#planner-grid-frame .planner-board");
+  await expect(board).toBeVisible();
+  await page.waitForTimeout(900);
+
+  const h = () => board.evaluate((el: HTMLElement) => Math.round(el.getBoundingClientRect().height));
+  const short = await h();
+
+  // Revealing: the space opens first, so the box is already growing but has
+  // not arrived. Both halves matter — "already growing" rules out a stall,
+  // "not arrived" rules out the snap.
+  await page.locator("#planner-others-toggle").click();
+  await page.waitForTimeout(70);
+  const growing = await h();
+  expect(growing).toBeGreaterThan(short);
+  await page.waitForTimeout(1200);
+  const tall = await h();
+  expect(growing).toBeLessThan(tall);
+
+  // Hiding: the box holds while the rows wipe out, then closes behind them.
+  await page.locator("#planner-others-toggle").click();
+  await page.waitForTimeout(70);
+  expect(await h()).toBe(tall);
+  await page.waitForTimeout(1200);
+  expect(await h()).toBe(short);
+
+  // And the pin comes off, or the list would stop growing with its own content.
+  await expect
+    .poll(() => board.evaluate((el: HTMLElement) => el.style.height), { timeout: 3000 })
+    .toBe("");
+});
