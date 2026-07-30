@@ -931,8 +931,10 @@ test.describe("time passing", () => {
       `${rowTop}px`,
     );
 
-    // Every exam countdown reads the date too, and was a day long with it.
-    const away = page.locator(".exam-away").first();
+    // The countdown to the next exam reads the date too, and was a day long
+    // with it. It is a segment on the list's rule, not a cell in the row —
+    // see the phone test below.
+    const away = page.locator(".exam-gap.is-away").first();
     const days = (text: string | null) => Number(text?.match(/\d+/)?.[0] ?? Number.NaN);
     const after = days(await away.textContent());
     expect(Number.isFinite(after)).toBe(true);
@@ -961,5 +963,39 @@ test.describe("time passing", () => {
     await page.clock.runFor("02:00:00");
     await expect(label).toHaveText("Neste");
     await expect(page.locator("#home-now-bar")).toBeHidden();
+  });
+});
+
+test.describe("the exam list on a phone", () => {
+  test.use({ viewport: { width: 390, height: 844 } });
+
+  test("no exam row is taller than its neighbours", async ({ page }) => {
+    // The countdown used to be a third cell of the row. At 390 px there is no
+    // third column for it, so it dropped to a second grid row under the date:
+    // exactly one row in the list stood two lines tall with a hole beside it
+    // where the course would have been. It is a segment on the rule now — the
+    // first link in the same chain the reading-day connectors continue.
+    await page.goto("/planlegger/#26h;MTDT.2026;");
+    const rows = page.locator(".exam-list .exam-row");
+    await expect(rows.first()).toBeVisible({ timeout: 45_000 });
+    await expect(page.locator(".exam-gap.is-away")).toHaveCount(1);
+
+    // The countdown is a SIBLING of the rows, not inside one.
+    expect(
+      await page.locator(".exam-gap.is-away").evaluate((el) => el.closest(".exam-row") !== null),
+    ).toBe(false);
+
+    const heights = await rows.evaluateAll((els) =>
+      els.map((el) => Math.round(el.getBoundingClientRect().height)),
+    );
+    expect(heights.length).toBeGreaterThan(1);
+    expect(new Set(heights).size, `exam rows differ in height: ${heights.join(", ")}`).toBe(1);
+
+    // And the vurderingsform still shares the code's line — dropping the row's
+    // unused third column is what gives it back the 16 px of gap it needs.
+    const whatHeights = await page
+      .locator(".exam-list .exam-what")
+      .evaluateAll((els) => els.map((el) => Math.round(el.getBoundingClientRect().height)));
+    expect(new Set(whatHeights).size).toBe(1);
   });
 });

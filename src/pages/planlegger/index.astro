@@ -539,12 +539,22 @@ const programOptionsJson = JSON.stringify(programOptions).replaceAll("<", "\\u00
     background: var(--border-strong);
   }
 
+  /* Two columns: the date, then the exam. A dated row has nothing else to say
+     — the countdown that used to need a third one is a segment on the rule now
+     (`awayLine`). Keeping the column "just in case" was not free either: an
+     `auto` track collapses to zero, but its gap does not, and those 16 px were
+     exactly what pushed "Skriftlig skoleeksamen" onto a second line at 390 px. */
   :global(.exam-row) {
     display: grid;
-    grid-template-columns: var(--exam-date-col) minmax(0, 1fr) auto;
+    grid-template-columns: var(--exam-date-col) minmax(0, 1fr);
     align-items: baseline;
     gap: 0 var(--gap-4);
     padding: var(--space-1) 0;
+  }
+
+  /* The one row that still has a third thing to say. */
+  :global(.exam-row.exam-dateless) {
+    grid-template-columns: var(--exam-date-col) minmax(0, 1fr) auto;
   }
 
   :global(.exam-date) {
@@ -596,25 +606,11 @@ const programOptionsJson = JSON.stringify(programOptions).replaceAll("<", "\\u00
     color: var(--muted);
   }
 
+  /* "dato ikke satt", and nothing else — see `.exam-row.exam-dateless`. */
   :global(.exam-away) {
     font-size: var(--text-xs);
     color: var(--faint);
     white-space: nowrap;
-  }
-
-  /* On a phone the third column has nowhere to go, so the countdown drops to
-     the second line of the DATE column — beside the number it counts to,
-     rather than between the exam and its reading days. */
-  @media (max-width: 40rem) {
-    :global(.exam-row) {
-      grid-template-columns: var(--exam-date-col) minmax(0, 1fr);
-    }
-
-    :global(.exam-away) {
-      grid-column: 1;
-      grid-row: 2;
-      text-align: right;
-    }
   }
 
   /* The distance, hung on the rule between two knots. */
@@ -623,6 +619,14 @@ const programOptionsJson = JSON.stringify(programOptions).replaceAll("<", "\\u00
       calc(var(--exam-date-col) + var(--gap-4) + var(--exam-knot));
     font-size: var(--text-xs);
     color: var(--faint);
+  }
+
+  /* The first segment — today to the next exam. Same rule, same indent as the
+     lesedager connectors below it, so the list reads as one chain of
+     distances; never `is-tight`'s red, because how far off an exam is says
+     nothing about how much room there is to revise. */
+  :global(.exam-gap.is-away) {
+    color: var(--muted);
   }
 
   :global(.exam-gap.is-tight) {

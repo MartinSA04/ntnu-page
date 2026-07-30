@@ -283,15 +283,32 @@ function examRow(row: ExamListRow, hueVar: string, scheme: string | null): HTMLL
   if (scheme) what.append(el("span", "exam-form", scheme));
   item.append(what);
 
-  // A CELL of the row, not a wrapping tail inside `.exam-what` — as a flex
-  // sibling of the course name it wrapped onto its own line on a phone and
-  // landed between the exam and its own reading-day connector, which read as
-  // if the countdown belonged to the gap. It is a fact about *when*, so on a
-  // narrow screen it sits under the date it counts to.
-  if (row.daysFromToday !== null) {
-    item.append(el("span", "exam-away np-data", daysFromTodayText(row.daysFromToday)));
-  }
   return item;
+}
+
+/**
+ * The countdown to the first exam not yet sat — hung on the rule ABOVE its
+ * knot, in the same place and the same idiom as the reading-day connectors
+ * below it (`examGap`).
+ *
+ * It used to be a third cell of the row. On a phone there is no third column
+ * for it to be in, so it dropped to a second grid row under the date and made
+ * exactly one row in the list two lines tall, with a hole beside it where the
+ * course would have been. Every escape from that was worse: as a flex tail
+ * inside `.exam-what` it wraps under the course name and reads as though it
+ * belonged to the gap below, and there is genuinely no width at 390 px for a
+ * date, a code, a vurderingsform and a countdown on one line.
+ *
+ * Making it a segment is not a dodge, though — it is what it always was. The
+ * list is a chain of distances along one rule: today → the next exam → so many
+ * lesedager → the one after. This was the only link drawn as a badge on a knot
+ * instead of as a link, and the only reason a row needed a third column.
+ */
+function awayLine(row: ExamListRow): HTMLLIElement | null {
+  if (row.daysFromToday === null) return null;
+  // `is-away` and not `is-tight`: a distance from today is not a verdict on
+  // how much revision room there is, and red here would claim one.
+  return el("li", "exam-gap is-away np-data", daysFromTodayText(row.daysFromToday));
 }
 
 /** "i dag" / "om 1 dag" / "om {n} dager" — the singular/plural split every
@@ -423,6 +440,10 @@ export function renderExamList(
 
   const list = el("ul", "exam-list");
   for (const row of model.rows) {
+    // The distance from today comes BEFORE the exam it measures to — it is the
+    // first link in the same chain the reading-day connectors continue.
+    const away = awayLine(row);
+    if (away) list.append(away);
     list.append(
       examRow(row, hueByCode.get(row.code) ?? "--hue-blue", schemeByCode.get(row.code) ?? null),
     );
