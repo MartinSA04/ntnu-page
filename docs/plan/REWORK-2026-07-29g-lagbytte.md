@@ -57,6 +57,30 @@ the toggle (`code|day|from|to|label`, with an occurrence index for duplicates).
 A row inside a collision bracket subtracts its parent's delta, or the two
 transforms would compound.
 
+## D3b — The departure is the arrival played backwards (2026-07-30g)
+
+The sequence above was mirrored from the start: space opens, then bars arrive;
+bars leave, then space closes. The **stagger** was not. Arrivals struck in one
+after another in reading order; departures all vanished on the same frame.
+
+That is not the reverse of an order, it is the absence of one, and it is what
+made hiding the layer read as a different gesture rather than as the same one
+undone.
+
+They now leave on the same 32 ms step, counted backwards — the last bar to
+land is the first to go. Measured on a six-bar layer:
+
+| | reading order → delay |
+| --- | --- |
+| arrive | 152, 184, 216, 248, 280, 312 ms |
+| depart | 160, 128, 96, 64, 32, 0 ms |
+
+And the close waits for the *last* wipe rather than the first:
+`--planner-departs` carries the final stagger index, so the field's
+`transition-delay` is `departs × 32 ms + --dur-fast` — 270 ms for six bars,
+which is exactly when the last one finishes. "What is leaving is gone before
+the space closes" now holds for all of them, not just the earliest.
+
 ## D3 — What leaves
 
 Elements that disappear are out of the DOM before anything can animate them.

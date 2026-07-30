@@ -50,8 +50,11 @@ const STAGGER_CAP = 12;
  */
 const CLEANUP_MS = 1100;
 
-/** How long a ghost lives: its wipe (`--dur-fast`), plus a frame or two. */
-const GHOST_MS = 200;
+/**
+ * How long a ghost lives: the last one's staggered wipe, plus a frame or two.
+ * Roughly `cap × 32 ms + dur-fast` — see `.planner-motion-ghost`.
+ */
+const GHOST_MS = 700;
 
 interface Box {
   left: number;
@@ -104,7 +107,18 @@ function layGhosts(
   if (ghosts.length === 0) return null;
   const layer = el("div", "planner-motion-ghosts");
   layer.setAttribute("aria-hidden", "true");
-  for (const { node, box } of ghosts) {
+  // The departure is the arrival played backwards, and that includes the
+  // ORDER: arrivals strike in one after another in reading order, so
+  // departures leave one after another in the REVERSE of it — the last bar to
+  // land is the first to go. Without this they all vanished on the same frame,
+  // which is not a reversed order, it is no order at all.
+  const last = Math.min(ghosts.length - 1, STAGGER_CAP);
+  host.style.setProperty("--planner-departs", String(last));
+  ghosts.forEach(({ node, box }, i) => {
+    node.style.setProperty(
+      "--planner-depart",
+      String(Math.min(ghosts.length - 1 - i, STAGGER_CAP)),
+    );
     // A bar that arrived on the LAST toggle still wears its arrival mark, and
     // that rule outranks the ghost's: the two bars revealed a moment ago
     // played the entrance again on their way out — clipped away for the first
@@ -119,7 +133,7 @@ function layGhosts(
     node.style.width = `${box.width}px`;
     node.style.height = `${box.height}px`;
     layer.append(node);
-  }
+  });
   host.append(layer);
   return layer;
 }
@@ -166,6 +180,7 @@ function release(
   if (ghosts) setTimeout(() => ghosts.remove(), GHOST_MS);
   setTimeout(() => {
     host.classList.remove("is-settling", "is-closing");
+    host.style.removeProperty("--planner-departs");
     ghosts?.remove();
     for (const node of Array.from(host.querySelectorAll<HTMLElement>(".is-arriving")))
       clearArrival(node);

@@ -500,15 +500,19 @@
     background-size var(--dur) var(--ease);
 }
 
-/* Closing up waits for what is leaving to be gone. Opening does not wait for
-   anything — the space has to exist before a bar can land in it. */
+/* Closing up waits for what is leaving to be GONE — all of it, not just the
+   first one. `--planner-departs` is the last departure's stagger index
+   (`layerMotion.ts`), so this reads "after the last wipe finishes". Opening
+   does not wait for anything: the space has to exist before a bar can land in
+   it, which is why the reveal has no equivalent delay. */
 .planner-grid.is-settling.is-closing .planner-block,
 .planner-grid.is-settling.is-closing .planner-clash-zone,
 .planner-grid.is-settling.is-closing .planner-grid-tick,
 .planner-grid.is-settling.is-closing .planner-grid-now,
 .planner-grid.is-settling.is-closing .planner-grid-field {
-  transition-delay: var(--dur-fast);
+  transition-delay: calc(var(--planner-departs, 0) * 32ms + var(--dur-fast));
 }
+
 
 /* The arriving layer, struck in with the view switch's own wipe — after the
    room for it has been made. A ruler tick or a newly needed Saturday row is
@@ -556,6 +560,10 @@
   position: absolute;
   margin: 0;
   animation: planner-strike var(--dur-fast) var(--ease) reverse forwards;
+  /* The same 32 ms step the arrivals use, counted backwards: the last bar to
+     strike in is the first to wipe out. They used to leave on a single frame,
+     which is not the reverse of an order, it is the absence of one. */
+  animation-delay: calc(var(--planner-depart, 0) * 32ms);
 }
 
 /* --- Margin notes -------------------------------------------------------- */
@@ -793,8 +801,10 @@ button.planner-board-row:hover {
     background var(--dur-fast) var(--ease);
 }
 
+/* Same wait as the week's: the list closes up after the last row has wiped
+   out, not after the first (`--planner-departs`, layerMotion.ts). */
 .planner-board.is-settling.is-closing [data-motion-key] {
-  transition-delay: var(--dur-fast);
+  transition-delay: calc(var(--planner-departs, 0) * 32ms + var(--dur-fast));
 }
 
 @media (max-width: 40rem) {

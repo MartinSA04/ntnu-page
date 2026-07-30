@@ -1216,3 +1216,36 @@ test.describe("nålen", () => {
     expect(single.length).toBeGreaterThan(0);
   });
 });
+
+test("the layer leaves in the reverse of the order it arrived in", async ({ page }) => {
+  // REWORK-2026-07-30g. The sequence was already mirrored — space opens, then
+  // bars arrive; bars leave, then space closes — but the STAGGER was not:
+  // arrivals struck in one after another in reading order while departures all
+  // vanished on the same frame. That is not the reverse of an order, it is the
+  // absence of one.
+  await page.goto("/planlegger/#26h;MTDT.2026;");
+  await expect(gridBlocks(page).first()).toBeVisible({ timeout: 45_000 });
+
+  const indices = (selector: string, prop: string) =>
+    page.evaluate(
+      ([sel, p]) =>
+        Array.from(document.querySelectorAll(`#planner-grid-frame ${sel}`)).map((el) =>
+          Number((el as HTMLElement).style.getPropertyValue(p)),
+        ),
+      [selector, prop] as const,
+    );
+
+  await page.locator("#planner-others-toggle").click();
+  const arrive = await indices(".planner-block.is-arriving", "--planner-arrive");
+  expect(arrive.length).toBeGreaterThan(1);
+  // Reading order, ascending: 0, 1, 2 …
+  expect(arrive).toEqual([...arrive].sort((a, b) => a - b));
+  await page.waitForTimeout(1400);
+
+  await page.locator("#planner-others-toggle").click();
+  const depart = await indices(".planner-motion-ghost", "--planner-depart");
+  expect(depart.length).toBe(arrive.length);
+  // The same reading order, DESCENDING: the last bar to land is the first to go.
+  expect(depart).toEqual([...depart].sort((a, b) => b - a));
+  expect(Math.max(...depart)).toBe(depart.length - 1);
+});
