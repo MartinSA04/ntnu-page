@@ -82,10 +82,14 @@ h3 {
   padding-inline-start: 0;
 }
 
+/* Links are ink and underlined. The underline is not decoration here, it is
+   the whole distinguishing mark: a link no longer differs from its prose by
+   colour, so it has to differ by form (WCAG 1.4.1). That is also the older and
+   better typographic answer than a coloured word. */
 a {
-  color: var(--accent-ink);
+  color: var(--ui);
   text-decoration: underline;
-  text-decoration-color: color-mix(in srgb, var(--accent) 40%, transparent);
+  text-decoration-color: color-mix(in srgb, var(--ui) 45%, transparent);
   text-underline-offset: 2px;
   transition: color var(--dur-fast) var(--ease);
 }
@@ -142,9 +146,16 @@ th {
   color: var(--muted);
 }
 
+/* The offset is the whole indicator on a filled control, not a nicety. Since
+   the ring became ink (REWORK-2026-07-30) it is the same colour as every
+   pressed and selected fill, so a focused `.np-toggle` is an ink slab with an
+   ink ring and the paper gap between them is the only thing separating the
+   two. At 2px that read as a seam; 3px reads as a ring. (The green ring had
+   the same collision on green fills — it was just rarer, because fewer
+   controls filled.) */
 :focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
+  outline: 2px solid var(--ui);
+  outline-offset: 3px;
   border-radius: var(--radius-xs);
 }
 

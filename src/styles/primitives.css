@@ -1,8 +1,8 @@
 /**
  * Ruteark primitives — the .np-* vocabulary. One interaction grammar:
  * flat at rest; hover answers on the surface (paper darkens a step, bare
- * controls take an ink wash) with text lighting to --accent-ink; press
- * dips 1px; focus is the global 2px accent outline. Interactive controls
+ * controls take an ink wash) with text lighting to full ink; press
+ * dips 1px; focus is the global 2px --ui outline. Interactive controls
  * never carry borders (hairlines are structure).
  *
  * The press dip lives on the controls themselves, not on an opt-in class:
@@ -110,15 +110,15 @@
 
 .np-btn:hover {
   background: var(--control-hover);
-  color: var(--accent-ink);
 }
 
-/* --accent-strong, not --accent: this is a fill carrying --accent-contrast
-   text, and that pair has to clear AA (tokens.css, a11y-6). */
+/* Pressed is a SELECTION, not a verdict, so it fills with ink (18.62:1 under
+   paper text — the accent fill it replaces measured 4.39 and needed its own
+   darker token to clear AA at all). */
 .np-btn[aria-pressed="true"],
 .np-btn.is-active {
-  background: var(--accent-strong);
-  color: var(--accent-contrast);
+  background: var(--ui);
+  color: var(--ui-contrast);
 }
 
 /* A fixed --control-h box — so nothing about it shrinks. `flex: none` is the
@@ -143,7 +143,7 @@
 
 .np-icon-btn:hover {
   background: var(--wash);
-  color: var(--accent-ink);
+  color: var(--ui);
 }
 
 /* Bare navigational text control (topbar links, quiet actions). */
@@ -164,7 +164,7 @@
 
 .np-navlink:hover {
   background: var(--wash);
-  color: var(--accent-ink);
+  color: var(--ui);
 }
 
 .np-navlink[aria-current="page"] {
@@ -201,7 +201,6 @@
 a.np-tag:hover,
 button.np-tag:hover {
   background: var(--card-hover);
-  color: var(--accent-ink);
 }
 
 /* The square dot — a filled ruteark cell carrying a course hue.
@@ -211,7 +210,7 @@ button.np-tag:hover {
   width: 8px;
   height: 8px;
   border-radius: 1px;
-  background: var(--dot, var(--accent));
+  background: var(--dot, var(--ui));
 }
 
 .np-tag--sm .np-dot {
@@ -253,12 +252,12 @@ button.np-tag:hover {
 
 .np-toggle:hover {
   background: var(--control-hover);
-  color: var(--accent-ink);
+  color: var(--ui);
 }
 
 .np-toggle[aria-pressed="true"] {
-  background: var(--accent-strong);
-  color: var(--accent-contrast);
+  background: var(--ui);
+  color: var(--ui-contrast);
 }
 
 /* --- Fields -------------------------------------------------------- */
@@ -281,8 +280,8 @@ button.np-tag:hover {
 }
 
 .np-field:focus-within {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
+  outline: 2px solid var(--ui);
+  outline-offset: 3px;
 }
 
 /* `align-self: stretch` is a hit-target rule, not a layout one. The field is
@@ -398,7 +397,8 @@ button.np-tag:hover {
   font-weight: var(--weight-medium);
   text-transform: uppercase;
   letter-spacing: var(--tracking);
-  color: var(--accent-ink);
+  /* A disclosure opens something. It judges nothing, so it is ink. */
+  color: var(--ui);
   cursor: pointer;
   list-style: none;
   border-radius: var(--radius-sm);
@@ -446,7 +446,7 @@ button.np-tag:active,
 /* Deep-link arrival: one quiet accent flash. */
 @keyframes np-flash {
   0% {
-    outline-color: var(--accent-ring);
+    outline-color: var(--ui-ring);
   }
   100% {
     outline-color: transparent;
@@ -455,6 +455,6 @@ button.np-tag:active,
 
 .np-target-flash {
   outline: 2px solid transparent;
-  outline-offset: 2px;
+  outline-offset: 3px;
   animation: np-flash var(--dur-flash) var(--ease);
 }

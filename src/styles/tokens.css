@@ -38,20 +38,49 @@
   --control-hover: var(--card-hover);
   --control-edge: var(--faint);
 
-  /* Accent: Flexoki green — "it fits". Text goes through --accent-ink. */
-  --accent: #66800b;
-  --accent-ink: color-mix(in srgb, var(--accent) 65%, var(--fg));
-  --accent-contrast: #fffcf0;
-  /* The FILLED variant, and the only one that ever carries --accent-contrast
-     text: green-600 under #fffcf0 measures 4.39:1 — 0.11 under AA — on every
-     accent-filled control (the Studieinfo "Lagre" primary, a selected kull
-     chip, the øvinger toggle, /emner/'s city facets, the skip link) (a11y-6).
-     green-700 measures 6.03:1. Darkening --accent itself would drag links,
-     focus rings, --accent-ink and --accent-weak with it, so the fill gets its
-     own token; dark needs no shift (green-400 on Flexoki black is 6.12:1). */
-  --accent-strong: #536907;
-  --accent-weak: color-mix(in srgb, var(--accent) 12%, transparent);
-  --accent-ring: color-mix(in srgb, var(--accent) 45%, transparent);
+  /* There is no `--accent` (REWORK-2026-07-30). There used to be, and it did
+     five jobs: the collision verdict, the full-credit figure, the "I planen"
+     state, every focus ring and every link. Only the first two are judgements
+     about whether the term works — the rest is interface wearing the verdict's
+     colour, which is exactly what Green-Means-Fits says green may never do.
+     Splitting the token is what makes the rule enforceable: there is no
+     general-purpose accent left to reach for.
+
+     It also removes a colour compromise. green-600 measured 4.39:1 on paper —
+     under AA — so text went through a `--accent-ink` mix (65 % toward ink,
+     7.63:1) and fills through a separate `--accent-strong`. Three tokens to
+     make one colour readable, and the mix landed on #48580c, which reads
+     brown. --verdict below needs neither: it clears AA as text AND as a fill
+     on every surface in the system. */
+
+  /* THE VERDICT. Green, and only where the plan is being judged: the collision
+     line and a full 30 sp. Nothing else, ever.
+
+     Hue 107°, not green-600's 73°. The paper is 48°, so the old olive sat 25°
+     from its own ground and read as darker paper rather than as a colour. A
+     *true* green (145–160°) would have collided with the course hue cyan at
+     175°, which is why Flexoki's green is olive in the first place — 100–120°
+     is the gap where neither the paper nor a course identity lives.
+
+     Measured on #fffcf0 / #f2f0e5 / #e6e4d9: 5.89 / 5.30 / 4.75, and 5.89 the
+     other way round as a fill under paper-coloured text. Dark green-ish 400 on
+     #100f0f / #1c1b1a / #282726: 7.16 / 6.43 / 5.57. One token, both roles,
+     every surface — which is why there is no `-ink` or `-strong` variant. */
+  --verdict: #31701f;
+  --verdict-contrast: #fffcf0;
+
+  /* THE INTERFACE. Ink — focus rings, pressed and selected fills, links,
+     hover, membership. Ink-Before-Chrome was already the rule everywhere else
+     in this system; the accent was the exception, and it was the exception for
+     no stated reason.
+
+     18.62:1 as a fill or a ring on paper (11.98:1 in dark), against green's
+     4.39. A focus ring is a thing you must not miss, and it was the weakest
+     mark on the page. --ui-ring is the softened variant the arrival flash
+     fades from, never a resting focus indicator. */
+  --ui: var(--fg);
+  --ui-contrast: var(--bg);
+  --ui-ring: color-mix(in srgb, var(--fg) 50%, transparent);
 
   /* Collision ink: Flexoki red, reserved exclusively for conflicts.
      --clash-edge is the solid inline-start rule a colliding block carries.
@@ -72,7 +101,9 @@
 
   /* Interaction washes. */
   --wash: color-mix(in srgb, var(--fg) 6%, transparent);
-  --selection: color-mix(in srgb, var(--accent) 24%, transparent);
+  /* Text selection is the browser's own interface, not a verdict on anything,
+     so it follows --ui like every other selected state. */
+  --selection: color-mix(in srgb, var(--ui) 20%, transparent);
 
   /* Course-hue wash strengths, as mix percentages: the block's fill is
      color-mix(in srgb, var(--dot) var(--wash-course), var(--card)). They are
@@ -216,12 +247,12 @@
   --control-bg: #282726;
   --control-hover: #343331;
 
-  --accent: #879a39;
-  --accent-contrast: #100f0f;
-  /* Dark's fill already clears AA against near-black ink (6.12:1), and a
-     *darker* fill here would lose contrast, not gain it — so the filled
-     variant is the accent itself. */
-  --accent-strong: var(--accent);
+  /* The same hue shift as light (73° → 99°), lifted for a black ground:
+     7.16:1 on --bg, 6.43:1 on --card, 5.57:1 on --card-nested, and the same
+     figures inverted when it carries near-black text. --ui and --ui-ring need
+     no dark override — they are derived from --fg and --bg, which flip here. */
+  --verdict: #74ad55;
+  --verdict-contrast: #100f0f;
 
   /* Flexoki red-300, not the light theme's mirror red-400 (#d14d41). Red is
      the one ink the product cannot afford to whisper, and #d14d41 read 4.42:1

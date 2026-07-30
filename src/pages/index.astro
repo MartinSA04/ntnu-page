@@ -80,7 +80,7 @@ const seasonWord = isAutumn ? "høsten" : "våren";
     font-size: var(--text-md);
   }
   .home-resume a {
-    color: var(--accent-ink);
+    color: var(--ui);
   }
   /* --- Nå (REWORK-2026-07-29b D3) ---------------------------------------- */
 
@@ -104,11 +104,12 @@ const seasonWord = isAutumn ? "høsten" : "våren";
   }
 
   .home-now-link:hover .home-now-room {
-    color: var(--accent-ink);
+    color: var(--ui);
   }
 
+  /* "Nå · 37 min igjen" labels a moment; it does not judge a plan. */
   .home-now-label {
-    color: var(--accent-ink);
+    color: var(--muted);
   }
 
   /* The room, set as display type: the one fact you are walking somewhere to
@@ -153,10 +154,11 @@ const seasonWord = isAutumn ? "høsten" : "våren";
     display: none;
   }
 
+  /* How far through the lecture you are — a measurement, not a verdict. */
   .home-now-bar > span {
     display: block;
     height: 100%;
-    background: var(--accent);
+    background: var(--ui);
   }
 
   .home-now-next {

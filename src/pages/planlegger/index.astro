@@ -199,8 +199,11 @@ const programOptionsJson = JSON.stringify(programOptions).replaceAll("<", "\\u00
     margin-top: var(--space-1);
   }
 
+  /* The unanswered studieretning, pulled out of a muted line. It asks you to
+     do something; it does not say the term works — so it is ink, not the
+     verdict green (REWORK-2026-07-30). */
   :global(.planner-context-direction) {
-    color: var(--accent-ink);
+    color: var(--ui);
   }
 
   .planner-link-note:not([hidden]) {
@@ -383,7 +386,7 @@ const programOptionsJson = JSON.stringify(programOptions).replaceAll("<", "\\u00
      written in this template; it now merely has to beat :where(), not (0,2,0). */
   :global(.planner-section-sub.is-clean),
   :global(.planner-verdict.is-clean) {
-    color: var(--accent-ink);
+    color: var(--verdict);
   }
 
   .planner-credit-line {
@@ -397,7 +400,7 @@ const programOptionsJson = JSON.stringify(programOptions).replaceAll("<", "\\u00
      truth (B9.3); the overload keeps neutral ink and explains itself in
      .planner-credit-note below. */
   .planner-credit-line.is-full {
-    color: var(--accent-ink);
+    color: var(--verdict);
   }
 
   .planner-credit-note:not([hidden]) {
@@ -782,11 +785,12 @@ const programOptionsJson = JSON.stringify(programOptions).replaceAll("<", "\\u00
   }
 
   /* The attention mark sits under the name, so the credit column stays a
-     column of figures. Accent ink, not red — it is an invitation to open the
-     row, and Red-Is-Collision keeps red for two things that cannot coexist. */
+     column of figures. Ink, not red — it is an invitation to open the row, and
+     Red-Is-Collision keeps red for two things that cannot coexist. Not green
+     either: "se detaljer" is a thing to do, not a verdict (REWORK-2026-07-30). */
   :global(.planner-course-flag) {
     font-size: var(--text-xs);
-    color: var(--accent-ink);
+    color: var(--ui);
   }
 
   /* --- Credit gap door --------------------------------------------------- */

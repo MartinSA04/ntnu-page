@@ -12,6 +12,13 @@ import { describe, expect, it } from "vitest";
  * (audit a11y-5 / a11y-6). Both are 13.44px/400–500 text, so WCAG AA's 4.5:1
  * applies, not the 3:1 large-text exception.
  *
+ * `--accent` is gone (REWORK-2026-07-30). It became `--verdict`, which is
+ * greener AND darker precisely so that one token can be both the text and the
+ * fill — the pair of tokens the old accent needed (`-ink` at 7.63:1 to be
+ * readable, `-strong` at 6.03:1 to be fillable) existed only because green-600
+ * cleared neither. The floor below is therefore checked in BOTH directions and
+ * on all three paper steps, which is the claim that replaced them.
+ *
  * The ratios are computed from the literal hex in tokens.css, so changing a
  * swatch re-runs the measurement rather than the reviewer's eye.
  */
@@ -77,13 +84,26 @@ describe.each(["light", "dark"] as const)("contrast: %s theme", (theme) => {
     expect(contrast(hex(theme, "--clash"), hex(theme, surface))).toBeGreaterThanOrEqual(AA);
   });
 
-  /* Accent fills. DESIGN §2: "on accent fills use --accent-contrast" — so this
-     is the one pair every filled control (.np-btn[aria-pressed], .np-toggle
-     [aria-pressed], .studieinfo-save, .skip-link) has to clear. */
-  it("--accent-contrast on --accent-strong clears AA", () => {
+  /* The verdict, in both of its roles. It is a sentence colour on the banner
+     ("ingen kollisjoner") and on the credit line, and it has to survive a card
+     and a nested card — and it is a fill under --verdict-contrast wherever the
+     mark is drawn. One token doing two jobs is only allowed while both clear. */
+  it.each(["--bg", "--card", "--card-nested"])("--verdict clears AA on %s", (surface) => {
+    expect(contrast(hex(theme, "--verdict"), hex(theme, surface))).toBeGreaterThanOrEqual(AA);
+  });
+
+  it("--verdict-contrast on --verdict clears AA", () => {
     expect(
-      contrast(hex(theme, "--accent-contrast"), hex(theme, "--accent-strong")),
+      contrast(hex(theme, "--verdict-contrast"), hex(theme, "--verdict")),
     ).toBeGreaterThanOrEqual(AA);
+  });
+
+  /* Ink fills. Every filled control is --ui now (.np-btn[aria-pressed],
+     .np-toggle[aria-pressed], .studieinfo-save, .skip-link), which is the
+     change that made the a11y-6 compromise unnecessary rather than merely
+     compliant: --fg on --bg is the highest-contrast pair the palette has. */
+  it("--ui-contrast on --ui clears AA", () => {
+    expect(contrast(hex(theme, "--ui-contrast"), hex(theme, "--ui"))).toBeGreaterThanOrEqual(AA);
   });
 
   /* Body and secondary ink on both paper steps. */

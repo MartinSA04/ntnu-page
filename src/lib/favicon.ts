@@ -1,6 +1,6 @@
 /**
  * The Ruteark mark: a 2x2 ruled square (hairline grid) with one cell filled
- * in the accent green — "the squared paper every Norwegian student sketches
+ * in the verdict green — "the squared paper every Norwegian student sketches
  * a timetable on" (docs/DESIGN.md §1). Rendered on a fixed dark ground so
  * the tab icon reads the same regardless of the page's current theme.
  * Inlined as a `data:` URI so there is no per-build asset to manage.
@@ -13,11 +13,16 @@ export const GROUND = "#100f0f";
 export const LINE = "#575653";
 
 /**
- * Flexoki green (matches tokens.css's light-mode `--accent`). Build-time SVG
- * markup can't read CSS custom properties, so this is the one sanctioned
- * literal — callers should use it rather than re-hardcoding the hex value.
+ * The verdict green, in its DARK-theme value (tokens.css `--verdict`), because
+ * the mark is drawn on a fixed `GROUND` and never on paper: the light value
+ * measures 4.24:1 there, this one 7.16:1. Build-time SVG markup cannot read CSS
+ * custom properties, so this is the one sanctioned literal — callers should use
+ * it rather than re-hardcoding the hex.
+ *
+ * The mark is the one place the verdict colour doubles as identity, and that is
+ * the point of it: a filled cell on squared paper IS a term that fits.
  */
-export const ACCENT = "#66800b";
+export const VERDICT = "#74ad55";
 
 /** The 2x2 ruled square mark as an SVG string, one cell filled with `accent`. */
 export function faviconSvg(accent: string): string {

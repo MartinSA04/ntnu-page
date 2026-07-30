@@ -79,8 +79,11 @@ const description = "Søk i NTNUs emnekatalog etter emnekode, emnenavn eller stu
     padding: var(--space-1) 0;
     transition: color var(--dur-fast) var(--ease);
   }
+  /* The row already rests at full ink, so hover cannot answer with colour —
+     it answers with the underline, the same mark every other link uses. */
   :global(.emner-row-link:hover) {
-    color: var(--accent-ink);
+    text-decoration: underline;
+    text-decoration-color: color-mix(in srgb, var(--ui) 45%, transparent);
   }
   :global(.emner-row-code) {
     font-family: var(--font-mono);

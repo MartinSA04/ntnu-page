@@ -205,7 +205,7 @@
 }
 
 .planner-grid-row[data-today] .planner-grid-field {
-  background-color: color-mix(in srgb, var(--accent) 5%, transparent);
+  background-color: color-mix(in srgb, var(--fg) 4%, transparent);
 }
 
 /* --- A bar --------------------------------------------------------------- */
@@ -342,7 +342,7 @@
      percentage divided by a percentage is not something to rely on. */
   left: calc(var(--planner-spine) + (100% - var(--planner-spine) - 16px) * var(--planner-x) / 100);
   width: 1px;
-  background: color-mix(in srgb, var(--accent) 30%, transparent);
+  background: color-mix(in srgb, var(--ui) 32%, transparent);
   pointer-events: none;
   z-index: 3;
 }
@@ -358,7 +358,7 @@
   top: calc(var(--planner-now-top) - 22px);
   height: var(--planner-now-height);
   width: 2px;
-  background: var(--accent);
+  background: var(--ui);
 }
 
 /* --- The strike-in (D4) --------------------------------------------------- */
@@ -521,7 +521,7 @@
   display: inline-flex;
   align-items: center;
   gap: var(--gap-2);
-  text-decoration-color: color-mix(in srgb, var(--accent) 40%, transparent);
+  text-decoration-color: color-mix(in srgb, var(--ui) 45%, transparent);
 }
 
 /* --- TAVLA — the list view (REWORK-2026-07-29b D2) ------------------------ */

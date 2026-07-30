@@ -2,7 +2,7 @@
 import { ClientRouter } from "astro:transitions";
 import semestersData from "../../data/semesters.json";
 import ThemeToggle from "../components/ThemeToggle.astro";
-import { ACCENT, faviconDataUri } from "../lib/favicon.ts";
+import { faviconDataUri, VERDICT } from "../lib/favicon.ts";
 import groteskLatin from "../styles/fonts/schibsted-grotesk-latin.woff2?url";
 import monoLatin from "../styles/fonts/spline-sans-mono-latin.woff2?url";
 import "../styles/fonts.css";
@@ -80,7 +80,7 @@ const crawlDate = formatCrawlDate(semestersData.crawledAt);
     <link rel="preload" href={monoLatin} as="font" type="font/woff2" crossorigin />
     <title>{title}</title>
     <meta name="description" content={description} />
-    <link rel="icon" href={faviconDataUri(ACCENT)} />
+    <link rel="icon" href={faviconDataUri(VERDICT)} />
     <script is:inline define:vars={{ THEME_KEY }}>
       // No-flash theme init — reads the stored choice, falls back to the OS
       // preference, and sets data-theme on <html> before first paint.

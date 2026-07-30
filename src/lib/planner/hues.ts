@@ -1,6 +1,6 @@
 /**
  * Categorical course-identity hues (docs/DESIGN.md §2). Six custom
- * properties, cycling by selection order — green is the accent ("it fits")
+ * properties, cycling by selection order — green is the verdict ("it fits")
  * and red is collision ink, so neither is ever assigned here.
  */
 export const PLAN_HUES = [

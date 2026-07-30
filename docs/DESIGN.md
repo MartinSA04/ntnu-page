@@ -20,9 +20,10 @@ alarmism, pill-shaped chrome, bouncy motion, pure #000/#fff anywhere.
 
 ## 2. Color
 
-Flexoki throughout. Every neutral is warm; accents are literal Flexoki
-swatches, never derived mixes (except the sanctioned `--accent-ink` and
-`--wash` mixes in tokens.css).
+Flexoki throughout. Every neutral is warm; colour is a literal Flexoki
+swatch unless a bullet below says otherwise and says why — the two standing
+exceptions are `--verdict` (hue 107°, §8) and the sanctioned `--wash` /
+`--selection` mixes in tokens.css.
 
 - **Paper**: `--bg` #FFFCF0 ground, `--card` #F2F0E5 panels one step down,
   `--card-nested` #E6E4D9 for recessed/nested fills. Dark mode mirrors on
@@ -37,15 +38,25 @@ swatches, never derived mixes (except the sanctioned `--accent-ink` and
   `--card` on `--bg` is only ~1.1:1, below WCAG 1.4.11's 3:1 for a control
   boundary). `--control-edge` — a neutral (not accent) inline-start rule on
   `.np-field` only, since a field carries no text label to identify it the
-  way a button's or toggle's caption does; a green edge on every resting
-  field would spend Green-Means-Fits on chrome instead of a verdict. This is
+  way a button's or toggle's caption does. (It was already neutral for the
+  reason the whole accent split later generalised: a green edge on every
+  resting field spends Green-Means-Fits on chrome instead of a verdict.) This is
   a tonal step, not a border: Ink-Before-Chrome still holds, the control
   layer is just one more layer of the same paper stack.
-- **Accent — Flexoki green** (#66800B light / #879A39 dark): the color of
-  "it fits". Owns: focus rings, selected fills, links, the credit total at
-  30 sp, "I planen" state. As text always via `--accent-ink` (green mixed
-  65% toward ink) — raw `--accent` text is forbidden; on accent fills use
-  `--accent-contrast`.
+- **The verdict — green** (`--verdict` #31701F light / #74AD55 dark): the
+  color of "it fits", and it owns exactly two things — the collision line
+  and the credit total at a full 30 sp. Nothing else. One token in both
+  roles (text and fill), on every paper step; there is no `-ink` and no
+  `-strong` variant, and `--verdict-contrast` is the only thing that ever
+  sits on top of it.
+- **The interface — ink** (`--ui` = `--fg`, `--ui-contrast` = `--bg`):
+  focus rings, pressed and selected fills, links, hover, membership
+  ("I planen"), the now marker. `--ui-ring` is the softened variant the
+  deep-link arrival flash fades from, never a resting focus indicator.
+- **There is no `--accent`** (retired 2026-07-30). It did five jobs and only
+  two of them were verdicts, which is the definition of decoration the rule
+  below forbids. Splitting it is what makes the rule enforceable: there is
+  no general-purpose accent token left to reach for.
 - **Collision red** (#AF3029 / #D14D41 + `--clash-bg`): **only** for two
   things that cannot coexist (timetable overlaps, same-day exams). Fetch
   errors, empty states and validation are ink, not red.
@@ -59,9 +70,11 @@ swatches, never derived mixes (except the sanctioned `--accent-ink` and
 **Red-Is-Collision.** Red marks coexistence failures, nothing else. If red
 appears, two concrete things clash, and the copy names both.
 
-**Green-Means-Fits.** Positive verdicts are the accent's job: complete
-credits, conflict-free confirmations, membership state. Green never
-decorates.
+**Green-Means-Fits.** Green is a *judgement about whether the term works*,
+and nothing else: the conflict-free line and a full 30 sp. Membership,
+selection, focus and hover are interface and take `--ui`. Green never
+decorates — and since 2026-07-30 it cannot, because the token it would have
+to borrow no longer exists.
 
 ## 3. Typography
 
@@ -166,12 +179,12 @@ deleted (§5).
 
 One grammar, defined once in primitives.css: rest = flat; hover = surface
 answer (paper darkens a step, bare controls take `--wash`) + text lights to
-`--accent-ink`; **press = a 1px dip, built into every control listed below**
+`--ui` where it was muted; **press = a 1px dip, built into every control below**
 (`.np-btn:active`, `.np-icon-btn:active`, `.np-navlink:active`,
 `.np-toggle:active`, `.np-summary:active`, `a.np-tag:active`,
 `button.np-tag:active`) — `.np-press` is the escape hatch for one-off
 pressables that aren't one of those, not something to add alongside them;
-focus = global 2px accent outline.
+focus = global 2px `--ui` outline.
 
 **Labels & data**
 - **`.np-kicker`** — mono, `--text-xs`, 500, uppercase, `--tracking-wide`,
@@ -191,7 +204,7 @@ focus = global 2px accent outline.
 **Buttons**
 - **`.np-btn`** — paper action button on `--control-bg`/`--control-hover`
   (grotesk 500 label, sentence verbs: "Legg til i planen"). `aria-pressed`/
-  `.is-active` fills accent.
+  `.is-active` fills `--ui`.
 - **`.np-icon-btn`** — 36px bare glyph, `--wash` hover.
 - **`.np-navlink`** — bare navigation text; `aria-current="page"` inks it.
 
@@ -206,7 +219,7 @@ focus = global 2px accent outline.
 - **`.np-dot`** — the square hue dot (8px, 1px radius; 6px inside
   `.np-tag--sm`), set via `style="--dot: var(--hue-cyan)"`.
 - **`.np-toggle`** — selectable mono tag on `--control-bg`/`--control-hover`
-  (semester switcher, filters), `aria-pressed` fills accent.
+  (semester switcher, filters), `aria-pressed` fills `--ui`.
   `.np-toggle--text` — sans, `--text-sm`, no uppercase/tracking, same fills
   and `aria-pressed`; use for multi-word proper names (studieretning/campus
   choices) where mono-tracked caps would wrap a 20-character Norwegian
@@ -217,7 +230,7 @@ focus = global 2px accent outline.
 - **`.np-field`** — paper input on `--control-bg`, a persistent 2px
   `--control-edge` inline-start rule (§2 — this is the one primitive that
   owns that shadow; don't add another `box-shadow` to it or a class composed
-  with it), focus-within keeps the 2px accent outline.
+  with it), focus-within keeps the 2px `--ui` outline.
 
 **Surfaces**
 - **`.np-panel`** — paper panel on `--card`.
@@ -242,7 +255,7 @@ focus = global 2px accent outline.
 - **`.np-summary`** — mono disclosure row with rotating chevron.
 
 **Micro-interactions**
-- **`.np-target-flash`** — quiet accent outline flash on deep-link arrival.
+- **`.np-target-flash`** — quiet `--ui-ring` outline flash on deep-link arrival.
 
 **Deleted — do not reach for these, they no longer exist:** `.np-kbd`
 (zero users), `.np-tile` (zero users; §12's killed triptych was its only
@@ -301,9 +314,22 @@ apology. Empty states are invitations to act.
 
 ## 8. Adjudicated decisions
 
-- **The accent is green, not NTNU blue.** The tool's output is a verdict
+- **The verdict is green, not NTNU blue.** The tool's output is a verdict
   (fits / collides); green-vs-red is that verdict's native language. Blue
-  remains a course-identity hue. Do not "brand-correct" this to blue.
+  remains a course-identity hue, and a verdict may not wear a colour that
+  also means "this is TDT4120". Do not "brand-correct" this to blue.
+- **The verdict green is hue 107°, not Flexoki green-600's 73°** — the one
+  sanctioned departure from "accents are literal Flexoki swatches"
+  (adjudicated 2026-07-30). green-600 sat 25° from the paper's own 48° and
+  read as darker paper rather than as a colour. A *true* green (145–160°)
+  was not available either: the course hue cyan is at 175°, and Flexoki's
+  green is olive precisely to stay clear of it. 100–120° is the only gap
+  where neither the ground nor a course identity lives. Measured, both
+  directions, all three paper steps — see `tests/site/tokens.test.ts`.
+- **The interface is ink, not the accent.** Ink-Before-Chrome already
+  governed every other surface; the accent was the unexplained exception.
+  A focus ring went from 4.39:1 to 18.62:1 by obeying the rule the rest of
+  the system already followed.
 - **Course hues never color text.** Hue-colored text on warm paper fails
   contrast in half the pairs; the square dot carries identity, text stays
   ink. Do not add colored course names for "scannability".

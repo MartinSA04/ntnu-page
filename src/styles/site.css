@@ -15,8 +15,8 @@
   left: var(--space-2);
   z-index: 100;
   padding: var(--space-2) var(--space-3);
-  background: var(--accent-strong);
-  color: var(--accent-contrast);
+  background: var(--ui);
+  color: var(--ui-contrast);
   border-radius: var(--radius-sm);
   font-family: var(--font-sans);
   font-size: var(--text-sm);
@@ -180,7 +180,7 @@
 }
 
 .site-footer a:hover {
-  color: var(--accent-ink);
+  color: var(--ui);
 }
 
 .site-footer-sep {
@@ -334,8 +334,8 @@
 }
 
 .studieinfo-select:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
+  outline: 2px solid var(--ui);
+  outline-offset: 3px;
 }
 
 .studieinfo-note {
@@ -352,17 +352,18 @@
   margin-top: var(--space-2);
 }
 
-/* Lagre is the primary — accent fill in both rest and hover (the shared
-   .np-btn hover would wash it back to a neutral control). --accent-strong is
-   the fill variant that clears AA under --accent-contrast (a11y-6). */
+/* Lagre is the primary — an ink fill in both rest and hover (the shared
+   .np-btn hover would wash it back to a neutral control). Saving a plan is an
+   action, not a verdict on one, so it takes --ui like every other committed
+   state. Hover lifts rather than darkens, because ink cannot go darker. */
 .studieinfo-save {
-  background: var(--accent-strong);
-  color: var(--accent-contrast);
+  background: var(--ui);
+  color: var(--ui-contrast);
 }
 
 .studieinfo-save:hover {
-  background: color-mix(in srgb, var(--accent-strong) 88%, var(--fg));
-  color: var(--accent-contrast);
+  background: color-mix(in srgb, var(--ui) 86%, var(--muted));
+  color: var(--ui-contrast);
 }
 
 /* --- Add-course dialog (Task 12) ---------------------------------------
@@ -453,8 +454,12 @@
   margin-left: auto;
 }
 
+/* "I planen" is membership, not a judgement — it says where a course is, not
+   whether the term works. It reads as full ink against the muted rows around
+   it (REWORK-2026-07-30). */
 .add-course-added {
-  color: var(--accent-ink);
+  color: var(--ui);
+  font-weight: var(--weight-medium);
 }
 
 .add-course-close {
@@ -563,7 +568,7 @@
   flex: none;
   width: 1.15rem;
   height: 1.15rem;
-  accent-color: var(--accent);
+  accent-color: var(--ui);
 }
 
 .course-settings-actions {
@@ -583,7 +588,7 @@
 }
 
 .course-settings-link:hover {
-  color: var(--accent-ink);
+  color: var(--ui);
 }
 
 /* --- Session popover (REWORK-2026-07-29f) ------------------------------
@@ -696,5 +701,5 @@
 }
 
 .block-popover-link:hover {
-  color: var(--accent-ink);
+  color: var(--ui);
 }

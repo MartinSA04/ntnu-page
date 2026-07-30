@@ -218,6 +218,9 @@ test("verdict: a failed timetable fetch refuses the check instead of clearing it
   // kollisjoner" in Green-Means-Fits accent — a confident answer to PRODUCT
   // §1's only question, computed over data it never had. The verdict now has a
   // third state, and this is the only place the three are distinguishable.
+  // (`--verdict` green is the ONLY thing on the page still coloured by an
+  // outcome — REWORK-2026-07-30 moved every focus ring, fill and link to ink —
+  // so a false green here is now the single loudest lie the page can tell.)
   await page.route("**/api/course/TMA4400/timetable*", (route) =>
     route.fulfill({
       status: 503,
@@ -236,8 +239,8 @@ test("verdict: a failed timetable fetch refuses the check instead of clearing it
   const status = page.locator("#planner-grid-status");
   await expect(status).toContainText(/kan ikke sjekkes/, { timeout: 45_000 });
   await expect(status).toContainText(/mangler timeplan for \d+ emne/);
-  // Not the clean state, and not silence either: `.is-clean` is the accent-green
-  // mark, and it must never sit on a verdict we could not compute.
+  // Not the clean state, and not silence either: `.is-clean` is the verdict
+  // green, and it must never sit on a verdict we could not compute.
   await expect(status).not.toHaveClass(/is-clean/);
 });
 
