@@ -99,7 +99,7 @@ describe("planClash", () => {
     const verdict = await planClash({ code: "TDT4100", version: "1" }, plan(), SEMESTER);
     expect(verdict).toEqual({ kind: "off-semester" });
     expect(clashSentence(verdict, SEMESTER)).toBe(
-      "Undervises ikke i Høst 2026 — ingen kollisjon å sjekke.",
+      "Undervises ikke i Høst 2026, ingen kollisjon å sjekke.",
     );
   });
 
@@ -122,7 +122,7 @@ describe("planClash", () => {
     ]);
     expect(verdict).toEqual({ kind: "unclassified" });
     expect(clashSentence(verdict, SEMESTER)).toBe(
-      "Kan ikke sjekke kollisjon i Høst 2026 — ingen aktiviteter er merket som forelesning.",
+      "Kan ikke sjekke kollisjon i Høst 2026. Ingen aktiviteter er merket som forelesning.",
     );
   });
 

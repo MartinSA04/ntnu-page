@@ -367,7 +367,7 @@ function clashLines(rows: ExamListRow[]): HTMLElement[] {
     const codes = [...new Set(list.map((r) => r.code))];
     const names = codes.length === 2 ? codes.join(" og ") : codes.join(", ");
     const line = el("p", "exam-clash np-note-clash");
-    line.append(`${names} er samme dag — `);
+    line.append(`${names} er samme dag: `);
     line.append(el("span", "np-data", `${list[0]?.weekday ?? ""} ${formatShortDate(date)}`));
     out.push(line);
   }
@@ -379,7 +379,9 @@ function clashLines(rows: ExamListRow[]): HTMLElement[] {
  *  deferred lands, so the kont filter never reads as "no exam" (exams-1). */
 function datelessRow(code: string, hueVar: string, scheme: string | null): HTMLLIElement {
   const item = el("li", "exam-row exam-dateless");
-  item.append(el("span", "exam-date np-data", "—"));
+  // The date cell is left empty rather than filled with a dash: the row's
+  // own third column already says "dato ikke satt" in words.
+  item.append(el("span", "exam-date np-data"));
   const what = el("span", "exam-what");
   what.style.setProperty("--dot", `var(${hueVar})`);
   what.append(el("span", "exam-code np-data", code));

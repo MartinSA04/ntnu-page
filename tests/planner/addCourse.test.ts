@@ -79,7 +79,7 @@ describe("addCourseRowControl", () => {
     // modals-4's CSS half: the tone split needs a hook CSS can select on.
     expect(control.stateKind).toBe("program");
 
-    expect(control.run()).toBe("TDT4109 droppet — fortsatt en del av programmet.");
+    expect(control.run()).toBe("TDT4109 droppet, men fortsatt en del av programmet.");
     expect(store.loadPlan().courses).toEqual([
       { code: "TDT4109", name: TDT4109.name, version: "1", source: "program", dropped: true },
     ]);

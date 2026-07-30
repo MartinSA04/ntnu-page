@@ -172,10 +172,12 @@ test("share: a program-less link clears the profile chip", async ({ page }) => {
   await expect(courseRows(page)).toHaveCount(5, { timeout: 30_000 });
   await expect(planTitle(page)).toContainText("MTDT", { timeout: 30_000 });
 
-  // A different-path hop first guarantees a real document load (so the initial
-  // hash-load path runs), and proves the profile is genuinely stored: the chip
-  // still reads MTDT on /emner/.
-  await page.goto("/emner/");
+  // A different-path hop first guarantees a real document load, so the initial
+  // hash-load path runs. It also proves the profile is genuinely stored rather
+  // than only in memory: the landing page's chip reads it back. (`/emner/` no
+  // longer carries the chip at all, REWORK-2026-07-30d, so it cannot be the
+  // page that proves this.)
+  await page.goto("/");
   await expect(page.locator("#studieinfo-chip")).toContainText("MTDT");
 
   await page.goto("/planlegger/#26h;-;%2BTDT4100");

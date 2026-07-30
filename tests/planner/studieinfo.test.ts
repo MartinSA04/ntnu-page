@@ -50,7 +50,7 @@ describe("cohortHint", () => {
     // prefill actually comes from. publishedYears listed 2026, so the old gate
     // stayed silent here.
     expect(cohortHint({ cohort: 2026, foundYear: 2024, periodMissing: false, semesterLabel })).toBe(
-      "Fant ingen studieplan for kull 2026 — viser kull 2024. Juster selv.",
+      "Fant ingen studieplan for kull 2026. Viser kull 2024 i stedet, juster selv.",
     );
   });
 
@@ -64,14 +64,14 @@ describe("cohortHint", () => {
 
   it("says the plan is missing entirely when no document was found at all", () => {
     expect(cohortHint({ cohort: 2019, foundYear: null, periodMissing: false, semesterLabel })).toBe(
-      "Fant ingen studieplan for kull 2019 — du kan legge til emner selv.",
+      "Fant ingen studieplan for kull 2019. Du kan legge til emner selv.",
     );
   });
 
   it("surfaces the period dead end the modal used to throw away (plan-5)", () => {
     // MTDT kull 2024 at Høst 2027 is period 7; the 2024 document has 1–6.
     expect(cohortHint({ cohort: 2024, foundYear: 2024, periodMissing: true, semesterLabel })).toBe(
-      "Studieplanen for kull 2024 har ingen periode for Høst 2027 ennå — velg et annet kull eller semester.",
+      "Studieplanen for kull 2024 har ingen periode for Høst 2027 ennå. Velg et annet kull eller semester.",
     );
   });
 
@@ -82,7 +82,7 @@ describe("cohortHint", () => {
       periodMissing: true,
       semesterLabel,
     });
-    expect(text).toContain("viser kull 2024");
+    expect(text).toContain("Viser kull 2024");
     expect(text).toContain("har ingen periode for Høst 2027");
   });
 });

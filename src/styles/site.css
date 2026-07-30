@@ -718,3 +718,24 @@
 .block-popover-link:hover {
   color: var(--ui);
 }
+
+/* --- Inline icon marks (REWORK-2026-07-30d) ------------------------------ */
+
+/* Every one of these replaced a character standing in for a mark: "×" on a
+   close button, "→" on a link out. A glyph inherits the text font's weight and
+   metrics, sits on the baseline instead of centred, and renders differently in
+   every fallback face; an SVG does none of that. Sized here rather than at
+   each call site so one rule governs the set. */
+.np-icon-btn svg {
+  width: 17px;
+  height: 17px;
+  flex: none;
+}
+
+.course-settings-link svg,
+.block-popover-link svg {
+  width: 15px;
+  height: 15px;
+  flex: none;
+  margin-inline-start: var(--gap-1);
+}

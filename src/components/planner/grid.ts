@@ -1229,13 +1229,13 @@ export function renderGrid(
       gapNote(
         "Fikk ikke hentet timeplan for ",
         gaps.failed,
-        " — kollisjonssjekken er ufullstendig.",
+        ". Kollisjonssjekken er ufullstendig.",
       ),
     );
   }
   if (gaps.pending.length > 0) {
     notesHost.append(
-      gapNote("Mangler timeplan for ", gaps.pending, " — kollisjonssjekken er ufullstendig."),
+      gapNote("Mangler timeplan for ", gaps.pending, ". Kollisjonssjekken er ufullstendig."),
     );
   }
   if (gaps.empty.length > 0) {
@@ -1250,7 +1250,7 @@ export function renderGrid(
       el(
         "p",
         "planner-grid-note np-hint",
-        "Ingen aktiviteter er merket som forelesning i disse emnene — viser all undervisning.",
+        "Ingen aktiviteter er merket som forelesning i disse emnene. Viser all undervisning.",
       ),
     );
   } else if (!revealOthers) {
@@ -1263,7 +1263,7 @@ export function renderGrid(
         gapNote(
           "Ingen aktiviteter er merket som forelesning i ",
           silent,
-          " — timene vises ikke her, og de er ikke med i kollisjonssjekken. Slå på «Øvinger og labber» for å se dem.",
+          ". Timene vises ikke her, og de er ikke med i kollisjonssjekken. Slå på «Øvinger og labber» for å se dem.",
         ),
       );
     }
@@ -1296,8 +1296,8 @@ export function renderGrid(
       code: choice.code,
       name: choice.name,
       hueVar: choice.hueVar,
-      text: ` har ${choice.count} alternative forelesninger — velg din`,
-      aria: `${choice.code} har ${choice.count} alternative forelesninger — vi viser én av dem, velg din`,
+      text: ` har ${choice.count} alternative forelesninger, velg din`,
+      aria: `${choice.code} har ${choice.count} alternative forelesninger. Vi viser én av dem, velg din`,
     })),
     ...[...unpickedGroups].map(([code, row]) => {
       const count = row.keys.size;
@@ -1306,8 +1306,8 @@ export function renderGrid(
         code,
         name: row.name,
         hueVar: row.hueVar,
-        text: ` har ${count} ${noun} — velg din`,
-        aria: `${code} har ${count} ${noun} du ikke har valgt — velg din`,
+        text: ` har ${count} ${noun}, velg din`,
+        aria: `${code} har ${count} ${noun} du ikke har valgt. Velg din`,
       };
     }),
   ];

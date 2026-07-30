@@ -507,7 +507,7 @@ describe("mountPlannerApp — audit repro", () => {
       "#26h;-;%2BTDT4109,%2BTMA4400,%2BTMA4412",
     );
     const status = find("planner-grid-status");
-    expect(status.textContent).toBe("kan ikke sjekkes — mangler timeplan for 1 emne");
+    expect(status.textContent).toBe("kan ikke sjekkes, mangler timeplan for 1 emne");
     expect(status.classList.contains("is-clean")).toBe(false);
     expect(status.classList.contains("np-note-clash")).toBe(false);
   });
@@ -848,7 +848,7 @@ describe("mountPlannerApp — audit repro", () => {
       .find((e) => e.classList.contains("planner-course-open") && e.dataset.code === "TMA4100")
       ?.click();
     const dialog = body.querySelector(".course-settings");
-    expect(dialog?.textContent).toContain("Ikke undervist i 2026 — sist undervist 2025");
+    expect(dialog?.textContent).toContain("Ikke undervist i 2026. Sist undervist 2025");
     expect(dialog?.textContent).not.toContain("Fikk ikke hentet");
   });
 
@@ -862,7 +862,7 @@ describe("mountPlannerApp — audit repro", () => {
     );
     const note = find("planner-link-note");
     expect(note.hidden).toBe(false);
-    expect(note.textContent).toContain("viser Høst 2026");
+    expect(note.textContent).toContain("Viser Høst 2026");
 
     // studieinfo's Lagre → store.setSemester → savePlan. It does NOT go through
     // `hashchange` (syncHash uses replaceState), which is why nothing cleared it.

@@ -4,7 +4,7 @@ import Layout from "../../layouts/Layout.astro";
 const description = "Søk i NTNUs emnekatalog etter emnekode, emnenavn eller studiested.";
 ---
 
-<Layout title="Emner — Semesterplan" description={description} wide>
+<Layout title="Emner · Semesterplan" description={description} wide>
   <p class="np-kicker emner-kicker">Emner</p>
   <h1 class="emner-title">Emnekatalog</h1>
 
@@ -311,7 +311,7 @@ const description = "Søk i NTNUs emnekatalog etter emnekode, emnenavn eller stu
       button.textContent = label;
       button.setAttribute(
         "aria-label",
-        sentence === "" ? `${label} — ${code}` : `${label} — ${code} · ${sentence}`,
+        sentence === "" ? `${label}, ${code}` : `${label}, ${code} · ${sentence}`,
       );
     }
 
@@ -530,7 +530,7 @@ const description = "Søk i NTNUs emnekatalog etter emnekode, emnenavn eller stu
       if (ranked.length > RESULT_CAP) {
         const more = document.createElement("li");
         more.className = "np-hint emner-more";
-        more.textContent = `${ranked.length - RESULT_CAP} flere treff — presiser søket.`;
+        more.textContent = `${ranked.length - RESULT_CAP} flere treff. Presiser søket.`;
         resultsEl.append(more);
       }
 

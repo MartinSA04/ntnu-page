@@ -50,11 +50,12 @@ this one is current. e2e: 18/18 green on the tree this shipped against.
 - **Four honest planner empty/fallback states**, including a real
   fetch-failure retry path; `/studier/*` (both surfaces) + `studyPlan.ts` +
   `programUrl.ts` deleted with no redirects; 404 simplified.
-- **Homepage proof fragment** (`.home-proof`, commit 74cd6ff): the small
-  `.np-frame.np-ruled` red-ink collision with "Del planen med en lenke —
-  ingen innlogging" beneath it. This file and PRODUCT.md §5 both listed it as
-  the one open MUST of §5 until 2026-07-27 (audit pc-7) — it is built; it
-  sits below the CTA rather than above the fold.
+- **Homepage proof fragment** (`.home-proof`, commit 74cd6ff): built
+  2026-07-27 after this file and PRODUCT.md §5 had both listed it as the one
+  open MUST of §5 (audit pc-7), then **deleted 2026-07-30d**. A ruled panel
+  showing two invented courses colliding is a picture of the product, not
+  evidence about it, and the Nå card above it already shows the student's own
+  week. Its removal took `.np-ruled` with it, which had no other caller.
 
 **UX-STUDY.md folded in.** This rework subsumes S1–S4 (picker regression +
 kull-chip dead-end — the modal + kull-relevance rule fix all four), S5 (the

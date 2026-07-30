@@ -29,7 +29,7 @@
  */
 import type { GroupOption } from "../../lib/planner/groups.js";
 import type { CourseSource, PlanStore } from "../../lib/planner/store.js";
-import { dot, el, formatCreditNumber } from "./dom.js";
+import { dot, el, formatCreditNumber, icon } from "./dom.js";
 
 /**
  * What the caller hands the modal. Everything the old
@@ -390,7 +390,8 @@ export function mountCourseSettings(store: PlanStore, signal: AbortSignal): Cour
     });
     row.append(action);
 
-    const link = el("a", "course-settings-link", "Gå til emnesiden →");
+    const link = el("a", "course-settings-link", "Gå til emnesiden");
+    link.append(icon("arrowRight"));
     link.href = `/emne/${ctx.code}/`;
     row.append(link);
 
@@ -398,7 +399,8 @@ export function mountCourseSettings(store: PlanStore, signal: AbortSignal): Cour
   }
 
   function renderClose(): HTMLElement {
-    const button = el("button", "np-icon-btn course-settings-close", "×");
+    const button = el("button", "np-icon-btn course-settings-close");
+    button.append(icon("close"));
     button.type = "button";
     button.setAttribute("aria-label", "Lukk");
     button.addEventListener("click", close);

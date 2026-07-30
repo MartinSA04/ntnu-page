@@ -313,8 +313,10 @@ and every legacy/versioned hash-parsing branch in `store.ts`.
   replaced it 2026-07-27 (665513f), the chip carries the whole cross-page
   affordance and re-adding a bar is a regression, not a feature —
   content column (`--maxw` for data pages via Layout's `wide` prop,
-  `--measure` otherwise), and a footer link row ("Søk i emner · Data hentet
-  {crawlDate} fra NTNU · uoffisiell") — `/studier/` is gone outright, not
+  `--measure` otherwise), and a footer that only states provenance ("Data
+  hentet {crawlDate} fra NTNU · uoffisiell, med forbehold om feil" — no link;
+  the catalog is one of the two nav destinations, so a third route to it in
+  the footer was chrome, REWORK-2026-07-30d) — `/studier/` is gone outright, not
   demoted (PRODUCT.md §4 addendum, §0 addendum point 6; supersedes REVIEW.md
   I1/I5's "one pill, footer-demoted" description).
 

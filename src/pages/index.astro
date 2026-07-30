@@ -10,7 +10,7 @@ const isAutumn = currentSemester ? /h$/i.test(currentSemester.id) : true;
 const seasonWord = isAutumn ? "høsten" : "våren";
 ---
 
-<Layout title="Semesterplan — planlegg semesteret ved NTNU" description={description}>
+<Layout title="Semesterplan · planlegg semesteret ved NTNU" description={description}>
   {/* The returning student's answer, when there is one to give: which room,
       right now. It renders above the pitch and replaces it — a page that
       already knows your week should not open by explaining what it is
@@ -42,25 +42,6 @@ const seasonWord = isAutumn ? "høsten" : "våren";
     </p>
   </div>
 
-  <div class="home-proof">
-    <div class="np-frame np-ruled home-proof-frame" aria-hidden="true">
-      <div class="home-proof-row">
-        <span class="np-tag home-proof-tag" style="--dot: var(--hue-blue)">
-          <span class="np-dot"></span>TDT4110
-        </span>
-      </div>
-      <div class="home-proof-row is-clash">
-        <span class="np-tag home-proof-tag" style="--dot: var(--hue-magenta)">
-          <span class="np-dot"></span>TMA4100
-        </span>
-        <span class="np-note-clash home-proof-clash">
-          Kolliderer med <span class="np-data">TDT4110</span> torsdag
-          <span class="np-data">14:15</span>
-        </span>
-      </div>
-    </div>
-    <p class="np-hint home-proof-caption">Del planen med en lenke — ingen innlogging.</p>
-  </div>
 </Layout>
 
 <style>
@@ -223,39 +204,6 @@ const seasonWord = isAutumn ? "høsten" : "våren";
     }
   }
 
-  .home-proof {
-    margin-top: var(--space-7);
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: var(--gap-6);
-    max-width: var(--maxw);
-  }
-  .home-proof-frame {
-    padding: var(--cell);
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-2);
-    min-width: 16rem;
-  }
-  .home-proof-row {
-    display: flex;
-    align-items: center;
-    gap: var(--gap-2);
-  }
-  .home-proof-row.is-clash {
-    flex-wrap: wrap;
-    box-shadow: var(--clash-edge);
-    background: var(--clash-bg);
-    padding: var(--space-1) var(--space-2);
-    border-radius: var(--radius-xs);
-  }
-  .home-proof-clash {
-    flex-basis: 100%;
-  }
-  .home-proof-caption {
-    max-width: 18rem;
-  }
 </style>
 
 <script>
@@ -366,26 +314,26 @@ const seasonWord = isAutumn ? "høsten" : "våren";
 
       if (verdict.kind === "done") {
         label.textContent = "Denne uka";
-        room.textContent = "—";
+        room.textContent = "Ingen flere";
         room.classList.add("is-none");
         course.textContent = "Ingenting mer denne uka.";
         sub.textContent = "";
         bar.hidden = true;
         next.replaceChildren();
-        link.setAttribute("aria-label", "Ingenting mer denne uka — åpne planleggeren");
+        link.setAttribute("aria-label", "Ingenting mer denne uka. Åpne planleggeren");
         return;
       }
 
       const s = verdict.session;
       const running = verdict.kind === "running";
       label.textContent = running ? "Nå" : "Neste";
-      room.textContent = s.room || "—";
+      room.textContent = s.room || "Rom ikke satt";
       room.classList.toggle("is-none", !s.room);
       // The room is the display figure, so a building name that is really a
       // sentence steps down rather than wrapping across three lines.
       // Only a real building name steps down; ordinary codes ("R1", "A3-138")
       // keep the display size, which is the whole point of the figure.
-      room.classList.toggle("is-long", s.room.length > 8 || /\s/.test(s.room));
+      room.classList.toggle("is-long", !s.room || s.room.length > 8 || /\s/.test(s.room));
       course.textContent = `${s.code} · ${s.courseName}`;
       sub.textContent = [
         s.activity,
@@ -405,7 +353,7 @@ const seasonWord = isAutumn ? "høsten" : "våren";
       }
       link.setAttribute(
         "aria-label",
-        `${running ? "Pågår nå" : "Neste time"}: ${s.code}, rom ${s.room || "ikke satt"} — åpne planleggeren`,
+        `${running ? "Pågår nå" : "Neste time"}: ${s.code}, rom ${s.room || "ikke satt"}. Åpne planleggeren`,
       );
 
       next.replaceChildren();

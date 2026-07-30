@@ -34,7 +34,7 @@
  */
 import { semesterYear } from "../../lib/planner/schedule.js";
 import type { AddCourseInput, PlanProgram, PlanStore } from "../../lib/planner/store.js";
-import { el, fold, formatShortDate } from "./dom.js";
+import { el, fold, formatShortDate, icon } from "./dom.js";
 import type { ProgramOption, SemesterSummary } from "./plannerApp.js";
 import {
   type DirectionOption,
@@ -85,7 +85,7 @@ const FALLBACK_COHORT_YEARS = 6;
  * "Velg kull …" while hiding every kull (modals-2/ux-fail-5).
  */
 const PROGRAM_MISSING_HINT =
-  "Fant ingen studieplan for dette programmet. Velg kull og lagre — da husker vi programmet ditt, men emnene må du legge til selv.";
+  "Fant ingen studieplan for dette programmet. Velg kull og lagre, så husker vi programmet ditt. Emnene må du legge til selv.";
 
 /** "publiseres vanligvis i <måned>" — desember for vår, august for høst. */
 export function publishMonthFor(semesterId: string): string {
@@ -122,15 +122,15 @@ export function cohortHint(input: {
 }): string {
   const notes: string[] = [];
   if (input.foundYear === null) {
-    notes.push(`Fant ingen studieplan for kull ${input.cohort} — du kan legge til emner selv.`);
+    notes.push(`Fant ingen studieplan for kull ${input.cohort}. Du kan legge til emner selv.`);
   } else if (input.foundYear !== input.cohort) {
     notes.push(
-      `Fant ingen studieplan for kull ${input.cohort} — viser kull ${input.foundYear}. Juster selv.`,
+      `Fant ingen studieplan for kull ${input.cohort}. Viser kull ${input.foundYear} i stedet, juster selv.`,
     );
   }
   if (input.periodMissing) {
     notes.push(
-      `Studieplanen for kull ${input.cohort} har ingen periode for ${input.semesterLabel} ennå — velg et annet kull eller semester.`,
+      `Studieplanen for kull ${input.cohort} har ingen periode for ${input.semesterLabel} ennå. Velg et annet kull eller semester.`,
     );
   }
   return notes.join(" ");
@@ -283,7 +283,7 @@ export function mountStudieinfo(deps: StudieinfoDeps, signal: AbortSignal): Stud
   for (const semester of deps.semesters) {
     const suffix = semester.timetablePublished
       ? ""
-      : ` — timeplan publiseres ~${publishMonthFor(semester.id)}`;
+      : `, timeplan publiseres ~${publishMonthFor(semester.id)}`;
     const option = el(
       "option",
       undefined,
@@ -546,7 +546,8 @@ export function mountStudieinfo(deps: StudieinfoDeps, signal: AbortSignal): Stud
       chip.append(el("span", "np-data studieinfo-chip-code", stagedProgram.code));
       chip.append(el("span", "studieinfo-chip-sep", "·"));
       chip.append(el("span", "studieinfo-chip-name", stagedProgram.name));
-      const remove = el("button", "np-icon-btn studieinfo-chip-remove", "×") as HTMLButtonElement;
+      const remove = el("button", "np-icon-btn studieinfo-chip-remove") as HTMLButtonElement;
+      remove.append(icon("close"));
       remove.type = "button";
       // Names the programme: this button is where focus lands after a pick and
       // on open, so its label is what announces which programme is staged.

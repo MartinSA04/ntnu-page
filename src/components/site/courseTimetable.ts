@@ -153,7 +153,7 @@ export function termNote(entries: CourseTimetableEntry[], options: CourseTimetab
   const plannedTerm = `${semester.year}_${SEASON_TERMS[semester.season] ?? ""}`;
   const shown = terms.map(termLabel).join(", ");
   if (terms.includes(plannedTerm)) return `Viser ${shown}.`;
-  return `Viser ${shown} — ikke undervist i ${semester.label}.`;
+  return `Viser ${shown}. Ikke undervist i ${semester.label}.`;
 }
 
 /**

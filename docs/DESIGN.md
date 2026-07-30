@@ -151,12 +151,13 @@ therefore carries **one hour hairline only**, drawn by `planner-week.css` on
 `.planner-grid-rail`/`.planner-grid-day` — i.e. on the boxes whose top edge
 *is* the slot grid's origin, which is what keeps it in register (tiling it
 from the frame is what caused REVIEW.md D4's ~22 px misregistration). Neither
-`.np-frame` nor `.np-ruled` is on the spread, and the exam date list carries
-no ruling either. **`.np-ruled--hours` is deleted** (§5) — it had zero callers
-while still shipping in the sitewide bundle, and reaching for it would have
-given a contributor a 15-minute square field plus a second hour rule anchored
-to a different box than the live one. The only surviving `.np-ruled` surface
-on the whole site is the homepage proof panel (`.home-proof-frame`, §8).
+`.np-frame` nor a squared field is on the spread, and the exam date list
+carries no ruling either. **`.np-ruled` and `.np-ruled--hours` are both
+deleted** (§5). `--hours` went with zero callers; `.np-ruled` itself had one
+left, the landing page's picture of a plan, and that picture is gone
+(REWORK-2026-07-30d). Reaching for either would have given a contributor a
+15-minute square field plus a second hour rule anchored to a different box
+than the live one.
 
 If the ruling ever comes back on a planning surface, put it on the rail/day
 columns, not the frame.
@@ -248,8 +249,9 @@ focus = global 2px `--ui` outline.
   panel. Note it sets `overflow: hidden`, which is why the week's frame is
   deliberately *not* an `.np-frame` (it would kill the horizontal scroll —
   see `planner-week.css`).
-- **`.np-ruled`** — the squared field, used with `.np-frame`. One live user:
-  the homepage proof panel (§4/§8). Not on the week, not on the exam list.
+- **`.np-ruled`** — deleted with its last caller (§4). The ruling exists in
+  exactly one place now, hand-rolled in `planner-week.css` on the boxes it
+  rules.
 
 **Disclosure**
 - **`.np-summary`** — mono disclosure row with rotating chevron.
@@ -340,9 +342,10 @@ apology. Empty states are invitations to act.
      or a hero for "cohesion" dilutes the one signature. That still stands,
      and it is the half reviewers keep proposing.
   2. *The week does not carry it either.* f86105b retired the squared field
-     from the weekly spread in favour of a single hour hairline (§4). So the
-     one `.np-ruled` element left on the site is the homepage proof panel
-     `.home-proof-frame` — an `aria-hidden` **picture of a plan**, not a card
-     and not a control. That is sanctioned: it is the site's one illustration
-     of the instrument, and the signature belongs on the thing being
-     illustrated. It is not a licence to rule any other decorative surface.
+     from the weekly spread in favour of a single hour hairline (§4), and
+     REWORK-2026-07-30d retired the last ruled element on the site with it:
+     the landing page's `aria-hidden` picture of a plan, which showed two
+     invented courses colliding. A drawing of the product is not evidence
+     that the product works, and the page already answers with the student's
+     own week. `.np-ruled` is deleted; the ruling lives in the one file that
+     draws it.

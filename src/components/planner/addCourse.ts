@@ -175,7 +175,7 @@ export function addCourseRowControl(store: PlanStore, course: AddCourseInput): A
     stateKind: "program",
     run: () => {
       store.dropCourse(code);
-      return `${code} droppet — fortsatt en del av programmet.`;
+      return `${code} droppet, men fortsatt en del av programmet.`;
     },
   };
 }
@@ -383,7 +383,7 @@ export function mountAddCourse(deps: AddCourseDeps, signal: AbortSignal): AddCou
 
     status.textContent =
       matched.length > shown.length
-        ? `Viser ${shown.length} av ${matched.length} treff — skriv for å filtrere.`
+        ? `Viser ${shown.length} av ${matched.length} treff. Skriv for å filtrere.`
         : `${matched.length} treff.`;
   }
 

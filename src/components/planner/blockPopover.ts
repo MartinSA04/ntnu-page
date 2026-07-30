@@ -20,7 +20,7 @@
  * sliver of screen — a real close button is always rendered.
  */
 import type { CourseSource } from "../../lib/planner/store.js";
-import { dot, el } from "./dom.js";
+import { dot, el, icon } from "./dom.js";
 import type { BlockDetail } from "./grid.js";
 
 /** Desktop breakpoint — matches the stylesheet's own bottom-sheet cutoff. */
@@ -80,7 +80,8 @@ export function mountBlockPopover(
     title.append(el("span", "np-data block-popover-code", detail.code));
     head.append(title);
 
-    const closeBtn = el("button", "np-icon-btn block-popover-close", "×");
+    const closeBtn = el("button", "np-icon-btn block-popover-close");
+    closeBtn.append(icon("close"));
     closeBtn.type = "button";
     closeBtn.setAttribute("aria-label", "Lukk");
     closeBtn.addEventListener("click", close);
@@ -115,7 +116,8 @@ export function mountBlockPopover(
     });
     actions.append(settings);
 
-    const link = el("a", "block-popover-link", "Gå til emnesiden →");
+    const link = el("a", "block-popover-link", "Gå til emnesiden");
+    link.append(icon("arrowRight"));
     link.href = `/emne/${detail.code}/`;
     actions.append(link);
     dialog.append(actions);

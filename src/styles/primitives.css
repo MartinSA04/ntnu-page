@@ -357,33 +357,19 @@ button.np-tag:hover {
   overflow: hidden;
 }
 
-/* Two declarations here are load-bearing, both about where the tiling starts.
-   `background-origin` defaults to padding-box while the timetable's grid rows
-   start at the content box, so the squares sat a constant 16px off the blocks
-   they were supposed to be ruling. And `background-attachment` defaults to
-   scroll, which on the horizontally scrollable week frame pins the ruling to
-   the frame while the columns slide out from under it; `local` ties it to the
-   scrolled content instead. Ruled surfaces must also pad in whole --cell
-   multiples, or the ruling meets the frame mid-square. */
-.np-ruled {
-  background-image:
-    linear-gradient(var(--ruling-line) 1px, transparent 1px),
-    linear-gradient(90deg, var(--ruling-line) 1px, transparent 1px);
-  background-size: var(--cell) var(--cell);
-  background-origin: content-box;
-  background-attachment: local;
-}
+/* DELETED: `.np-ruled` and `.np-ruled--hours`, the squared field.
+   `--hours` went first (ds-4) with zero callers. `.np-ruled` itself had one
+   left, the landing page's picture of a plan, and that picture is gone
+   (REWORK-2026-07-30d) because a fake window showing two invented courses is
+   not evidence of anything.
 
-/* DELETED — `.np-ruled--hours`. It had zero callers anywhere in src/, e2e/ or
-   the built output while still shipping in the sitewide bundle, which is the
-   exact system debt DESIGN §5 deleted `.np-kbd`/`.np-tile`/`.np-lift` for
-   (ds-4). Worse than dead: the week retired the squared ruling in f86105b and
-   hand-rolls the surviving hour line on `.planner-grid-rail`/`.planner-grid-day`
-   (planner-week.css), anchored to the box whose top edge IS the slot grid's
-   origin — so a contributor who reached for this primitive would have got a
-   15-minute square field plus a second hour rule tiled from a different origin,
-   the ~22 px misregistration planner-week.css documents. One implementation,
-   in the file that owns the surface. */
+   The week retired the squared ruling in f86105b and hand-rolls the surviving
+   hour line in planner-week.css, anchored to the box whose top edge IS the
+   grid's origin. A contributor reaching for a ruling primitive would have got
+   a 15-minute square field plus a second hour rule tiled from a different
+   origin: the ~22 px misregistration that file documents. One implementation,
+   in the file that owns the surface. The `--cell` token stays, because that
+   file measures with it. */
 
 /* --- Disclosure ---------------------------------------------------- */
 

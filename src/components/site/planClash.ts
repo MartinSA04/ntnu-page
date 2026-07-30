@@ -195,9 +195,9 @@ export function clashSentence(verdict: ClashVerdict, semester: ClashSemester): s
     case "empty":
       return `Ingen andre emner i planen din for ${term}.`;
     case "off-semester":
-      return `Undervises ikke i ${term} — ingen kollisjon å sjekke.`;
+      return `Undervises ikke i ${term}, ingen kollisjon å sjekke.`;
     case "unclassified":
-      return `Kan ikke sjekke kollisjon i ${term} — ingen aktiviteter er merket som forelesning.`;
+      return `Kan ikke sjekke kollisjon i ${term}. Ingen aktiviteter er merket som forelesning.`;
     case "clear":
       return `Ingen kollisjon i planen din for ${term}.`;
     case "error":

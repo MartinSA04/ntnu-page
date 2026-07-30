@@ -31,7 +31,7 @@ const programOptions: [code: string, name: string, studyLevel: string, cities: s
 const programOptionsJson = JSON.stringify(programOptions).replaceAll("<", "\\u003c");
 ---
 
-<Layout title="Planlegger — Semesterplan" description={description} wide>
+<Layout title="Planlegger · Semesterplan" description={description} wide>
   <div class="planner-banner">
     {/* ETT NAVN (REWORK-2026-07-30b). The plan is named ONCE, here, in the
         notation a student types: MTDT · 2026 · Høst 2026, set in the mono
@@ -47,21 +47,29 @@ const programOptionsJson = JSON.stringify(programOptions).replaceAll("<", "\\u00
       <div class="planner-id">
         <h1 class="planner-title" id="planner-title">Semesterplan</h1>
         {/* The page's one permanent opener for studieinfo. It was an underlined
-            word in the hint line — 37x22, under WCAG 2.5.8's 24px floor, and
+            word in the hint line: 37x22, under WCAG 2.5.8's 24px floor, and
             reading as a footnote rather than as the control that changes
-            everything above it. Same sliders mark the course rows use for
-            "settings for this thing", one scope up. */}
+            everything above it.
+
+            Lucide `settings-2`, the exact mark `settingsIcon()` builds for the
+            course rows — "settings for this thing", one scope up. It was a
+            hand-drawn approximation of that icon, which is worse than either
+            using it or using something else. */}
         <button type="button" class="np-btn planner-edit-plan" id="planner-edit-plan">
           <svg
             viewBox="0 0 24 24"
             fill="none"
             stroke="currentColor"
-            stroke-width="1.8"
+            stroke-width="2"
             stroke-linecap="round"
+            stroke-linejoin="round"
             aria-hidden="true"
+            focusable="false"
           >
-            <path d="M20 7h-9M14 17H5M17 3v8M7 13v8" />
-            <path d="M4 7h3M17 17h3" />
+            <path d="M20 7h-9" />
+            <path d="M14 17H5" />
+            <circle cx="17" cy="17" r="3" />
+            <circle cx="7" cy="7" r="3" />
           </svg>
           <span id="planner-edit-plan-label">Endre</span>
         </button>
@@ -381,6 +389,14 @@ const programOptionsJson = JSON.stringify(programOptions).replaceAll("<", "\\u00
     margin-bottom: var(--space-3);
     padding-bottom: var(--space-2);
     border-bottom: 1px solid var(--border-strong);
+  }
+
+  /* Except over the exams, where the månedsbånd starts a few pixels under it
+     and draws a far stronger horizontal of its own. Two rules that close to
+     each other read as a mistake, and the band is the one carrying meaning. */
+  .planner-exams .planner-section-head {
+    border-bottom: 0;
+    padding-bottom: 0;
   }
 
   /* The grotesk at a real size, not 0.72 rem of tracked-out uppercase mono.

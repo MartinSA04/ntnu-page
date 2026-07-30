@@ -437,7 +437,7 @@ export async function mountPlannerApp(
     const notes: string[] = [];
     const stale = notTaughtIn(code);
     if (stale) {
-      notes.push(`Ikke undervist i ${stale.year} — sist undervist ${stale.lastYear}.`);
+      notes.push(`Ikke undervist i ${stale.year}. Sist undervist ${stale.lastYear}.`);
     } else if (state) {
       if (isOffSemester(state)) notes.push("Undervises ikke i valgt semester.");
       // `errors` is Norwegian on both sides of the colon (data.ts's
@@ -546,7 +546,7 @@ export async function mountPlannerApp(
     let semesterId = parsed.semesterId;
     if (!knownSemester(semesterId)) {
       const fallback = semesters.find((s) => s.id === defaultSemesterId) ?? semesters[0];
-      linkNote = `Lenken pekte på et semester vi ikke kan planlegge ennå — viser ${semesterLabel(fallback)}.`;
+      linkNote = `Lenken pekte på et semester vi ikke kan planlegge ennå. Viser ${semesterLabel(fallback)}.`;
       semesterId = fallback?.id ?? defaultSemesterId;
     }
     return {
@@ -808,7 +808,7 @@ export async function mountPlannerApp(
     elements.editPlanLabel.textContent = program ? "Endre" : "Velg studieprogram";
     elements.editPlan.setAttribute(
       "aria-label",
-      program ? `Endre studieinfo — ${program.code}` : "Velg studieprogram og kull",
+      program ? `Endre studieinfo for ${program.code}` : "Velg studieprogram og kull",
     );
   }
 
@@ -952,8 +952,8 @@ export async function mountPlannerApp(
       const single = (periodCourses?.obligatory.length ?? 0) === 1;
       notes.push(
         single
-          ? `Studieplanen fører opp hele emnet (${formatCreditNumber(suspiciousPrefillCredits)} sp) i dette semesteret — det går over flere semestre.`
-          : `Studieplanen oppgir ${formatCreditNumber(suspiciousPrefillCredits)} sp dette semesteret — mer enn et normalt semester. Fjern det du ikke tar.`,
+          ? `Studieplanen fører opp hele emnet (${formatCreditNumber(suspiciousPrefillCredits)} sp) i dette semesteret, men det går over flere semestre.`
+          : `Studieplanen oppgir ${formatCreditNumber(suspiciousPrefillCredits)} sp dette semesteret, mer enn et normalt semester. Fjern det du ikke tar.`,
       );
     }
     elements.creditNote.textContent = notes.join(" ");
@@ -1211,7 +1211,7 @@ export async function mountPlannerApp(
       const deadline = pending.deadlineDate
         ? `Studieplanen viser frist ${formatShortDate(pending.deadlineDate)}. `
         : "";
-      const prompt = "Velg studieretning i studieinfo — ukeplanen fylles ut med en gang.";
+      const prompt = "Velg studieretning i studieinfo, så fylles ukeplanen ut med en gang.";
       return {
         title: pending.name,
         note: `${deadline}${prompt}`,
@@ -1230,7 +1230,7 @@ export async function mountPlannerApp(
         title: `Studieplanen din for ${label} er valgfri`,
         note: `${pool.length} ${pool.length === 1 ? "emne" : "emner"} å velge mellom.`,
         action: { label: "Velg emner", run: () => openAddFromQuestion() },
-        weekMessage: "Velg emner fra studieplanen over — ukeplanen fylles ut med en gang.",
+        weekMessage: "Velg emner fra studieplanen over, så fylles ukeplanen ut med en gang.",
       };
     }
 
@@ -1728,7 +1728,7 @@ export async function mountPlannerApp(
     if (grid?.state !== "grid") return;
     if (grid.incompleteCourses.length > 0) {
       const n = grid.incompleteCourses.length;
-      host.textContent = `kan ikke sjekkes — mangler timeplan for ${n} ${n === 1 ? "emne" : "emner"}`;
+      host.textContent = `kan ikke sjekkes, mangler timeplan for ${n} ${n === 1 ? "emne" : "emner"}`;
       return;
     }
     // Anything still in flight (`partial` without an incomplete course).
@@ -1861,7 +1861,7 @@ export async function mountPlannerApp(
         const secondary = el(
           "button",
           "np-navlink planner-week-card-secondary",
-          "…eller legg til emner med emnekode",
+          "Eller legg til emner med emnekode",
         );
         secondary.type = "button";
         secondary.addEventListener("click", () => openAddFromQuestion());
@@ -1894,7 +1894,7 @@ export async function mountPlannerApp(
         renderGridMessage(
           elements.gridFrame,
           elements.gridNotes,
-          `Timeplan for ${semesterLabel(semester)} publiseres vanligvis i ${publishMonthFor(semester.id)} — kom tilbake da.`,
+          `Timeplan for ${semesterLabel(semester)} publiseres vanligvis i ${publishMonthFor(semester.id)}. Kom tilbake da.`,
         );
       } else if (question) {
         // A studieretning/elective/period question owns the empty week — its

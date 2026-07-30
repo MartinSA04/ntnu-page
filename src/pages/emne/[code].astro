@@ -88,10 +88,10 @@ function formatDate(date: string | null): string | null {
   return d.toLocaleDateString("nb-NO", { day: "numeric", month: "long", year: "numeric" });
 }
 
-const description = `${course.code} ${course.name} — timeplan, eksamen og nøkkeltall fra NTNU.`;
+const description = `${course.code} ${course.name}: timeplan, eksamen og nøkkeltall fra NTNU.`;
 ---
 
-<Layout title={`${course.code} — ${course.name}`} description={description} wide>
+<Layout title={`${course.code} · ${course.name}`} description={description} wide>
   <p class="np-data emne-code">{course.code}</p>
   <h1 class="emne-title">{course.name}</h1>
   <p class="emne-meta np-note">
@@ -191,7 +191,7 @@ const description = `${course.code} ${course.name} — timeplan, eksamen og nøk
       }
       {
         !isOffered && exams.length > 0 && (
-          <p class="np-hint">Datoene er fra {sourceYear} — emnet er ikke i katalogen for {catalogYear}.</p>
+          <p class="np-hint">Datoene er fra {sourceYear}. Emnet er ikke i katalogen for {catalogYear}.</p>
         )
       }
       <details class="emne-disclosure" data-role="exam-more" hidden>
@@ -697,7 +697,7 @@ const description = `${course.code} ${course.name} — timeplan, eksamen og nøk
         planState.textContent = !entry
           ? ""
           : entry.dropped
-            ? "droppet — fortsatt en del av programmet"
+            ? "droppet, men fortsatt en del av programmet"
             : program
               ? "fra studieprogrammet ditt"
               : "I planen";

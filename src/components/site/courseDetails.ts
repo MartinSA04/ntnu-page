@@ -169,11 +169,7 @@ function renderCreditReductions(reductions: CreditReduction[]): HTMLElement | nu
     const code = el("td", "np-data", r.courseCode);
     // An em dash, not "?" and not an empty cell: the catalog genuinely does
     // not date the older reductions, and a blank cell reads as a render bug.
-    tr.append(
-      code,
-      el("td", "np-data", r.reduction ?? "—"),
-      el("td", undefined, r.fromTerm ?? "—"),
-    );
+    tr.append(code, el("td", "np-data", r.reduction ?? ""), el("td", undefined, r.fromTerm ?? ""));
     tbody.append(tr);
   }
   table.append(tbody);

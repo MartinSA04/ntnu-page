@@ -222,7 +222,7 @@ export function renderBoard(
       const note = el(
         "p",
         "planner-board-clash-note np-data",
-        `${codes.join(" / ")} overlapper — velg én`,
+        `${codes.join(" / ")} overlapper. Velg én`,
       );
       note.setAttribute("data-motion-key", `clash-note-${day}`);
       group.append(note);
@@ -282,13 +282,12 @@ function buildRow(
   what.append(el("span", "planner-board-sub np-data", sub));
   row.append(what);
 
-  const room = entry.rooms || "—";
-  const roomEl = el(
-    "span",
-    `planner-board-room np-data${isRoomCode(room) ? "" : " is-long"}`,
-    room,
-  );
-  row.append(roomEl);
+  // No em dash standing in for "nothing": an empty cell says it without
+  // spending a glyph on it, and the column already right-aligns.
+  const room = entry.rooms;
+  if (room) {
+    row.append(el("span", `planner-board-room np-data${isRoomCode(room) ? "" : " is-long"}`, room));
+  }
 
   row.setAttribute(
     "aria-label",

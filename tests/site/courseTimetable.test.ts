@@ -57,7 +57,7 @@ describe("termNote (U14 — one view, honest about which season it is)", () => {
   // elapsed, shown under a bare "2026" chip a student would plan around.
   it("says outright when the entries are not the planned semester", () => {
     expect(termNote([entry("2026_VÅR")], OPTIONS)).toBe(
-      "Viser Vår 2026 — ikke undervist i Høst 2026.",
+      "Viser Vår 2026. Ikke undervist i Høst 2026.",
     );
   });
 
@@ -75,7 +75,7 @@ describe("termNote (U14 — one view, honest about which season it is)", () => {
   // that year, so the line has to name it rather than the canonical one.
   it("names last year's season for a course not offered this year", () => {
     expect(termNote([entry("2025_HØST")], { ...OPTIONS, year: 2025 })).toBe(
-      "Viser Høst 2025 — ikke undervist i Høst 2026.",
+      "Viser Høst 2025. Ikke undervist i Høst 2026.",
     );
   });
 });

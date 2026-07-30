@@ -20,10 +20,10 @@ import { expect, type Page, test } from "@playwright/test";
  *
  * The rework (2026-07-25) deleted `/studier/` and the plan strip: the site's
  * chrome now offers exactly two nav destinations (`/planlegger/`, `/emner/`),
- * plus a `#studieinfo-chip` naming whose plan this is on every page BUT the
- * planner, which names the plan in its own title (REWORK-2026-07-30b). The nav
- * circuits below only ever hop between the two real chrome links;
- * `/studier/`'s own test is now a 404 check, not a positive case.
+ * plus a `#studieinfo-chip` on the landing page only (REWORK-2026-07-30d):
+ * the planner names the plan in its own title, and the catalog pages do not
+ * need it. The nav circuits below only ever hop between the two real chrome
+ * links; `/studier/`'s own test is now a 404 check, not a positive case.
  */
 
 const THEME_KEY = "np:theme";
@@ -213,33 +213,41 @@ test.describe("other pages keep working after navigation", () => {
 });
 
 test.describe("the studieinfo chip", () => {
-  test("names the plan on every page but the one that already does", async ({ page }) => {
+  test("is a landing-page element, and nothing else carries it", async ({ page }) => {
     await seed(page, { [PROFILE_KEY]: BIT_PROFILE, [LAST_SEMESTER_KEY]: "26h" });
     const expectedLabel = "BIT · 2025 · Høst 2026";
 
     await page.goto("/");
     await expect(page.locator("#studieinfo-chip")).toHaveText(expectedLabel);
 
+    // Everywhere else it is gone, and it has to be gone after a client-side
+    // swap rather than only on a cold load: the chip is server-rendered per
+    // page, so a ClientRouter navigation is exactly where a stale one would
+    // linger. The planner says the same three facts in its title; the catalog
+    // pages are for looking a course up, not for checking whose plan it
+    // would join.
     await navTo(page, "/emner/");
-    await expect(page.locator("#studieinfo-chip")).toHaveText(expectedLabel);
+    await expect(page.locator("#studieinfo-chip")).toHaveCount(0);
 
-    // The planner is the exception, and it has to survive a client-side swap
-    // rather than only a cold load: the chip is server-rendered per page, so
-    // a ClientRouter navigation is exactly where a stale one would linger.
-    // The same three facts are in the title instead.
     await navTo(page, "/planlegger/");
     await expect(page.locator("#studieinfo-chip")).toHaveCount(0);
     await expect(page.locator("#planner-title")).toHaveText(expectedLabel, { timeout: 30_000 });
 
-    // …and comes back when you leave again.
-    await navTo(page, "/emner/");
-    await expect(page.locator("#studieinfo-chip")).toHaveText(expectedLabel);
-
-    // /emne/[code]/ isn't reachable from the persistent chrome (only via a
-    // search result), so this leg is a direct load rather than a swap.
     await page.goto("/emne/TDT4100/");
+    await expect(page.locator("#studieinfo-chip")).toHaveCount(0);
+
+    // And it comes back on the one page that owns it.
+    await page.goto("/");
     await expect(page.locator("#studieinfo-chip")).toHaveText(expectedLabel);
   });
+});
+
+test("the footer states provenance and the caveat, and links nowhere", async ({ page }) => {
+  await page.goto("/planlegger/");
+  const footer = page.locator(".site-footer");
+  await expect(footer).toContainText("Data hentet");
+  await expect(footer).toContainText("uoffisiell, med forbehold om feil");
+  await expect(footer.locator("a")).toHaveCount(0);
 });
 
 test("/studier/ is gone", async ({ page }) => {
