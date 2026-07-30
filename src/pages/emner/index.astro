@@ -76,6 +76,16 @@ const description = "Søk i NTNUs emnekatalog etter emnekode, emnenavn eller stu
   .emner-search {
     margin-bottom: var(--space-4);
   }
+  /* The field stays `type="search"` — that is what makes it a `searchbox` to a
+     screen reader rather than a plain textbox — but Chrome's clear glyph comes
+     with it, drawn in the browser's own accent blue against a palette that
+     owns no such colour. Suppress the glyph, keep the role. (The add dialog's
+     field is `type="text"` for an unrelated reason no stylesheet can fix:
+     Chrome's search input eats the first Escape.) */
+  .emner-search input::-webkit-search-cancel-button {
+    -webkit-appearance: none;
+    appearance: none;
+  }
   .emner-facets {
     display: grid;
     grid-template-columns: max-content 1fr;

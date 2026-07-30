@@ -220,7 +220,15 @@ export function mountAddCourse(deps: AddCourseDeps, signal: AbortSignal): AddCou
   // `{open: true, value: ""}`, press 2 → `{open: false}`) — the dismissal
   // gesture reads as broken until the second press (modals-7). The native
   // clear button is not load-bearing: `open()` resets the value anyway.
+  //
+  // The *role* is the half of `type="search"` worth keeping, and it comes
+  // free of the behaviour: `searchbox` is what makes a screen reader say
+  // "search field" instead of "edit text", and unlike the input type it
+  // changes nothing about how Escape is handled. Emner's field reaches the
+  // same role natively (it can afford `type="search"`, nothing else on that
+  // page wants Escape) and suppresses the clear glyph in CSS instead.
   searchInput.type = "text";
+  searchInput.role = "searchbox";
   searchInput.placeholder = "Søk etter emnekode eller emnenavn …";
   searchInput.setAttribute("aria-label", "Søk etter emne");
   searchForm.append(searchInput);
