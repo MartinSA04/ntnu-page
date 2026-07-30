@@ -100,6 +100,11 @@
   --planner-lane-h: 34px;
   --planner-bar-h: 28px;
   --planner-band-h: 18px;
+  /* The space above the first bar and below the last thing in the row. It is
+     a token because the row's height and every child's offset are computed
+     from it, and they have to agree or the row is not centred (see the field's
+     min-height below). */
+  --planner-row-pad: 8px;
   position: relative;
   /* Eight hours across needs room to stay legible: below this the frame
      scrolls sideways rather than squeezing a lecture into 40 px. The old
@@ -118,6 +123,7 @@
     --planner-lane-h: 30px;
     --planner-bar-h: 26px;
     --planner-band-h: 17px;
+    --planner-row-pad: 6px;
   }
 }
 
@@ -179,8 +185,10 @@
    the grotesk; Data-Is-Mono governs times and codes, not names. */
 .planner-grid-spine {
   display: flex;
-  align-items: flex-start;
-  padding: 12px var(--gap-4) 12px 0;
+  align-items: center;
+  /* Same pad as the field's, so a one-lane row is as tall as its content and
+     not 23 px taller because the weekday is set at 1.7 rem. */
+  padding: var(--planner-row-pad) var(--gap-4) var(--planner-row-pad) 0;
   font-size: clamp(1.05rem, 2.6vw, 1.7rem);
   font-weight: var(--weight-bold);
   line-height: 1;
@@ -199,15 +207,33 @@
   /* Lanes stack from the top; a drop-in band gets its own strip under them
      (`--planner-bands`, written by `renderGrid`) so the two can never
      overlap. That reservation is the whole fix for a band whose label used to
-     sit behind a lecture. */
-  min-height: calc(
-    var(--planner-lanes, 1) *
-    var(--planner-lane-h) +
-    var(--planner-bands, 0) *
-    (var(--planner-band-h) + 4px) +
-    12px
+     sit behind a lecture.
+
+     The height is the CONTENT plus one pad at each end, and the content is
+     `lanes × stride` minus the trailing lane gap — because `--planner-lane-h`
+     is a stride (bar + gap), so N lanes occupy N strides *less one gap*. That
+     subtraction is what was missing: a one-lane row measured 34 + 12 = 46 px
+     around a 28 px bar sitting 6 px down, which left 6 above and 12 below.
+     Every row in the week was off-centre by 3 px, and a two-lane row by the
+     same amount again (REWORK-2026-07-30f).
+
+     The pad lives in this arithmetic rather than in `padding`, because every
+     child is absolutely positioned and reads the same token for its own
+     offset. Two places computing the same space is how they drift. */
+  /* What the row actually contains, top of the first bar to bottom of the last
+     thing. `--planner-lane-h` is a STRIDE (bar + gap), so N lanes occupy N
+     strides less one trailing gap — that subtraction is what was missing.
+
+     The children centre against this rather than being offset from the top,
+     because the row's real height is `max(spine, field)` and the spine wins on
+     a one-lane row: a 28 px bar sat 8 px down a 51 px row with 15 px under it.
+     Padding cannot fix that; only measuring from the middle can. */
+  --planner-content-h: calc(
+    var(--planner-lanes, 1) * var(--planner-lane-h) -
+    (var(--planner-lane-h) - var(--planner-bar-h)) +
+    var(--planner-bands, 0) * (var(--planner-band-h) + var(--planner-row-pad))
   );
-  padding: 6px 0;
+  min-height: calc(var(--planner-content-h) + 2 * var(--planner-row-pad));
   background-image: linear-gradient(to right, var(--ruling-hour) 1px, transparent 1px);
   background-size: calc(100% / var(--planner-hours, 8)) 100%;
 }
@@ -229,7 +255,7 @@
   position: absolute;
   left: var(--planner-x);
   width: var(--planner-w);
-  top: calc(6px + var(--planner-lane, 0) * var(--planner-lane-h));
+  top: calc(50% - var(--planner-content-h) / 2 + var(--planner-lane, 0) * var(--planner-lane-h));
   height: var(--planner-bar-h);
   display: flex;
   align-items: center;
@@ -276,8 +302,10 @@
    opacity, because nothing is drawn on top of it any more. */
 .planner-block.is-band {
   z-index: 0;
-  top: auto;
-  bottom: 4px;
+  /* The last thing in the content block, so it measures from the same middle
+     as the lanes rather than from the row's own bottom edge. */
+  top: calc(50% + var(--planner-content-h) / 2 - var(--planner-band-h));
+  bottom: auto;
   height: var(--planner-band-h);
 }
 
@@ -353,33 +381,62 @@
   white-space: nowrap;
 }
 
-/* The moment. Faint through the whole week, because the hour is the same hour
-   on every row; solid across today's, where it is literally true. */
+/* NÅLEN — the moment (REWORK-2026-07-30f).
+ *
+ * A 2 px ink line across today's row with a solid head sitting on the row's
+ * top border. The head is the load-bearing half: the line still has to cross a
+ * course bar, and 2 px of ink laid over a saturated printed fill reads as a
+ * scratch rather than as a mark. Nothing else in the week ever sits on that
+ * border, so the head cannot be mistaken for something drawn on a course.
+ *
+ * Two things it deliberately no longer does:
+ *
+ *  - **It is not on the other days.** It used to draw a 32 % hairline down the
+ *    whole week, on the reasoning that the hour is the same hour on every row.
+ *    But that made it a 1 px line among 1 px hour rules — the same KIND of
+ *    mark as the ruling it crossed — so on any day that was not today it was
+ *    simply invisible. The ruler already labels the hours.
+ *  - **It is not a clock.** No time rides on it. The ruler carries the
+ *    figures and the pointer readout carries the minute, and outside the drawn
+ *    hours the mark is hidden rather than pinned to an edge: a week clamped to
+ *    its own sessions has no honest place to put 21:10.
+ */
 .planner-grid-now {
   position: absolute;
-  top: 22px;
-  bottom: 0;
+  top: var(--planner-now-top);
+  height: var(--planner-now-height);
   /* --planner-x is a unitless 0–100, so this stays length arithmetic: a
      percentage divided by a percentage is not something to rely on. */
   left: calc(var(--planner-spine) + (100% - var(--planner-spine) - 16px) * var(--planner-x) / 100);
-  width: 1px;
-  background: color-mix(in srgb, var(--ui) 32%, transparent);
+  width: 2px;
+  margin-left: -1px;
+  background: var(--ui);
   pointer-events: none;
-  z-index: 3;
+  z-index: 4;
 }
 
 .planner-grid-now[hidden] {
   display: none;
 }
 
-.planner-grid-now.is-today::after {
+/* The head, straddling the row's top border. */
+.planner-grid-now::before {
   content: "";
   position: absolute;
-  left: -1px;
-  top: calc(var(--planner-now-top) - 22px);
-  height: var(--planner-now-height);
-  width: 2px;
-  background: var(--ui);
+  top: -1px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0;
+  height: 0;
+  border-inline: 6px solid transparent;
+  border-top: 8px solid var(--ui);
+}
+
+@media (max-width: 40rem) {
+  .planner-grid-now::before {
+    border-inline-width: 5px;
+    border-top-width: 7px;
+  }
 }
 
 /* --- The strike-in (D4) --------------------------------------------------- */

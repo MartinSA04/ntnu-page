@@ -625,10 +625,18 @@ function clockLabel(minutes: number): string {
 }
 
 /**
- * Places the "now" marker, or hides it when the moment is outside the drawn
- * week. Exported because it has to be re-run on a timer: a line that says
- * "now" and means "an hour ago" is worse than no line, and re-rendering the
- * whole week every minute to move one element would be absurd.
+ * Places the needle, or hides it (REWORK-2026-07-30f).
+ *
+ * It is drawn on TODAY'S ROW ONLY and only inside the drawn hours, so there
+ * are exactly two states: on the row at a minute, or absent. Both of the cases
+ * that used to get a faint week-wide hairline — a weekend, and a moment past
+ * the axis — now get nothing, because a mark nobody can find is worse than no
+ * mark, and a week clamped to its own sessions has no honest place to put
+ * 21:10.
+ *
+ * Exported because it has to be re-run on a timer: a line that says "now" and
+ * means "an hour ago" is worse than no line, and re-rendering the whole week
+ * every minute to move one element would be absurd.
  */
 export function syncNowMarker(frame: HTMLElement, at: Date = new Date()): void {
   const grid = frame.querySelector<HTMLElement>(".planner-grid");
@@ -640,19 +648,20 @@ export function syncNowMarker(frame: HTMLElement, at: Date = new Date()): void {
   const dayNumber = jsDay === 0 ? 7 : jsDay;
   const minutes = at.getHours() * 60 + at.getMinutes();
   const row = grid.querySelector<HTMLElement>(`.planner-grid-row[data-day="${dayNumber}"]`);
-  if (!Number.isFinite(min) || !Number.isFinite(span) || minutes < min || minutes > min + span) {
+  if (
+    !row ||
+    !Number.isFinite(min) ||
+    !Number.isFinite(span) ||
+    minutes < min ||
+    minutes > min + span
+  ) {
     marker.hidden = true;
     return;
   }
   marker.hidden = false;
   marker.style.setProperty("--planner-x", String(((minutes - min) / span) * 100));
-  // Solid only where it is literally true. A weekend, or a day the week does
-  // not draw, still gets the faint line — the hour is the same hour.
-  marker.classList.toggle("is-today", row !== null);
-  if (row) {
-    marker.style.setProperty("--planner-now-top", `${row.offsetTop}px`);
-    marker.style.setProperty("--planner-now-height", `${row.offsetHeight}px`);
-  }
+  marker.style.setProperty("--planner-now-top", `${row.offsetTop}px`);
+  marker.style.setProperty("--planner-now-height", `${row.offsetHeight}px`);
 }
 
 /**

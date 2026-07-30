@@ -955,7 +955,9 @@ test.describe("time passing", () => {
     // the louder signal and it was pointing at the wrong day.
     await page.clock.runFor("24:00:00");
     await expect(today).toHaveAttribute("data-day", "4");
-    await expect(marker).toHaveClass(/is-today/);
+    // The needle is on today's row or nowhere (REWORK-2026-07-30f), so its
+    // being visible at all is the assertion that it followed the day.
+    await expect(marker).toBeVisible();
     const rowTop = await page
       .locator('#planner-grid-frame .planner-grid-row[data-day="4"]')
       .evaluate((el: HTMLElement) => el.offsetTop);
@@ -1141,4 +1143,76 @@ test("a clean plan says nothing about provenance", async ({ page }) => {
   await expect(gridBlocks(page).first()).toBeVisible({ timeout: 45_000 });
   await expect(settledVerdict(page)).resolves.toMatch(/kollisjon/);
   await expect(page.locator("#planner-provenance")).toBeHidden();
+});
+
+test.describe("nålen", () => {
+  test.use({ timezoneId: "Europe/Oslo" });
+
+  test("is on today's row inside the drawn hours, and nowhere else", async ({ page }) => {
+    // REWORK-2026-07-30f. Two states, not four: on the row at a minute, or
+    // absent. The faint week-wide hairline it replaces was a 1px line among
+    // 1px hour rules — the same KIND of mark as the ruling it crossed — so on
+    // any day that was not today it could not be found at all.
+    const marker = page.locator("#planner-grid-frame .planner-grid-now");
+
+    // Tuesday of teaching week 36, inside EXPH0300's 08:15 lecture.
+    await page.clock.install({ time: new Date("2026-09-01T09:05:00+02:00") });
+    await page.goto("/planlegger/#26h;MTDT.2026;");
+    await expect(gridBlocks(page).first()).toBeVisible({ timeout: 45_000 });
+    await expect(marker).toBeVisible();
+
+    // It spans exactly today's row, so the head lands on that row's top border.
+    const row = page.locator('#planner-grid-frame .planner-grid-row[data-day="2"]');
+    const [top, height] = await row.evaluate((el: HTMLElement) => [el.offsetTop, el.offsetHeight]);
+    const style = await marker.evaluate((el) => ({
+      t: el.style.getPropertyValue("--planner-now-top"),
+      h: el.style.getPropertyValue("--planner-now-height"),
+    }));
+    expect(style).toEqual({ t: `${top}px`, h: `${height}px` });
+
+    // Past the drawn hours: gone. A week clamped to its own sessions has no
+    // honest place to put 21:10, and this is not a clock.
+    await page.clock.setFixedTime(new Date("2026-09-01T21:10:00+02:00"));
+    await page.clock.runFor("01:00");
+    await expect(marker).toBeHidden();
+
+    // Saturday: gone. There is no today row to be on.
+    await page.clock.setFixedTime(new Date("2026-09-05T11:40:00+02:00"));
+    await page.clock.runFor("01:00");
+    await expect(marker).toBeHidden();
+  });
+
+  test("every bar is centred in its row", async ({ page }) => {
+    // `--planner-lane-h` is a stride (bar + gap), so N lanes occupy N strides
+    // LESS one trailing gap. Without that subtraction a one-lane row measured
+    // 46px around a 28px bar sitting 6px down: 6 above, 12 below, every row in
+    // the week off-centre — and the row's real height is max(spine, field),
+    // which the spine won, so no amount of padding could have fixed it.
+    await page.goto("/planlegger/#26h;MTDT.2026;");
+    await expect(gridBlocks(page).first()).toBeVisible({ timeout: 45_000 });
+
+    const gaps = await page.evaluate(() =>
+      Array.from(document.querySelectorAll("#planner-grid-frame .planner-grid-row")).flatMap((row) => {
+        const field = row.querySelector(".planner-grid-field") as HTMLElement;
+        const fr = field.getBoundingClientRect();
+        return Array.from(field.querySelectorAll(".planner-block")).map((bar) => {
+          const r = bar.getBoundingClientRect();
+          return {
+            band: bar.classList.contains("is-band"),
+            above: Math.round(r.top - fr.top),
+            below: Math.round(fr.bottom - r.bottom),
+          };
+        });
+      }),
+    );
+    expect(gaps.length).toBeGreaterThan(0);
+    for (const g of gaps) {
+      // A lane bar sits one pad from the top; a band sits one pad from the
+      // bottom. Whichever it is, its own side must be the pad exactly.
+      expect(g.band ? g.below : g.above).toBe(8);
+    }
+    // And with one lane and no band the two ends match, which is the claim.
+    const single = gaps.filter((g) => !g.band && g.below === 8);
+    expect(single.length).toBeGreaterThan(0);
+  });
 });
