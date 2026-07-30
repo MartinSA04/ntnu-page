@@ -312,27 +312,6 @@ function sameProgramSet(courses: PlanCourse[], next: AddCourseInput[]): boolean 
   });
 }
 
-/** "22. jul 2026" style date for the provenance line, from an ISO timestamp. */
-function formatCrawledAt(iso: string): string {
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return iso;
-  const MONTHS = [
-    "jan",
-    "feb",
-    "mar",
-    "apr",
-    "mai",
-    "jun",
-    "jul",
-    "aug",
-    "sep",
-    "okt",
-    "nov",
-    "des",
-  ];
-  return `${d.getDate()}. ${MONTHS[d.getMonth()]} ${d.getFullYear()}`;
-}
-
 /**
  * Mounts the planner page. `semestersFile` is `data/semesters.json`,
  * `programOptions` is the trimmed `[code, name]` catalog from
@@ -2019,72 +1998,68 @@ export async function mountPlannerApp(
   // --- Provenance line -----------------------------------------------------
 
   /**
-   * DR-8 makes provenance the moat, so it has to describe *this* render.
-   * "Data hentet 24. jul 2026 fra NTNU · uoffisiell" came solely from
-   * `semesters.json`'s build-time `crawledAt` while the grid, names, credits
-   * and exam enrichment all came live from `/api` — and it said exactly the
-   * same thing when the timetable was unpublished, when an exam had no date,
-   * and when a bundle came back with `errors[]` (U9).
+   * DR-8's provenance line, reduced to the half that is worth reading: **what
+   * we could not verify**.
    *
-   * It has to be RE-COMPOSED whenever any of that changes, which is the half
-   * that was missing: `loadBundles` re-rendered four things and not this one,
-   * so the line froze at "Henter timeplan fra NTNU nå" on every passive visit
-   * and the per-course failure clause below was structurally unreachable
+   * It used to open with the routine sources on every render — "Timeplan
+   * hentet direkte fra NTNU nå · eksamensdatoer fra katalogen (hentet 28. jul
+   * 2026) · studieplan for kull 2024. Uoffisiell." — which is a sentence
+   * saying everything worked, printed under a week that visibly worked, on a
+   * page whose footer already carries the crawl date and the caveat. Boilerplate
+   * that appears every time is boilerplate nobody reads, and it was carrying
+   * the failure clauses with it.
+   *
+   * So the line is silent when the join is clean and speaks only when it is
+   * not (REWORK-2026-07-30e). "The join admits its gaps" is the MUST; stating
+   * that it has none is not part of it.
+   *
+   * Still RE-COMPOSED whenever anything it describes changes: `loadBundles`
+   * re-rendered four things and not this one, so the line froze and the
+   * per-course failure clause was structurally unreachable
    * (copy-4/pd-2/ux-2/ux-fail-3/pc-4/edit-5 — six findings, one missing call).
    */
   function renderProvenance(): void {
     const semester = currentSemester();
     const states = orderedActiveStates();
-    const crawled = formatCrawledAt(semestersFile.crawledAt);
-    const sources: string[] = [];
+    const notes: string[] = [];
 
-    if (states.length === 0) {
-      sources.push(`Emnekatalogen hentet ${crawled} fra NTNU`);
-    } else if (semester && !semester.timetablePublished) {
-      sources.push(`Timeplan ikke publisert for ${semesterLabel(semester)}`);
-    } else if (states.some((s) => s.loading)) {
-      sources.push("Henter timeplan fra NTNU nå");
-    } else if (states.some((s) => s.bundle?.timetable)) {
-      sources.push("Timeplan hentet direkte fra NTNU nå");
-    }
+    // Nothing to be provenance about, or the answer is still arriving. The
+    // week draws its own skeleton and its own "publiseres vanligvis i …".
+    const settled = states.length > 0 && !states.some((s) => s.loading);
 
-    const indexCovers = indexCoversSemester(plannerIndex, plan.semesterId);
-    if (states.length > 0) {
+    if (settled && semester) {
+      const indexCovers = indexCoversSemester(plannerIndex, plan.semesterId);
       if (plannerIndexFailed) {
-        // Our own artifact, not NTNU's: "ikke publisert" here was a statement
-        // about NTNU derived from our own failed download (pd-3/ux-fail-7).
-        sources.push("fikk ikke hentet eksamensdatoene");
-      } else {
-        sources.push(
-          indexCovers
-            ? `eksamensdatoer fra katalogen (hentet ${crawled})`
-            : `eksamensdatoer ikke publisert for ${semesterLabel(semester)}`,
-        );
+        // Our own artifact, not NTNU's: "ikke publisert" here would be a
+        // statement about NTNU derived from our own failed download
+        // (pd-3/ux-fail-7).
+        notes.push("Fikk ikke hentet eksamensdatoene.");
+      } else if (!indexCovers) {
+        notes.push(`Eksamensdatoer ikke publisert for ${semesterLabel(semester)}.`);
       }
     }
-    // Which study plan we actually read. The 404 step-back walks back up to
-    // two cohorts and used to be invisible: 184BG/MTMT kull 2026 got a
-    // confident full 30 sp week off the 2024 curriculum under the words
-    // "studieplan for kull 2026" (plan-3/ux-fail-4). Silent while the fetch is
-    // in flight — a plan we have not received yet is not a source.
+
+    // Which study plan we actually read, but ONLY when it is not the one that
+    // was asked for. The 404 step-back walks back up to two cohorts and used
+    // to be invisible: 184BG/MTMT kull 2026 got a confident full 30 sp week
+    // off the 2024 curriculum under the words "studieplan for kull 2026"
+    // (plan-3/ux-fail-4). Silent while the fetch is in flight — a plan we have
+    // not received yet is not a gap.
     const program = plan.program;
     if (program) {
-      if (studyPlanOutcome.kind === "found") {
-        sources.push(
-          studyPlanOutcome.year === program.cohort
-            ? `studieplan for kull ${program.cohort}`
-            : `studieplan for kull ${studyPlanOutcome.year} (ingen egen plan for kull ${program.cohort})`,
+      if (studyPlanOutcome.kind === "found" && studyPlanOutcome.year !== program.cohort) {
+        notes.push(
+          `Studieplan for kull ${studyPlanOutcome.year}, det finnes ingen egen plan for kull ${program.cohort}.`,
         );
       } else if (studyPlanOutcome.kind === "not-found") {
-        sources.push(`fant ingen studieplan for ${program.code}`);
+        notes.push(`Fant ingen studieplan for ${program.code}.`);
       } else if (studyPlanOutcome.kind === "error") {
-        sources.push(`fikk ikke hentet studieplanen for ${program.code}`);
+        notes.push(`Fikk ikke hentet studieplanen for ${program.code}.`);
       }
     }
 
-    // The gaps, named. Both counts are already computed elsewhere; saying
-    // "hentet fra NTNU" over a course whose timetable 404'd is the failure
-    // mode that makes the whole line untrustworthy.
+    // The per-course gaps, named. Saying nothing over a course whose timetable
+    // 404'd is the failure mode that makes the whole verdict untrustworthy.
     const failures: string[] = [];
     for (const state of states) {
       for (const error of state.bundle?.errors ?? []) {
@@ -2092,22 +2067,25 @@ export async function mountPlannerApp(
         failures.push(`${what} for ${state.course.code}`);
       }
     }
+    if (failures.length > 0) notes.push(`Fikk ikke hentet ${failures.join(", ")}.`);
+
     // Only when the index can actually speak for this semester. Otherwise the
     // count came from last catalog year's dateless rows (which survive the
     // window by design — a dateless exam carries no year to be wrong about)
     // and was stated inside a sentence that had just said we have no exam data
     // for the semester at all (exams-3).
-    const dateless = indexCovers && !plannerIndexFailed ? countDatelessExams() : 0;
-
-    const parts = [`${sources.join(" · ")}.`];
-    if (failures.length > 0) parts.push(`Fikk ikke hentet ${failures.join(", ")}.`);
+    const dateless =
+      settled && indexCoversSemester(plannerIndex, plan.semesterId) && !plannerIndexFailed
+        ? countDatelessExams()
+        : 0;
     if (dateless > 0) {
-      parts.push(
+      notes.push(
         `${dateless} ${dateless === 1 ? "eksamen har" : "eksamener har"} ingen dato ennå.`,
       );
     }
-    parts.push("Uoffisiell.");
-    elements.provenance.textContent = parts.join(" ");
+
+    elements.provenance.textContent = notes.join(" ");
+    elements.provenance.hidden = notes.length === 0;
   }
 
   /**

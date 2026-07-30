@@ -184,7 +184,7 @@ const programOptionsJson = JSON.stringify(programOptions).replaceAll("<", "\\u00
       </section>
     </div>
 
-    <p class="np-hint planner-provenance" id="planner-provenance"></p>
+    <p class="np-hint planner-provenance" id="planner-provenance" hidden></p>
   </div>
 </Layout>
 
@@ -391,13 +391,6 @@ const programOptionsJson = JSON.stringify(programOptions).replaceAll("<", "\\u00
     border-bottom: 1px solid var(--border-strong);
   }
 
-  /* Except over the exams, where the månedsbånd starts a few pixels under it
-     and draws a far stronger horizontal of its own. Two rules that close to
-     each other read as a mistake, and the band is the one carrying meaning. */
-  .planner-exams .planner-section-head {
-    border-bottom: 0;
-    padding-bottom: 0;
-  }
 
   /* The grotesk at a real size, not 0.72 rem of tracked-out uppercase mono.
      Four of those competed down the page and none of them was a heading;
@@ -1069,7 +1062,9 @@ const programOptionsJson = JSON.stringify(programOptions).replaceAll("<", "\\u00
     justify-self: end;
   }
 
-  .planner-provenance {
+  /* Only present when the join has a gap to admit (REWORK-2026-07-30e), so it
+     is spaced as a note that arrived rather than as a permanent footer. */
+  .planner-provenance:not([hidden]) {
     max-width: none;
     margin-top: var(--space-6);
   }

@@ -252,6 +252,14 @@ test("verdict: a failed timetable fetch refuses the check instead of clearing it
   await expect(gridBlocks(page).first()).toBeVisible({ timeout: 45_000 });
   await expect(gridBlocks(page).filter({ hasText: "TMA4400" })).toHaveCount(0);
 
+  // The provenance line is the other half of refusing: it names WHICH course
+  // the check could not see. It is silent on a clean plan (REWORK-2026-07-30e),
+  // so its presence here is the assertion, not just its text.
+  const provenance = page.locator("#planner-provenance");
+  await expect(provenance).toBeVisible({ timeout: 45_000 });
+  await expect(provenance).toContainText("TMA4400");
+  await expect(provenance).not.toContainText("Timeplan hentet direkte fra NTNU");
+
   const status = page.locator("#planner-grid-status");
   await expect(status).toContainText(/kan ikke sjekkes/, { timeout: 45_000 });
   await expect(status).toContainText(/mangler timeplan for \d+ emne/);
@@ -1120,4 +1128,17 @@ test.describe("target sizes", () => {
       expect(await undersized(page)).toEqual([]);
     });
   }
+});
+
+test("a clean plan says nothing about provenance", async ({ page }) => {
+  // The counterpart to the failure test above. This line used to read
+  // "Timeplan hentet direkte fra NTNU nå · eksamensdatoer fra katalogen
+  // (hentet 28. jul 2026) · studieplan for kull 2026. Uoffisiell." on every
+  // render — under a week that visibly worked, on a page whose footer already
+  // carries the crawl date and the caveat. DR-8 asks the join to admit its
+  // gaps, not to announce that it has none (REWORK-2026-07-30e).
+  await page.goto("/planlegger/#26h;MTDT.2026;");
+  await expect(gridBlocks(page).first()).toBeVisible({ timeout: 45_000 });
+  await expect(settledVerdict(page)).resolves.toMatch(/kollisjon/);
+  await expect(page.locator("#planner-provenance")).toBeHidden();
 });

@@ -534,6 +534,33 @@ describe("mountPlannerApp — audit repro", () => {
     expect(status.classList.contains("is-clean")).toBe(true);
   });
 
+  it("the provenance line is silent when the join has no gap to admit", async () => {
+    // The counterpart to the failure test below: on a plan where everything
+    // resolved, the line used to print "Timeplan hentet direkte fra NTNU nå ·
+    // eksamensdatoer fra katalogen (hentet …) · studieplan for kull 2024.
+    // Uoffisiell." under a week that visibly worked, with the crawl date and
+    // the caveat already in the sitewide footer. DR-8 asks the join to admit
+    // its gaps, not to announce that it has none (REWORK-2026-07-30e).
+    await mount(
+      {
+        "/data/search-index.json": () => ({ year: 2026, courses: [] }),
+        "/api/course/TDT4109/timetable": () => [entry("TDT4109", 1, "08:15", "10:00")],
+        "/api/course/": () => ({
+          courseCode: "X",
+          courseName: "X",
+          credits: 7.5,
+          location: null,
+          assessmentScheme: null,
+          exams: [],
+        }),
+      },
+      "#26h;-;%2BTDT4109",
+    );
+    const prov = find("planner-provenance");
+    expect(prov.textContent).toBe("");
+    expect(prov.hidden).toBe(true);
+  });
+
   it("copy-4/pd-2/ux-2/pc-4/edit-5: provenance is recomposed after the fetches land", async () => {
     await mount(
       {
@@ -551,11 +578,16 @@ describe("mountPlannerApp — audit repro", () => {
       },
       "#26h;-;%2BTDT4109,%2BTMA4400",
     );
+    // The line states ONLY what could not be verified now
+    // (REWORK-2026-07-30e): no "Timeplan hentet direkte fra NTNU nå", because
+    // a sentence saying everything worked, printed under a week that visibly
+    // worked, is what stopped anyone reading the clause that matters.
     const prov = find("planner-provenance").textContent;
     expect(prov).not.toContain("Henter timeplan fra NTNU nå");
-    expect(prov).toContain("Timeplan hentet direkte fra NTNU nå");
+    expect(prov).not.toContain("Timeplan hentet direkte fra NTNU nå");
     expect(prov).toContain("Fikk ikke hentet timeplan for TMA4400");
     expect(prov).not.toMatch(/Not found|Failed to fetch|boom/);
+    expect(find("planner-provenance").hidden).toBe(false);
   });
 
   it("plan-3/ux-fail-4: a 404 step-back names the cohort the plan really came from", async () => {
@@ -593,7 +625,7 @@ describe("mountPlannerApp — audit repro", () => {
       "#26h;MTMT.2026;",
     );
     const prov = find("planner-provenance").textContent;
-    expect(prov).toContain("studieplan for kull 2024 (ingen egen plan for kull 2026)");
+    expect(prov).toContain("Studieplan for kull 2024, det finnes ingen egen plan for kull 2026.");
   });
 
   it("app-1: syncHash never writes a null history state", async () => {
@@ -679,8 +711,8 @@ describe("mountPlannerApp — audit repro", () => {
     expect(examHost.descendants().filter((e) => e.textContent === "Prøv igjen").length).toBe(1);
     expect(find("planner-exam-status").textContent).not.toContain("henter");
     const prov = find("planner-provenance").textContent;
-    expect(prov).toContain("fikk ikke hentet eksamensdatoene");
-    expect(prov).not.toContain("eksamensdatoer ikke publisert");
+    expect(prov).toContain("Fikk ikke hentet eksamensdatoene.");
+    expect(prov).not.toContain("ikke publisert");
   });
 
   it("plan-2: a period that exists but names nothing says so", async () => {
@@ -1231,7 +1263,7 @@ describe("mountPlannerApp — audit repro", () => {
     // The week says the same thing instead of the canned "Legg til emner …".
     expect(find("planner-grid-frame").textContent).toContain("publiserer ingen studieplan");
     // ux-fail-4's provenance half (landed in wave 3) must not contradict it.
-    expect(find("planner-provenance").textContent).toContain("fant ingen studieplan for KNOAND");
+    expect(find("planner-provenance").textContent).toContain("Fant ingen studieplan for KNOAND.");
     expect(find("planner-provenance").textContent).not.toContain("studieplan for kull 2026");
   });
 
@@ -1247,7 +1279,7 @@ describe("mountPlannerApp — audit repro", () => {
     );
     expect(find("planner-direction-title").textContent).not.toBe("Fant ingen studieplan");
     expect(find("planner-provenance").textContent).toContain(
-      "fikk ikke hentet studieplanen for KNOAND",
+      "Fikk ikke hentet studieplanen for KNOAND.",
     );
   });
 

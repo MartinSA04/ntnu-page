@@ -49,12 +49,34 @@ Em dashes standing in for "no value" went too: an empty room, an unset exam
 date and an absent credit reduction are now empty cells and words. The board's
 room column collapses instead of printing a dash.
 
-## D5 — One rule under a section head, not two
+## D5 — The provenance line states only what it could not verify
 
-The exams' month band starts a few pixels under the section head's rule and
-draws a far stronger horizontal of its own. Two rules that close together read
-as a mistake, and the band is the one carrying meaning, so the head's border
-comes off over the exams only.
+It read, on every render:
+
+> Timeplan hentet direkte fra NTNU nå · eksamensdatoer fra katalogen (hentet
+> 28. jul 2026) · studieplan for kull 2024. Uoffisiell.
+
+A sentence saying everything worked, printed under a week that visibly worked,
+on a page whose footer now carries the crawl date and the caveat anyway.
+Boilerplate that appears every time is boilerplate nobody reads, and it was
+carrying the clauses that matter with it: the per-course fetch failure, the
+substituted study-plan cohort, the exams with no date yet.
+
+So it is silent when the join is clean and speaks only when it is not. DR-8's
+MUST is that *the join admits its gaps*; announcing that it has none was never
+part of it. What survives, each as its own sentence rather than a fragment in
+a middot chain, because each is a separate thing that went wrong:
+
+- `Fikk ikke hentet timeplan for TMA4400.`
+- `Fikk ikke hentet eksamensdatoene.` / `Eksamensdatoer ikke publisert for Høst 2026.`
+- `Studieplan for kull 2024, det finnes ingen egen plan for kull 2026.`
+- `Fant ingen studieplan for MTDT.` / `Fikk ikke hentet studieplanen for MTDT.`
+- `2 eksamener har ingen dato ennå.`
+
+`formatCrawledAt` had no other caller and is deleted with it.
+
+(An earlier pass read "the line under exams" as the section head's rule and
+removed that instead. It is back.)
 
 ## D6 — No em dashes in anything the product says
 
