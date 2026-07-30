@@ -966,11 +966,49 @@ export async function mountPlannerApp(
   // The Uke/Emner region tabs are gone (REWORK-2026-07-29c): they existed
   // because a phone could not scroll past a 768 px week to reach the course
   // list, and the transposed week is ~290 px. One column, no switch.
-  // The now marker is placed at render time, but a planner is a page people
-  // leave open — so it is nudged every minute rather than left to drift. One
-  // element moves; nothing re-renders.
-  const nowTimer = setInterval(() => syncNowMarker(elements.gridFrame), 60_000);
+
+  // --- The clock (REWORK-2026-07-30) ---------------------------------------
+  //
+  // A planner is a page people leave open. The marker was nudged every minute
+  // for exactly that reason — but the marker was the only thing on a clock,
+  // and it is not the only thing that reads a date. WHICH DAY IT IS was read
+  // once, at render: `todayWeekday()` for the row drawn at full ink,
+  // `todayInOslo()` for every exam countdown.
+  //
+  // So a page left open overnight kept Wednesday's spine bold and Wednesday's
+  // row tinted while the now line had already stepped down into Thursday —
+  // the marker looked misplaced because the highlight, which is the louder
+  // signal, was pointing at the wrong day. Every "om N dager" was a day long
+  // on top of that.
+  //
+  // The tick therefore has two jobs, and the expensive one only runs when the
+  // date has actually rolled.
+  let dayStamp = todayStamp();
+
+  function tickNow(): void {
+    const stamp = todayStamp();
+    if (stamp === dayStamp) {
+      // The ordinary minute: one element moves, nothing re-renders.
+      syncNowMarker(elements.gridFrame);
+      return;
+    }
+    dayStamp = stamp;
+    // Both dates are read again inside, and this places the marker itself.
+    renderGridAndExams();
+  }
+
+  const nowTimer = setInterval(tickNow, 60_000);
   lifeSignal.addEventListener("abort", () => clearInterval(nowTimer));
+  // A sleeping laptop runs no timers, and coming back to the tab is precisely
+  // when a stale day gets looked at. Waiting up to a minute to correct it is
+  // waiting through the moment that matters.
+  document.addEventListener(
+    "visibilitychange",
+    () => {
+      if (document.visibilityState === "visible") tickNow();
+    },
+    { signal: lifeSignal },
+  );
 
   elements.viewUke.addEventListener("click", () => setWeekView("uke"));
   elements.viewTavle.addEventListener("click", () => setWeekView("tavle"));
@@ -1006,6 +1044,22 @@ export async function mountPlannerApp(
   function todayWeekday(): number | null {
     const day = new Date().getDay();
     return day >= 1 && day <= 6 ? day : null;
+  }
+
+  /**
+   * What "today" the page is currently drawn for — the thing `tickNow` watches
+   * for a change.
+   *
+   * BOTH dates are in it because the planner genuinely has two: the week's row
+   * comes from the local weekday and the exam countdowns from the calendar
+   * date in Oslo (`todayInOslo`, exams-2). For a student in Norway they roll
+   * together; elsewhere they do not, and this fires on whichever moves first
+   * rather than leaving the other surface a day behind. It does not try to
+   * settle which one is right — that disagreement predates this and is a
+   * separate question.
+   */
+  function todayStamp(): string {
+    return `${todayInOslo()}|${todayWeekday()}`;
   }
 
   // --- Programme / kull / retning / semester: the studieinfo modal --------

@@ -312,15 +312,32 @@ const seasonWord = isAutumn ? "høsten" : "våren";
      */
     let token = 0;
 
+    /**
+     * The week this card is answering from. Held so the clock can repaint
+     * without refetching: the card's own claim is minute-resolution ("Nå · 37
+     * min igjen", "Neste"), and it used to be computed exactly once and then
+     * left — a card named after the present tense that was wrong within the
+     * hour and pointing at yesterday by morning.
+     */
+    let sessions: Awaited<ReturnType<typeof loadWeekSessions>> | null = null;
+
     async function renderNow(): Promise<void> {
       const mine = ++token;
       const plan = store.loadPlan();
       if (plan.courses.filter((c) => !c.dropped).length === 0) {
+        sessions = null;
         if (nowEl) nowEl.hidden = true;
         return;
       }
-      const sessions = await loadWeekSessions(plan, semester.id, semester.teachingWeeks ?? []);
+      const loaded = await loadWeekSessions(plan, semester.id, semester.teachingWeeks ?? []);
       if (mine !== token || signal.aborted || !nowEl) return;
+      sessions = loaded;
+      paintNow();
+    }
+
+    /** The half that reads the clock. No fetch, so it is safe every minute. */
+    function paintNow(): void {
+      if (!sessions || !nowEl) return;
 
       const verdict = nowVerdict(sessions, weekMinutes(new Date()));
       // Nothing to answer with (no timetables yet, or a course-less plan): the
@@ -412,6 +429,20 @@ const seasonWord = isAutumn ? "høsten" : "våren";
       store.onPlanChange(() => {
         void renderNow();
       }),
+    );
+
+    // The clock, at the resolution the card itself claims. Repainting is
+    // cheap — the week is already in hand — so this is a minute tick, not a
+    // reload, and a tab that was asleep is corrected the moment it is looked
+    // at rather than up to a minute later.
+    const clock = setInterval(paintNow, 60_000);
+    signal.addEventListener("abort", () => clearInterval(clock));
+    document.addEventListener(
+      "visibilitychange",
+      () => {
+        if (document.visibilityState === "visible") paintNow();
+      },
+      { signal },
     );
   });
 </script>

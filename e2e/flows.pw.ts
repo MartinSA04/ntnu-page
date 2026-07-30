@@ -887,3 +887,79 @@ test("add dialog: one Escape from the search field closes it", async ({ page }) 
   await input.press("Escape");
   await expect(addDialog).toBeHidden();
 });
+
+/**
+ * The clock (REWORK-2026-07-30). A planner is a page people leave open, and
+ * everything below is invisible to every other kind of test: the assertions
+ * are about what the page says an hour or a day after it was rendered.
+ *
+ * Europe/Oslo is pinned because the fixtures below are wall-clock times in
+ * NTNU's own timezone, and the CI container runs in UTC.
+ */
+test.describe("time passing", () => {
+  test.use({ timezoneId: "Europe/Oslo" });
+
+  test("the week follows the day across midnight", async ({ page }) => {
+    // Wednesday of teaching week 36, mid-morning.
+    await page.clock.install({ time: new Date("2026-09-02T10:40:00+02:00") });
+    await page.goto("/planlegger/#26h;MTDT.2026;");
+    await expect(page.locator("#planner-grid-frame .planner-block").first()).toBeVisible({
+      timeout: 45_000,
+    });
+    const today = page.locator("#planner-grid-frame .planner-grid-row[data-today]");
+    const marker = page.locator("#planner-grid-frame .planner-grid-now");
+    await expect(today).toHaveAttribute("data-day", "3");
+
+    // The ordinary minute may NOT re-render: the marker moves and nothing
+    // else does. Rebuilding the week every 60 s would throw away the layer
+    // motion, the scroll position and any open popover.
+    const bar = await page.locator("#planner-grid-frame .planner-block").first().elementHandle();
+    await page.clock.runFor("00:05:00");
+    expect(await bar?.evaluate((el) => el.isConnected)).toBe(true);
+
+    // Left open overnight. This kept Wednesday's spine at full ink and
+    // Wednesday's row tinted while the now line had already stepped down into
+    // Thursday — so the marker read as misplaced, because the highlight is
+    // the louder signal and it was pointing at the wrong day.
+    await page.clock.runFor("24:00:00");
+    await expect(today).toHaveAttribute("data-day", "4");
+    await expect(marker).toHaveClass(/is-today/);
+    const rowTop = await page
+      .locator('#planner-grid-frame .planner-grid-row[data-day="4"]')
+      .evaluate((el: HTMLElement) => el.offsetTop);
+    expect(await marker.evaluate((el) => el.style.getPropertyValue("--planner-now-top"))).toBe(
+      `${rowTop}px`,
+    );
+
+    // Every exam countdown reads the date too, and was a day long with it.
+    const away = page.locator(".exam-away").first();
+    const days = (text: string | null) => Number(text?.match(/\d+/)?.[0] ?? Number.NaN);
+    const after = days(await away.textContent());
+    expect(Number.isFinite(after)).toBe(true);
+    await page.clock.runFor("24:00:00");
+    await expect(away).not.toHaveText(new RegExp(`\\b${after}\\b`));
+    expect(days(await away.textContent())).toBe(after - 1);
+  });
+
+  test("the landing card counts its own minutes down", async ({ page }) => {
+    // Monday of teaching week 36, 15 minutes into TMA4412's 08:15 lecture.
+    await page.clock.install({ time: new Date("2026-08-31T08:30:00+02:00") });
+    await page.goto("/planlegger/#26h;MTDT.2026;");
+    await expect(page.locator("#planner-grid-frame .planner-block").first()).toBeVisible({
+      timeout: 45_000,
+    });
+
+    await page.goto("/");
+    const label = page.locator("#home-now-label");
+    // A card labelled "Nå" was computed once and then left: it claimed the
+    // minute it was rendered in for as long as the tab stayed open.
+    await expect(label).toHaveText("Nå · 90 min igjen", { timeout: 45_000 });
+    await page.clock.runFor("00:10:00");
+    await expect(label).toHaveText("Nå · 80 min igjen");
+
+    // And it hands over when the session ends rather than counting past it.
+    await page.clock.runFor("02:00:00");
+    await expect(label).toHaveText("Neste");
+    await expect(page.locator("#home-now-bar")).toBeHidden();
+  });
+});
