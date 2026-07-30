@@ -502,7 +502,9 @@ const description = "Søk i NTNUs emnekatalog etter emnekode, emnenavn eller stu
 
           // I2: the row was write-only — the "+" mutated localStorage and
           // said nothing. The button reports the state now. It used to be
-          // followed by a "se ukeplanen →" link; the topbar chip goes there.
+          // followed by a "se ukeplanen" link, dropped when the topbar chip
+          // took that job; the chip is deleted too (2026-07-30), so the way
+          // to the week from here is the nav's own Planlegger link.
           const sync = (): void => setAddState(addBtn, code, clashEl.textContent ?? "");
           sync();
 

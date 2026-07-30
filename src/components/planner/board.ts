@@ -20,9 +20,9 @@
 import { classifyActivity } from "../../lib/planner/activity.js";
 import { findConflicts, groupConflicts, mergeParallelSlots } from "../../lib/planner/conflicts.js";
 import { applyGroupSelection, entryGroupKey } from "../../lib/planner/groups.js";
-import { entriesInSemester, type ScheduleEntry } from "../../lib/planner/schedule.js";
-import { dayName, dot, el } from "./dom.js";
-import { type BlockDetail, visibleLayer } from "./grid.js";
+import { entriesInSemester, parseWeeks, type ScheduleEntry } from "../../lib/planner/schedule.js";
+import { dayName, dot, el, weekLabel } from "./dom.js";
+import { type BlockDetail, blockDetailFor, buildingLabel, visibleLayer } from "./grid.js";
 import type { PlanCourseState } from "./types.js";
 
 export interface BoardRenderOptions {
@@ -45,11 +45,20 @@ interface BoardEntry extends ScheduleEntry {
   /** The activity/group label. */
   label: string;
   rooms: string;
+  /** The building(s) behind those rooms, for the popover rather than the row. */
+  buildings: string;
+  weeksLabel: string;
   isLecture: boolean;
   /** The student picked this entry group (or it had none to pick). */
   groupPicked: boolean;
-  /** This session overlaps another lecture — the pair is bracketed. */
-  clash: boolean;
+  /**
+   * The lectures this session overlaps and the minutes they share, `null` when
+   * it overlaps nothing. The row itself only needs to know THAT it
+   * clashes (the pair is bracketed in the margin); the popover a row opens
+   * needs to name the partner, and it is the same card a bar opens, so the
+   * facts behind it cannot be thinner here.
+   */
+  clash: { partners: string[]; window: { start: number; end: number } } | null;
 }
 
 const minutesOf = (time: string): number => {
@@ -107,11 +116,13 @@ function collect(courses: PlanCourseState[], teachingWeeks: number[]): BoardEntr
         courseName: state.bundle?.details?.courseName ?? state.course.name,
         label: raw.title?.trim() || raw.name?.trim() || "",
         rooms: roomLabel(raw.rooms),
+        buildings: buildingLabel(raw.rooms),
+        weeksLabel: weekLabel(parseWeeks(raw.weeks)),
         // Same classifier as the grid's, not a second guess at what counts as
         // a lecture — the two views must agree about which sessions can clash.
         isLecture: classifyActivity(raw) === "lecture",
         groupPicked: key === null || soleGroup || picked.has(key),
-        clash: false,
+        clash: null,
       });
     }
   }
@@ -154,7 +165,19 @@ export function renderBoard(
         minutesOf(entry.startTime) < group.end &&
         minutesOf(entry.endTime) > group.start
       ) {
-        entry.clash = true;
+        // Widened across every group this session falls in, exactly as the
+        // grid's `clashWindowFor` does it, because a session can sit in two.
+        const partners = group.codes.filter((code) => code !== entry.courseCode);
+        const prev = entry.clash;
+        entry.clash = prev
+          ? {
+              partners: [...new Set([...prev.partners, ...partners])],
+              window: {
+                start: Math.min(prev.window.start, group.start),
+                end: Math.max(prev.window.end, group.end),
+              },
+            }
+          : { partners, window: { start: group.start, end: group.end } };
       }
     }
   }
@@ -297,18 +320,15 @@ function buildRow(
   );
 
   if (onBlockClick) {
+    // Built by the grid's own `blockDetailFor`, not by a second hand-rolled
+    // literal: the card a row opens IS the card a bar opens, and the last
+    // version of this literal quietly shipped an empty week label.
     row.addEventListener("click", () =>
       onBlockClick(
-        {
-          code: entry.courseCode,
-          dayNumber: entry.dayNumber,
-          name: entry.courseName,
-          entryName: entry.label || null,
-          timeLabel: `${dayName(entry.dayNumber)} ${entry.startTime}–${entry.endTime}`,
-          rooms: entry.rooms,
-          weeksLabel: "",
-          isLecture: entry.isLecture,
-        },
+        blockDetailFor(
+          { ...entry, name: entry.label, weeksNumbers: [], groupCount: 1, ordinal: 0 },
+          entry.clash,
+        ),
         row,
       ),
     );

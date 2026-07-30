@@ -1,5 +1,6 @@
 import { describe, expect, test } from "vitest";
 import {
+  courseFacts,
   lecturesAreExclusive,
   nextSelection,
   pickableGroups,
@@ -298,5 +299,44 @@ describe("TMA4400 as MTDT — the picker's decision against applyGroupSelection"
       "Mattelab 1",
       "Mattelab 2",
     ]);
+  });
+});
+
+describe("courseFacts", () => {
+  /* The modal used to join its facts into one mono run-on: "7,5 sp · fra
+     programmet · droppet". The card the student arrives from sets a figure and
+     qualifies it on the line below, and this is the same block. */
+  test("sets the credits as the figure and where the course came from under it", () => {
+    expect(courseFacts({ credits: 7.5, source: "program", dropped: false })).toEqual({
+      figure: "7,5 sp",
+      provenance: "Fra programmet",
+    });
+  });
+
+  test("names a manual add as the student's own", () => {
+    expect(courseFacts({ credits: 7.5, source: "manual", dropped: false })).toEqual({
+      figure: "7,5 sp",
+      provenance: "Lagt til selv",
+    });
+  });
+
+  /* A dropped course is still in the plan and still restorable, so the line
+     says what dropping DID rather than repeating the verb (§0.3). */
+  test("says what a dropped course is excluded from", () => {
+    expect(courseFacts({ credits: 7.5, source: "program", dropped: true })).toEqual({
+      figure: "7,5 sp",
+      provenance: "Droppet, ikke med i uka eller i sp",
+    });
+  });
+
+  /* DR-6: credits are null-holed. With no figure to set, the provenance is the
+     fact, and `figure` stays null rather than carrying it, because the figure
+     is typeset in the mono and "Fra programmet" is a sentence fragment, not
+     data (Data-Is-Mono). */
+  test("keeps the figure empty when the credits are missing", () => {
+    expect(courseFacts({ credits: null, source: "program", dropped: false })).toEqual({
+      figure: null,
+      provenance: "Fra programmet",
+    });
   });
 });

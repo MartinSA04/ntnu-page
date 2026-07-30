@@ -193,12 +193,20 @@ export function mountAddCourse(deps: AddCourseDeps, signal: AbortSignal): AddCou
   dialog.id = "planner-add-dialog";
   dialog.setAttribute("aria-labelledby", "add-course-title");
 
+  // The masthead the planner's other surfaces open on (`.np-head`), in its
+  // paper variant: this dialog is about the catalog rather than about one
+  // course, so it has no hue to print. It sits outside the scrolling body, so
+  // it stays put while a long result list moves under it.
+  const head = el("div", "np-head add-course-head");
+  const ident = el("div", "np-head-ident");
+  const title = el("h2", "np-head-title add-course-title", "Legg til emne");
+  title.id = "add-course-title";
+  ident.append(title);
+  head.append(ident);
+  dialog.append(head);
+
   const body = el("div", "add-course-body");
   dialog.append(body);
-
-  const title = el("h2", "add-course-title", "Legg til emne");
-  title.id = "add-course-title";
-  body.append(title);
 
   const searchForm = el("form", "np-field add-course-field") as HTMLFormElement;
   searchForm.autocomplete = "off";
@@ -225,9 +233,14 @@ export function mountAddCourse(deps: AddCourseDeps, signal: AbortSignal): AddCou
   const results = el("ul", "add-course-results");
   body.append(results);
 
+  // One action, and it is the only way out besides Esc (backdrop clicks are
+  // deliberately not a dismissal, modals-7), so it sits in the same footer the
+  // other cards close with rather than trailing the list.
+  const actions = el("div", "np-actions add-course-actions");
   const closeBtn = el("button", "np-btn add-course-close", "Lukk") as HTMLButtonElement;
   closeBtn.type = "button";
-  body.append(closeBtn);
+  actions.append(closeBtn);
+  body.append(actions);
 
   document.body.append(dialog);
 

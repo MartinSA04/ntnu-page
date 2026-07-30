@@ -39,7 +39,7 @@ this one is current. e2e: 18/18 green on the tree this shipped against.
   `layout.ts` bullet.)*
 - **Exam date list** (`examSchedule.ts` + `examList.ts`) with explicit gap
   lines, replacing the exam ribbon.
-- **Persistent nav**: Planlegger + Emner + a studieinfo chip, identical on
+- **Persistent nav**: Planlegger + Emner (the studieinfo chip beside them was removed 2026-07-30), identical on
   every page; the plan strip is deleted. *(A sitewide plan-count link shipped
   here too and was removed 2026-07-27, commit 665513f — it duplicated the chip
   one row below it. The chip alone carries the cross-page affordance;

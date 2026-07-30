@@ -115,13 +115,20 @@ const COMPACT_BLOCK_MINUTES = 60;
  */
 const LANE_CAP = Number.POSITIVE_INFINITY;
 
-interface GridEntry extends ScheduleEntry {
+export interface GridEntry extends ScheduleEntry {
   hueVar: string;
   /** The course's proper name (for the block popover), distinct from `name`. */
   courseName: string;
   /** The activity/group label — `title`, e.g. "Forelesningsparallell 2 Trondheim". */
   name: string;
   rooms: string;
+  /**
+   * The building(s) those rooms sit in ("IT-bygget, sydfløy"), or "" when
+   * upstream gave none, or gave one the room label is already showing. The
+   * bar has no width for it; the popover does, and "F1" alone is not a place
+   * you can walk to.
+   */
+  buildings: string;
   weeksNumbers: number[];
   weeksLabel: string;
   isLecture: boolean;
@@ -156,11 +163,38 @@ export interface BlockDetail {
   name: string;
   /** The activity/group label ("Forelesningsparallell 2"), when the block is one entry. */
   entryName: string | null;
-  /** Spoken slot, e.g. "mandag 08:15–10:00". */
-  timeLabel: string;
+  /**
+   * The slot as its two figures, not as a pre-joined sentence: the card sets
+   * the clock as its largest figure and the weekday beside it, and it derives
+   * the duration from the pair.
+   */
+  startTime: string;
+  endTime: string;
   rooms: string;
+  /** The building(s) `rooms` sit in, "" when upstream named none (`buildingLabel`). */
+  buildings: string;
   weeksLabel: string;
   isLecture: boolean;
+  /**
+   * The lecture(s) this session collides with, and the minutes they share.
+   * `null` when it collides with nothing.
+   *
+   * The week already draws the collision as a red zone across the lane, and
+   * the margin names it in a sentence; the card in between said nothing at
+   * all, so a click on the red bar answered every question except the one the
+   * red raised. Red-Is-Collision requires the copy to name both things, which
+   * is why the partner codes travel with the window rather than the card
+   * inferring "something here clashes" from the zone.
+   */
+  clash: BlockClash | null;
+}
+
+/** A session's collision, as the popover needs it: who, and which minutes. */
+export interface BlockClash {
+  /** Course codes this session collides with, never its own. */
+  partners: string[];
+  startTime: string;
+  endTime: string;
 }
 
 export interface GridRenderOptions {
@@ -260,6 +294,27 @@ function roomLabel(rooms: { building: string | null; room: string | null }[]): s
     .join(", ");
 }
 
+/**
+ * The building(s) behind a session's rooms, deduped: the half of the room fact
+ * the bar has to throw away.
+ *
+ * A room with no code of its own already prints its building as its label
+ * (`roomLabel` falls back to it), and upstream does publish rows where the two
+ * fields carry the same string. Either way naming it again underneath would
+ * print the same string twice, so those entries are skipped rather than joined.
+ */
+export function buildingLabel(rooms: { building: string | null; room: string | null }[]): string {
+  return [
+    ...new Set(
+      rooms
+        .filter((r) => r.room !== null && r.building !== null && r.building !== r.room)
+        .map((r) => r.building),
+    ),
+  ]
+    .filter((b): b is string => typeof b === "string" && b !== "")
+    .join(", ");
+}
+
 /** Spoken week range for aria-labels, e.g. "uke 35 til 41" (PLANNER.md §2's a11y example). */
 function spokenWeekRange(weeks: number[]): string {
   if (weeks.length === 0) return "";
@@ -320,6 +375,7 @@ function collectEntries(courses: PlanCourseState[], showAllGroups: boolean): Gri
         courseName: state.course.name,
         name: raw.title ?? raw.name ?? state.course.name,
         rooms: roomLabel(raw.rooms),
+        buildings: buildingLabel(raw.rooms),
         weeksNumbers,
         weeksLabel: weekLabel(weeksNumbers),
         isLecture: classifyActivity(raw) === "lecture",
@@ -436,7 +492,10 @@ function mergeSlots(entries: GridEntry[]): GridEntry[] {
       const rooms = [...new Set(members.flatMap((m) => m.rooms.split(", ")))]
         .filter(Boolean)
         .join(", ");
-      return { ...representative, rooms, groupCount: members.length };
+      const buildings = [...new Set(members.flatMap((m) => m.buildings.split(", ")))]
+        .filter(Boolean)
+        .join(", ");
+      return { ...representative, rooms, buildings, groupCount: members.length };
     },
   );
 }
@@ -771,18 +830,35 @@ export function metaLine(entry: { rooms: string; startTime: string }): string {
   return [entry.startTime, entry.rooms].filter(Boolean).join(" · ");
 }
 
-/** The course-settings material for a single block. */
-function blockDetailFor(entry: GridEntry): BlockDetail {
+/**
+ * The popover material for a single block. `clash` comes from the render's own
+ * conflict pass, the same `ConflictGroup`s the red zone is drawn from, so the
+ * card and the zone can never disagree about which minutes collide.
+ */
+export function blockDetailFor(
+  entry: GridEntry,
+  clash: { partners: string[]; window: { start: number; end: number } } | null,
+): BlockDetail {
   const label = groupLabel(entry);
   return {
     code: entry.courseCode,
     dayNumber: entry.dayNumber,
     name: entry.courseName,
     entryName: label || null,
-    timeLabel: `${dayName(entry.dayNumber)} ${entry.startTime}–${entry.endTime}`,
+    startTime: entry.startTime,
+    endTime: entry.endTime,
     rooms: entry.rooms,
+    buildings: entry.buildings,
     weeksLabel: entry.weeksLabel,
     isLecture: entry.isLecture,
+    clash:
+      clash && clash.partners.length > 0
+        ? {
+            partners: clash.partners,
+            startTime: minutesToTime(clash.window.start),
+            endTime: minutesToTime(clash.window.end),
+          }
+        : null,
   };
 }
 
@@ -828,8 +904,12 @@ function buildBlock(
     if (what) block.append(el("span", "planner-block-what", what));
   }
 
-  if (onBlockClick)
-    block.addEventListener("click", () => onBlockClick(blockDetailFor(entry), block));
+  if (onBlockClick) {
+    const clash = geometry.clashWindow
+      ? { partners: partnerCodes, window: geometry.clashWindow }
+      : null;
+    block.addEventListener("click", () => onBlockClick(blockDetailFor(entry, clash), block));
+  }
   return block;
 }
 

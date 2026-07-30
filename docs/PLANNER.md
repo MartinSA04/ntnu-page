@@ -61,7 +61,11 @@ register: blocks laid on the grid like a hand-drawn timetable done neatly,
 with the hour line anchored to the same box the slot grid starts at.
 
 When two courses collide, the page marks the sheet
-in red ink: a solid 2px `--clash-edge` inline-start rule on the colliding
+in red ink. *(Superseded in part: the per-block inline-start rule below is
+gone, and with it the `--clash-edge` token. The collision is ONE zone per day
+across exactly the minutes that overlap, drawn behind every lane it crosses —
+the mark belongs to the moment, not to either course. See DESIGN §4 and
+planner-week.css.)* A solid 2px `--clash-edge` inline-start rule on the colliding
 block plus `--clash-bg` on the overlapping band only (not a hatch over the
 whole block — that read at the same weight as the pastel course wash and
 was barely separable), the course code keeps `underline wavy` in `--clash`,

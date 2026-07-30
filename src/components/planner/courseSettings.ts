@@ -29,7 +29,7 @@
  */
 import type { GroupOption } from "../../lib/planner/groups.js";
 import type { CourseSource, PlanStore } from "../../lib/planner/store.js";
-import { dot, el, formatCreditNumber, icon } from "./dom.js";
+import { el, formatCreditNumber, icon } from "./dom.js";
 
 /**
  * What the caller hands the modal. Everything the old
@@ -79,6 +79,31 @@ export interface CourseSettingsHandle {
   /** The code currently on screen, or null while closed — lets the caller refresh us in place. */
   currentCode(): string | null;
   close(): void;
+}
+
+/**
+ * The fact block under the head: the figure this course is measured in, and
+ * the line under it that qualifies it: the same shape the session card sets a
+ * clock and its weekday in, rather than the mono run-on ("7,5 sp · fra
+ * programmet · droppet") this replaces.
+ *
+ * With no credits to state (DR-6 null-holes them) `figure` stays null and the
+ * provenance takes the block on its own, as a sentence fragment in the
+ * grotesk, never promoted into the mono the figure is set in (Data-Is-Mono).
+ */
+export function courseFacts(ctx: {
+  credits: number | null;
+  source: CourseSource;
+  dropped: boolean;
+}): { figure: string | null; provenance: string } {
+  return {
+    figure: ctx.credits == null ? null : `${formatCreditNumber(ctx.credits)} sp`,
+    provenance: ctx.dropped
+      ? "Droppet, ikke med i uka eller i sp"
+      : ctx.source === "program"
+        ? "Fra programmet"
+        : "Lagt til selv",
+  };
 }
 
 /**
@@ -369,7 +394,7 @@ export function mountCourseSettings(store: PlanStore, signal: AbortSignal): Cour
    * carries one of its own.
    */
   function renderActions(ctx: CourseSettingsContext): HTMLElement {
-    const row = el("div", "course-settings-actions");
+    const row = el("div", "np-actions np-actions--split course-settings-actions");
     const isProgram = ctx.source === "program";
     const label = isProgram ? (ctx.dropped ? "Legg tilbake" : "Dropp") : "Fjern fra planen";
 
@@ -390,7 +415,7 @@ export function mountCourseSettings(store: PlanStore, signal: AbortSignal): Cour
     });
     row.append(action);
 
-    const link = el("a", "course-settings-link", "Gå til emnesiden");
+    const link = el("a", "np-link-out", "Gå til emnesiden");
     link.append(icon("arrowRight"));
     link.href = `/emne/${ctx.code}/`;
     row.append(link);
@@ -407,29 +432,48 @@ export function mountCourseSettings(store: PlanStore, signal: AbortSignal): Cour
     return button;
   }
 
+  /**
+   * The same masthead the session card opens on (`.np-head--printed`): the
+   * course's own printed fill with its code knocked out of it, its name on the
+   * quiet line under it. A student reaches this modal FROM that card, and the
+   * two used to share nothing but a hue dot, so the editor read as a different
+   * object about a different course.
+   */
+  function renderHead(ctx: CourseSettingsContext): HTMLElement {
+    const head = el("div", "np-head np-head--printed course-settings-head");
+    head.style.setProperty("--dot", `var(${ctx.hueVar})`);
+    const ident = el("div", "np-head-ident");
+    const title = el("h2", "np-head-title np-data course-settings-code", ctx.code);
+    title.id = "course-settings-title";
+    ident.append(title);
+    if (ctx.name) ident.append(el("p", "np-head-sub", ctx.name));
+    head.append(ident, renderClose());
+    return head;
+  }
+
   function renderContent(ctx: CourseSettingsContext): void {
     dialog.replaceChildren();
+    dialog.append(renderHead(ctx));
 
-    const head = el("div", "course-settings-head");
-    const title = el("h2", "course-settings-title");
-    title.id = "course-settings-title";
-    title.append(dot(ctx.hueVar));
-    title.append(el("span", "np-data course-settings-code", ctx.code));
-    title.append(el("span", "course-settings-name", ctx.name));
-    head.append(title, renderClose());
-    dialog.append(head);
+    const body = el("div", "course-settings-body");
 
-    const facts: string[] = [];
-    if (ctx.credits != null) facts.push(`${formatCreditNumber(ctx.credits)} sp`);
-    facts.push(ctx.source === "program" ? "fra programmet" : "lagt til selv");
-    if (ctx.dropped) facts.push("droppet");
-    dialog.append(el("p", "np-note course-settings-facts", facts.join(" · ")));
+    // The figure the course is measured in, and the line that qualifies it:
+    // the card's fact block, not the mono run-on this replaces.
+    const { figure, provenance } = courseFacts(ctx);
+    const facts = el("div", "np-fact course-settings-facts");
+    if (figure) {
+      facts.append(el("p", "np-fact-value np-data", figure));
+      facts.append(el("p", "np-fact-sub", provenance));
+    } else {
+      facts.append(el("p", "np-fact-value", provenance));
+    }
+    body.append(facts);
 
     // The status sentences the course row used to concatenate into one
     // run-on meta line (D2) — one line each, in `.np-hint` because they are
     // sentences with verbs, not mono fragments (DESIGN §3).
     for (const note of ctx.notes) {
-      dialog.append(el("p", "np-hint course-settings-note", note));
+      body.append(el("p", "np-hint course-settings-note", note));
     }
     if (ctx.onRetry) {
       const retry = el("button", "np-btn course-settings-retry", "Prøv igjen");
@@ -437,12 +481,13 @@ export function mountCourseSettings(store: PlanStore, signal: AbortSignal): Cour
       retry.setAttribute("aria-label", `Prøv å hente ${ctx.code} på nytt`);
       const run = ctx.onRetry;
       retry.addEventListener("click", () => run());
-      dialog.append(retry);
+      body.append(retry);
     }
 
     const { lectures, others } = pickableGroups(ctx.groups);
-    if (lectures.length > 0 || others.length > 0) dialog.append(renderGroupsSection(ctx));
-    dialog.append(renderActions(ctx));
+    if (lectures.length > 0 || others.length > 0) body.append(renderGroupsSection(ctx));
+    body.append(renderActions(ctx));
+    dialog.append(body);
   }
 
   dialog.addEventListener("close", () => {

@@ -54,7 +54,7 @@ import {
   parsePlanHash,
 } from "../../lib/planner/store.js";
 import { type AddCourseDeps, type AddCourseHandle, mountAddCourse } from "./addCourse.js";
-import { mountBlockPopover } from "./blockPopover.js";
+import { mountBlockPopover, type SessionChoice } from "./blockPopover.js";
 import { renderBoard } from "./board.js";
 import { type CourseSettingsContext, mountCourseSettings } from "./courseSettings.js";
 import { el, formatCreditNumber, formatCredits, formatShortDate, settingsIcon } from "./dom.js";
@@ -70,6 +70,7 @@ import {
   renderGrid,
   renderGridMessage,
   syncNowMarker,
+  unresolvedLectureChoices,
 } from "./grid.js";
 import { beginLayerChange } from "./layerMotion.js";
 import {
@@ -345,10 +346,9 @@ export async function mountPlannerApp(
   // semester); the course-settings modal owns everything per-course — group
   // selection AND drop/remove (REWORK-2026-07-29 D1/D3). Both hang off the
   // single store this app owns — one mount each. Studieinfo opens from the
-  // banner "Endre" button, the week's studieretning question, every empty-state
-  // button, the OPEN_STUDIEINFO event (Layout chip) and the `?studieinfo` query
-  // param handled at the end of mount; course settings from a course row and
-  // from any block in the week or day view.
+  // banner "Endre" button, the week's studieretning question and every
+  // empty-state button, and from nowhere else on the site; course settings
+  // from a course row and from any block in the week or day view.
   const studieinfo = mountStudieinfo(
     { store, semesters, programOptions, defaultSemesterId },
     lifeSignal,
@@ -363,13 +363,29 @@ export async function mountPlannerApp(
   function openBlockPopover(detail: BlockDetail, anchor: HTMLElement): void {
     const state = courseStates.get(detail.code);
     const course = plan.courses.find((c) => c.code === detail.code);
+
+    // What the card's verb may promise comes from the editor's OWN material:
+    // `groups` is narrowed exactly as the picker lists it, so a layer with one
+    // option, or none, cannot offer a choice the modal would not show
+    // ("Velg parallell" on a course with a single parallel is a dead end).
+    const layerOptions = (buildCourseSettingsContext(detail.code)?.groups ?? []).filter(
+      (option) => (option.kind === "lecture") === detail.isLecture,
+    );
+    const choice: SessionChoice =
+      layerOptions.length > 1 ? (detail.isLecture ? "parallel" : "group") : "course";
+
+    // Whether the drawn lecture is a guess is the same question the margin
+    // note answers, so it is the same function. A second rule here is how the
+    // note and the card would start disagreeing about what was chosen.
+    const guess = state ? unresolvedLectureChoices([state], false)[0] : undefined;
+
     blockPopover.showFor(
       {
         detail,
         hueVar: state?.hueVar ?? "--muted",
         courseName: state?.bundle?.details?.courseName ?? course?.name ?? detail.name,
-        source: course?.source ?? "manual",
-        dropped: course?.dropped === true,
+        choice,
+        lectureAlternatives: guess?.count ?? 0,
       },
       anchor,
     );
@@ -1108,12 +1124,12 @@ export async function mountPlannerApp(
   // --- Programme / kull / retning / semester: the studieinfo modal --------
   //
   // All four plan choices live in the one studieinfo modal, and exactly one
-  // persistent control opens it: Layout's topbar `#studieinfo-chip`, via the
-  // OPEN_STUDIEINFO event `mountStudieinfo` listens for. The banner's own
-  // "Endre" button and the clickable page title were two more doors to the
-  // same room and are gone. What remains below are the *contextual* openers —
-  // the week's studieretning question and the empty-state cards — which only
-  // ever appear when the week has nothing else in it.
+  // persistent control opens it: this page's own "Endre" button
+  // (`#planner-edit-plan`). The topbar chip that used to be the other one is
+  // deleted, and the clickable page title before it. What remains below are
+  // the *contextual* openers — the week's studieretning question and the
+  // empty-state cards — which only ever appear when the week has nothing else
+  // in it.
 
   // --- Studieretning question --------------------------------------------
 
@@ -2439,21 +2455,10 @@ export async function mountPlannerApp(
   syncHash();
   renderAll();
 
-  // `?studieinfo` (the Layout chip navigating in from another page): open the
-  // modal once, then strip the param via replaceState so a reload or Back does
-  // not re-open it. The fragment carries the plan grammar and must survive
-  // untouched — syncHash above already wrote it, and it is preserved here.
-  const params = new URLSearchParams(location.search);
-  if (params.has("studieinfo")) {
-    params.delete("studieinfo");
-    const query = params.toString();
-    history.replaceState(
-      history.state, // never null — see syncHash (app-1)
-      "",
-      `${location.pathname}${query ? `?${query}` : ""}${location.hash}`,
-    );
-    studieinfo.open();
-  }
+  // There is no `?studieinfo` entrance any more. It existed for one caller,
+  // Layout's topbar chip navigating in from another page, and the chip is
+  // deleted (2026-07-30, owner's call): the "Endre" button below is the only
+  // way into the modal.
 
   lastDerivationKey = derivationKey();
   await Promise.all([loadBundles(), loadPeriodCourses()]);

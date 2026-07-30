@@ -12,12 +12,17 @@ import "../styles/primitives.css";
 import "../styles/site.css";
 
 /**
- * Site shell: sticky topbar (wordmark, nav, the theme toggle, and on the
- * landing page a studieinfo chip naming whose plan this is), a centered
+ * Site shell: sticky topbar (wordmark, nav, the theme toggle), a centered
  * content column (reading measure by default, the `--maxw` data column when
  * `wide`), and a footer carrying provenance. Ruteark's colour lives in
  * tokens.css: no inline colour vars here (see docs/SPEC.md "Design-system
  * usage").
+ *
+ * The topbar carries no plan state and no way into the studieinfo modal. It
+ * used to end in a `#studieinfo-chip` on the landing page, naming the
+ * programme and linking to `/planlegger/?studieinfo`; that is deleted
+ * (2026-07-30, owner's call). The planner's own "Endre" button is the single
+ * entrance to the modal now, and the planner's title says whose plan it is.
  */
 interface Props {
   title: string;
@@ -39,15 +44,6 @@ const NAV = [
 ] as const;
 
 const path = Astro.url.pathname;
-/**
- * The studieinfo chip is a landing-page element, not site chrome.
- *
- * The planner names the plan in its own title (REWORK-2026-07-30b), and the
- * catalog pages do not need it at all: you are looking up a course there, not
- * checking whose plan it would join. What is left is the one page that has no
- * other way to say it.
- */
-const showChip = path === "/";
 
 function isCurrentSection(sections: readonly string[]): boolean {
   return sections.some((prefix) => path === prefix || path.startsWith(prefix));
@@ -160,13 +156,6 @@ const crawlDate = formatCrawlDate(semestersData.crawledAt);
             ))
           }
         </nav>
-        {
-          showChip && (
-            <a class="np-btn studieinfo-chip" id="studieinfo-chip" href="/planlegger/?studieinfo">
-              Velg studieprogram
-            </a>
-          )
-        }
         <ThemeToggle storageKey={THEME_KEY} />
       </header>
       <main id="main-content" class:list={["site-content", { wide }]}>
@@ -178,85 +167,5 @@ const crawlDate = formatCrawlDate(semestersData.crawledAt);
         uoffisiell, med forbehold om feil
       </footer>
     </div>
-    <script>
-      // Leaf module, deliberately: importing the constant from studieinfo.ts
-      // pulled the whole 11.9 KB dialog into every page's bundle (perf-4).
-      import { OPEN_STUDIEINFO_EVENT } from "../components/planner/studieinfoEvent.ts";
-      import { onPage } from "../lib/pageLifecycle.ts";
-      import { semesterYear } from "../lib/planner/schedule.ts";
-      import { createPlanStore } from "../lib/planner/store.ts";
-
-      /** `"26h"` → `"Høst 2026"` (rework Task 11's Facts). `null` for a malformed id. */
-      function semesterLabel(semesterId: string): string | null {
-        const year = semesterYear(semesterId);
-        if (year === null) return null;
-        return /h$/i.test(semesterId.trim()) ? `Høst ${year}` : `Vår ${year}`;
-      }
-
-      /**
-       * The persistent studieinfo chip — "who is this plan for", and the one
-       * control that changes it. It renders once here, subscribes to the
-       * store's change event, and every page gets it for free.
-       *
-       * It used to have a companion: a "N emner · X sp → ukeplanen" bar under
-       * the topbar on every page but `/` and `/planlegger/`. It is gone. The
-       * chip beside it already names the plan and already links to the week,
-       * and `/emner/` and `/emne/[code]/` each carry their own "se ukeplanen →"
-       * next to the course they just added — so the bar was a third route to
-       * the same place, spending a full-width rule and a border on it.
-       */
-      onPage((signal) => {
-        const chip = document.getElementById("studieinfo-chip") as HTMLAnchorElement | null;
-        if (!chip) return;
-
-        // On the planner itself the chip opens the same studieinfo dialog
-        // `mountStudieinfo` already wires there — no navigation needed, so
-        // the click is intercepted instead of following the href.
-        if (location.pathname.startsWith("/planlegger/")) {
-          chip.addEventListener(
-            "click",
-            (event) => {
-              event.preventDefault();
-              window.dispatchEvent(new CustomEvent(OPEN_STUDIEINFO_EVENT));
-            },
-            { signal },
-          );
-        }
-
-        const store = createPlanStore("");
-
-        // site.css caps the chip at 9rem below this width (the shared phone
-        // breakpoint), and the three-fact label does not fit: it ellipsised
-        // mid-fact to "MTDT · 2026 · H…", spending the tail on a semester the
-        // planner's own context line already carries. The programme identity
-        // is the fact only the chip states, so at phone width it gets the
-        // whole box (mob-1).
-        const narrow = matchMedia("(max-width: 480px)");
-
-        function render(): void {
-          const plan = store.loadPlan();
-          if (!chip) return;
-          const program = plan.program;
-          // DESIGN §3 Data-Is-Mono: filled, the chip is data fragments joined
-          // by middots with no verb — the same facts /planlegger/ sets in mono
-          // ~110px below it. Empty, it is a verb phrase and stays grotesk
-          // (ds-6).
-          chip.classList.toggle("np-data", Boolean(program));
-          if (!program) {
-            chip.textContent = "Velg studieprogram";
-            return;
-          }
-          const semester = semesterLabel(plan.semesterId) ?? plan.semesterId;
-          chip.textContent = narrow.matches
-            ? `${program.code} · ${program.cohort}`
-            : `${program.code} · ${program.cohort} · ${semester}`;
-        }
-
-        render();
-        const unsubscribe = store.onPlanChange(render);
-        narrow.addEventListener("change", render, { signal });
-        signal.addEventListener("abort", unsubscribe);
-      });
-    </script>
   </body>
 </html>

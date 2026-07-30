@@ -1,5 +1,7 @@
 import { afterEach, describe, expect, test } from "vitest";
 import {
+  blockDetailFor,
+  buildingLabel,
   lectureLessCourses,
   planGaps,
   renderGrid,
@@ -616,5 +618,101 @@ describe("drop-in windows get a strip, not a lane (REWORK-2026-07-30c)", () => {
       .find("planner-block")
       .find((b) => b.classes.has("is-band"));
     expect(band?.tagName).toBe("BUTTON");
+  });
+});
+
+describe("buildingLabel (the fact the bar has no room for)", () => {
+  test("names the building behind a room code", () => {
+    // The bar prints "F1" and the popover used to as well, which is not enough
+    // to walk to: the data has the building and nothing rendered it.
+    expect(buildingLabel([{ room: "F1", building: "IT-bygget, sydfløy" }])).toBe(
+      "IT-bygget, sydfløy",
+    );
+  });
+
+  test("names a shared building once, however many rooms are booked", () => {
+    // TDT4110's Ferdighetstrening books four Realfagbygget rooms per slot.
+    expect(
+      buildingLabel([
+        { room: "A3-100", building: "Realfagbygget" },
+        { room: "A3-125", building: "Realfagbygget" },
+        { room: "A4-100", building: "Realfagbygget" },
+      ]),
+    ).toBe("Realfagbygget");
+  });
+
+  test("lists two buildings when the session really is in two", () => {
+    expect(
+      buildingLabel([
+        { room: "R1", building: "Realfagbygget" },
+        { room: "H3 521", building: "Tapirbygget" },
+      ]),
+    ).toBe("Realfagbygget, Tapirbygget");
+  });
+
+  test("says nothing when the building repeats the room's own name", () => {
+    // Upstream does publish rows where the two fields carry the same string;
+    // printing it under itself is the noise this function exists to avoid.
+    expect(buildingLabel([{ room: "R9", building: "R9" }])).toBe("");
+  });
+
+  test("says nothing when the building IS the room label", () => {
+    // `roomLabel` falls back to the building when there is no room, so
+    // repeating it underneath would print the same string twice.
+    expect(buildingLabel([{ room: null, building: "Realfagbygget" }])).toBe("");
+    expect(buildingLabel([])).toBe("");
+    expect(buildingLabel([{ room: "R1", building: null }])).toBe("");
+  });
+});
+
+describe("blockDetailFor (what a clicked bar hands the popover)", () => {
+  const gridEntry = {
+    courseCode: "TDT4110",
+    courseName: "Informasjonsteknologi, grunnkurs",
+    dayNumber: 1,
+    startTime: "14:15",
+    endTime: "16:00",
+    weeks: ["34-47"],
+    hueVar: "--hue-blue",
+    name: "Forelesningsparallell 3",
+    rooms: "F1",
+    buildings: "IT-bygget, sydfløy",
+    weeksNumbers: [34, 47],
+    weeksLabel: "uke 34–47",
+    isLecture: true,
+    groupPicked: false,
+    groupCount: 1,
+    ordinal: 0,
+  };
+
+  test("hands over the clock as its own pair, not a pre-joined sentence", () => {
+    // The card sets the time as its largest figure and the day beside it, so it
+    // needs the two halves rather than "mandag 14:15–16:00".
+    const detail = blockDetailFor(gridEntry, null);
+    expect(detail.startTime).toBe("14:15");
+    expect(detail.endTime).toBe("16:00");
+    expect(detail.dayNumber).toBe(1);
+  });
+
+  test("hands over the building, so the card can name where the room is", () => {
+    expect(blockDetailFor(gridEntry, null).buildings).toBe("IT-bygget, sydfløy");
+  });
+
+  test("names the collision partner and the minutes they share", () => {
+    // Red-Is-Collision: if red appears, the copy names both things. The zone in
+    // the week says WHEN; only the partner code says WITH WHAT.
+    const detail = blockDetailFor(gridEntry, {
+      partners: ["TDT4160"],
+      window: { start: 14 * 60 + 15, end: 16 * 60 },
+    });
+    expect(detail.clash).toEqual({
+      partners: ["TDT4160"],
+      startTime: "14:15",
+      endTime: "16:00",
+    });
+  });
+
+  test("stays quiet when the session collides with nothing", () => {
+    expect(blockDetailFor(gridEntry, null).clash).toBeNull();
   });
 });

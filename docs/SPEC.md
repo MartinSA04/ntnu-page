@@ -216,9 +216,12 @@ plannerApp.ts    orchestration: owns the DOM ids in planlegger/index.astro,
   deleted `examRibbon.ts`**. Reads an already `indexForSemester`-narrowed
   index so a stale exam date cannot reach it.
 - **`studieinfo.ts`** — `mountStudieinfo(deps, signal) → StudieinfoHandle`,
-  `OPEN_STUDIEINFO_EVENT` (the event `Layout.astro`'s chip dispatches on
-  `/planlegger/`, and the `?studieinfo` query param triggers elsewhere),
-  `publishMonthFor(semesterId)`. **The only surface that picks
+  `publishMonthFor(semesterId)`. Opened through the handle alone, from
+  `/planlegger/` alone: `#planner-edit-plan` ("Endre") plus the contextual
+  empty-state and studieretning openers. The `OPEN_STUDIEINFO_EVENT` window
+  event, its `studieinfoEvent.ts` leaf module, the `?studieinfo` query param
+  and `Layout.astro`'s topbar chip that used all three are **deleted**
+  (2026-07-30, owner's call). **The only surface that picks
   programme/kull/retning/semester** — the deleted homepage picker and
   planner inline picker are gone. Absorbed `/studier/[code]/`'s "Bruk som
   planen min" import semantics: Lagre calls `setProgramPlan`, preserving

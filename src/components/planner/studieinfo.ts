@@ -57,8 +57,12 @@ export interface StudieinfoHandle {
   open(): void;
 }
 
-/** `window` CustomEvent the modal listens for (Layout chip / empty states open it). */
-export const OPEN_STUDIEINFO_EVENT = "np:open-studieinfo";
+/* There is no `OPEN_STUDIEINFO_EVENT` any more, and no `window` listener for
+   it. It existed so a control on another page could open this modal without
+   importing it; the one control that did, Layout's topbar chip, is deleted
+   (2026-07-30, owner's call). Every opener left is on `/planlegger/` and holds
+   the handle this returns, so it calls `open()` directly. `studieinfoEvent.ts`,
+   the leaf module that carried the name for Layout's sake, is deleted with it. */
 
 /** Rows rendered in the programme typeahead at once (matches the planner picker). */
 const MAX_PROGRAM_ROWS = 12;
@@ -145,11 +149,9 @@ function semesterLabel(semester: SemesterSummary): string {
 
 /**
  * Mounts the studieinfo modal once. Creates a single `<dialog>` appended to
- * `document.body`, wires the `OPEN_STUDIEINFO_EVENT` listener, and returns a
- * handle so a caller holding it can open the dialog directly. `signal` aborts
- * on the next page swap: it removes the dialog and drops the window listener,
- * so a re-mount (once per `astro:page-load`) never leaves a second dialog or
- * a stale listener behind.
+ * `document.body` and returns a handle its callers open it through. `signal`
+ * aborts on the next page swap and removes the dialog, so a re-mount (once per
+ * `astro:page-load`) never leaves a second one behind.
  */
 export function mountStudieinfo(deps: StudieinfoDeps, signal: AbortSignal): StudieinfoHandle {
   // Idempotency: a previous mount's dialog may still be in the DOM after a
@@ -198,12 +200,21 @@ export function mountStudieinfo(deps: StudieinfoDeps, signal: AbortSignal): Stud
   dialog.id = "studieinfo-dialog";
   dialog.setAttribute("aria-labelledby", "studieinfo-title");
 
+  // The same masthead the session card and the course modal open on
+  // (`.np-head`), in its paper variant: a programme has no hue of its own, so
+  // the band is a tonal step with a hairline under it rather than a printed
+  // fill. It sits outside the scrolling body, so it stays put while a long
+  // programme list moves under it.
+  const head = el("div", "np-head studieinfo-head");
+  const ident = el("div", "np-head-ident");
+  const title = el("h2", "np-head-title studieinfo-title", "Studieinfo");
+  title.id = "studieinfo-title";
+  ident.append(title);
+  head.append(ident);
+  dialog.append(head);
+
   const body = el("div", "studieinfo-body");
   dialog.append(body);
-
-  const title = el("h2", "studieinfo-title", "Studieinfo");
-  title.id = "studieinfo-title";
-  body.append(title);
 
   // Programme -------------------------------------------------------------
   const programSection = el("div", "studieinfo-field");
@@ -302,7 +313,7 @@ export function mountStudieinfo(deps: StudieinfoDeps, signal: AbortSignal): Stud
   hint.setAttribute("aria-live", "polite");
   body.append(hint);
 
-  const actions = el("div", "studieinfo-actions");
+  const actions = el("div", "np-actions studieinfo-actions");
   const saveBtn = el("button", "np-btn studieinfo-save", "Lagre") as HTMLButtonElement;
   saveBtn.type = "button";
   saveBtn.id = "studieinfo-save";
@@ -872,7 +883,6 @@ export function mountStudieinfo(deps: StudieinfoDeps, signal: AbortSignal): Stud
     invoker = null;
   });
 
-  window.addEventListener(OPEN_STUDIEINFO_EVENT, open, { signal });
   signal.addEventListener("abort", () => dialog.remove());
 
   return { open };

@@ -90,58 +90,23 @@
   }
 }
 
-/* --- Studieinfo chip: persistent, sitewide (rework Task 11) ---
-   Always visible in the topbar — "who is this plan for" is never more than
-   one glance away, and never gated behind a page that has to load first. */
-.studieinfo-chip {
-  max-width: 14rem;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
+/* DELETED: `.studieinfo-chip`, the topbar's plan chip (2026-07-30, owner's
+   call). It named the programme on the landing page and was one of two ways
+   into the studieinfo modal; the planner's own "Endre" button is the only one
+   now. The phone budget it shared with the wordmark went with it: the topbar's
+   three remaining children fit 320 px without either of them giving. */
 
-/* At 360 px the topbar's four children want ~460 px between them, so two of
-   them have to give — and both were giving badly: the chip was cut mid-glyph
-   at "Velg s" and the theme toggle was crushed to a 7 px sliver (mob-1). The
-   toggle no longer shrinks at all (primitives.css `flex: none`), so the give
-   is shared here between the wordmark and the chip, each with a floor and a
-   real ellipsis.
-
-   `display: block` is what makes the ellipsis work: inside an inline-flex the
-   label sits in an anonymous flex item no rule can reach, which is why the
-   `text-overflow` above did nothing. `line-height` then does the vertical
-   centring the flexbox was doing. */
+/* One scale step down (--text-md → --text-base) buys the wordmark ~12 px,
+   which is the difference between "Semesterplan" whole and "Semesterpl…" on
+   a 390 px phone. */
 @media (max-width: 480px) {
-  .site-brand,
-  .studieinfo-chip {
+  .site-brand {
     display: block;
     min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
     line-height: var(--control-h);
-  }
-
-  /* The floors are measured, not chosen: gutters 32 + nav 114 + toggle 44 +
-     three 4 px gaps = 202, which leaves 118 px for the two labels at 320 px —
-     so 4rem each is the most either may claim without the page itself
-     scrolling sideways (measured at 320/360/390: scrollWidth == the viewport
-     in all three). The chip carries the higher shrink factor, so the wordmark
-     is the last thing to lose a letter; the chip degrades gracefully because
-     its label is an invitation ("Velg studieprogram") or a short fact
-     ("MTDT · 2026"). */
-  .studieinfo-chip {
-    flex: 0 4 auto;
-    min-width: 4rem;
-    max-width: 9rem;
-  }
-
-  /* One scale step down (--text-md → --text-base) buys the wordmark ~12 px,
-     which is the difference between "Semesterplan" whole and "Semesterpl…" on
-     a 390 px phone. */
-  .site-brand {
-    flex: 0 1 auto;
-    min-width: 4rem;
     font-size: var(--text-base);
   }
 }
@@ -201,12 +166,23 @@
 .studieinfo-dialog {
   width: min(34rem, calc(100vw - 2rem));
   max-width: calc(100vw - 2rem);
+  max-height: min(90vh, 48rem);
   /* base.css's `* { margin: 0 }` beats the UA `dialog { margin: auto }`, so
      without this a showModal()'d dialog pins to the top-left instead of
      centering. */
   margin: auto;
   padding: 0;
   color: var(--fg);
+}
+
+/* MUST stay qualified on [open], same trap the other two dialogs document: an
+   author `display` beats the UA's `dialog:not([open]) { display: none }`
+   whatever the specificity, so an unqualified rule here would park the modal
+   on screen from first paint. The column is what lets the head stay while the
+   body scrolls. */
+.studieinfo-dialog[open] {
+  display: flex;
+  flex-direction: column;
 }
 
 .studieinfo-dialog::backdrop {
@@ -220,15 +196,28 @@
    field, an unanswered studieretning, the reset button) hides through that
    one rule. */
 
+/* The body sets its own, roomier padding than `.np-head`'s default, so the
+   head has to follow it: a title starting 8px left of every field under it
+   reads as a mistake, not as a masthead. */
+.studieinfo-head {
+  padding-inline-start: var(--space-5);
+}
+
 .studieinfo-body {
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
   padding: var(--space-5);
-  max-height: min(85vh, 44rem);
+  /* The scrolling half of the dialog's column: `min-height: 0` is what lets a
+     long programme list shrink it instead of growing the modal past the
+     viewport. */
+  min-height: 0;
   overflow-y: auto;
 }
 
+/* The one head in the system whose title is a page-level <h2> rather than a
+   course code, so it keeps the headline step (`.np-head-title` sets the card
+   step; site.css loads after primitives.css, so this wins). */
 .studieinfo-title {
   font-family: var(--font-sans);
   font-size: var(--text-lg);
@@ -326,8 +315,8 @@
   max-width: none;
 }
 
-/* Native selects on the field grammar: the inline-start rule is the edge,
-   no border, focus is the global accent outline. */
+/* Native selects on the field grammar: the control fill, no border, no edge
+   rule, focus is the global ink outline. */
 .studieinfo-select {
   min-height: var(--control-h);
   padding: 0 var(--space-3);
@@ -337,7 +326,6 @@
   font-size: var(--text-sm);
   border: 0;
   border-radius: var(--radius-sm);
-  box-shadow: inset 2px 0 0 0 var(--control-edge);
 }
 
 .studieinfo-select:focus-visible {
@@ -353,10 +341,11 @@
   max-width: none;
 }
 
+/* Both actions are verbs about the same staged edit, so they stay together at
+   the start (`.np-actions` without `--split`, which is for a verb and a way
+   out to another page). */
 .studieinfo-actions {
-  display: flex;
   gap: var(--gap-2);
-  margin-top: var(--space-2);
 }
 
 /* Lagre is the primary — an ink fill in both rest and hover (the shared
@@ -381,13 +370,29 @@
 .add-course-dialog {
   width: min(30rem, calc(100vw - 2rem));
   max-width: calc(100vw - 2rem);
+  max-height: min(85vh, 44rem);
   margin: auto;
   padding: 0;
   color: var(--fg);
 }
 
+/* MUST stay qualified on [open], the same trap the other dialogs document: an
+   author `display` beats the UA's `dialog:not([open]) { display: none }`
+   whatever the specificity. The column is what lets the head stay while the
+   results scroll. */
+.add-course-dialog[open] {
+  display: flex;
+  flex-direction: column;
+}
+
 .add-course-dialog::backdrop {
   background: color-mix(in srgb, var(--fg) 45%, transparent);
+}
+
+/* Matched to the body's own padding, so the title starts where the search
+   field under it does. */
+.add-course-head {
+  padding-inline-start: var(--space-5);
 }
 
 .add-course-body {
@@ -395,10 +400,15 @@
   flex-direction: column;
   gap: var(--space-3);
   padding: var(--space-5);
-  max-height: min(85vh, 40rem);
+  /* `min-height: 0` is what lets a full result list shrink this instead of
+     growing the dialog past the viewport. */
+  min-height: 0;
   overflow-y: auto;
 }
 
+/* The one title in the system that is a page-level <h2> rather than a course
+   code, alongside studieinfo's: it keeps the headline step (`.np-head-title`
+   sets the card step, and site.css loads after primitives.css). */
 .add-course-title {
   font-family: var(--font-sans);
   font-size: var(--text-lg);
@@ -442,10 +452,20 @@
   min-width: 0;
 }
 
-/* The lazy clash/credits line (or the not-taught note) — always its own
-   row so it never fights the head/actions line for space. */
+/* The lazy clash/credits line (or the not-taught note). Always its own
+   row so it never fights the head/actions line for space, and the space is
+   reserved while it is still empty so a hover cannot reflow the list under the
+   pointer.
+
+   `order` moves it under BOTH the name and the button without moving it in the
+   DOM: it is written between them so a screen reader hears the note as part of
+   the course rather than after the control, but visually a row that keeps the
+   empty line in the middle is three lines tall and only ever says anything on
+   two of them. Nothing here is focusable, so visual and tab order cannot
+   disagree. */
 .add-course-row-note {
   flex-basis: 100%;
+  order: 1;
   margin: 0;
 }
 
@@ -469,8 +489,11 @@
   font-weight: var(--weight-medium);
 }
 
-.add-course-close {
-  align-self: flex-start;
+/* The list's last row would otherwise stack its own hairline on top of the
+   footer's, two rules a few pixels apart. The footer's is the one that means
+   something: the list ends here, and this is what you can do about it. */
+.add-course-row:last-child {
+  border-bottom: 0;
 }
 
 /* --- Course settings (REWORK-2026-07-29 D1) ----------------------------
@@ -487,8 +510,10 @@
   width: min(26rem, calc(100vw - 2 * var(--space-4)));
   max-width: calc(100vw - 2 * var(--space-4));
   max-height: min(80vh, 40rem);
-  overflow-y: auto;
-  padding: var(--space-4);
+  /* No padding and no scrolling here: the head is a full-bleed printed strip
+     trimmed by `.np-frame`'s own corners, and the body under it is what
+     scrolls, so the masthead stays put while a long group list moves. */
+  padding: 0;
   color: var(--fg);
   box-shadow: var(--shadow-lg);
 }
@@ -501,46 +526,27 @@
 .course-settings[open] {
   display: flex;
   flex-direction: column;
-  gap: var(--space-3);
 }
 
 .course-settings::backdrop {
   background: color-mix(in srgb, var(--fg) 32%, transparent);
 }
 
-/* Title and its close button on one line — the button never wraps below the
-   title, and a long "TDT4100 · Objektorientert programmering" never pushes it
-   off the edge. */
-.course-settings-head {
+.course-settings-body {
   display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: var(--gap-3);
+  flex-direction: column;
+  gap: var(--space-3);
+  /* `min-height: 0` is what lets it actually shrink and scroll inside the
+     flex column above; without it a long picker grows the dialog instead. */
+  min-height: 0;
+  overflow-y: auto;
+  padding: var(--space-4);
 }
 
-.course-settings-title {
-  display: flex;
-  align-items: baseline;
-  flex-wrap: wrap;
-  gap: var(--gap-2);
-  min-width: 0;
-  font-size: var(--text-md);
-  overflow-wrap: anywhere;
+.course-settings-code {
+  letter-spacing: var(--tracking);
 }
 
-.course-settings-name {
-  font-weight: var(--weight-normal);
-  color: var(--muted);
-}
-
-.course-settings-close {
-  flex-shrink: 0;
-  /* Nudged into the frame's own padding so the × sits on the corner rather
-     than indented from it. */
-  margin: calc(-1 * var(--space-1)) calc(-1 * var(--space-1)) 0 0;
-}
-
-.course-settings-facts,
 .course-settings-note {
   margin: 0;
 }
@@ -588,40 +594,32 @@
   border-top: 1px solid var(--border);
 }
 
-.course-settings-link {
-  display: inline-flex;
-  align-items: center;
-  /* The one way out of the modal to the course page, so it is a target and
-     not a tail: 24px tall (WCAG 2.5.8), width unchanged. */
-  min-height: 24px;
-  font-size: var(--text-sm);
-  color: var(--muted);
-  text-decoration: none;
-}
-
-.course-settings-link:hover {
-  color: var(--ui);
-}
-
-/* --- Session popover (REWORK-2026-07-29f) ------------------------------
+/* --- Session popover (REWORK-2026-07-29f, retypeset 2026-07-30) ---------
    What a bar in the week says when you click it: the facts the bar could not
-   fit, anchored to the bar. A READ surface — the course-settings modal is one
-   button away, but it is no longer what a click on a session opens.
+   fit, anchored to the bar. A READ surface: the course editor is one verb
+   away, but it is no longer what a click on a session opens.
 
    Non-modal (`show()`, not `showModal()`), so the week stays visible behind
    it and clicking another bar re-targets the same card. Desktop pins it under
    the anchor via inline top/left from blockPopover.ts; below 60rem it becomes
    a bottom sheet, because a floating card that size either clips against an
-   edge or covers the whole viewport. */
+   edge or covers the whole viewport.
+
+   The label column is gone. `NÅR / ROM / HVA / UKER` spent a third of the
+   width naming facts that say what they are; the card is typeset instead:
+   printed head, the clock as the one large figure, each remaining fact its own
+   line with its own quiet second line (see blockPopover.ts's header). */
 .block-popover {
   position: fixed;
   z-index: 40;
   margin: 0;
-  width: min(20rem, calc(100vw - 2 * var(--space-4)));
+  width: min(21rem, calc(100vw - 2 * var(--space-4)));
   max-width: calc(100vw - 2 * var(--space-4));
-  max-height: min(70vh, 28rem);
+  max-height: min(70vh, 30rem);
   overflow-y: auto;
-  padding: var(--space-4);
+  /* No padding: the head is a full-bleed printed strip and `.np-frame`'s
+     `overflow: hidden` is what trims its corners to the frame's radius. */
+  padding: 0;
   color: var(--fg);
   box-shadow: var(--shadow-lg);
 }
@@ -631,8 +629,7 @@
    one regardless of specificity — an unqualified `display: grid` here would
    park an empty card on screen from first paint. */
 .block-popover[open] {
-  display: grid;
-  gap: var(--space-2);
+  display: block;
 }
 
 @media (max-width: 59.9375rem) {
@@ -647,76 +644,52 @@
   }
 }
 
-.block-popover-head {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: var(--gap-3);
+/* The head, its ident block, its knocked-out close button and the fact blocks
+   below are `.np-head*` / `.np-fact*` (primitives.css), the same masthead the
+   course and studieinfo modals open on. What stays here is what is this card's
+   alone. */
+.block-popover-code {
+  letter-spacing: var(--tracking);
 }
 
-.block-popover-title {
-  display: flex;
-  align-items: center;
-  gap: var(--gap-2);
-  min-width: 0;
-  font-size: var(--text-md);
+.block-popover-body {
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-4);
 }
 
-.block-popover-close {
-  flex-shrink: 0;
-  margin: calc(-1 * var(--space-1)) calc(-1 * var(--space-1)) 0 0;
-}
-
-.block-popover-name {
+/* The clock is the largest thing in the card: of everything here it is the one
+   fact a student copies into a calendar, and the axis above the bar only
+   labels whole hours. */
+.block-popover-when {
+  display: grid;
+  gap: var(--space-1);
   margin: 0;
+}
+
+.block-popover-clock {
+  font-size: var(--text-lg);
+  font-weight: var(--weight-medium);
+  line-height: var(--leading-tight);
+  letter-spacing: -0.02em;
+}
+
+.block-popover-meta {
+  font-size: var(--text-sm);
   color: var(--muted);
 }
 
-/* One fact per line, labelled. At this width a run-on "Forelesning · 08:15–
-   10:00 · R1 · uke 34–47" is the same wall of text the bar was truncating. */
 .block-popover-facts {
   display: grid;
-  grid-template-columns: 3.2rem minmax(0, 1fr);
-  gap: var(--space-1) var(--gap-3);
-  margin: var(--space-1) 0 0;
+  gap: var(--space-2);
 }
 
-.block-popover-label {
-  font-family: var(--font-mono);
-  font-size: var(--text-xs);
-  letter-spacing: var(--tracking);
-  text-transform: uppercase;
-  color: var(--faint);
-}
-
-.block-popover-value {
+.block-popover-clash {
   margin: 0;
-  font-size: var(--text-sm);
-  overflow-wrap: anywhere;
 }
 
 .block-popover-actions {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: var(--gap-3);
   margin-top: var(--space-1);
-  padding-top: var(--space-3);
-  border-top: 1px solid var(--border);
-}
-
-.block-popover-link {
-  display: inline-flex;
-  align-items: center;
-  min-height: 24px;
-  font-size: var(--text-sm);
-  color: var(--muted);
-  text-decoration: none;
-}
-
-.block-popover-link:hover {
-  color: var(--ui);
 }
 
 /* --- Inline icon marks (REWORK-2026-07-30d) ------------------------------ */
@@ -730,12 +703,4 @@
   width: 17px;
   height: 17px;
   flex: none;
-}
-
-.course-settings-link svg,
-.block-popover-link svg {
-  width: 15px;
-  height: 15px;
-  flex: none;
-  margin-inline-start: var(--gap-1);
 }

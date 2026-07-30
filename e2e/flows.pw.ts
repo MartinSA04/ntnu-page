@@ -41,15 +41,17 @@ const courseRows = (page: Page) => page.locator("#planner-course-rows .planner-c
 
 /**
  * Opens a course's settings the way the UI now does it: a bar in the week
- * opens the READ popover for that session, and "Innstillinger" in it is the
- * way through to the editor (REWORK-2026-07-29f). Clicking a bar no longer
- * opens the modal directly.
+ * opens the READ popover for that session, and its one verb is the way through
+ * to the editor (REWORK-2026-07-29f). Clicking a bar no longer opens the modal
+ * directly. The verb is targeted by class, not by text: it names its outcome
+ * for the layer the clicked session belongs to ("Velg parallell" / "Velg
+ * gruppe" / "Endre emnet"), so which word it is depends on the course.
  */
 async function settingsFromBlock(page: Page, block = gridBlocks(page).first()): Promise<void> {
   await block.click();
   const popover = page.locator("#planner-block-popover");
   await expect(popover).toBeVisible();
-  await popover.locator("button", { hasText: "Innstillinger" }).click();
+  await popover.locator(".block-popover-edit").click();
   await expect(page.locator("#planner-course-settings")).toBeVisible();
 }
 
@@ -173,12 +175,11 @@ test("share: a program-less link clears the profile chip", async ({ page }) => {
   await expect(planTitle(page)).toContainText("MTDT", { timeout: 30_000 });
 
   // A different-path hop first guarantees a real document load, so the initial
-  // hash-load path runs. It also proves the profile is genuinely stored rather
-  // than only in memory: the landing page's chip reads it back. (`/emner/` no
-  // longer carries the chip at all, REWORK-2026-07-30d, so it cannot be the
-  // page that proves this.)
+  // hash-load path runs. The landing page states nothing about the plan since
+  // the chip was deleted, so the proof that the profile is genuinely stored
+  // rather than held in memory is the planner reading it back after the hop.
   await page.goto("/");
-  await expect(page.locator("#studieinfo-chip")).toContainText("MTDT");
+  await expect(page.locator("#studieinfo-chip")).toHaveCount(0);
 
   await page.goto("/planlegger/#26h;-;%2BTDT4100");
   await expect(courseRows(page)).toHaveCount(1, { timeout: 30_000 });
@@ -460,7 +461,6 @@ test("one control opens studieinfo, and semester lives only inside it", async ({
   // types — with the programme's own name demoted to the hint beside "endre".
   await expect(planTitle(page)).toHaveText("MTDT · 2026 · Høst 2026");
   await expect(page.locator("#planner-context-line")).toContainText("Datateknologi");
-  await expect(page.locator("#studieinfo-chip")).toHaveCount(0);
 
   // With a plan set, the week is a real grid — so no empty-state card is on
   // screen and "endre" is the only thing left that opens the modal.
@@ -531,7 +531,90 @@ test("week: three overlapping lectures stack into three lanes, no pile", async (
   await page.locator("#planner-grid-frame .planner-block").first().click();
   const popover = page.locator("#planner-block-popover");
   await expect(popover).toBeVisible();
-  await expect(popover).toContainText("08:15");
+  await expect(popover.locator(".block-popover-clock")).toHaveText("08:15–10:00");
+
+  // And the card says what the red zone behind it means: with three courses in
+  // one slot the sentence names the OTHER two, and the shared minutes are the
+  // whole session, so it does not repeat the clock two lines above it.
+  const clash = popover.locator(".block-popover-clash");
+  await expect(clash).toContainText("Kolliderer med");
+  const clashText = (await clash.textContent()) ?? "";
+  const named = codes.filter((code) => clashText.includes(code));
+  expect(named).toHaveLength(2);
+  expect(clashText).not.toContain("08:15");
+});
+
+test("session popover: the card names the building, the length and the collision", async ({
+  page,
+  context,
+}) => {
+  // The four facts the card used to leave out (REWORK-2026-07-30 "Kvittering"):
+  // how long the session runs, which building the room is in, which minutes it
+  // shares with what, and a button that says what pressing it does.
+  // Stubbed, because all four have to be true of one specific slot.
+  const lecture = (
+    code: string,
+    start: string,
+    end: string,
+    room: string,
+    building: string,
+    title: string,
+  ) => ({
+    courseCode: code,
+    courseName: { nob: `${code} emne`, nno: null, eng: null },
+    dayNumber: 1,
+    startTime: start,
+    endTime: end,
+    weeks: ["34-47"],
+    rooms: [{ building, room, url: null }],
+    title,
+    name: title,
+  });
+  await context.route("**/api/course/TDT4110/timetable*", (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify([
+        lecture("TDT4110", "14:15", "16:00", "F1", "IT-bygget, sydfløy", "Forelesning"),
+      ]),
+    }),
+  );
+  await context.route("**/api/course/TDT4120/timetable*", (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify([
+        lecture("TDT4120", "15:15", "17:00", "R1", "Realfagbygget", "Forelesning"),
+      ]),
+    }),
+  );
+
+  await page.goto("/planlegger/#26h;-;%2BTDT4110,%2BTDT4120");
+  const bar = page.locator("#planner-grid-frame .planner-block", { hasText: "TDT4110" });
+  await expect(bar).toBeVisible({ timeout: 30_000 });
+  await bar.click();
+
+  const popover = page.locator("#planner-block-popover");
+  await expect(popover).toBeVisible();
+  await expect(popover.locator(".block-popover-code")).toHaveText("TDT4110");
+  // The clock is the card's one large figure; the quiet line under it carries
+  // the weekday, the length and the weeks.
+  await expect(popover.locator(".block-popover-clock")).toHaveText("14:15–16:00");
+  const meta = popover.locator(".block-popover-meta");
+  await expect(meta).toContainText("mandag");
+  await expect(meta).toContainText("1 t 45 min");
+  await expect(meta).toContainText("uke 34–47");
+  // "F1" is not a place you can walk to. The bar has no width for the building;
+  // the card does.
+  await expect(popover).toContainText("IT-bygget, sydfløy");
+  // A partial overlap names the minutes the two really share: 15:15, not the
+  // session's own 14:15.
+  await expect(popover.locator(".block-popover-clash")).toHaveText(
+    "Kolliderer med TDT4120 15:15–16:00.",
+  );
+  // One lecture, one group: there is no parallel to choose, so the verb offers
+  // the course rather than promising a picker the modal would not show.
+  await expect(popover.locator(".block-popover-edit")).toHaveText("Endre emnet");
 });
 
 test("week: Rutenett and Liste show the same week two ways", async ({ page }) => {
@@ -590,7 +673,21 @@ test("landing page: Nå answers with the room, not a course count", async ({ pag
 
   // The page stops introducing itself once it has an answer.
   await expect(page.locator("#home-pitch")).toHaveClass(/is-secondary/);
-  await expect(page.locator("#home-resume")).toBeHidden();
+
+  // The resume line still states whose plan this is. It used to be a
+  // descendant of the pitch, which meant the pitch's own demotion set
+  // `display: none` on it while its script was setting `hidden = false`: two
+  // owners of one element's visibility, and the loser was the only place the
+  // landing page names the plan now that the topbar chip is gone.
+  const resume = page.locator("#home-resume");
+  await expect(resume).toBeVisible();
+  await expect(resume).toContainText("MTDT");
+  await expect(resume).toContainText("emner");
+  // The onward mark is a drawn glyph like every other link-out in the system,
+  // not an arrow character sitting on the baseline in whatever face the text
+  // fell back to.
+  await expect(resume.locator("a svg")).toHaveCount(1);
+  await expect(await resume.textContent()).not.toContain("→");
 });
 
 test("week: the øving layer shows picked groups, not the whole cohort's", async ({ page }) => {
@@ -1045,9 +1142,10 @@ test("ett navn: the plan is named once, and the switch is not a third toggle", a
 
   await expect(planTitle(page)).toHaveText("MTDT · 2026 · Høst 2026");
   await expect(page.locator("#studieinfo-chip")).toHaveCount(0);
-  // Three topbar children (the ThemeToggle ships a <script> beside its button,
-  // which is not one) — dropping to three is what stops the wordmark and the
-  // chip truncating each other at 390 px.
+  // Three topbar children on every page now (the ThemeToggle ships a <script>
+  // beside its button, which is not one): wordmark, nav, toggle. The chip that
+  // used to be the fourth, and to truncate against the wordmark at 390 px, is
+  // deleted.
   await expect(page.locator(".site-topbar > *:not(script)")).toHaveCount(3);
 
   // The switch carries no fill and no box — its whole state is the rule under

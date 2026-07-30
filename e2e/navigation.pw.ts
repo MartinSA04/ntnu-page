@@ -19,11 +19,12 @@ import { expect, type Page, test } from "@playwright/test";
  * `onPage()` wrapper on every page script. These tests fail without them.
  *
  * The rework (2026-07-25) deleted `/studier/` and the plan strip: the site's
- * chrome now offers exactly two nav destinations (`/planlegger/`, `/emner/`),
- * plus a `#studieinfo-chip` on the landing page only (REWORK-2026-07-30d):
- * the planner names the plan in its own title, and the catalog pages do not
- * need it. The nav circuits below only ever hop between the two real chrome
- * links; `/studier/`'s own test is now a 404 check, not a positive case.
+ * chrome now offers exactly two nav destinations (`/planlegger/`, `/emner/`)
+ * and nothing else. The landing page's `#studieinfo-chip` went too
+ * (2026-07-30): the topbar carries no plan state and no way into the
+ * studieinfo modal, which only `/planlegger/` opens. The nav circuits below
+ * only ever hop between the two real chrome links; `/studier/`'s own test is
+ * now a 404 check, not a positive case.
  */
 
 const THEME_KEY = "np:theme";
@@ -212,33 +213,32 @@ test.describe("other pages keep working after navigation", () => {
   });
 });
 
-test.describe("the studieinfo chip", () => {
-  test("is a landing-page element, and nothing else carries it", async ({ page }) => {
+test.describe("the topbar carries no plan state", () => {
+  test("no page has a studieinfo chip, and only the planner opens the modal", async ({ page }) => {
     await seed(page, { [PROFILE_KEY]: BIT_PROFILE, [LAST_SEMESTER_KEY]: "26h" });
-    const expectedLabel = "BIT · 2025 · Høst 2026";
 
+    // The chip is deleted (2026-07-30). It has to be gone after a client-side
+    // swap as well as on a cold load: it was server-rendered per page, so a
+    // ClientRouter navigation is exactly where a stale one would linger.
     await page.goto("/");
-    await expect(page.locator("#studieinfo-chip")).toHaveText(expectedLabel);
+    await expect(page.locator("#studieinfo-chip")).toHaveCount(0);
 
-    // Everywhere else it is gone, and it has to be gone after a client-side
-    // swap rather than only on a cold load: the chip is server-rendered per
-    // page, so a ClientRouter navigation is exactly where a stale one would
-    // linger. The planner says the same three facts in its title; the catalog
-    // pages are for looking a course up, not for checking whose plan it
-    // would join.
     await navTo(page, "/emner/");
     await expect(page.locator("#studieinfo-chip")).toHaveCount(0);
 
     await navTo(page, "/planlegger/");
     await expect(page.locator("#studieinfo-chip")).toHaveCount(0);
-    await expect(page.locator("#planner-title")).toHaveText(expectedLabel, { timeout: 30_000 });
+    // The planner still names whose plan it is, in its own title, and its
+    // "Endre" button is the one way into the modal anywhere on the site.
+    await expect(page.locator("#planner-title")).toHaveText("BIT · 2025 · Høst 2026", {
+      timeout: 30_000,
+    });
+    await expect(page.locator("#studieinfo-dialog")).toBeHidden();
+    await page.locator("#planner-edit-plan").click();
+    await expect(page.locator("#studieinfo-dialog")).toBeVisible();
 
     await page.goto("/emne/TDT4100/");
     await expect(page.locator("#studieinfo-chip")).toHaveCount(0);
-
-    // And it comes back on the one page that owns it.
-    await page.goto("/");
-    await expect(page.locator("#studieinfo-chip")).toHaveText(expectedLabel);
   });
 });
 

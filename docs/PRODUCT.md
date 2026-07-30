@@ -64,9 +64,14 @@ they supersede:
    DR-3's underlying sourcing rule (catalog `ExamDate`, not scraped text;
    kont excluded) is unchanged — only the display is.
 6. **Navigation: persistent buttons, not layout-dependent ones.** Supersedes
-   D11's "one nav pill" — the nav is now **Planlegger + Emner + a
-   studieinfo chip**, identical on every page (`Layout.astro`). §4's "one
-   pill" line and the plan strip it describes are corrected below.
+   D11's "one nav pill" — the nav is now **Planlegger + Emner**, identical on
+   every page (`Layout.astro`). §4's "one pill" line and the plan strip it
+   describes are corrected below. *(Narrowed 2026-07-30, owner's call: the
+   studieinfo chip that rode beside them is deleted. The topbar carries no
+   plan state and no way into the studieinfo modal; `/planlegger/`'s own
+   "Endre" button is the single entrance, and the planner's title is where the
+   plan is named. The `?studieinfo` query param and the `OPEN_STUDIEINFO`
+   window event existed only to serve that chip and are deleted with it.)*
 7. **Manual adds are semester-specific.** Shipped as `np:plans` scoped per
    `semesterId`, with `np:profile` (the programme choice) global — a manual
    add in one semester no longer leaks into another.
@@ -147,7 +152,7 @@ Two flows are co-primary: **the elective decide-loop (2)** and **the shared-plan
 
 2. **Elective decide-loop (CO-PRIMARY, not yet built — Phase 4).** *(the wording example below counts LESEDAGER since 2026-07-29 — the free days between two exams, both exam days excluded, which is the number a student is actually asking for. `/studier/[code]/` is deleted, 2026-07-25 — §0 addendum point 3; the choice-group prose it hosted moved to a "Fra studieplanen" panel in the planner's course rail. This flow is unbuilt regardless, so the entry point needs re-deciding whenever Phase 4 starts.)* Choice group on `/studier/[code]/` → "legg alle til vurdering" (shortlist tier, localStorage + hash) → **inline in each choice-group row: "kolliderer med planen din" + two facts** (assessment form, grade shape) computed against committed courses → ghost blocks on the planner grid → drop losers → **promote survivor, and on promotion render a plain-language delta**: *"TDT4200 → TDT4258: fjerner 1 kollisjon, sprer eksamen fra 1 til 4 lesedager."* → credit running total climbs → **commit summary** (copyable code list + "bekreft i Studentweb") → Studentweb. No compare page, no matrix (c1-2, c4).
 
-3. **Free-search add & clash-check.** `/emner/` (a *mode*, not a top-level destination — see §4) with filters → **plan-aware row preview before add** ("ville kollidert med TMA4100") → quick-add → the persistent nav's studieinfo chip updates sitewide (plan strip deleted 2026-07-25 and the count-link deleted 2026-07-27, §4).
+3. **Free-search add & clash-check.** `/emner/` (a *mode*, not a top-level destination — see §4) with filters → **plan-aware row preview before add** ("ville kollidert med TMA4100") → quick-add → the plan is read back on `/planlegger/` (plan strip deleted 2026-07-25, the count-link 2026-07-27 and the topbar studieinfo chip 2026-07-30, §4).
 
 4. **Single-course research → fork (largest cold traffic).** `/emne/[code]/` is a **fork point, not an encyclopedia** (c4). Primary CTA: **"Vil dette kollidere for deg? Legg til og se."** Prose demoted below the fold. Shows the timetable as a grid (not a flat list) and a season-split grade shape *in the decision context*, plus a plan-context line ("passer i planen din for Høst 2026 — ingen kollisjon"). One-time planner intro for empty-plan visitors. We stop competing with ntnu.no on encyclopedic depth we'd lose on (c4).
 
@@ -173,7 +178,7 @@ Two flows are co-primary: **the elective decide-loop (2)** and **the shared-plan
 Planlegger | Emner" still made search a co-equal top-level surface, which
 contradicted the positioning at the time (c4-2, c4-cut #1); the 2026-07-25
 mandate has since asked for persistent buttons regardless of layout, so the
-nav *is* now Planlegger + Emner side by side, plus a studieinfo chip — see
+nav *is* now Planlegger + Emner side by side — see
 the corrected nav paragraph below.
 
 - `/` — **dispatcher + proof.** Verb-first, shows the red-ink collision above the fold (§5). **Shipped.**
@@ -190,8 +195,9 @@ the planner's course rail, where "Bruk som planen min" semantics now live
 I3's "entrances before deletion" sequencing rule — it doesn't apply to an
 outright deletion with no migration path.
 
-**Nav: persistent Planlegger + Emner + a studieinfo chip, corrected
-2026-07-25 (§0 addendum point 6, supersedes D11's "one pill").** Every page
+**Nav: persistent Planlegger + Emner, corrected 2026-07-25 (§0 addendum
+point 6, supersedes D11's "one pill"), studieinfo chip removed 2026-07-30.**
+Every page
 carries the same nav — no page-dependent single pill, no footer demotion of
 `/emner/`. `aria-current` is still computed from an explicit per-item
 `sections` list rather than a path prefix, so `/emne/[code]/` (not a
@@ -261,7 +267,7 @@ The draft's MoSCoW was ~60% incumbent-owned nouns (catalog, grid, description, g
 - **Designed pre-publish mode as a *primary* mode** (DR-2, c2-F8): exam ribbon + credits + grades + assessment carry real value with no grid; clash engine degrades to exam-clash + campus-spread. **Partial** — an unpublished semester is now an informed choice (U6) rather than a silent blank grid, but there is no dedicated pre-publish layout distinct from the normal empty-grid message.
 - **Commit summary**: copyable committed-code list + "bekreft i Studentweb" (c3-4). **Not yet built.**
 - Language / campus (city-level) / assessment filters (absorbs old persona D). **Partial** — campus is shipped as ~4 city facets on `/emner/` (REVIEW.md U15, replacing 8 raw location strings); language and assessment filters are not built.
-- Plan strip (sitewide, with cross-page continuation affordance) (c3-3). **Superseded 2026-07-25, and settled 2026-07-27** — the strip went with the layout-dependent single nav pill (§0 addendum point 6), and the count-link that briefly replaced it was removed in turn (665513f). The persistent nav's studieinfo chip carries the affordance alone — see §4.
+- Plan strip (sitewide, with cross-page continuation affordance) (c3-3). **Superseded 2026-07-25, and settled 2026-07-27** — the strip went with the layout-dependent single nav pill (§0 addendum point 6), and the count-link that briefly replaced it was removed in turn (665513f). The chip that briefly carried the affordance alone is itself deleted (2026-07-30): the planner is where the plan is named — see §4.
 - Mobile day-agenda + 44px touch targets. **Not yet built** — unaffected by the 2026-07-25 rework, stays open. A4's narrower fix shipped instead (edge fade + scroll-to-today + a hint naming the clipped days, so the horizontal-scroll week stops silently truncating Thursday/Friday) — the agenda *restructure* for mobile is still open.
 - `notices[]` at add-time, incl. **off-semester add handling**: message defined, and **off-semester credits excluded from the 30-sp total** so the "full load" signal isn't corrupted (c3-8). **Shipped** (part of the B9 credit-line fix).
 - **Version threading** made first-class in `PlanState` + every API call + hash (DR-4, c2-F4) — a correctness MUST, not a nicety. **Shipped** (REVIEW.md C2 — the search index and every add path now carry the catalog version; 293 of 5 470 courses are not version "1"). This is catalog *course* versioning (DR-4), unaffected by the 2026-07-25 suspension of *hash-grammar* versioning below.
@@ -421,7 +427,7 @@ The critiques' whole value is here: what did **not** survive scrutiny, made expl
 | D8 | **Version is first-class in state + every API call + hash; grade join is bare-prefix aggregation.** | Draft's `PlanState` of `{code,name}` and bare-code hash. | Re-versioned courses show wrong grid/exam; `GradeRow.courseCode` is a suffixed string space — string-equality join silently misses (c2-F4). |
 | D9 | **Study plan never asserts "group satisfied"; show credit total + verbatim prose.** | Draft's "commit at 30 sp / survivors satisfy the group." | `PlanCourseGroup` has no choose-N field; the count is free-text only (c2-F2, DR-5). |
 | D10 | **Pre-publish is a *primary* value-carrying mode.** | Draft treated pre-publish as a fallback/edge state. | `timetablePublished` is false through most of the elective window; a grid-only flagship is blank exactly when Velgeren plans (c2-F8). |
-| D11 | **One nav pill (Planlegger); `/emner/` demoted from nav; `/emne/[code]` is a fork point, not an encyclopedia.** *(Nav corrected 2026-07-25 — §0 addendum point 6: the user asked for persistent buttons regardless of layout; nav is now Planlegger + Emner + a studieinfo chip on every page. `/emne/[code]` as a fork point, not an encyclopedia, is unaffected.)* | Draft's two pills (Planlegger \| Emner); course page as "research / largest traffic." | The loudest surfaces were the least differentiated; the IA must obey the positioning (c4-cut #1, c4-cut #2). |
+| D11 | **One nav pill (Planlegger); `/emner/` demoted from nav; `/emne/[code]` is a fork point, not an encyclopedia.** *(Nav corrected 2026-07-25 — §0 addendum point 6: the user asked for persistent buttons regardless of layout; nav is now Planlegger + Emner on every page; the studieinfo chip that briefly joined them was removed 2026-07-30. `/emne/[code]` as a fork point, not an encyclopedia, is unaffected.)* | Draft's two pills (Planlegger \| Emner); course page as "research / largest traffic." | The loudest surfaces were the least differentiated; the IA must obey the positioning (c4-cut #1, c4-cut #2). |
 | D12 | **Grade stats only in the decision cell.** *(Partially reversed 2026-07-27, commit 94b5d9a — an explicit owner decision, kept here rather than rewritten so the reasoning on both sides survives. The season-split figure now ships on `/emne/[code]/`, which §3 flow 4 and the differentiation note below already name as **a** decision context — "the fork-point context". What D12 rejected and still rejects is grade **trivia**: a sortable column, a cross-course leaderboard, hue-tinted bars, any derived difficulty score, and a figure divorced from the fork CTA. The audit's cpc-2 flagged the doc/code contradiction; §6's grade bullet lists the constraints the shipped figure is held to, including that resit sittings must not be drawn as peer semesters.)* | Draft's browsable grade shape on the course page. | Browsable grade trivia is DBH-mirror parasitism and violates the p4 discipline; in-decision it informs and differentiates (c4-cut #3). |
 | D13 | **Temporal margin banner + return trigger are MUST; "next plannable term" is an explicit rule.** | Draft had the deadline in zero of six flows; "next term" was an invisible default. | The entire positioning is "before the deadline" — it was off-screen (c3-1, c1-7). |
 | D14 | **Cut week-scrubber, personal fixed blocks, assessment-mix workload counts; fold persona D into filters.** *(Clarified 2026-07-25 — §0 addendum point 4: this row never actually decided anything about a block-level popover; it only read that way adjacent to "no personal fixed blocks." The 2026-07-25 mandate settles it: a block popover is in scope. Week-scrubber, fixed blocks, workload counts and persona-D-as-a-build stay cut.)* | Draft SHOULD/COULD-listed all of them. | During-semester concern in a before-semester tool; breaks shared-URL parity; wrong side of no-fabricated-scores; dragged translation work back for a sliver (c1-6, c3-9). |

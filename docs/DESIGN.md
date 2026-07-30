@@ -36,13 +36,10 @@ exceptions are `--verdict` (hue 107°, §8) and the sanctioned `--wash` /
   of `.np-field`/`.np-btn`/`.np-toggle`, one deliberate step off `--card` so
   a control is identifiable against the page in *both* themes (measured:
   `--card` on `--bg` is only ~1.1:1, below WCAG 1.4.11's 3:1 for a control
-  boundary). `--control-edge` — a neutral (not accent) inline-start rule on
-  `.np-field` only, since a field carries no text label to identify it the
-  way a button's or toggle's caption does. (It was already neutral for the
-  reason the whole accent split later generalised: a green edge on every
-  resting field spends Green-Means-Fits on chrome instead of a verdict.) This is
-  a tonal step, not a border: Ink-Before-Chrome still holds, the control
-  layer is just one more layer of the same paper stack.
+  boundary). The fill is the whole affordance: `.np-field` carried a 2px
+  `--control-edge` rule along its inline start until 2026-07-30 and no longer
+  does, in any form. `--control-edge` survives for `.planner-check` alone, the
+  øving toggle's 14 px indicator, which has no fill of its own to be seen by.
 - **The verdict — green** (`--verdict` #31701F light / #74AD55 dark): the
   color of "it fits", and it owns exactly two things — the collision line
   and the credit total at a full 30 sp. Nothing else. One token in both
@@ -62,8 +59,12 @@ exceptions are `--verdict` (hue 107°, §8) and the sanctioned `--wash` /
   errors, empty states and validation are ink, not red.
 - **Course hues**: six Flexoki categoricals (blue, cyan, purple, magenta,
   orange, yellow — green and red are spoken for), assigned by selection
-  order, expressed as the square `.np-dot`. Never as text color, never as
-  borders.
+  order, expressed as the square `.np-dot` or as a **printed fill with
+  `--on-block` knocked out of it** (tokens.css's block ink). Two surfaces
+  carry the fill and no others: the week's bars, and the head of the session
+  popover a bar opens: the card is the bar you pressed, so it wears the same
+  colour the same way (REWORK-2026-07-30 "Kvittering"). Never as text color,
+  never as borders.
 
 ### Named rules
 
@@ -228,10 +229,18 @@ focus = global 2px `--ui` outline.
   variant — the CSS owns casing.
 
 **Fields**
-- **`.np-field`** — paper input on `--control-bg`, a persistent 2px
-  `--control-edge` inline-start rule (§2 — this is the one primitive that
-  owns that shadow; don't add another `box-shadow` to it or a class composed
-  with it), focus-within keeps the 2px `--ui` outline.
+- **`.np-field`** — paper input on `--control-bg`, nothing else at rest;
+  focus-within keeps the 2px `--ui` outline. No edge rule (§2).
+
+**No inset shadows, anywhere.** A mark pressed into a box is not this system's
+voice; depth is tonal paper layering, and shadows are outset whispers under
+floating things. The three that existed were **removed rather than
+reimplemented** (2026-07-30): `.np-field`'s and `.studieinfo-select`'s
+inline-start rule, and the ring on a dropped course's chip, which now simply
+loses its fill. The `--clash-edge` token that carried a fourth is deleted, its
+per-bar collision mark having been replaced by the day zone long before.
+Replacing one with a painted gradient or an inset-offset outline is the same
+mark in other clothes; don't.
 
 **Surfaces**
 - **`.np-panel`** — paper panel on `--card`.
@@ -249,6 +258,32 @@ focus = global 2px `--ui` outline.
   panel. Note it sets `overflow: hidden`, which is why the week's frame is
   deliberately *not* an `.np-frame` (it would kill the horizontal scroll —
   see `planner-week.css`).
+- **`.np-head` / `.np-head-ident` / `.np-head-title` / `.np-head-sub`** — the
+  masthead every card and modal opens on (REWORK-2026-07-30 "Kvittering"): what
+  this is, its quiet second line, and the way out of it, full-bleed against the
+  frame's own edge. Two grounds, and which one a surface takes says what it is
+  about. Plain `.np-head` is paper one step down with a hairline under it, for a
+  subject with no colour of its own (the studieinfo modal: a programme is not a
+  course). **`.np-head--printed`** is the course's own printed fill with the
+  text knocked out of it (§2's block ink, `--dot` set per open by the call
+  site), so the session card and the course modal read as the bar you pressed;
+  **`.np-head--reduced`** is the same fill at øving/lab strength. A `<dialog>`
+  using one pads its BODY, never itself, and the body is what scrolls, so the
+  head stays put. Live users: all four floating surfaces in the planner, i.e.
+  the session popover and the course modal (printed), studieinfo and
+  add-course (paper).
+- **`.np-fact` / `.np-fact-value` / `.np-fact-sub`** — a fact and the line that
+  qualifies it: a room over its building, a parallel over "one of three",
+  credits over where the course came from. This is what replaced the
+  `NÅR / ROM / HVA / UKER` label column, which spent a third of a 20 rem card
+  naming facts that say what they are.
+- **`.np-actions`** — a card's footer: a hairline, then what you can do about
+  what is above it. **`--split`** pushes a pair apart when they are different
+  kinds of thing (a verb that changes the plan, and the way out to another
+  page); verbs about the same edit stay together at the start (studieinfo's
+  Lagre/Avbryt, add-course's lone Lukk).
+- **`.np-link-out`** — the way out of a card to a page ("Gå til emnesiden →").
+  A target, not a tail: 24 px tall (WCAG 2.5.8), `--muted` until pointed at.
 - **`.np-ruled`** — deleted with its last caller (§4). The ruling exists in
   exactly one place now, hand-rolled in `planner-week.css` on the boxes it
   rules.

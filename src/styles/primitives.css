@@ -262,11 +262,10 @@ button.np-tag:hover {
 
 /* --- Fields -------------------------------------------------------- */
 
-/* The inline-start rule is the field's edge. Ink-Before-Chrome rules out a
-   border, and the tonal step alone computes ~1.1:1 against the page — in
-   dark mode a resting search field simply is not there. Two pixels of
-   --control-edge read at ~5:1 in both themes without becoming chrome: it is
-   the margin line on a sheet of ruteark. */
+/* The fill is the whole field. It used to carry a 2px inline-start rule as
+   well (an inset shadow, then briefly a painted gradient); both are gone, and
+   nothing replaced them. A field is paper one step off the page with the
+   instrument corner, and that is all. */
 .np-field {
   display: flex;
   align-items: center;
@@ -275,7 +274,6 @@ button.np-tag:hover {
   padding: 0 var(--space-3);
   background: var(--control-bg);
   border-radius: var(--radius-sm);
-  box-shadow: inset 2px 0 0 0 var(--control-edge);
   transition: background var(--dur-fast) var(--ease);
 }
 
@@ -344,6 +342,150 @@ button.np-tag:hover {
 .np-popover-option.is-active,
 .np-popover-option:hover {
   background: var(--card-hover);
+}
+
+/* --- The masthead of a card (REWORK-2026-07-30 "Kvittering") ---------------
+
+   Every floating surface in the planner opens on the same band: what this is,
+   its quiet second line, and the way out of it, full-bleed against the
+   frame's own edge, which is why the frame below clips its corners and every
+   `<dialog>` using this pads its BODY rather than itself.
+
+   Two grounds, and which one a surface takes says what it is about:
+
+    - `.np-head` is paper one step down with a hairline under it. Structure by
+      tonal step, exactly as Ink-Before-Chrome has it: for a surface whose
+      subject has no colour of its own (the studieinfo modal: a programme is
+      not a course and has no hue).
+    - `.np-head--printed` is the course's own printed fill with the text
+      knocked out of it, the same arithmetic `.planner-block` uses, so a card
+      about a course reads as the bar you pressed. The hue is a FILL here,
+      never text (DESIGN §8), and `--dot` is set per open by the call site.
+      `.np-head--reduced` is the øving/lab strength of the same fill, so a
+      muted bar's card is muted too (DR-1's display layer). */
+.np-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--gap-2);
+  padding: var(--space-2) var(--space-2) var(--space-2) var(--space-4);
+  background: var(--card);
+  color: var(--fg);
+  border-bottom: 1px solid var(--border);
+}
+
+.np-head--printed {
+  background: color-mix(in srgb, var(--dot) var(--block-mix), var(--block-base));
+  color: var(--on-block);
+  border-bottom: 0;
+}
+
+.np-head--reduced {
+  background: color-mix(in srgb, var(--dot) var(--block-muted), var(--card));
+  color: var(--fg);
+  border-bottom: 0;
+}
+
+.np-head-ident {
+  display: grid;
+  gap: 1px;
+  min-width: 0;
+}
+
+.np-head-title {
+  margin: 0;
+  font-size: var(--text-md);
+  font-weight: var(--weight-medium);
+  overflow-wrap: anywhere;
+}
+
+/* Mixed from `currentcolor` rather than set to `--muted`, so one declaration
+   serves both grounds: 74 % of ink on paper, 74 % of paper on a printed fill. */
+.np-head-sub {
+  margin: 0;
+  font-size: var(--text-sm);
+  line-height: var(--leading-snug);
+  color: color-mix(in srgb, currentcolor 74%, transparent);
+}
+
+/* `.np-icon-btn` rests at `--muted` with a `--fg`-mixed wash; on a printed
+   band both are invisible, so inside a head it is knocked out of whatever the
+   band is. */
+.np-head .np-icon-btn {
+  flex-shrink: 0;
+  color: inherit;
+}
+
+.np-head .np-icon-btn:hover {
+  color: inherit;
+  background: color-mix(in srgb, currentcolor 16%, transparent);
+}
+
+/* --- The footer of a card -------------------------------------------------
+
+   A hairline, then what you can do about what is above it. `--split` pushes a
+   pair apart when they are different KINDS of thing: a verb that changes the
+   plan on one side, the way out to another page on the other; two verbs
+   (Lagre/Avbryt) stay together at the start, where the primary one is the
+   first thing under the last field. */
+.np-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--gap-3);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--border);
+}
+
+.np-actions--split {
+  justify-content: space-between;
+}
+
+/* The way out of a card to a page. A target, not a tail: 24 px tall (WCAG
+   2.5.8), quiet until it is pointed at. */
+.np-link-out {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  font-size: var(--text-sm);
+  color: var(--muted);
+  text-decoration: none;
+}
+
+.np-link-out:hover {
+  color: var(--ui);
+}
+
+.np-link-out svg {
+  width: 15px;
+  height: 15px;
+  flex: none;
+  margin-inline-start: var(--gap-1);
+}
+
+/* --- A fact, and the line that qualifies it -------------------------------
+
+   The card's replacement for a label column: a room over its building, a
+   parallel over "one of three", credits over where the course came from.
+   `NÅR / ROM / HVA / UKER` spent a third of a 20 rem card naming facts that
+   say what they are. */
+.np-fact {
+  display: grid;
+  gap: 1px;
+}
+
+.np-fact-value {
+  margin: 0;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  overflow-wrap: anywhere;
+}
+
+.np-fact-sub {
+  margin: 0;
+  font-size: var(--text-sm);
+  line-height: var(--leading-snug);
+  color: var(--muted);
 }
 
 /* Planning surface: the paper spread with squared ruling and a frame.

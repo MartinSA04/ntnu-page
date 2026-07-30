@@ -27,13 +27,15 @@
   --border-strong: #cecdc3;
 
   /* Controls. Ink-Before-Chrome forbids borders here, so the tonal step is
-     the whole affordance and it has to be seen: --card against --bg computes
-     1.11:1, far under WCAG 1.4.11's 3:1 for a control boundary. In light the
-     step plus warm paper carries it; in dark the fill lifts a full Flexoki
-     step above --card, and --control-edge (≈5:1 against --bg in both themes)
-     gives .np-field a rule that always reads — a margin line on squared
-     paper, not a border. Neutral on purpose: a green edge on every field
-     would spend Green-Means-Fits on chrome. */
+     the whole affordance: --card against --bg computes 1.11:1 in light, and in
+     dark the fill lifts a full Flexoki step above --card so it reads there
+     too.
+
+     `.np-field` used to add a 2px --control-edge rule along its inline start
+     for the light theme's sake. It is REMOVED (2026-07-30, owner's call), not
+     reimplemented in another form: the fill is the field. --control-edge stays
+     because `.planner-check`, the øving toggle's 14px indicator, still draws
+     its box with it — a box that has no fill of its own to be seen by. */
   --control-bg: var(--card);
   --control-hover: var(--card-hover);
   --control-edge: var(--faint);
@@ -82,14 +84,19 @@
   --ui-contrast: var(--bg);
   --ui-ring: color-mix(in srgb, var(--fg) 50%, transparent);
 
-  /* Collision ink: Flexoki red, reserved exclusively for conflicts.
-     --clash-edge is the solid inline-start rule a colliding block carries.
-     It is deliberately a different *kind* of mark from the hue washes below
-     — a wash can never out-shout another wash, and Red-Is-Collision means
-     red has to win on sight. --clash-bg fills the overlapping band only. */
+  /* Collision ink: Flexoki red, reserved exclusively for conflicts. It is
+     deliberately a different *kind* of mark from the hue washes below: a wash
+     can never out-shout another wash, and Red-Is-Collision means red has to
+     win on sight. --clash-bg fills the overlapping band only.
+
+     DELETED: --clash-edge, the inset inline-start shadow a colliding block
+     used to carry. The block no longer carries any per-bar mark (the collision
+     is ONE zone per day across the minutes that overlap, planner-week.css), so
+     the token had zero callers. There are no inset shadows left anywhere on
+     this site, and the three others were removed rather than redrawn in some
+     other form — see docs/DESIGN.md §5. */
   --clash: #af3029;
   --clash-bg: #ffe1d5;
-  --clash-edge: inset 2px 0 0 0 var(--clash);
 
   /* Course identity hues (Flexoki categorical 600s; green/red excluded). */
   --hue-blue: #205ea6;
@@ -243,7 +250,7 @@
      is where the light theme's tonal step disappears: on black paper #1c1b1a
      against #100f0f is 1.10:1 and a resting search field is simply not there.
      Hover then has to go a step further again, or the control would answer
-     with the fill it already has. --control-edge follows --faint per theme. */
+     with the fill it already has. */
   --control-bg: #282726;
   --control-hover: #343331;
 
