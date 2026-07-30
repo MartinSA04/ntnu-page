@@ -33,20 +33,23 @@ const programOptionsJson = JSON.stringify(programOptions).replaceAll("<", "\\u00
 
 <Layout title="Planlegger — Semesterplan" description={description} wide>
   <div class="planner-banner">
-    {/* No "Planlegger" kicker: the topbar names the page and the title answers
-        "whose plan is this" on its own. It was the first of seven uppercase
-        mono labels competing down the page. */}
-    <h1 class="planner-title" id="planner-title">Semesterplan</h1>
-    <p class="np-hint planner-context-line" id="planner-context-line"></p>
+    {/* ETT NAVN (REWORK-2026-07-30b). The plan is named ONCE, here, in the
+        notation a student types: MTDT · 2026 · Høst 2026, set in the mono
+        because every part of it is data (Data-Is-Mono, followed up the type
+        scale rather than abandoned at the top of it). The topbar's chip
+        carried the same three facts 100 px above this and is gone from this
+        page; the programme's own 42-character database string is a hint now,
+        not a 2 rem headline.
 
-    {/* PRODUCT §1 makes the collision verdict the page's primary job, and it
-        used to be 0.84 rem of muted text wedged between a kicker and a toggle.
-        The credit total sat here too until it got a drawing of its own — a
-        drawn number belongs beside the thing it is drawn from, so it moved
-        down to the course list with its strip (REWORK-2026-07-29d). */}
-    <p class="planner-status" id="planner-status">
-      <span class="planner-verdict" id="planner-grid-status" aria-live="polite"></span>
-    </p>
+        The verdict shares the title's baseline — PRODUCT §1's question and
+        its answer on one line, rather than two paragraphs apart. */}
+    <div class="planner-head">
+      <h1 class="planner-title" id="planner-title">Semesterplan</h1>
+      <p class="planner-status" id="planner-status">
+        <span class="planner-verdict" id="planner-grid-status" aria-live="polite"></span>
+      </p>
+    </div>
+    <p class="np-hint planner-context-line" id="planner-context-line"></p>
   </div>
 
   <p class="np-hint planner-link-note" id="planner-link-note" hidden></p>
@@ -70,19 +73,20 @@ const programOptionsJson = JSON.stringify(programOptions).replaceAll("<", "\\u00
 
       <div class="planner-section-head">
         <h2 class="planner-section-name" id="planner-week-heading">Uke</h2>
+        {/* Two ways of looking at one week, and one layer you can add to it —
+            and they used to be three identical uppercase mono `.np-toggle`s in
+            a row, so nothing in the form said that one PICKS and the other
+            ADDS. The switch is two words with a rule that slides between them;
+            the layer is a box you tick. Neither can be mistaken for the
+            other now (REWORK-2026-07-30b). */}
         <div class="planner-section-tools">
           <div class="planner-view-tabs" role="group" aria-label="Vis uka som rutenett eller liste">
-            <button
-              type="button"
-              class="np-toggle planner-view-tab"
-              id="planner-view-uke"
-              aria-pressed="true"
-            >
+            <button type="button" class="planner-view-tab" id="planner-view-uke" aria-pressed="true">
               Rutenett
             </button>
             <button
               type="button"
-              class="np-toggle planner-view-tab"
+              class="planner-view-tab"
               id="planner-view-tavle"
               aria-pressed="false"
             >
@@ -91,11 +95,16 @@ const programOptionsJson = JSON.stringify(programOptions).replaceAll("<", "\\u00
           </div>
           <button
             type="button"
-            class="np-toggle planner-others-toggle"
+            class="planner-others-toggle"
             id="planner-others-toggle"
             aria-pressed="false"
           >
-            Vis øvinger og labber
+            <span class="planner-check" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5">
+                <path d="m4 12 6 6L20 6" />
+              </svg>
+            </span>
+            Øvinger og labber
           </button>
         </div>
       </div>
@@ -153,22 +162,29 @@ const programOptionsJson = JSON.stringify(programOptions).replaceAll("<", "\\u00
 <style>
   /* --- Banner ------------------------------------------------------------ */
 
-  /* Facts only. The one control that changes any of them is the topbar
-     studieinfo chip (Layout.astro) — the banner used to carry a second
-     "Endre" button and the title itself was a third, all three opening the
-     same modal. */
+  /* Facts only. The one control that changes any of them is the "endre"
+     button in the hint line below the title — the topbar chip that used to
+     own that job is gone from this page (REWORK-2026-07-30b), because it was
+     naming the same plan the title names. */
   .planner-banner {
     margin-bottom: var(--space-4);
   }
 
-  /* The plan's two outputs, on one line under the identity. Set as figures,
-     not as footnotes: PRODUCT §1 makes the verdict the page's primary job. */
-  .planner-status {
+  /* The question and its answer on one baseline. The verdict pushes to the
+     far end on a wide screen and drops under the title when there is no room
+     — it is never squeezed against the plan's name. */
+  .planner-head {
     display: flex;
     align-items: baseline;
     flex-wrap: wrap;
-    gap: var(--gap-2) var(--gap-4);
-    margin-top: var(--space-3);
+    /* `space-between`, not `margin-left: auto` on the verdict: a flex line
+       holding a single item lays it out at main-start under space-between, so
+       the verdict sits at the far end of the title's line when they share one
+       and returns to the left margin when it wraps to its own. The margin
+       version pinned it right in both cases, which on a phone left it floating
+       in the gutter between the title and the hint. */
+    justify-content: space-between;
+    gap: var(--gap-3) var(--gap-6);
   }
 
   .planner-verdict {
@@ -179,24 +195,63 @@ const programOptionsJson = JSON.stringify(programOptions).replaceAll("<", "\\u00
     display: none;
   }
 
-  /* The page title IS the answer to "whose plan is this" (D2/A1). The
-     programme name is set in the grotesk at the page-title step; the code
-     rides beside it in mono, because that is the part a student copies. */
+  /* THE TITLE. `MTDT · 2026 · Høst 2026` — the plan in the notation a student
+     types, searches and says out loud, so it is the mono at the page-title
+     step. Data-Is-Mono has always governed times, dates, codes and counts;
+     this just follows it to the top of the scale instead of dropping it there.
+
+     Slightly under --text-xl because Spline Sans Mono sets wider and taller
+     than Schibsted Grotesk at the same nominal size: 1.75rem mono is the
+     optical match for 2rem grotesk, which is what every other page title on
+     the site is. `is-empty` swaps back to the grotesk for the one state that
+     has no plan to name (see `renderBanner`). */
   .planner-title {
-    display: flex;
-    align-items: baseline;
-    gap: var(--gap-3);
-    flex-wrap: wrap;
+    font-family: var(--font-mono);
+    /* The floor is measured, not chosen: at 390 px the banner has 358 px, and
+       an 8-character code ("EXPHPHIL · 2026 · Vår 2027") sets 337 px at
+       1.4rem and 427 px at 1.75. So the common case never wraps and the
+       longest one still fits on one line. */
+    font-size: clamp(1.4rem, 4.4vw, 1.75rem);
+    letter-spacing: -0.02em;
+    line-height: var(--leading-tight);
   }
 
-  :global(.planner-title-code) {
-    font-size: var(--text-md);
-    color: var(--muted);
+  :global(.planner-title-part) {
+    white-space: nowrap;
+  }
+
+  .planner-title.is-empty {
+    font-family: var(--font-sans);
+    font-size: var(--text-xl);
+    letter-spacing: -0.015em;
+  }
+
+  /* The separators recede so the three facts read as three, not as one
+     seven-token string. */
+  :global(.planner-title-sep) {
+    color: var(--faint);
+    font-weight: var(--weight-normal);
   }
 
   .planner-context-line {
     max-width: none;
     margin-top: var(--space-1);
+  }
+
+  /* The one control in the banner. A bare underlined word, not a button:
+     it changes a fact stated on the line it sits in, and a filled control
+     there would out-shout the fact. */
+  :global(.planner-edit-plan) {
+    font: inherit;
+    color: var(--muted);
+    border-bottom: 1px solid var(--border-strong);
+    border-radius: 0;
+    transition: color var(--dur-fast) var(--ease);
+  }
+
+  :global(.planner-edit-plan:hover) {
+    color: var(--ui);
+    border-bottom-color: currentColor;
   }
 
   /* The unanswered studieretning, pulled out of a muted line. It asks you to
@@ -345,27 +400,109 @@ const programOptionsJson = JSON.stringify(programOptions).replaceAll("<", "\\u00
     display: none;
   }
 
-  /* --- Rutenett ⇄ Liste (REWORK-2026-07-29b D2) --------------------------- */
+  /* --- Rutenett ⇄ Liste (REWORK-2026-07-30b) ------------------------------ */
 
-  /* Two views of one week. They sit in the section head beside the verdict
-     because that is what they change; the toggles are `.np-toggle`, so the
-     pressed state is the primitive's accent fill and nothing new is invented
-     for it. */
-  /* One control with two states, so it joins into a single segmented unit —
-     three separately-spaced chips in a row read as three peers, and the
-     øving toggle is not a peer of these two. It switches the layer the week
-     draws; they switch how the week is drawn. */
+  /* Two words and a rule that slides between them. No box: a box says "press
+     me", and this is a place you already are — one of the two is always true,
+     which is exactly what a filled chip cannot say. The rule is also the same
+     mark the section head draws directly underneath, so the control sits IN
+     the structure rather than on top of it.
+
+     It replaces two `.np-toggle`s, which were the same height, the same
+     uppercase mono and the same fill as the øving toggle beside them —
+     three identical controls, two completely different behaviours. */
   .planner-view-tabs {
+    position: relative;
     display: flex;
-    gap: 1px;
-    background: var(--border);
-    border-radius: var(--radius-xs);
-    overflow: hidden;
+    gap: var(--gap-4);
+    padding-bottom: 7px;
+  }
+
+  /* The travelling rule. `--view-x` / `--view-w` are written by
+     `renderViewTabs` from the live button boxes, because "Rutenett" and
+     "Liste" are different widths in every font and at every zoom level — a
+     hard-coded 50 % would be wrong at all of them. It rides the same --dur
+     and --ease as the week's own layer change, so pressing Liste and pressing
+     Øvinger feel like one instrument; reduced motion zeroes both. */
+  .planner-view-tabs::after {
+    content: "";
+    position: absolute;
+    inset-inline-start: 0;
+    bottom: 0;
+    height: 2px;
+    width: var(--view-w, 0);
+    background: var(--ui);
+    transform: translateX(var(--view-x, 0));
+    transition:
+      transform var(--dur) var(--ease),
+      width var(--dur) var(--ease);
   }
 
   :global(.planner-view-tab) {
-    padding-inline: var(--space-4);
-    border-radius: 0;
+    font-family: var(--font-sans);
+    font-size: var(--text-sm);
+    font-weight: var(--weight-normal);
+    color: var(--muted);
+    padding: 0;
+    border-radius: var(--radius-xs);
+    transition: color var(--dur-fast) var(--ease);
+  }
+
+  :global(.planner-view-tab:hover) {
+    color: var(--ui);
+  }
+
+  :global(.planner-view-tab[aria-pressed="true"]) {
+    color: var(--fg);
+    font-weight: var(--weight-medium);
+  }
+
+  /* The layer, not a view: a box you tick. Nothing about it is shaped like
+     the pair beside it, which is the whole point — it ADDS øvinger and labber
+     to the week; it does not choose how the week is drawn. */
+  .planner-others-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--gap-2);
+    font-family: var(--font-sans);
+    font-size: var(--text-sm);
+    color: var(--muted);
+    transition: color var(--dur-fast) var(--ease);
+  }
+
+  .planner-others-toggle:hover,
+  .planner-others-toggle[aria-pressed="true"] {
+    color: var(--fg);
+  }
+
+  .planner-check {
+    display: grid;
+    place-items: center;
+    flex: none;
+    width: 14px;
+    height: 14px;
+    border: 1px solid var(--control-edge);
+    border-radius: var(--radius-xs);
+    transition:
+      background var(--dur-fast) var(--ease),
+      border-color var(--dur-fast) var(--ease);
+  }
+
+  .planner-others-toggle[aria-pressed="true"] .planner-check {
+    background: var(--ui);
+    border-color: var(--ui);
+  }
+
+  .planner-check svg {
+    width: 10px;
+    height: 10px;
+    color: var(--ui-contrast);
+    opacity: 0;
+    transition: opacity var(--dur-fast) var(--ease);
+  }
+
+  .planner-others-toggle[aria-pressed="true"] .planner-check svg {
+    opacity: 1;
   }
 
   /* The gap that says "different kind of control" — wider than any gap inside

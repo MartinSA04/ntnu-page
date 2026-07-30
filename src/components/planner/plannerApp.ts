@@ -734,28 +734,51 @@ export async function mountPlannerApp(
   // it never required a switcher on the fold.
 
   /**
-   * The banner — facts, no controls. The programme is a *title* with its code
-   * beside it in mono (D2/D10): it is the only thing that tells MIDT from
-   * MTDT. Below it the supporting line: kull · studieretning · the resolved
-   * semester. The studieretning is there because it is the *answer* the
-   * student gave to the one question the study plan forced.
+   * The banner — ETT NAVN (REWORK-2026-07-30b).
    *
-   * Nothing here opens the studieinfo modal any more. The title was a button
-   * and the banner carried an "Endre" button beside it, which together with
-   * Layout's topbar chip made three permanent controls for one modal. The
-   * chip is the single opener now.
+   * The title is the plan in the notation a student actually types:
+   * `MTDT · 2026 · Høst 2026`, three facts and two separators, all of them
+   * data and therefore all of them mono. It replaces a 2 rem rendering of
+   * NTNU's own programme string — hyphen, parenthetical and all — which took
+   * three lines on a phone before anything actionable appeared, and which the
+   * topbar chip was simultaneously saying in miniature 100 px above.
+   *
+   * The programme's full name is not lost, it is demoted: it is a 42-character
+   * database field, and the hint line is where those belong. Beside it sits
+   * "endre", the page's one opener for the studieinfo modal now that the chip
+   * has left this page.
+   *
+   * With no programme there is nothing to name, and the title falls back to
+   * being the product's own — the one moment the wordmark and the page title
+   * are allowed to agree, because until you pick a plan the page really is
+   * only Semesterplan.
    */
   function renderBanner(): void {
     const program = plan.program;
     const semester = currentSemester();
 
-    elements.title.replaceChildren();
+    const title = elements.title;
+    title.replaceChildren();
+    title.classList.toggle("is-empty", !program);
     if (program) {
-      const named = program.name !== "" && program.name !== program.code;
-      elements.title.append(el("span", undefined, named ? program.name : program.code));
-      if (named) elements.title.append(el("span", "np-data planner-title-code", program.code));
+      const parts = [program.code, program.cohort, semester ? semesterLabel(semester) : ""].filter(
+        Boolean,
+      );
+      // The separator belongs to the part BEFORE it, and each part is
+      // unbreakable. When the title has to wrap on a phone it therefore
+      // breaks as "MTDT ·" / "2026 · Høst 2026" rather than orphaning a
+      // lone "·" at the head of the second line.
+      parts.forEach((part, i) => {
+        const seg = el("span", "planner-title-part", String(part));
+        if (i < parts.length - 1) {
+          seg.append(el("span", "planner-title-sep", " ·"));
+          title.append(seg, " ");
+        } else {
+          title.append(seg);
+        }
+      });
     } else {
-      elements.title.textContent = "Semesterplan";
+      title.textContent = "Semesterplan";
     }
 
     elements.contextLine.replaceChildren();
@@ -765,15 +788,25 @@ export async function mountPlannerApp(
       line.append(node);
     };
     if (program) {
-      append(el("span", "np-data", `kull ${program.cohort}`));
+      const named = program.name !== "" && program.name !== program.code;
+      if (named) append(program.name);
       if (program.direction) {
         append(el("span", "planner-context-direction", program.direction.name));
       }
+    } else if (semester) {
+      // No plan yet: the hint carries the semester the empty week is for, so
+      // the title can stay the product's name without dropping the fact.
+      append(el("span", "np-data", semesterLabel(semester)));
     }
-    if (semester) append(el("span", "np-data", semesterLabel(semester)));
     if (semester && !semester.timetablePublished) {
       append(`timeplan publiseres ~${publishMonthFor(semester.id)}`);
     }
+    // Last, so it reads as the action on everything said before it.
+    const edit = el("button", "planner-edit-plan", program ? "endre" : "velg studieprogram");
+    edit.type = "button";
+    edit.id = "planner-edit-plan";
+    edit.addEventListener("click", () => studieinfo.open());
+    append(edit);
   }
 
   /**
@@ -1012,6 +1045,11 @@ export async function mountPlannerApp(
 
   elements.viewUke.addEventListener("click", () => setWeekView("uke"));
   elements.viewTavle.addEventListener("click", () => setWeekView("tavle"));
+  // The travelling rule is measured, so it has to be re-measured whenever the
+  // measurement could change: a resize, and the frame after the webfont swaps
+  // the labels out from under it.
+  window.addEventListener("resize", renderViewTabs, { passive: true, signal });
+  document.fonts?.ready.then(() => renderViewTabs());
 
   // --- Uke ⇄ Tavla (REWORK-2026-07-29b D2) --------------------------------
 
@@ -1031,13 +1069,35 @@ export async function mountPlannerApp(
     renderGridAndExams();
   }
 
+  /**
+   * The pressed state, and the rule that travels to it.
+   *
+   * The offsets are measured rather than declared because "Rutenett" and
+   * "Liste" are different widths — in every face, at every zoom step, and
+   * again once the webfont lands. A hard-coded 50 % is wrong at all of them.
+   * `offsetLeft` is relative to the tabs container, which is the positioned
+   * ancestor of the rule, so no further arithmetic is needed.
+   *
+   * Guarded on `offsetWidth` because the unit suite renders into a hand-rolled
+   * DOM with no layout: there the tabs still get their `aria-pressed`, and the
+   * decoration that has nothing to measure is simply skipped.
+   */
   function renderViewTabs(): void {
+    let active: HTMLElement | null = null;
     for (const [button, view] of [
       [elements.viewUke, "uke"],
       [elements.viewTavle, "tavle"],
     ] as const) {
-      button.setAttribute("aria-pressed", String(weekView === view));
+      const on = weekView === view;
+      button.setAttribute("aria-pressed", String(on));
+      if (on) active = button;
     }
+    const tabs = elements.viewUke.parentElement;
+    if (!tabs || !active || typeof active.offsetWidth !== "number" || active.offsetWidth === 0) {
+      return;
+    }
+    tabs.style.setProperty("--view-w", `${active.offsetWidth}px`);
+    tabs.style.setProperty("--view-x", `${active.offsetLeft}px`);
   }
 
   /** Today as a weekday number (1 = mandag), or `null` at the weekend. */

@@ -1254,7 +1254,7 @@ export function renderGrid(
         gapNote(
           "Ingen aktiviteter er merket som forelesning i ",
           silent,
-          " — timene vises ikke her, og de er ikke med i kollisjonssjekken. Slå på «vis øvinger og labber» for å se dem.",
+          " — timene vises ikke her, og de er ikke med i kollisjonssjekken. Slå på «Øvinger og labber» for å se dem.",
         ),
       );
     }

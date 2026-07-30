@@ -12,8 +12,8 @@ import "../styles/primitives.css";
 import "../styles/site.css";
 
 /**
- * Site shell: sticky topbar (wordmark + nav + a persistent studieinfo chip
- * naming whose plan this is + theme toggle), a count-link back to the week
+ * Site shell: sticky topbar (wordmark + nav + a studieinfo chip naming whose
+ * plan this is, on every page but the planner + theme toggle), a count-link back to the week
  * (non-empty plans only, on every page but the two that already show the
  * plan), a centered content column (reading measure by default, the
  * `--maxw` data column when `wide`), and a footer that carries the demoted
@@ -40,6 +40,8 @@ const NAV = [
 ] as const;
 
 const path = Astro.url.pathname;
+/** The planner names the plan in its own title, so it does not get the chip. */
+const onPlanner = path.startsWith("/planlegger/");
 
 function isCurrentSection(sections: readonly string[]): boolean {
   return sections.some((prefix) => path === prefix || path.startsWith(prefix));
@@ -152,13 +154,20 @@ const crawlDate = formatCrawlDate(semestersData.crawledAt);
             ))
           }
         </nav>
-        <a
-          class="np-btn studieinfo-chip"
-          id="studieinfo-chip"
-          href="/planlegger/?studieinfo"
-        >
-          Velg studieprogram
-        </a>
+        {
+          /* Everywhere but the planner (REWORK-2026-07-30b). There the plan's
+             name IS the page title, so a chip repeating it 100 px above was the
+             same three facts twice in two typographic treatments — and the
+             fourth topbar child is what pushed the wordmark and the chip into
+             truncating each other at 390 px. On /emner/ and /emne/[code]/ it
+             stays: it is the only thing there saying whose plan a course would
+             join. */
+          !onPlanner && (
+            <a class="np-btn studieinfo-chip" id="studieinfo-chip" href="/planlegger/?studieinfo">
+              Velg studieprogram
+            </a>
+          )
+        }
         <ThemeToggle storageKey={THEME_KEY} />
       </header>
       <main id="main-content" class:list={["site-content", { wide }]}>

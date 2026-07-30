@@ -59,6 +59,16 @@ const courseSettingsBtn = (page: Page, code: string) =>
 const gridBlocks = (page: Page) => page.locator("#planner-grid-frame .planner-block");
 
 /**
+ * The planner names the plan in its own title now, so the topbar chip is not
+ * rendered there (REWORK-2026-07-30b) — `#planner-title` is where "whose plan
+ * is this" is asserted on this page, and `#planner-edit-plan` is the one
+ * control that opens studieinfo from it. The chip is still the assertion on
+ * every other page, where it is the only thing naming the plan.
+ */
+const planTitle = (page: Page) => page.locator("#planner-title");
+const editPlan = (page: Page) => page.locator("#planner-edit-plan");
+
+/**
  * Waits for `#planner-grid-status` to settle and returns it, failing loudly if
  * the plan's own data never arrived.
  *
@@ -128,7 +138,7 @@ test("onboarding: modal → programme + kull + retning → a full week", async (
   await expect(dialog).toBeHidden();
 
   await expect(gridBlocks(page).first()).toBeVisible({ timeout: 45_000 });
-  await expect(page.locator("#studieinfo-chip")).toContainText("MTDT · 2024");
+  await expect(planTitle(page)).toHaveText("MTDT · 2024 · Høst 2026");
   expect(page.url()).toMatch(/#26h;MTDT\.2024/);
 });
 
@@ -159,7 +169,7 @@ test("share: a program-less link clears the profile chip", async ({ page }) => {
   // removeProgram the header chip kept naming MTDT while the planner showed none.
   await page.goto("/planlegger/#26h;MTDT.2026;");
   await expect(courseRows(page)).toHaveCount(5, { timeout: 30_000 });
-  await expect(page.locator("#studieinfo-chip")).toContainText("MTDT", { timeout: 30_000 });
+  await expect(planTitle(page)).toContainText("MTDT", { timeout: 30_000 });
 
   // A different-path hop first guarantees a real document load (so the initial
   // hash-load path runs), and proves the profile is genuinely stored: the chip
@@ -169,8 +179,11 @@ test("share: a program-less link clears the profile chip", async ({ page }) => {
 
   await page.goto("/planlegger/#26h;-;%2BTDT4100");
   await expect(courseRows(page)).toHaveCount(1, { timeout: 30_000 });
-  await expect(page.locator("#studieinfo-chip")).toContainText("Velg studieprogram");
-  await expect(page.locator("#studieinfo-chip")).not.toContainText("MTDT");
+  // A program-less plan has no code to be the title, so the page falls back to
+  // its own name — and the hint carries the invitation instead of a programme.
+  await expect(planTitle(page)).toHaveText("Semesterplan");
+  await expect(planTitle(page)).not.toContainText("MTDT");
+  await expect(editPlan(page)).toHaveText("velg studieprogram");
 });
 
 test("overlap: two colliding courses stack, both full width and readable", async ({ page }) => {
@@ -422,7 +435,8 @@ test("one control opens studieinfo, and semester lives only inside it", async ({
   // The page used to carry three permanent openers for one modal — the
   // topbar chip, a banner "Endre" button, and the page title (silently a
   // button) — plus a "Bytt semester" disclosure duplicating the modal's own
-  // semester select.
+  // semester select. Since REWORK-2026-07-30b the chip is not on this page at
+  // all and "endre" in the hint line is the one that remains.
   await page.goto("/planlegger/#26h;MTDT.2026;");
   await expect(courseRows(page).first()).toBeVisible({ timeout: 30_000 });
 
@@ -430,16 +444,20 @@ test("one control opens studieinfo, and semester lives only inside it", async ({
   await expect(page.locator("#planner-semester")).toHaveCount(0);
   await expect(page.locator("#planner-title button")).toHaveCount(0);
 
-  // The banner still STATES the term; it just no longer switches it.
-  await expect(page.locator("#planner-context-line")).toContainText("Høst 2026");
+  // The banner still STATES the term; it just no longer switches it. It is
+  // part of the TITLE now — the plan is one string, in the notation a student
+  // types — with the programme's own name demoted to the hint beside "endre".
+  await expect(planTitle(page)).toHaveText("MTDT · 2026 · Høst 2026");
+  await expect(page.locator("#planner-context-line")).toContainText("Datateknologi");
+  await expect(page.locator("#studieinfo-chip")).toHaveCount(0);
 
   // With a plan set, the week is a real grid — so no empty-state card is on
-  // screen and the topbar chip is the only thing left that opens the modal.
+  // screen and "endre" is the only thing left that opens the modal.
   await expect(page.locator("#planner-grid-frame .planner-week-card")).toHaveCount(0);
 
   const dialog = page.locator("#studieinfo-dialog");
   await expect(dialog).toBeHidden();
-  await page.click("#studieinfo-chip");
+  await editPlan(page).click();
   await expect(dialog).toBeVisible();
   await expect(page.locator("#studieinfo-semester-select")).toBeVisible();
 });
@@ -719,7 +737,7 @@ test("manual adds stay in their semester", async ({ page }) => {
   // toggle-and-add): manual adds are scoped per semester in `np:plans`, so a
   // switch away must drop this course from view without deleting it.
   const dialog = page.locator("#studieinfo-dialog");
-  await page.click("#studieinfo-chip");
+  await editPlan(page).click();
   await expect(dialog).toBeVisible();
   await page.selectOption("#studieinfo-semester-select", "27v");
   await page.click("#studieinfo-save");
@@ -727,7 +745,7 @@ test("manual adds stay in their semester", async ({ page }) => {
 
   await expect(courseRows(page)).toHaveCount(0);
 
-  await page.click("#studieinfo-chip");
+  await editPlan(page).click();
   await expect(dialog).toBeVisible();
   await page.selectOption("#studieinfo-semester-select", "26h");
   await page.click("#studieinfo-save");
@@ -770,7 +788,7 @@ test("MTIØT: a programme code containing Æ/Ø/Å resolves, not a 400 (B1)", as
     )
     .toBe(true);
 
-  await expect(page.locator("#studieinfo-chip")).toContainText("MTIØT · 2024");
+  await expect(planTitle(page)).toContainText("MTIØT · 2024");
 });
 
 test("BSPL: a campus choice whose own code contains Ø survives a reload (B10)", async ({
@@ -1001,4 +1019,48 @@ test.describe("the exam list on a phone", () => {
       .evaluateAll((els) => els.map((el) => Math.round(el.getBoundingClientRect().height)));
     expect(new Set(whatHeights).size).toBe(1);
   });
+});
+
+test("ett navn: the plan is named once, and the switch is not a third toggle", async ({ page }) => {
+  // REWORK-2026-07-30b. Two faults, one test, because they share a cause —
+  // controls and facts that looked like each other:
+  //   01 the plan was named twice, 100 px apart (topbar chip + page title);
+  //   02 Rutenett/Liste (a radio group) and Øvinger (a checkbox) were three
+  //      identical uppercase mono `.np-toggle`s in a row.
+  await page.goto("/planlegger/#26h;MTDT.2026;");
+  await expect(gridBlocks(page).first()).toBeVisible({ timeout: 45_000 });
+
+  await expect(planTitle(page)).toHaveText("MTDT · 2026 · Høst 2026");
+  await expect(page.locator("#studieinfo-chip")).toHaveCount(0);
+  // Three topbar children (the ThemeToggle ships a <script> beside its button,
+  // which is not one) — dropping to three is what stops the wordmark and the
+  // chip truncating each other at 390 px.
+  await expect(page.locator(".site-topbar > *:not(script)")).toHaveCount(3);
+
+  // The switch carries no fill and no box — its whole state is the rule under
+  // the live word, and that rule MOVES rather than cross-fading.
+  const tabs = page.locator(".planner-view-tabs");
+  const ruleAt = () =>
+    tabs.evaluate((el) => ({
+      x: el.style.getPropertyValue("--view-x"),
+      w: el.style.getPropertyValue("--view-w"),
+    }));
+  const atGrid = await ruleAt();
+  expect(Number.parseFloat(atGrid.w)).toBeGreaterThan(0);
+  expect(atGrid.x).toBe("0px");
+
+  await page.click("#planner-view-tavle");
+  await expect(page.locator(".planner-board").first()).toBeVisible();
+  const atList = await ruleAt();
+  expect(Number.parseFloat(atList.x)).toBeGreaterThan(0);
+  // "Liste" is the shorter word — the rule is measured, not a fixed half.
+  expect(Number.parseFloat(atList.w)).toBeLessThan(Number.parseFloat(atGrid.w));
+
+  // And the layer control is a box you tick, not a fourth view: it has a
+  // check mark of its own and never takes the pressed FILL the old toggle did.
+  const others = page.locator("#planner-others-toggle");
+  await expect(others.locator(".planner-check")).toHaveCount(1);
+  await expect(others).toHaveAttribute("aria-pressed", "false");
+  await others.click();
+  await expect(others).toHaveAttribute("aria-pressed", "true");
 });
