@@ -34,6 +34,9 @@ const PATHS = {
   menu: '<path d="M4 6h16"/><path d="M4 12h16"/><path d="M4 18h16"/>',
   "chevron-right": '<path d="m9 18 6-6-6-6"/>',
   "chevron-left": '<path d="m15 18-6-6 6-6"/>',
+  // The select indicator (dom.ts carries the runtime twin as `chevronDown`).
+  // Its open state is this same mark rotated 180°, never a second glyph.
+  "chevron-down": '<path d="m6 9 6 6 6-6"/>',
   info: '<circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/>',
   "help-circle":
     '<circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/>',

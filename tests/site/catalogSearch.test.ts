@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
   type CatalogRow,
+  codePrefix,
   fold,
   parseQuery,
+  prefixFacets,
   searchCatalog,
 } from "../../src/components/site/catalogSearch.js";
 
@@ -126,5 +128,59 @@ describe("searchCatalog — ranking (search-1 / astro-5)", () => {
     const stale: CatalogRow = ["TMA4100", "Matematikk 1", "Trondheim", [], "1", [2025]];
     const live = row("BMA1010", "Matematikk for ingeniørfag");
     expect(codes(searchCatalog([live, stale], "matematikk"))).toEqual(["TMA4100", "BMA1010"]);
+  });
+});
+
+describe("codePrefix", () => {
+  it("takes the leading letters of a course code, uppercased", () => {
+    expect(codePrefix("TMA4100")).toBe("TMA");
+    expect(codePrefix("MGLU1101")).toBe("MGLU");
+    expect(codePrefix("imag2012")).toBe("IMAG");
+  });
+
+  it("keeps Æ/Ø/Å, which 58 programme and 238 course codes contain", () => {
+    expect(codePrefix("SØK1000")).toBe("SØK");
+    expect(codePrefix("TIØ4258")).toBe("TIØ");
+  });
+
+  // 325 of 5 470 catalog codes open with a digit ("6MP4210"). They are not an
+  // error, they just cannot carry a subject chip.
+  it("returns an empty prefix for a code that does not start with letters", () => {
+    expect(codePrefix("6MP4210")).toBe("");
+    expect(codePrefix("")).toBe("");
+  });
+});
+
+describe("prefixFacets", () => {
+  it("counts the prefixes in a result set, biggest first", () => {
+    const rows = [
+      row("TMA4100", "Matematikk 1"),
+      row("TMA4110", "Matematikk 3"),
+      row("TMA4120", "Matematikk 4K"),
+      row("MA0001", "Brukerkurs i matematikk A"),
+      row("MA1101", "Grunnkurs i analyse"),
+      row("IMAG2012", "Matematikk for ingeniørfag"),
+    ];
+    expect(prefixFacets(rows)).toEqual([
+      { prefix: "TMA", count: 3 },
+      { prefix: "MA", count: 2 },
+      { prefix: "IMAG", count: 1 },
+    ]);
+  });
+
+  // Without a tie-break the chip row reshuffled between renders whenever two
+  // subjects drew level, moving a chip out from under the pointer.
+  it("breaks ties on the prefix so the chip order is stable", () => {
+    const rows = [row("TDT4100", "Objektorientert"), row("IMAG2012", "Matematikk")];
+    expect(prefixFacets(rows).map((f) => f.prefix)).toEqual(["IMAG", "TDT"]);
+  });
+
+  it("contributes no chip for a code with no letter prefix", () => {
+    const rows = [row("6MP4210", "Matematikk"), row("TMA4100", "Matematikk 1")];
+    expect(prefixFacets(rows)).toEqual([{ prefix: "TMA", count: 1 }]);
+  });
+
+  it("is empty for an empty result set", () => {
+    expect(prefixFacets([])).toEqual([]);
   });
 });

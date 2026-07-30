@@ -9,12 +9,13 @@
  * Emner list, and a block in the week/day grid.
  *
  * It is a real modal (`showModal()`), not the old anchored card. That is the
- * whole reason this file is shorter than the one it replaces: Esc, the
- * backdrop, and focus return to the invoker are native `<dialog>` behaviour,
- * and a centered dialog cannot be knocked out of position by the grid
- * re-rendering underneath it — so `popover.ts`'s hand-wired Escape/outside-
- * pointerdown listeners, its flip-above-when-no-room arithmetic and its
- * `refreshInvoker` anchor re-resolution are all dropped rather than ported.
+ * whole reason this file is shorter than the one it replaces: Esc, backdrop
+ * dismissal (`closedby="any"`) and focus return to the invoker are all
+ * native `<dialog>` behaviour, and a centered dialog cannot be knocked out of
+ * position by the grid re-rendering underneath it — so `popover.ts`'s
+ * hand-wired Escape/outside-pointerdown listeners, its flip-above-when-no-room
+ * arithmetic and its `refreshInvoker` anchor re-resolution are all dropped
+ * rather than ported.
  *
  * `setCourseGroups` still writes on every edit, so the grid behind the
  * backdrop is already correct when the modal closes; `renderContent` is a
@@ -61,6 +62,16 @@ export interface CourseSettingsContext {
    * (groups-5).
    */
   resolved?: boolean;
+  /**
+   * The lecture group keys the week is drawing right now — read off
+   * `applyGroupSelection`'s own output, NOT off `defaults`. The two differ
+   * exactly where it matters: `defaults` is empty both for a course that
+   * narrows nothing because every option is already on screen (TMA4401) and
+   * for one that narrows nothing because its session families are all
+   * singletons while other programmes' parallels sit unused (TMA4400). Only
+   * the first has nothing to pick. See `pickableGroups`.
+   */
+  drawnLectures: string[];
   source: CourseSource;
   dropped: boolean;
   /**
@@ -164,15 +175,36 @@ export function nextSelection(args: {
  * select it, and one øving group does not need a checkbox. The two kinds are
  * counted SEPARATELY — a course with a single parallel and two øving groups
  * would otherwise draw a lone dead radio above the useful checkboxes.
+ *
+ * `drawn` is the lecture group keys the week is drawing right now, and it is
+ * the second half of the lecture gate: **a lecture layer whose every option is
+ * already on screen is not a choice, however many options that is.** TMA4401
+ * publishes "Forelesning" and "Plenumsregning" — two complementary weekly
+ * sessions, both classified as lectures, both drawn — and the count-only gate
+ * offered them as two checkboxes, inviting the student to untick teaching they
+ * attend. Counting is not enough to tell that apart from TMA4400, which also
+ * narrows nothing (three singleton session families → no defaults) but lists
+ * eight parallels the week is NOT drawing, one of which an MTDT student may
+ * legitimately want; that capability is documented in groups.ts and ticked by
+ * e2e/flows.pw.ts, so the gate cannot be `defaults.length > 0`. What separates
+ * them is whether anything is left to switch TO.
+ *
+ * The øving/lab layer is deliberately not held to the same test: its default
+ * IS "every group of your programme", so `drawn` covers all of them and the
+ * rule would delete every øving picker on the site. Its count gate stands.
  */
-export function pickableGroups(groups: GroupOption[]): {
+export function pickableGroups(
+  groups: GroupOption[],
+  drawn: string[],
+): {
   lectures: GroupOption[];
   others: GroupOption[];
 } {
   const lectures = groups.filter((g) => g.kind === "lecture");
   const others = groups.filter((g) => g.kind !== "lecture");
+  const switchable = lectures.some((g) => !drawn.includes(g.key));
   return {
-    lectures: lectures.length > 1 ? lectures : [],
+    lectures: lectures.length > 1 && switchable ? lectures : [],
     others: others.length > 1 ? others : [],
   };
 }
@@ -188,6 +220,10 @@ export function mountCourseSettings(store: PlanStore, signal: AbortSignal): Cour
   const dialog = el("dialog", "np-frame course-settings");
   dialog.id = "planner-course-settings";
   dialog.setAttribute("aria-labelledby", "course-settings-title");
+  // Light dismiss: Esc *and* a backdrop click. Every edit here is written to
+  // the store as it is made, so there is nothing staged for a stray click to
+  // throw away — the × stays for touch, where neither gesture exists.
+  dialog.setAttribute("closedby", "any");
   document.body.append(dialog);
 
   /** The context currently on screen; null while closed. */
@@ -325,7 +361,7 @@ export function mountCourseSettings(store: PlanStore, signal: AbortSignal): Cour
    * back from a radio, which the student cannot untick (groups-6).
    */
   function renderGroupsSection(ctx: CourseSettingsContext): HTMLElement {
-    const { lectures, others } = pickableGroups(ctx.groups);
+    const { lectures, others } = pickableGroups(ctx.groups, ctx.drawnLectures);
     const exclusive = lecturesAreExclusive(ctx.defaults);
     const section = el("div", "course-settings-groups");
     section.append(el("p", "np-kicker", "Grupper"));
@@ -484,7 +520,7 @@ export function mountCourseSettings(store: PlanStore, signal: AbortSignal): Cour
       body.append(retry);
     }
 
-    const { lectures, others } = pickableGroups(ctx.groups);
+    const { lectures, others } = pickableGroups(ctx.groups, ctx.drawnLectures);
     if (lectures.length > 0 || others.length > 0) body.append(renderGroupsSection(ctx));
     body.append(renderActions(ctx));
     dialog.append(body);

@@ -11,49 +11,52 @@
  * so several courses can be added in one visit. Esc dismissal is the native
  * `showModal()` behaviour — nothing extra to wire, as long as nothing inside
  * the dialog eats the key first (see `searchInput.type` below). Backdrop
- * clicks are NOT a dismissal: no browser closes a `showModal()` dialog on
- * one without `closedby="any"`, and this dialog sets no such attribute — the
- * "Lukk" button and Esc are the two ways out (modals-7).
+ * clicks dismiss too, via `closedby="any"` (owner's call, 2026-07-30 —
+ * reverses modals-7, which had reasoned only that no browser does it *by
+ * default*). The attribute is the whole implementation: it is native light
+ * dismiss, so a text selection dragged from inside the dialog out onto the
+ * backdrop does not close it, which the hand-rolled
+ * `click → event.target === dialog` idiom gets wrong. Browsers without it
+ * ignore the attribute and keep Esc and "Lukk", which are still both here.
  *
- * **The clash line is lazy**, reusing `/emner/`'s exact pattern
- * (`attachClashPreview`): computed on a row's first hover/focus, cached
- * after that, and invalidated (recomputed on the next hover) whenever the
- * plan changes. A per-row generation counter guards against a slow fetch
- * that started before a plan change overwriting the fresher one that
- * started after it. The same `fetchCourseBundle` call also carries the
- * course's credits — `search-index.json` rows have no credits field of
- * their own, and this reuses the one memoized request rather than costing a
- * second round trip.
+ * **There is no per-row lazy preview here, and there is none on `/emner/`
+ * either** (owner's call, 2026-07-30). Both surfaces used to run a hover-
+ * triggered `planClash` — dwell timer, generation counter, invalidate-on-
+ * plan-change, a "Sjekker kollisjon" indicator for the wait — to print a
+ * collision verdict beside a search result, and the credits line rode along
+ * on the same `fetchCourseBundle`. All of it is gone: searching is not the
+ * moment a plan is judged. The verdict still exists where a student is
+ * looking at one course rather than scanning a list (`/emne/[code]/`, via
+ * `planClash`, which is otherwise untouched) and where the plan itself is
+ * drawn (`/planlegger/`'s grid). Don't reintroduce it on a search surface
+ * on consistency grounds — the asymmetry is the decision.
  *
- * **Not-taught rows** (`offeredYears` missing the index's own year) get no
- * add control at all — just the `ikke undervist i {year}` note (`/emner/`'s
- * and `/emne/`'s own wording) — instead of an add whose later bundle fetch
- * for a year the course was never offered in would error. The note used to
- * lead with "kun eksamen", which the search-index tuple has no field to
- * support: of the 703 rows that exclude the catalog year, 203 record
- * `examOnly: false` and 107 have neither the flag nor a single exam
- * occasion, so `/emne/AAR4923/` deliberately declines to say it
- * (copy-3/crawler-4). Saying it here needs `examOnly` appended to the
- * tuple first (append-only, per docs/SPEC.md's crawled-data contracts).
+ * **Not-taught rows** (`offeredYears` missing the index's own year) are not
+ * rendered at all, and do not count toward the result total. They used to
+ * render with the `ikke undervist i {year}` note and no add control: honest,
+ * but this window is twelve rows deep, and a query like "matematikk" spent
+ * six of them on courses the dialog was refusing to add. `/emner/` is where
+ * such a course stays reachable (it keeps them behind a disclosure rather
+ * than dropping them); this surface exists to put a course into *this*
+ * semester's plan, and one it cannot add is not a result. When a query
+ * matches nothing else, the status says so specifically rather than
+ * reporting "0 treff" over courses that do exist.
  *
  * `deps` is a plain object the caller (plannerApp.ts) is expected to *mutate
- * in place* as its own state changes (semester switch, programme change,
- * the catalog index finishing its fetch) rather than re-mounting: every
- * function here reads `deps.foo` at call time, never destructures it once
- * up front, so the caller's assignment is picked up on the very next open
- * or the very next lazy check — no re-mount, no risk of doubled listeners.
+ * in place* as its own state changes (the catalog index finishing its fetch)
+ * rather than re-mounting: every function here reads `deps.foo` at call time,
+ * never destructures it once up front, so the caller's assignment is picked
+ * up on the very next open — no re-mount, no risk of doubled listeners.
  * `index` is nullable because the catalog fetch is async and can still be
  * in flight the moment the page mounts; the dialog says so rather than
- * asserting an empty catalog.
+ * asserting an empty catalog. `semester`/`programCode` were carried here
+ * only to feed the deleted clash preview and are gone with it.
  */
 
-import { fetchCourseBundle, type PlannerIndex } from "../../lib/planner/data.js";
-import { semesterYear } from "../../lib/planner/schedule.js";
+import type { PlannerIndex } from "../../lib/planner/data.js";
 import { type AddCourseInput, DEFAULT_VERSION, type PlanStore } from "../../lib/planner/store.js";
 import { searchCatalog } from "../site/catalogSearch.js";
-import { clashSentence, planClash } from "../site/planClash.js";
-import { el, formatCreditNumber } from "./dom.js";
-import type { SemesterSummary } from "./plannerApp.js";
+import { el } from "./dom.js";
 
 export interface AddCourseDeps {
   store: PlanStore;
@@ -66,8 +69,6 @@ export interface AddCourseDeps {
    * (pd-3); the caller sets it from `loadPlannerIndex()`'s own outcome.
    */
   indexFailed?: boolean;
-  semester: SemesterSummary;
-  programCode: string | null;
 }
 
 export interface AddCourseHandle {
@@ -192,6 +193,8 @@ export function mountAddCourse(deps: AddCourseDeps, signal: AbortSignal): AddCou
   const dialog = el("dialog", "np-frame add-course-dialog") as HTMLDialogElement;
   dialog.id = "planner-add-dialog";
   dialog.setAttribute("aria-labelledby", "add-course-title");
+  // Light dismiss: Esc *and* a backdrop click. See the file header.
+  dialog.setAttribute("closedby", "any");
 
   // The masthead the planner's other surfaces open on (`.np-head`), in its
   // paper variant: this dialog is about the catalog rather than about one
@@ -233,9 +236,10 @@ export function mountAddCourse(deps: AddCourseDeps, signal: AbortSignal): AddCou
   const results = el("ul", "add-course-results");
   body.append(results);
 
-  // One action, and it is the only way out besides Esc (backdrop clicks are
-  // deliberately not a dismissal, modals-7), so it sits in the same footer the
-  // other cards close with rather than trailing the list.
+  // Kept even though Esc and the backdrop both dismiss now: on touch there is
+  // no Esc, and a backdrop tap is not a gesture a student should have to guess
+  // at. It sits in the same footer the other cards close with rather than
+  // trailing the list.
   const actions = el("div", "np-actions add-course-actions");
   const closeBtn = el("button", "np-btn add-course-close", "Lukk") as HTMLButtonElement;
   closeBtn.type = "button";
@@ -254,62 +258,18 @@ export function mountAddCourse(deps: AddCourseDeps, signal: AbortSignal): AddCou
    * `<body>` on the very button the student just pressed (mirrors emner's A5
    * fix).
    */
-  const rows: { sync: () => void; invalidate: () => void }[] = [];
+  const rows: { sync: () => void }[] = [];
 
-  /**
-   * Lazy clash + credits line, on first hover/focus of the row — exactly
-   * `/emner/`'s `attachClashPreview`, generalized with a generation counter:
-   * a plan change invalidates (so the next hover recomputes), and if a
-   * slower fetch that started *before* the change resolves *after* a fresh
-   * one triggered by a later hover, its stale result is discarded rather
-   * than overwriting the newer verdict.
-   */
-  function attachPreview(
-    row: HTMLLIElement,
-    noteEl: HTMLElement,
-    code: string,
-    version: string,
-  ): () => void {
-    let checked = false;
-    let generation = 0;
-    const check = async (): Promise<void> => {
-      if (checked) return;
-      checked = true;
-      const gen = ++generation;
-      const year = semesterYear(deps.semester.id);
-      if (year === null) return;
-      const [bundle, verdict] = await Promise.all([
-        fetchCourseBundle(code, year, version),
-        planClash(
-          { code, version },
-          deps.store.loadPlan(),
-          deps.semester,
-          undefined,
-          deps.programCode,
-        ),
-      ]);
-      if (gen !== generation) return; // superseded — a newer check is already in flight/done
-      const parts: string[] = [];
-      const credits = bundle.details?.credits;
-      if (credits != null) parts.push(`${formatCreditNumber(credits)} sp`);
-      parts.push(clashSentence(verdict, deps.semester));
-      noteEl.textContent = parts.join(" · ");
-      noteEl.classList.toggle("is-clash", verdict.kind === "clash");
-    };
-    row.addEventListener("pointerenter", check);
-    row.addEventListener("focusin", check);
-    return () => {
-      checked = false;
-      noteEl.textContent = "";
-      noteEl.classList.remove("is-clash");
-    };
+  /** True when `course` is in the catalog year's own offering — see `render`. */
+  function isTaught(course: PlannerIndex["courses"][number]): boolean {
+    const year = deps.index?.year ?? null;
+    return year === null || course[5].includes(year);
   }
 
+  /** Builds one row. The caller has already established `isTaught(course)`. */
   function buildRow(course: PlannerIndex["courses"][number]): HTMLLIElement {
-    const [code, name, , , versionRaw, offeredYears] = course;
+    const [code, name, , , versionRaw] = course;
     const version = versionRaw && versionRaw !== "" ? versionRaw : DEFAULT_VERSION;
-    const currentYear = deps.index?.year ?? null;
-    const notTaught = currentYear !== null && !offeredYears.includes(currentYear);
 
     const row = el("li", "add-course-row") as HTMLLIElement;
     const head = el("span", "add-course-row-head");
@@ -317,20 +277,8 @@ export function mountAddCourse(deps: AddCourseDeps, signal: AbortSignal): AddCou
     head.append(el("span", "add-course-row-name", name));
     row.append(head);
 
-    const note = el("p", "np-hint add-course-row-note");
-    row.append(note);
-
     const actions = el("span", "add-course-row-actions");
     row.append(actions);
-
-    if (notTaught) {
-      // S13: a course whose current catalog year has no offering would 404
-      // on its timetable fetch the moment it landed in the plan — the row
-      // says so up front instead of offering an add that later errors. Only
-      // what `offeredYears` supports, though — see the file header.
-      note.textContent = `ikke undervist i ${currentYear}`;
-      return row;
-    }
 
     // One control, never hidden. The old add/added/remove triple hid the
     // button the student had just pressed (a11y-2) — and hid nothing in
@@ -365,8 +313,7 @@ export function mountAddCourse(deps: AddCourseDeps, signal: AbortSignal): AddCou
       sync();
     });
 
-    const invalidate = attachPreview(row, note, code, version);
-    rows.push({ sync, invalidate });
+    rows.push({ sync });
     return row;
   }
 
@@ -385,14 +332,36 @@ export function mountAddCourse(deps: AddCourseDeps, signal: AbortSignal): AddCou
       status.textContent = deps.indexFailed ? "Fikk ikke hentet emnekatalogen." : "Henter emner …";
       return;
     }
+    // Not-taught courses are excluded outright, in the count as well as in
+    // the list. They used to render as a row with the `ikke undervist i {year}`
+    // note and no add control — honest, but this window is twelve rows deep
+    // and on a query like "matematikk" six of them went to courses the dialog
+    // was refusing to add. The catalog page is where a course with no
+    // offering this year is still reachable (it keeps them behind a
+    // disclosure); this surface is for putting a course in *this* semester's
+    // plan, and one it cannot add is not a result.
+    const taught = index.courses.filter(isTaught);
     if (query === "") {
-      status.textContent = `Skriv for å søke i ${index.courses.length} emner.`;
+      status.textContent = `Skriv for å søke i ${taught.length} emner.`;
       return;
     }
 
-    const matched = searchCatalog(index.courses, query);
+    const matched = searchCatalog(taught, query);
     const shown = matched.slice(0, MAX_ROWS);
     for (const course of shown) results.append(buildRow(course));
+
+    if (matched.length === 0) {
+      // "0 treff" over a query that matched only not-taught courses reads as
+      // "no such course", which is wrong and unactionable — TMA4100 exists,
+      // it just has no 2026 offering, and /emne/ and /emner/ both say so.
+      const hidden = searchCatalog(index.courses, query).length;
+      const subject = hidden === 1 ? "Ett emne" : `${hidden} emner`;
+      status.textContent =
+        hidden > 0
+          ? `Ingen treff undervises i ${index.year}. ${subject} i emnekatalogen passer søket, men undervises ikke i år.`
+          : "0 treff.";
+      return;
+    }
 
     status.textContent =
       matched.length > shown.length
@@ -402,10 +371,7 @@ export function mountAddCourse(deps: AddCourseDeps, signal: AbortSignal): AddCou
 
   /** In-place refresh of the rows currently on screen — see `rows`. */
   function syncRows(): void {
-    for (const row of rows) {
-      row.invalidate();
-      row.sync();
-    }
+    for (const row of rows) row.sync();
   }
 
   searchInput.addEventListener("input", render);

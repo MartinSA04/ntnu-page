@@ -6,7 +6,10 @@ const description = "Søk i NTNUs emnekatalog etter emnekode, emnenavn eller stu
 
 <Layout title="Emner · Semesterplan" description={description} wide>
   <p class="np-kicker emner-kicker">Emner</p>
-  <h1 class="emner-title">Emnekatalog</h1>
+  <div class="emner-masthead">
+    <h1 class="emner-title">Emnekatalog</h1>
+    <p class="np-note emner-scale" id="emner-scale"></p>
+  </div>
 
   <div class="np-field emner-search">
     <input
@@ -18,66 +21,165 @@ const description = "Søk i NTNUs emnekatalog etter emnekode, emnenavn eller stu
     />
   </div>
 
-  <div class="emner-facets" id="emner-facets" role="group" aria-label="Filtrer på studiested"></div>
+  <div class="emner-facets">
+    <div class="emner-facet" id="emner-facet-subject" hidden>
+      <span class="emner-facet-label">Fag</span>
+      <div class="emner-chips" id="emner-subjects" role="group" aria-label="Filtrer på fagkode">
+      </div>
+    </div>
+    <div class="emner-facet">
+      <span class="emner-facet-label">Sted</span>
+      <div class="emner-chips" id="emner-facets" role="group" aria-label="Filtrer på studiested">
+      </div>
+    </div>
+  </div>
 
   <p class="emner-status np-hint" id="emner-status" aria-live="polite">Henter emner …</p>
 
-  <ul class="emner-results" id="emner-results"></ul>
+  <!-- D6/§3: a result list is a data surface, so it takes the full --maxw
+       column rather than the prose measure. It is a real <table> because it is
+       real tabular data: five fields per course, and a screen reader gets the
+       column header with each cell instead of a run-on line. -->
+  <table class="emner-table" id="emner-table" hidden>
+    <caption class="emner-caption np-kicker" id="emner-caption"></caption>
+    <thead>
+      <tr>
+        <th scope="col">Kode</th>
+        <th scope="col">Emne</th>
+        <th scope="col">Sted</th>
+        <th scope="col">Eksamen</th>
+        <th scope="col"><span class="sr-only">Handling</span></th>
+      </tr>
+    </thead>
+    <tbody id="emner-results"></tbody>
+  </table>
 </Layout>
 
 <style>
   .emner-kicker {
     margin-bottom: var(--space-2);
   }
-  .emner-title {
+  /* The title and the scale of the thing it names, on one line: "how many
+     courses, from which catalog year" is the first question a search page has
+     to answer and it used to be answerable only by emptying the field. */
+  .emner-masthead {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--space-4);
+    flex-wrap: wrap;
     margin-bottom: var(--space-5);
+  }
+  .emner-title {
+    margin: 0;
   }
   .emner-search {
     margin-bottom: var(--space-4);
-    max-width: var(--measure);
   }
   .emner-facets {
+    display: grid;
+    grid-template-columns: max-content 1fr;
+    align-items: baseline;
+    gap: var(--space-2) var(--space-4);
+    margin-bottom: var(--space-5);
+  }
+  .emner-facet {
+    display: contents;
+  }
+  .emner-facet-label {
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    font-weight: var(--weight-medium);
+    text-transform: uppercase;
+    letter-spacing: var(--tracking-wide);
+    color: var(--faint);
+  }
+  .emner-chips {
     display: flex;
     flex-wrap: wrap;
     gap: var(--space-2);
-    margin-bottom: var(--space-5);
   }
-  .emner-status {
-    margin-bottom: var(--space-4);
+  /* The hit count riding on a subject chip. It is a figure, so it is mono —
+     and it is `aria-hidden` because the chip's own `aria-label` already says
+     "TMA, 30 treff" as a sentence rather than as two glued fragments. */
+  :global(.emner-chip-count) {
+    color: var(--faint);
   }
-  .emner-results {
-    list-style: none;
-    /* D6: a result list is a data surface, not prose — no 38rem cap. */
-    max-width: none;
-    /* The UA's 40px list indent stepped every row right of the search field
-       that produced them, and cost 12% of a 360px viewport (mob-8). */
-    padding-inline-start: 0;
-    display: flex;
-    flex-direction: column;
+  :global(.np-toggle[aria-pressed="true"] .emner-chip-count) {
+    color: color-mix(in srgb, var(--ui-contrast) 72%, transparent);
   }
   .emner-retry {
     margin-left: var(--space-3);
   }
+  .emner-status {
+    margin-bottom: var(--space-4);
+  }
 
-  :global(.emner-row) {
-    display: flex;
-    align-items: center;
-    /* The clash line is a full-width third child, so the row has to wrap. */
-    flex-wrap: wrap;
-    gap: var(--space-4);
-    padding: var(--space-2);
+  /* --- The register ---------------------------------------------------
+     Fixed columns are the whole point. The list used to be a flex row whose
+     add button was a SIBLING of the link holding the metadata, so a row
+     without a button (a course with no offering this year) let its metadata
+     run 430px further right than the row above it — nothing columned up and
+     the eye had to hunt every line. */
+  .emner-table {
+    width: 100%;
+    border-collapse: collapse;
+    /* auto, not fixed: the name column should take the slack and the four
+       data columns should be exactly as wide as their content. */
+    table-layout: auto;
+  }
+  .emner-caption {
+    text-align: left;
+    padding-bottom: var(--space-2);
+  }
+  .emner-table th {
+    text-align: left;
+    padding: 0 var(--space-3) var(--space-2) 0;
+    border-bottom: 1px solid var(--border-strong);
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    font-weight: var(--weight-medium);
+    text-transform: uppercase;
+    letter-spacing: var(--tracking-wide);
+    color: var(--faint);
+    white-space: nowrap;
+  }
+  .emner-table th:last-child,
+  :global(.emner-row td:last-child) {
+    text-align: right;
+    padding-right: 0;
+  }
+
+  :global(.emner-row td) {
+    padding: var(--space-2) var(--space-3) var(--space-2) 0;
     border-bottom: 1px solid var(--border);
+    vertical-align: baseline;
+  }
+  :global(.emner-row:hover td) {
+    background: var(--wash);
+  }
+
+  :global(.emner-cell-code) {
+    white-space: nowrap;
+  }
+  /* Prefix and number set apart by a hair. A column of codes then shows its
+     own families — TMA, MGLU, IMAG — which is exactly what the subject chips
+     above filter on. Not a separator character: the code a student copies is
+     "TMA4110", and a real space or hyphen would ride along on the copy. */
+  :global(.emner-code) {
+    font-size: var(--text-sm);
+  }
+  :global(.emner-code-num) {
+    margin-left: 0.28em;
+    color: var(--muted);
   }
   :global(.emner-row-link) {
-    display: flex;
-    align-items: baseline;
-    gap: var(--space-4);
-    flex: 1;
-    min-width: 0;
-    text-decoration: none;
     color: var(--fg);
+    text-decoration: none;
+    /* WCAG 2.5.8: the link is the row's target, so it gets the full row height
+       rather than just its own line box. */
+    display: block;
     padding: var(--space-1) 0;
-    transition: color var(--dur-fast) var(--ease);
   }
   /* The row already rests at full ink, so hover cannot answer with colour —
      it answers with the underline, the same mark every other link uses. */
@@ -85,106 +187,102 @@ const description = "Søk i NTNUs emnekatalog etter emnekode, emnenavn eller stu
     text-decoration: underline;
     text-decoration-color: color-mix(in srgb, var(--ui) 45%, transparent);
   }
-  :global(.emner-row-code) {
+  :global(.emner-cell-where),
+  :global(.emner-cell-exam) {
     font-family: var(--font-mono);
-    font-size: var(--text-sm);
-    color: var(--muted);
-    flex-shrink: 0;
-    min-width: 7em;
-  }
-  :global(.emner-row-name) {
-    font-size: var(--text-base);
-    flex: 1 1 auto;
-    min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    font-size: var(--text-xs);
+    color: var(--faint);
     white-space: nowrap;
   }
-  :global(.emner-row-exam),
-  :global(.emner-row-location) {
-    font-family: var(--font-mono);
-    font-size: var(--text-xs);
+  :global(.emner-cell-action) {
+    white-space: nowrap;
+  }
+
+  /* --- The not-taught group -------------------------------------------
+     703 of 5 470 catalog rows exist only because the crawl unions two years.
+     They are real courses with real pages, so they are not dropped — but
+     interleaved they were indistinguishable from addable ones, and on
+     "matematikk" they took six of the first twelve rows. They fold instead,
+     under a count that says what is in there. */
+  :global(.emner-fold-row td) {
+    padding: var(--space-3) 0 var(--space-2);
+  }
+  :global(.emner-fold-btn) {
+    background: none;
+    border: 0;
+    padding: 0 var(--space-2) 0 0;
+    color: var(--muted);
+  }
+  :global(.emner-fold-btn:hover) {
+    color: var(--ui);
+    background: none;
+  }
+  :global(.emner-row--stale .emner-row-link),
+  :global(.emner-row--stale .emner-code) {
+    color: var(--muted);
+  }
+  :global(.emner-stale-note) {
     color: var(--faint);
-    flex-shrink: 0;
   }
-  :global(.emner-row-stale) {
-    font-family: var(--font-mono);
-    font-size: var(--text-xs);
-    color: var(--faint);
-    flex-shrink: 0;
+
+  :global(.emner-more td) {
+    padding: var(--space-3) 0;
   }
-  :global(.emner-row-actions) {
-    display: flex;
-    align-items: center;
-    gap: var(--space-2);
-    flex-shrink: 0;
-  }
-  /* The pre-add verdict, on its own line under the row it belongs to. It used
-     to live only in `title`/`aria-label`, so a phone — where the tap that
-     triggers the check is the same tap that commits the add — never showed
-     it at all (search-2). Empty until a hover/focus/tap resolves, and an
-     empty <p> takes no line box, so a cold list is unchanged. */
-  :global(.emner-row-clash) {
-    flex-basis: 100%;
-    margin: 0;
-  }
-  :global(.emner-row-clash.is-clash) {
-    color: var(--clash);
-  }
-  /* Truth at the end of the list too, not only in the status line 200 rows
-     above it (search-1). */
-  :global(.emner-more) {
-    padding: var(--space-3) var(--space-2);
-  }
-  /* A3: at 390px the exam note used to overflow into the location, and the
-     name collapsed to zero width. Wrap the link instead: code + notes on the
-     first line, the full name on its own. */
-  @media (max-width: 40rem) {
+
+  /* --- Narrow ---------------------------------------------------------
+     A5/A3: at 390px five columns cannot hold. The row becomes a block: code
+     and name on the first line, the data under it, the verb last — the same
+     order the wide table reads in, so nothing has to be relearned. */
+  @media (max-width: 46rem) {
+    .emner-facets {
+      grid-template-columns: 1fr;
+      gap: var(--space-1) 0;
+    }
+    .emner-table thead {
+      display: none;
+    }
     :global(.emner-row) {
-      align-items: flex-start;
-      gap: var(--space-2);
+      display: grid;
+      grid-template-columns: max-content 1fr;
+      gap: var(--space-1) var(--space-3);
+      padding: var(--space-2) 0;
+      border-bottom: 1px solid var(--border);
     }
-    :global(.emner-row-link) {
-      flex-wrap: wrap;
-      gap: var(--space-2);
+    :global(.emner-row td) {
+      padding: 0;
+      border-bottom: 0;
     }
-    :global(.emner-row-code) {
-      order: 1;
-      min-width: 0;
+    :global(.emner-cell-name) {
+      grid-column: 2;
     }
-    :global(.emner-row-exam) {
-      order: 2;
-      flex-shrink: 1;
+    :global(.emner-cell-where) {
+      grid-column: 1;
     }
-    :global(.emner-row-location),
-    :global(.emner-row-stale) {
-      order: 3;
-      flex-shrink: 1;
+    :global(.emner-cell-exam) {
+      grid-column: 2;
     }
-    :global(.emner-row-name) {
-      order: 4;
-      flex-basis: 100%;
-      white-space: normal;
-      overflow: visible;
+    :global(.emner-row td:last-child) {
+      grid-column: 1 / -1;
+      text-align: left;
+      padding-top: var(--space-1);
     }
-    :global(.emner-row-actions) {
-      flex-direction: column;
-      align-items: flex-end;
-      gap: var(--space-1);
-    }
-    /* Stacked, the two halves are no longer one line, so the separator that
-       joined them would read as a stray mark. */
-    :global(.emner-row-planlink::before) {
-      content: none;
+    :global(.emner-fold-row td),
+    :global(.emner-more td) {
+      display: block;
     }
   }
 </style>
 
 <script>
-  import { type CatalogRow, searchCatalog } from "../../components/site/catalogSearch";
-  import { clashSentence, planClash } from "../../components/site/planClash";
+  import {
+    type CatalogRow,
+    codePrefix,
+    prefixFacets,
+    searchCatalog,
+  } from "../../components/site/catalogSearch";
+  import { formatShortDate } from "../../components/planner/dom.ts";
   import { onPage } from "../../lib/pageLifecycle.ts";
-  import { createPlanStore } from "../../lib/planner/store.ts";
+  import { activeCourses, createPlanStore } from "../../lib/planner/store.ts";
   import semestersData from "../../../data/semesters.json";
 
   /** `public/data/search-index.json`; the row shape is `CatalogRow`. */
@@ -195,12 +293,18 @@ const description = "Søk i NTNUs emnekatalog etter emnekode, emnenavn eller stu
 
   const RESULT_CAP = 200;
   /**
-   * How long the pointer has to rest on a row's button before its clash check
-   * fires, and how long typing has to stop before the live region and the URL
-   * are written. Both exist because `render()` rebuilds every row on every
-   * keystroke (search-7, search-8, astro-6).
+   * The not-taught group is capped far lower than the live list. It is an
+   * archive drawer, not a result set — "matematikk" puts 12 in it, and a
+   * query broad enough to put 200 in there is a query to narrow, not to
+   * scroll.
    */
-  const HOVER_DWELL_MS = 200;
+  const STALE_CAP = 50;
+  /**
+   * How long typing has to stop before the live region and the URL are
+   * written. `render()` rebuilds every row on every keystroke, so without it
+   * typing "matematikk" wrote ten counts into the live region, nine of them
+   * for prefixes nobody searched (search-8, astro-6).
+   */
   const SETTLE_MS = 350;
   const SEASON_LABELS: Record<string, string> = {
     SPRING: "vår",
@@ -218,39 +322,59 @@ const description = "Søk i NTNUs emnekatalog etter emnekode, emnenavn eller stu
       .filter((c) => c !== "");
   }
 
-  function examNote(exams: [string, string | null][]): string {
+  /**
+   * The exam column: the earliest date if the catalog has one, else the
+   * seasons it has without dates, else nothing.
+   *
+   * A date, not "eksamen høst" — "høst" is what the index happens to store,
+   * while "18. nov" is the thing a student is actually planning around, and
+   * the exam list on `/planlegger/` already speaks in these same short dates.
+   */
+  function examCell(exams: [string, string | null][]): string {
     if (exams.length === 0) return "";
+    const dates = exams.map(([, date]) => date).filter((d): d is string => d !== null);
+    if (dates.length > 0) return formatShortDate(dates.sort()[0] as string);
     const seasons = [...new Set(exams.map(([season]) => SEASON_LABELS[season] ?? season))];
-    return seasons.length > 0 ? `eksamen ${seasons.join(", ")}` : "";
+    return seasons.join(", ");
   }
 
   // Per page-load, not per module: ClientRouter evaluates this module once,
   // so wiring at top level left the search dead after any in-site navigation.
   onPage((signal) => {
     const statusEl = document.getElementById("emner-status") as HTMLParagraphElement | null;
-    const resultsEl = document.getElementById("emner-results") as HTMLUListElement | null;
+    const tableEl = document.getElementById("emner-table") as HTMLTableElement | null;
+    const captionEl = document.getElementById("emner-caption") as HTMLElement | null;
+    const resultsEl = document.getElementById("emner-results") as HTMLTableSectionElement | null;
     const facetsEl = document.getElementById("emner-facets") as HTMLDivElement | null;
+    const subjectsEl = document.getElementById("emner-subjects") as HTMLDivElement | null;
+    const subjectFacetEl = document.getElementById("emner-facet-subject") as HTMLDivElement | null;
+    const scaleEl = document.getElementById("emner-scale") as HTMLParagraphElement | null;
     const searchInput = document.getElementById("emner-search") as HTMLInputElement | null;
-    if (!statusEl || !resultsEl || !facetsEl || !searchInput) return;
+    if (!statusEl || !tableEl || !captionEl || !resultsEl || !facetsEl || !searchInput) return;
+    if (!subjectsEl || !subjectFacetEl || !scaleEl) return;
 
-    const semester = semestersData.current;
-    const store = createPlanStore(semester.id);
-    const clashSemester = {
-      id: semester.id,
-      name: semester.name,
-      teachingWeeks: semester.teachingWeeks,
-    };
+    const store = createPlanStore(semestersData.current.id);
 
     let index: SearchIndex | null = null;
     let loading = false;
     const activeCities = new Set<string>();
+    /**
+     * Selected subject chips. Unlike the cities these are derived from the
+     * *current result set* (there are 360 prefixes in the catalog, which is a
+     * wall, but the six that survive "matematikk" are a filter), so a
+     * selection that the next query cannot honour is pruned rather than left
+     * silently filtering everything to nothing.
+     */
+    const activeSubjects = new Set<string>();
+    /** Whether the not-taught group is expanded; survives re-renders. */
+    let staleOpen = false;
     /**
      * The add controls of the rows currently on screen. A plan change updates
      * them in place instead of re-running `render()`: rebuilding the list
      * removed the very button the student had just pressed, which threw
      * keyboard focus back to `<body>` on every add (A5).
      */
-    const rows: { sync: () => void; invalidate: () => void; cancel: () => void }[] = [];
+    const rows: { sync: () => void }[] = [];
 
     let settleTimer: ReturnType<typeof setTimeout> | null = null;
     function cancelSettle(): void {
@@ -304,95 +428,12 @@ const description = "Søk i NTNUs emnekatalog etter emnekode, emnenavn eller stu
      * which is a WCAG 2.5.3 failure as well as a fourth spelling of one state
      * (copy-6).
      */
-    function setAddState(button: HTMLButtonElement, code: string, sentence: string): void {
+    function setAddState(button: HTMLButtonElement, code: string): void {
       const inPlan = store.hasCourse(code);
       const label = inPlan ? "I planen" : "Legg til i planen";
       button.setAttribute("aria-pressed", String(inPlan));
       button.textContent = label;
-      button.setAttribute(
-        "aria-label",
-        sentence === "" ? `${label}, ${code}` : `${label}, ${code} · ${sentence}`,
-      );
-    }
-
-    /**
-     * U11: the clash verdict has to be available *before* the student
-     * commits, but a verdict per visible row is 200 timetable fetches. So it
-     * is computed lazily on first deliberate hover/focus of the row's add
-     * button, and rendered into the row itself — writing it only into
-     * `title`/`aria-label` meant a touch user, whose tap both triggers the
-     * check and commits the add, never saw it at all (search-2).
-     */
-    function attachClashPreview(
-      button: HTMLButtonElement,
-      clashEl: HTMLElement,
-      code: string,
-      version: string,
-      sync: () => void,
-    ): { invalidate: () => void; cancel: () => void } {
-      let checked = false;
-      let generation = 0;
-      let dwell: ReturnType<typeof setTimeout> | null = null;
-
-      const cancel = (): void => {
-        if (dwell === null) return;
-        clearTimeout(dwell);
-        dwell = null;
-      };
-
-      const check = async (): Promise<void> => {
-        if (checked) return;
-        checked = true;
-        const gen = ++generation;
-        const currentPlan = store.loadPlan();
-        const verdict = await planClash(
-          { code, version },
-          currentPlan,
-          clashSemester,
-          undefined,
-          currentPlan.program?.code ?? null,
-        );
-        // Superseded: the plan changed while this was in flight, so the
-        // verdict is a diff against a plan that no longer exists. Writing it
-        // anyway advertised "Ingen kollisjon i planen din" over a plan that
-        // does collide, in the tooltip *and* the accessible name, until the
-        // next completed check (search-3). Same guard as addCourse.ts.
-        if (gen !== generation) return;
-        const sentence = clashSentence(verdict, clashSemester);
-        button.title = sentence;
-        clashEl.textContent = sentence;
-        clashEl.classList.toggle("is-clash", verdict.kind === "clash");
-        sync();
-      };
-
-      // A dwell, not a bare `pointerenter`: `render()` rebuilds every row on
-      // every keystroke, so a cursor left parked over the button column got a
-      // boundary event from whichever new button landed under it — two
-      // upstream NTNU calls per re-render for courses nobody chose to
-      // inspect (search-7). Focus stays immediate: it is the keyboard
-      // equivalent of a deliberate hover.
-      button.addEventListener("pointerenter", () => {
-        cancel();
-        dwell = setTimeout(check, HOVER_DWELL_MS);
-      });
-      button.addEventListener("pointerleave", cancel);
-      button.addEventListener("pointercancel", cancel);
-      button.addEventListener("focus", check);
-
-      // The verdict is a diff against the plan, so it expires the moment the
-      // plan does. Dropping the cached answer is honest; recomputing 200 of
-      // them eagerly is 200 timetable fetches.
-      return {
-        cancel,
-        invalidate: () => {
-          cancel();
-          checked = false;
-          generation++;
-          button.title = "";
-          clashEl.textContent = "";
-          clashEl.classList.remove("is-clash");
-        },
-      };
+      button.setAttribute("aria-label", `${label}, ${code}`);
     }
 
     /** The catalog narrowed to the selected city chips (all of them = no filter). */
@@ -404,23 +445,207 @@ const description = "Søk i NTNUs emnekatalog etter emnekode, emnenavn eller stu
       );
     }
 
+    /** Whether a row is offered in the catalog's own year. */
+    function isTaught(row: CatalogRow): boolean {
+      return index !== null && row[5].includes(index.year);
+    }
+
+    /** One course as one register line. */
+    function buildRow(course: CatalogRow, stale: boolean): HTMLTableRowElement {
+      const [code, name, location, exams, version, offeredYears] = course;
+      const row = document.createElement("tr");
+      row.className = stale ? "emner-row emner-row--stale" : "emner-row";
+
+      const codeCell = document.createElement("td");
+      codeCell.className = "emner-cell-code";
+      const codeEl = document.createElement("span");
+      codeEl.className = "np-data emner-code";
+      const prefix = codePrefix(code);
+      if (prefix === "") {
+        codeEl.textContent = code;
+      } else {
+        const prefixEl = document.createElement("span");
+        prefixEl.className = "emner-code-prefix";
+        prefixEl.textContent = prefix;
+        const numEl = document.createElement("span");
+        numEl.className = "emner-code-num";
+        numEl.textContent = code.slice(prefix.length);
+        codeEl.append(prefixEl, numEl);
+      }
+      codeCell.append(codeEl);
+
+      const nameCell = document.createElement("td");
+      nameCell.className = "emner-cell-name";
+      const link = document.createElement("a");
+      link.className = "emner-row-link";
+      link.href = `/emne/${encodeURIComponent(code)}/`;
+      link.textContent = name;
+      nameCell.append(link);
+
+      const whereCell = document.createElement("td");
+      whereCell.className = "emner-cell-where";
+      whereCell.textContent = location ?? "";
+
+      const examCellEl = document.createElement("td");
+      examCellEl.className = "emner-cell-exam";
+      examCellEl.textContent = examCell(exams);
+
+      const actionCell = document.createElement("td");
+      actionCell.className = "emner-cell-action";
+
+      row.append(codeCell, nameCell, whereCell, examCellEl, actionCell);
+
+      // C1/crawler-3: a course the catalog year has no offering for
+      // contributes zero blocks to this semester's week, and adding one used
+      // to leave the planner showing a raw English "Not found". It keeps its
+      // page and its row; what it does not get is a verb.
+      if (stale) {
+        const lastYear = offeredYears[0];
+        const note = document.createElement("span");
+        note.className = "np-note emner-stale-note";
+        note.textContent = lastYear === undefined ? "" : `sist undervist ${lastYear}`;
+        actionCell.append(note);
+        return row;
+      }
+
+      const addBtn = document.createElement("button");
+      addBtn.type = "button";
+      addBtn.className = "np-btn emner-row-add";
+
+      // I2: the row was write-only — the "+" mutated localStorage and said
+      // nothing. The button reports the state now.
+      const sync = (): void => setAddState(addBtn, code);
+      sync();
+
+      addBtn.addEventListener("click", () => {
+        if (store.hasCourse(code)) {
+          store.removeCourse(code);
+        } else {
+          store.addCourse({ code, name, version: version || "1" });
+        }
+        // `savePlan` dispatches synchronously, so `syncRows` has normally
+        // already run by here; this keeps the button honest if it has not.
+        sync();
+      });
+
+      rows.push({ sync });
+      actionCell.append(addBtn);
+
+      return row;
+    }
+
+    /** A full-width row carrying one message, spanning every column. */
+    function spanRow(className: string): { row: HTMLTableRowElement; cell: HTMLTableCellElement } {
+      const row = document.createElement("tr");
+      row.className = className;
+      const cell = document.createElement("td");
+      cell.colSpan = 5;
+      row.append(cell);
+      return { row, cell };
+    }
+
+    /** Clears the table. */
+    function resetTable(): void {
+      if (!resultsEl) return;
+      rows.length = 0;
+      resultsEl.replaceChildren();
+    }
+
+    function showTable(caption: string): void {
+      if (!tableEl || !captionEl) return;
+      tableEl.hidden = false;
+      captionEl.textContent = caption;
+      captionEl.hidden = caption === "";
+    }
+
+    /**
+     * The resting page. It used to be a caption over 600px of blank paper —
+     * the one state a student sees before typing anything said nothing about
+     * their own term. It now shows the plan they are searching *into*, in the
+     * exact format the results will arrive in, so the register is already
+     * legible by the time the first query lands.
+     */
+    function renderPlanState(): boolean {
+      if (!index || !tableEl) return false;
+      const planned = activeCourses(store.loadPlan());
+      const byCode = new Map(index.courses.map((c) => [c[0], c]));
+      const known = planned
+        .map((c) => byCode.get(c.code))
+        .filter((c): c is CatalogRow => c !== undefined);
+
+      if (known.length === 0) {
+        tableEl.hidden = true;
+        return false;
+      }
+      for (const course of known) resultsEl?.append(buildRow(course, !isTaught(course)));
+      showTable(`I planen · ${known.length} ${known.length === 1 ? "emne" : "emner"}`);
+      return true;
+    }
+
+    function renderSubjectFacets(ranked: CatalogRow[]): void {
+      if (!subjectsEl || !subjectFacetEl) return;
+      const facets = prefixFacets(ranked);
+      // One chip filters nothing — it is the whole result set wearing a
+      // button. Two is the smallest number that can narrow anything.
+      const useful = facets.length > 1 ? facets.slice(0, 8) : [];
+      const available = new Set(useful.map((f) => f.prefix));
+      // A selection the new query cannot honour would filter every row away
+      // and leave no visible cause; drop it instead.
+      for (const prefix of [...activeSubjects]) {
+        if (!available.has(prefix)) activeSubjects.delete(prefix);
+      }
+
+      subjectFacetEl.hidden = useful.length === 0;
+      subjectsEl.replaceChildren();
+      for (const { prefix, count } of useful) {
+        const chip = document.createElement("button");
+        chip.type = "button";
+        chip.className = "np-toggle";
+        chip.setAttribute("aria-pressed", String(activeSubjects.has(prefix)));
+        chip.setAttribute("aria-label", `${prefix}, ${count} treff`);
+        chip.append(document.createTextNode(prefix));
+        const cnt = document.createElement("span");
+        cnt.className = "np-data emner-chip-count";
+        cnt.textContent = String(count);
+        cnt.setAttribute("aria-hidden", "true");
+        chip.append(cnt);
+        chip.addEventListener("click", () => {
+          if (activeSubjects.has(prefix)) activeSubjects.delete(prefix);
+          else activeSubjects.add(prefix);
+          render();
+        });
+        subjectsEl.append(chip);
+      }
+    }
+
     function render(): void {
-      if (!statusEl || !resultsEl || !searchInput) return;
+      if (!statusEl || !resultsEl || !searchInput || !tableEl) return;
       if (!index) return;
       const raw = searchInput.value.trim();
       const scoped = scopedCourses();
 
-      // §3: no 200-row dump on an empty query — the page is a search mode,
+      resetTable();
+
+      // §3: no 5 470-row dump on an empty query — the page is a search mode,
       // not a browsable catalog. The chips still have to answer something,
       // though: the city filter used to live *below* this return, so a chip
       // latched `aria-pressed` and changed nothing on the page (astro-4).
       if (raw === "") {
-        for (const row of rows) row.cancel();
-        rows.length = 0;
-        resultsEl.replaceChildren();
+        renderSubjectFacets([]);
         const where = activeCities.size > 0 ? ` i ${[...activeCities].join(", ")}` : "";
         const noun = scoped.length === 1 ? "emne" : "emner";
-        setStatus(`Skriv for å søke i ${scoped.length} ${noun}${where}.`, "hint");
+        const planned = renderPlanState();
+        // With a plan on screen the invitation is enough on its own. With no
+        // plan this is the whole page, so it also says where an add goes —
+        // the resting catalog used to be one caption over 600 px of paper,
+        // and nothing on it connected the search to the week it feeds.
+        const size = scoped.length.toLocaleString("nb-NO");
+        setStatus(
+          planned
+            ? `Skriv for å søke i ${size} ${noun}${where}.`
+            : `Skriv for å søke i ${size} ${noun}${where}. Det du legger til, havner i planleggeren.`,
+          "hint",
+        );
         syncQuery(raw);
         return;
       }
@@ -429,120 +654,75 @@ const description = "Søk i NTNUs emnekatalog etter emnekode, emnenavn eller stu
       // through catalog order, and "teknologi" dropped 42 rows of which 39
       // were Trondheim (search-1/astro-5).
       const ranked = searchCatalog(scoped, raw);
+      // Computed on the whole hit set, *before* the subject narrowing, so the
+      // counts on the chips do not change the moment one is pressed.
+      renderSubjectFacets(ranked);
+      const narrowed =
+        activeSubjects.size === 0
+          ? ranked
+          : ranked.filter((row) => activeSubjects.has(codePrefix(row[0])));
 
-      for (const row of rows) row.cancel();
-      resultsEl.replaceChildren();
-      rows.length = 0;
-      const shown = ranked.slice(0, RESULT_CAP);
-      for (const [code, name, location, exams, version, offeredYears] of shown) {
-        const row = document.createElement("li");
-        row.className = "emner-row";
+      const taught = narrowed.filter(isTaught);
+      const stale = narrowed.filter((row) => !isTaught(row));
 
-        const link = document.createElement("a");
-        link.className = "emner-row-link";
-        link.href = `/emne/${encodeURIComponent(code)}/`;
+      const shown = taught.slice(0, RESULT_CAP);
+      for (const course of shown) resultsEl.append(buildRow(course, false));
 
-        const codeEl = document.createElement("span");
-        codeEl.className = "emner-row-code";
-        codeEl.textContent = code;
-
-        const nameEl = document.createElement("span");
-        nameEl.className = "emner-row-name";
-        nameEl.textContent = name;
-
-        link.append(codeEl, nameEl);
-
-        const note = examNote(exams);
-        if (note) {
-          const noteEl = document.createElement("span");
-          noteEl.className = "emner-row-exam";
-          noteEl.textContent = note;
-          link.append(noteEl);
-        }
-
-        if (location) {
-          const locEl = document.createElement("span");
-          locEl.className = "emner-row-location";
-          locEl.textContent = location;
-          link.append(locEl);
-        }
-
-        // C1: 703 of these rows come from last year's catalog only. Adding
-        // one contributes zero blocks to this semester's week, so the row
-        // says so — in the same words /emne/[code]/ uses.
-        const stale = !offeredYears.includes(index.year);
-        if (stale) {
-          const lastYear = offeredYears[0];
-          const staleEl = document.createElement("span");
-          staleEl.className = "emner-row-stale";
-          staleEl.textContent =
-            lastYear === undefined
-              ? `ikke undervist i ${index.year}`
-              : `ikke undervist i ${index.year} · sist undervist ${lastYear}`;
-          link.append(staleEl);
-        }
-
-        row.append(link);
-
-        // No add control on a stale row. It used to be live, and pressing it
-        // produced a planner claiming the whole plan had no teaching plus a
-        // raw English API error in the course row (crawler-3). The dialog's
-        // guard (addCourse.ts) already worked this way; the three add
-        // affordances now agree.
-        if (!stale) {
-          const actions = document.createElement("span");
-          actions.className = "emner-row-actions";
-
-          const clashEl = document.createElement("p");
-          clashEl.className = "np-hint emner-row-clash";
-
-          const addBtn = document.createElement("button");
-          addBtn.type = "button";
-          addBtn.className = "np-btn emner-row-add";
-
-          // I2: the row was write-only — the "+" mutated localStorage and
-          // said nothing. The button reports the state now. It used to be
-          // followed by a "se ukeplanen" link, dropped when the topbar chip
-          // took that job; the chip is deleted too (2026-07-30), so the way
-          // to the week from here is the nav's own Planlegger link.
-          const sync = (): void => setAddState(addBtn, code, clashEl.textContent ?? "");
-          sync();
-
-          addBtn.addEventListener("click", () => {
-            if (store.hasCourse(code)) {
-              store.removeCourse(code);
-            } else {
-              store.addCourse({ code, name, version: version || "1" });
-            }
-            // `savePlan` dispatches synchronously, so `syncRows` has normally
-            // already run by here; this keeps the button honest if it has not.
-            sync();
-          });
-
-          const preview = attachClashPreview(addBtn, clashEl, code, version || "1", sync);
-          rows.push({ sync, ...preview });
-
-          actions.append(addBtn);
-          row.append(actions, clashEl);
-        }
-
+      if (taught.length > RESULT_CAP) {
+        const { row, cell } = spanRow("np-hint emner-more");
+        cell.textContent = `${taught.length - RESULT_CAP} flere treff. Presiser søket.`;
         resultsEl.append(row);
       }
 
-      if (ranked.length > RESULT_CAP) {
-        const more = document.createElement("li");
-        more.className = "np-hint emner-more";
-        more.textContent = `${ranked.length - RESULT_CAP} flere treff. Presiser søket.`;
-        resultsEl.append(more);
+      if (stale.length > 0) {
+        // Open by default when there is nothing else on screen: a page whose
+        // only content is a collapsed group reads as no results at all.
+        const open = staleOpen || taught.length === 0;
+        const { row, cell } = spanRow("emner-fold-row");
+        const toggle = document.createElement("button");
+        toggle.type = "button";
+        toggle.className = "np-summary emner-fold-btn";
+        toggle.setAttribute("aria-expanded", String(open));
+        toggle.textContent = `Ikke undervist i ${index.year} · ${stale.length} ${
+          stale.length === 1 ? "emne" : "emner"
+        }`;
+        cell.append(toggle);
+        resultsEl.append(row);
+
+        const staleRows: HTMLTableRowElement[] = [];
+        for (const course of stale.slice(0, STALE_CAP)) {
+          const built = buildRow(course, true);
+          built.hidden = !open;
+          staleRows.push(built);
+          resultsEl.append(built);
+        }
+        toggle.addEventListener("click", () => {
+          staleOpen = toggle.getAttribute("aria-expanded") !== "true";
+          toggle.setAttribute("aria-expanded", String(staleOpen));
+          for (const node of staleRows) node.hidden = !staleOpen;
+        });
       }
 
+      const anything = shown.length > 0 || stale.length > 0;
+      if (anything) showTable("");
+      else tableEl.hidden = true;
+
       afterTyping(() => {
-        setStatus(
-          ranked.length > RESULT_CAP
-            ? `viser ${RESULT_CAP} av ${ranked.length} treff`
-            : `${ranked.length} treff`,
-          "note",
-        );
+        if (taught.length === 0) {
+          setStatus(
+            stale.length === 0
+              ? "Ingen treff."
+              : `Ingen treff undervises i ${index?.year}. Emnene under har sider, men ingen undervisning i år.`,
+            "hint",
+          );
+        } else {
+          setStatus(
+            taught.length > RESULT_CAP
+              ? `viser ${RESULT_CAP} av ${taught.length} treff`
+              : `${taught.length} treff`,
+            "note",
+          );
+        }
         syncQuery(raw);
       });
     }
@@ -603,6 +783,9 @@ const description = "Søk i NTNUs emnekatalog etter emnekode, emnenavn eller stu
       } finally {
         loading = false;
       }
+      if (scaleEl) {
+        scaleEl.textContent = `${index.courses.length.toLocaleString("nb-NO")} emner · katalog ${index.year}`;
+      }
       renderFacets();
       render();
     }
@@ -620,17 +803,11 @@ const description = "Søk i NTNUs emnekatalog etter emnekode, emnenavn eller stu
     );
     /** In-place refresh of the rows on screen — see `rows`. */
     function syncRows(): void {
-      for (const row of rows) {
-        row.invalidate();
-        row.sync();
-      }
+      for (const row of rows) row.sync();
     }
 
     signal.addEventListener("abort", store.onPlanChange(syncRows));
-    signal.addEventListener("abort", () => {
-      cancelSettle();
-      for (const row of rows) row.cancel();
-    });
+    signal.addEventListener("abort", cancelSettle);
 
     const params = new URLSearchParams(location.search);
     const initialQuery = params.get("q");

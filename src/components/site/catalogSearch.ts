@@ -44,6 +44,51 @@ export function fold(value: string): string {
     .replace(/aa/g, "a");
 }
 
+/**
+ * The letters a course code opens with — `"TMA4100"` → `"TMA"`, `"MGLU1101"`
+ * → `"MGLU"` — or `""` for the 325 catalog codes that do not start with any
+ * (`"6MP4210"` and friends).
+ *
+ * This is a *grouping* rule for this product's result list, not a fact about
+ * NTNU's catalog, which is why it lives here rather than in `ntnu-api`: no
+ * claim is made about what a prefix means, only that rows sharing one belong
+ * together under it. Students already talk this way ("et TMA-emne"), so it
+ * makes a subject filter out of a field the index already has.
+ */
+export function codePrefix(code: string): string {
+  return /^[A-ZÆØÅa-zæøå]+/.exec(code.trim())?.[0].toUpperCase() ?? "";
+}
+
+/** One subject chip: the prefix and how many of the rows carry it. */
+export interface PrefixFacet {
+  prefix: string;
+  count: number;
+}
+
+/**
+ * Subject facets for a *result set*, biggest first.
+ *
+ * Deliberately computed from the rows a query already matched rather than
+ * from the whole catalog: there are 360 prefixes in 5 470 courses, so a
+ * standing index of them is a wall nobody reads, while the 6 that survive
+ * "matematikk" are a filter worth having. Prefix-less codes contribute no
+ * chip — a chip labelled "" filters nothing a student could have meant.
+ *
+ * Ties break on the prefix so the order is stable across renders; without it
+ * the chip row reshuffled under the pointer whenever two subjects drew level.
+ */
+export function prefixFacets(rows: readonly CatalogRow[]): PrefixFacet[] {
+  const counts = new Map<string, number>();
+  for (const [code] of rows) {
+    const prefix = codePrefix(code);
+    if (prefix === "") continue;
+    counts.set(prefix, (counts.get(prefix) ?? 0) + 1);
+  }
+  return [...counts]
+    .map(([prefix, count]) => ({ prefix, count }))
+    .sort((a, b) => b.count - a.count || a.prefix.localeCompare(b.prefix, "nb"));
+}
+
 /** A parsed query: the folded tokens plus the two joined forms ranking needs. */
 export interface CatalogQuery {
   /** Whitespace-separated folded tokens; every one must appear in a row. */

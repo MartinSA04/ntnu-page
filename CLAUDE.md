@@ -44,6 +44,15 @@
   never empty); render the honest state ("ikke undervist i {year} · sist
   undervist {lastYear}") when it excludes the canonical year, never treat it
   as a current course with a mysteriously empty week.
+  The two search surfaces treat those rows **differently on purpose**:
+  `/emner/` keeps them, folded into one labelled `Ikke undervist i {year}`
+  group at the end of the register (they have pages, and the group opens
+  itself when nothing else matched), while the planner's add dialog omits
+  them from the list *and* the count — its window is twelve rows deep and
+  "matematikk" spent six of them on courses it was refusing to add. Don't
+  "restore consistency" by making the dialog render them again; when a query
+  matches only such courses the dialog says so specifically instead of
+  reporting "0 treff".
   `search-index.json`'s per-course row is a **six-element positional
   tuple** — `[code, name, location, exams, version, offeredYears]` — new
   fields are only ever appended, existing positions never renumbered; see

@@ -57,22 +57,61 @@ describe("pickableGroups", () => {
   test("the two kinds are counted separately", () => {
     // One parallel and two øving groups: the lone parallel is not a choice, so
     // it draws no dead radio above the checkboxes that are.
-    const { lectures, others } = pickableGroups([
-      option("forelesningsparallell-1", "lecture"),
-      option("mattelab-1", "other"),
-      option("mattelab-2", "other"),
-    ]);
+    const { lectures, others } = pickableGroups(
+      [
+        option("forelesningsparallell-1", "lecture"),
+        option("mattelab-1", "other"),
+        option("mattelab-2", "other"),
+      ],
+      ["forelesningsparallell-1"],
+    );
     expect(lectures).toEqual([]);
     expect(others.map((o) => o.key)).toEqual(["mattelab-1", "mattelab-2"]);
   });
 
   test("a single option of either kind is not something to choose between", () => {
-    const { lectures, others } = pickableGroups([
-      option("forelesningsparallell-1", "lecture"),
-      option("øvingsgruppe-1", "other"),
-    ]);
+    const { lectures, others } = pickableGroups(
+      [option("forelesningsparallell-1", "lecture"), option("øvingsgruppe-1", "other")],
+      ["forelesningsparallell-1"],
+    );
     expect(lectures).toEqual([]);
     expect(others).toEqual([]);
+  });
+
+  test("lectures the week already draws in full are not a choice (TMA4401)", () => {
+    // TMA4401 publishes "Forelesning" and "Plenumsregning" — two complementary
+    // weekly sessions, both classified as lectures, both on screen. Counting
+    // alone made them two checkboxes, which invited the student to untick
+    // teaching they attend. There is nothing to switch to, so there is no
+    // control.
+    const { lectures, others } = pickableGroups(
+      [
+        option("forelesning", "lecture"),
+        option("plenumsregning", "lecture"),
+        option("øvingstime", "other"),
+      ],
+      ["forelesning", "plenumsregning"],
+    );
+    expect(lectures).toEqual([]);
+    expect(others).toEqual([]);
+  });
+
+  test("a parallel the week is NOT drawing keeps the picker (TMA4400 as MTDT)", () => {
+    // The mirror image, and why the gate cannot be `defaults.length > 0`:
+    // TMA4400 narrows nothing either (three singleton session families), but
+    // the parallels tagged for other programmes are listed and undrawn, and
+    // picking one is a documented capability (groups.ts, e2e/flows.pw.ts).
+    const { lectures } = pickableGroups(
+      [
+        option("forelesning-1-mtdt-mtiot-mtkom", "lecture"),
+        option("forelesning-2-mtiot-mtkom-mtdt", "lecture"),
+        option("plenumsregning", "lecture"),
+        option("forelesning-1-mtbygg-mting", "lecture"),
+      ],
+      ["forelesning-1-mtdt-mtiot-mtkom", "forelesning-2-mtiot-mtkom-mtdt", "plenumsregning"],
+    );
+    expect(lectures.map((o) => o.key)).toContain("forelesning-1-mtbygg-mting");
+    expect(lectures).toHaveLength(4);
   });
 });
 

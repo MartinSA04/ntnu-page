@@ -38,7 +38,11 @@ import {
   type PlannerIndexCourse,
   type TimetableEntry,
 } from "../../lib/planner/data.js";
-import { groupOptions, resolveLectureDefaults } from "../../lib/planner/groups.js";
+import {
+  applyGroupSelection,
+  groupOptions,
+  resolveLectureDefaults,
+} from "../../lib/planner/groups.js";
 import { hueForIndex } from "../../lib/planner/hues.js";
 import { entriesForProgram, entriesInSemester, semesterYear } from "../../lib/planner/schedule.js";
 import {
@@ -458,7 +462,13 @@ export async function mountPlannerApp(
 
     const timetable = state?.bundle?.timetable;
     if (!state || !timetable) {
-      return { ...base, groups: [], selected: course.groups ?? [], defaults: [] };
+      return {
+        ...base,
+        groups: [],
+        selected: course.groups ?? [],
+        defaults: [],
+        drawnLectures: [],
+      };
     }
 
     // `defaults` is read off exactly the set the GRID narrows — the week's
@@ -501,6 +511,14 @@ export async function mountPlannerApp(
       selected,
       defaults: lectures.keys,
       resolved: lectures.resolved,
+      // What the week actually draws, through the SAME call the grid and the
+      // board render from — not `lectures.keys`, which is empty both for a
+      // course with nothing left to switch to and for one whose other
+      // parallels are simply another programme's. `pickableGroups` needs to
+      // tell those apart; only this can.
+      drawnLectures: groupOptions(applyGroupSelection(week, selected, state.programCode))
+        .filter((o) => o.kind === "lecture")
+        .map((o) => o.key),
     };
   }
 
@@ -1259,26 +1277,12 @@ export async function mountPlannerApp(
   // `addCourse.ts`'s dialog, which searches the whole catalog (not just the
   // study plan's own choice pool below) and stays open for multiple adds.
   //
-  // `addCourseDeps` is mutated in place rather than re-passed whenever the
-  // semester, the programme, or the catalog index (still loading at mount)
-  // change — see addCourse.ts's own header for why that's safe without
-  // re-mounting the dialog.
-  const addCourseDeps: AddCourseDeps = {
-    store,
-    index: null,
-    semester: currentSemester() ??
-      semesters[0] ?? {
-        id: defaultSemesterId,
-        name: "",
-        teachingWeeks: [],
-        timetablePublished: false,
-        fromDate: null,
-        toDate: null,
-        examLastDate: null,
-        examFinalDate: null,
-      },
-    programCode: plan.program?.code ?? null,
-  };
+  // `addCourseDeps` is mutated in place rather than re-passed when the catalog
+  // index (still loading at mount) arrives — see addCourse.ts's own header for
+  // why that's safe without re-mounting the dialog. It carried the semester
+  // and the programme code too until the clash preview was removed from the
+  // search surfaces; the dialog reads neither now.
+  const addCourseDeps: AddCourseDeps = { store, index: null };
   const addCourseDialog: AddCourseHandle = mountAddCourse(addCourseDeps, lifeSignal);
 
   /**
@@ -2406,12 +2410,6 @@ export async function mountPlannerApp(
     // banner said Høst 2027 while a line above it insisted on Høst 2026.
     if (next.semesterId !== plan.semesterId) linkNote = null;
     plan = next;
-    // The add-course dialog's deps are mutated in place (not re-passed) —
-    // see its mount call above — so a semester switch or a programme
-    // change/clear is picked up on the dialog's very next open or lazy
-    // clash check, with no re-mount.
-    addCourseDeps.semester = currentSemester() ?? addCourseDeps.semester;
-    addCourseDeps.programCode = plan.program?.code ?? null;
     syncHash();
     renderAll();
     void loadBundles();

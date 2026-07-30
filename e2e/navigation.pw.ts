@@ -156,7 +156,7 @@ test.describe("other pages keep working after navigation", () => {
     await page.goto("/");
     await navTo(page, "/emner/");
     await page.fill("#emner-search", "algoritmer");
-    await expect(page.locator("#emner-results li").first()).toBeVisible({ timeout: 15_000 });
+    await expect(page.locator("#emner-results tr.emner-row").first()).toBeVisible({ timeout: 15_000 });
   });
 
   test("the catalog query survives Back from a course page", async ({ page }) => {
@@ -166,7 +166,7 @@ test.describe("other pages keep working after navigation", () => {
     // query three times.
     await page.goto("/emner/");
     await page.fill("#emner-search", "algoritmer");
-    await expect(page.locator("#emner-results li").first()).toBeVisible({ timeout: 15_000 });
+    await expect(page.locator("#emner-results tr.emner-row").first()).toBeVisible({ timeout: 15_000 });
     // The write is debounced behind the last keystroke (search-7/astro-6), so
     // this is a wait, not a read.
     await expect(page).toHaveURL(/\?q=algoritmer/, { timeout: 15_000 });
@@ -180,7 +180,7 @@ test.describe("other pages keep working after navigation", () => {
     await page.goBack();
     await page.waitForURL(/\/emner\/\?q=algoritmer/);
     await expect(page.locator("#emner-search")).toHaveValue("algoritmer");
-    await expect(page.locator("#emner-results li").first()).toBeVisible({ timeout: 15_000 });
+    await expect(page.locator("#emner-results tr.emner-row").first()).toBeVisible({ timeout: 15_000 });
   });
 
   test("a course page fetches its own course, not the previous one", async ({ page }) => {

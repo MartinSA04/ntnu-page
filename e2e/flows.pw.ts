@@ -443,6 +443,25 @@ test("course settings: never offers a picker with only one option", async ({ pag
   await expect(settings.locator("button", { hasText: "Vis alle grupper" })).toHaveCount(0);
 });
 
+test("course settings: complementary lecture sessions are not offered as a choice", async ({
+  page,
+}) => {
+  // TMA4401 publishes "Forelesning" (mandag + onsdag) and "Plenumsregning"
+  // (fredag): two complementary weekly sessions, both classified as lectures,
+  // both drawn. The count-only gate made them two checkboxes, inviting the
+  // student to untick teaching they attend. The gate is now "is there anything
+  // to switch TO", which is also why TMA4400 above keeps its picker.
+  await page.goto("/planlegger/#26h;-;%2BTMA4401");
+  await expect(gridBlocks(page).first()).toBeVisible({ timeout: 45_000 });
+
+  await settingsFromBlock(page);
+  const settings = page.locator("#planner-course-settings");
+  await expect(settings).toBeVisible();
+  await expect(settings.locator(".course-settings-groups")).toHaveCount(0);
+  await expect(settings.locator(".course-settings-group-row")).toHaveCount(0);
+  await expect(settings).not.toContainText("Plenumsregning");
+});
+
 test("one control opens studieinfo, and semester lives only inside it", async ({ page }) => {
   // The page used to carry three permanent openers for one modal — the
   // topbar chip, a banner "Endre" button, and the page title (silently a
@@ -648,6 +667,94 @@ test("week: Rutenett and Liste show the same week two ways", async ({ page }) =>
   await expect(page.locator(".planner-board")).toHaveCount(0);
 });
 
+test("liste: the collision marks the two sessions, not the day around them", async ({ page }) => {
+  // The mark used to be a bracket on a wrapper every row of the day was
+  // appended to, so one afternoon overlap drew a rule down the side of that
+  // morning's lecture too — the marker claimed the day when it meant two
+  // sessions.
+  //
+  // Friday, from live 2026 data: TDT4110's default parallel at 08:15–10:00
+  // (clean), TDT4120's Forelesning at 12:15–15:00 and TMA4401's Plenumsregning
+  // at 14:15–16:00 (the overlap). Monday and Wednesday carry TMA4401's two
+  // Forelesning slots, so the week has five lecture rows and exactly one
+  // collision.
+  await page.goto("/planlegger/#26h;-;%2BTDT4110,%2BTDT4120,%2BTMA4401");
+  await expect(gridBlocks(page).first()).toBeVisible({ timeout: 45_000 });
+  expect(await settledVerdict(page)).toMatch(/1 kollisjon/);
+
+  await page.click("#planner-view-tavle");
+  const board = page.locator(".planner-board");
+  await expect(board).toBeVisible();
+
+  const rows = page.locator(".planner-board-row");
+  const marked = page.locator(".planner-board-row.is-clashing");
+  await expect(rows).toHaveCount(5);
+  await expect(marked).toHaveCount(2);
+  // The clean 08:15 lecture shares Friday with the pair and stays unmarked —
+  // under the old wrapper it sat inside the bracket with them.
+  await expect(marked.first()).toContainText("12:15");
+  await expect(rows.first()).not.toHaveClass(/is-clashing/);
+
+  const note = page.locator(".planner-board-clash-note");
+  await expect(note).toHaveCount(1);
+  await expect(note).toHaveText(/TDT4120 \/ TMA4401 overlapper|TMA4401 \/ TDT4120 overlapper/);
+  // "Velg én" is gone: a student looking at two overlapping sessions does not
+  // need to be told that overlapping sessions are a choice.
+  await expect(note).not.toContainText("Velg");
+});
+
+test("modals: a click on the backdrop dismisses every one of them", async ({ page }) => {
+  // Owner's call, 2026-07-30, reversing modals-7 — which had reasoned only
+  // that no browser light-dismisses a showModal() dialog *by default*. The
+  // implementation is `closedby="any"` on all three, so this is really a test
+  // that the attribute is set and that nothing inside the card is sitting in
+  // the dialog's own box swallowing the click.
+  await page.goto("/planlegger/#26h;-;%2BTDT4110");
+  await expect(gridBlocks(page).first()).toBeVisible({ timeout: 45_000 });
+
+  // Well outside every card: all three are pinned near the top and none is
+  // wider than 34rem, so the bottom-left corner is backdrop in each case.
+  const backdrop = { x: 8, y: 8 };
+  const viewport = page.viewportSize();
+  if (viewport) backdrop.y = viewport.height - 8;
+
+  for (const [name, open] of [
+    ["#planner-add-dialog", () => page.click("#planner-add-course-btn")],
+    ["#studieinfo-dialog", () => page.click("#planner-edit-plan")],
+    ["#planner-course-settings", () => settingsFromBlock(page)],
+  ] as const) {
+    await open();
+    const dialog = page.locator(name);
+    await expect(dialog).toBeVisible();
+    await page.mouse.click(backdrop.x, backdrop.y);
+    await expect(dialog).toBeHidden();
+  }
+});
+
+test("add dialog: the search field holds still while the results change", async ({ page }) => {
+  // Centred (`margin: auto`), the card re-centred on every keystroke: empty
+  // query → one status line, "tma" → twelve rows, "tma41" → three, and the
+  // caret travelled up and down the screen while the student was still typing
+  // into it. The dialog is pinned near the top instead, so it grows downward.
+  await page.goto("/planlegger/");
+  await page.click("#planner-add-course-btn");
+  const dialog = page.locator("#planner-add-dialog");
+  await expect(dialog).toBeVisible();
+
+  const input = dialog.locator("input.add-course-input");
+  const topOf = async () => (await input.boundingBox())?.y ?? -1;
+  const resting = await topOf();
+  expect(resting).toBeGreaterThan(0);
+
+  for (const query of ["tma", "tma41", "tma4400", "x"]) {
+    await input.fill(query);
+    // Settle whichever branch this query lands on — rows, or a status line
+    // over none — before measuring.
+    await expect(dialog.locator(".add-course-status")).not.toBeEmpty({ timeout: 15_000 });
+    expect(await topOf(), `"${query}" moved the search field`).toBe(resting);
+  }
+});
+
 test("landing page: Nå answers with the room, not a course count", async ({ page }) => {
   // REWORK-2026-07-29b D3. The plan is seeded through the planner (the store is
   // per-origin localStorage), then the landing page is asked what it shows.
@@ -787,41 +894,53 @@ test("course page: the grade figure renders from DBH", async ({ page }) => {
   }
 });
 
-test("catalog: the clash verdict is rendered in the row, not only in a tooltip", async ({
-  page,
-}) => {
-  // search-2: the verdict was written to `title`/`aria-label` only. On touch,
-  // the tap that triggers the check is the same tap that commits the add, so a
-  // phone user saw nothing before or after pressing "Legg til i planen".
-  await page.goto("/planlegger/#26h;-;%2BTDT4160");
-  await expect(courseRows(page)).toHaveCount(1, { timeout: 30_000 });
-
-  await page.goto("/emner/?q=TDT4110");
-  const row = page.locator("#emner-results li", { hasText: "TDT4110" }).first();
-  await expect(row).toBeVisible({ timeout: 15_000 });
-  const clash = row.locator(".emner-row-clash");
-  await expect(clash).toBeEmpty();
-
-  // Hover is a deliberate dwell (200 ms) before the timetable fetch — the same
-  // pointerenter a tap fires. Either verdict is the fix; TDT4110 vs TDT4160 is
-  // a live clash today ("Kolliderer med TDT4160, mandag 14:15."), but asserting
-  // that exact pair would go red on an upstream reshuffle that says nothing
-  // about this finding.
-  await row.locator(".emner-row-add").hover();
-  await expect(clash).toContainText(/kollisjon|kolliderer/i, { timeout: 30_000 });
-});
-
-test("catalog: a course that is not taught this year offers no add button", async ({ page }) => {
+test("catalog: a course that is not taught this year is grouped, not offered", async ({ page }) => {
   // crawler-3: TMA4100 and 702 others exist only in last year's catalog. Adding
   // one contributed nothing to the week and left the planner showing a raw
   // English "fikk ikke hentet detaljer: Not found". The page still exists — the
-  // two-year union is why — so only the add control goes.
+  // two-year union is why — so the row keeps its link and loses its verb.
+  //
+  // They now fold into one labelled group instead of interleaving: on
+  // "matematikk" they took six of the first twelve rows and were
+  // indistinguishable from addable ones. The group opens on its own when
+  // there is nothing else to show, which is this query's case.
   await page.goto("/emner/?q=TMA4100");
-  const row = page.locator("#emner-results li", { hasText: "TMA4100" }).first();
-  await expect(row).toBeVisible({ timeout: 15_000 });
+  const fold = page.locator(".emner-fold-btn");
+  await expect(fold).toBeVisible({ timeout: 15_000 });
+  await expect(fold).toContainText("Ikke undervist i");
+  await expect(fold).toHaveAttribute("aria-expanded", "true");
+
+  const row = page.locator("#emner-results tr.emner-row", { hasText: "TMA4100" }).first();
+  await expect(row).toBeVisible();
   await expect(row.locator('a[href="/emne/TMA4100/"]')).toHaveCount(1);
-  await expect(row).toContainText("ikke undervist i");
+  await expect(row).toContainText("sist undervist");
   await expect(row.locator(".emner-row-add")).toHaveCount(0);
+
+  // Collapsing is what the group is for: the rows go, the count stays.
+  await fold.click();
+  await expect(fold).toHaveAttribute("aria-expanded", "false");
+  await expect(row).toBeHidden();
+  await expect(fold).toContainText("Ikke undervist i");
+});
+
+test("catalog: the subject chips come from the query's own hits", async ({ page }) => {
+  // 360 code prefixes across 5 470 courses is a wall nobody reads; the handful
+  // that survive one query is a filter worth having. The counts are computed
+  // before the narrowing, so pressing a chip does not renumber the others.
+  await page.goto("/emner/?q=matematikk");
+  const chips = page.locator("#emner-subjects .np-toggle");
+  await expect(chips.first()).toBeVisible({ timeout: 15_000 });
+  await expect(chips.first()).toHaveText(/^TMA/);
+
+  const before = await chips.allTextContents();
+  await chips.first().click();
+  await expect(chips.first()).toHaveAttribute("aria-pressed", "true");
+  expect(await chips.allTextContents()).toEqual(before);
+
+  // Every remaining row is a TMA row.
+  const codes = await page.locator("#emner-results tr.emner-row .emner-code").allTextContents();
+  expect(codes.length).toBeGreaterThan(0);
+  for (const code of codes) expect(code).toMatch(/^TMA/);
 });
 
 test("manual adds stay in their semester", async ({ page }) => {

@@ -54,9 +54,9 @@ interface BoardEntry extends ScheduleEntry {
   /**
    * The lectures this session overlaps and the minutes they share, `null` when
    * it overlaps nothing. The row itself only needs to know THAT it
-   * clashes (the pair is bracketed in the margin); the popover a row opens
-   * needs to name the partner, and it is the same card a bar opens, so the
-   * facts behind it cannot be thinner here.
+   * clashes (it carries its own margin rule); the popover a row opens needs to
+   * name the partner, and it is the same card a bar opens, so the facts behind
+   * it cannot be thinner here.
    */
   clash: { partners: string[]; window: { start: number; end: number } } | null;
 }
@@ -127,6 +127,50 @@ function collect(courses: PlanCourseState[], teachingWeeks: number[]): BoardEntr
     }
   }
   return out;
+}
+
+/** One collision incident within a day: the sessions in it and the codes involved. */
+interface ClashSegment {
+  members: Set<BoardEntry>;
+  /** Distinct course codes, in the order the sessions start. */
+  codes: string[];
+}
+
+/**
+ * A day's collisions, split into the separate incidents they actually are.
+ *
+ * Two sessions belong to the same incident when their clash windows overlap —
+ * directly, or through a third session that overlaps both (10:15–12:00 against
+ * 11:15–13:00 against 12:15–14:00 is one running incident, and three notes
+ * would read as three unrelated ones). The sweep is over `clash.window`, which
+ * `renderBoard` has already widened across every conflict group a session
+ * falls in.
+ *
+ * A segment naming one course only is dropped: `mergeParallelSlots` already
+ * collapses a course's parallel sections before the engine sees them, so a
+ * single-code segment would be a course reported as colliding with itself.
+ */
+function clashSegments(items: BoardEntry[]): ClashSegment[] {
+  const clashing = items
+    .filter((e) => e.clash !== null)
+    .sort((a, b) => (a.clash?.window.start ?? 0) - (b.clash?.window.start ?? 0));
+
+  const segments: ClashSegment[] = [];
+  let reach = Number.NEGATIVE_INFINITY;
+  for (const entry of clashing) {
+    const window = entry.clash?.window;
+    if (!window) continue;
+    const open = segments.at(-1);
+    if (!open || window.start >= reach) {
+      segments.push({ members: new Set([entry]), codes: [entry.courseCode] });
+      reach = window.end;
+      continue;
+    }
+    open.members.add(entry);
+    if (!open.codes.includes(entry.courseCode)) open.codes.push(entry.courseCode);
+    reach = Math.max(reach, window.end);
+  }
+  return segments.filter((s) => s.codes.length > 1);
 }
 
 /**
@@ -225,30 +269,43 @@ export function renderBoard(
       continue;
     }
 
-    // A day's clashing sessions are bracketed together in the margin rather
-    // than each being tinted: the mark belongs to the pair, not to either one
-    // of them, and a filled row reads as an error state rather than as two
-    // things you have to choose between.
-    const clashing = items.filter((e) => e.clash);
-    const group = clashing.length > 1 ? el("div", "planner-board-clash") : board;
-    if (group !== board) {
-      group.setAttribute("data-motion-key", `clash-${day}`);
-      board.append(group);
+    // The mark rides on the clashing rows THEMSELVES, not on a wrapper around
+    // the day. It used to be a bracket in the margin of a `<div>` that every
+    // row of the day was appended to, so one 10:15 overlap drew a rule down
+    // the side of Monday's 16:00 øving as well — the marker claimed the day
+    // when it meant two sessions. Adjacent marked rows still join into one
+    // continuous rule (planner-week.css bridges the row hairline), so a pair
+    // reads as a pair without either row being tinted; a filled row reads as
+    // an error state rather than as two things you have to choose between.
+    const segments = clashSegments(items);
+    const marked = new Set(segments.flatMap((s) => [...s.members]));
+    // Each incident's note sits directly under the last row it applies to,
+    // rather than one note per day at the bottom: a day with two unrelated
+    // overlaps had them concatenated into a single sentence naming four
+    // courses, none of which actually clashed with all the others.
+    const noteAfter = new Map<BoardEntry, ClashSegment>();
+    for (const segment of segments) {
+      const last = items.filter((e) => segment.members.has(e)).at(-1);
+      if (last) noteAfter.set(last, segment);
     }
 
     for (const entry of items) {
-      group.append(buildRow(entry, strike++, motionKey(entry, keySeen), options.onBlockClick));
-    }
+      const row = buildRow(entry, strike++, motionKey(entry, keySeen), options.onBlockClick);
+      if (marked.has(entry)) row.classList.add("is-clashing");
+      board.append(row);
 
-    if (clashing.length > 1) {
-      const codes = [...new Set(clashing.map((e) => e.courseCode))];
+      const segment = noteAfter.get(entry);
+      if (!segment) continue;
+      // No "Velg én": a student looking at two overlapping sessions does not
+      // need to be told that overlapping sessions are a choice. The fact is
+      // the whole message.
       const note = el(
         "p",
         "planner-board-clash-note np-data",
-        `${codes.join(" / ")} overlapper. Velg én`,
+        `${segment.codes.join(" / ")} overlapper`,
       );
-      note.setAttribute("data-motion-key", `clash-note-${day}`);
-      group.append(note);
+      note.setAttribute("data-motion-key", `clash-note-${day}-${segment.codes.join("-")}`);
+      board.append(note);
     }
   }
 

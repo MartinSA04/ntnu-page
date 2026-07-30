@@ -552,6 +552,14 @@ details[open] > .np-summary::before {
   transform: rotate(135deg);
 }
 
+/* The same disclosure as a plain button, for the places a real <details> will
+   not go — `/emner/`'s not-taught group is a row inside the results table, and
+   a <details> cannot wrap a set of <tr>s. `aria-expanded` is what carries the
+   state there, so it drives the chevron the way `[open]` does above. */
+button.np-summary[aria-expanded="true"]::before {
+  transform: rotate(135deg);
+}
+
 .np-summary:hover {
   background: var(--wash);
 }

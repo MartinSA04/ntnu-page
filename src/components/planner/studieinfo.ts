@@ -140,6 +140,28 @@ export function cohortHint(input: {
   return notes.join(" ");
 }
 
+/**
+ * A native `<select>` in the shell that owns its indicator.
+ *
+ * The platform arrow is what this replaces: it renders differently in every
+ * engine, sits hard against the control's right edge with nothing answering
+ * the text inset on the left, and cannot be made to say whether the picker is
+ * open. `appearance: none` in site.css takes it away; this puts Lucide's
+ * `chevron-down` back in its place, inset by the same token as the text on the
+ * other side, and CSS turns it over while the select is `:open`.
+ *
+ * The icon is a sibling rather than a background image so it inherits
+ * `currentColor` and stays in step with the icon set the rest of the product
+ * draws from; `pointer-events: none` keeps it out of the way of the control
+ * underneath, which is still an ordinary `<select>` with its native picker,
+ * its native keyboard behaviour and its own label association.
+ */
+function selectShell(select: HTMLSelectElement): HTMLElement {
+  const shell = el("div", "studieinfo-select-shell");
+  shell.append(select, icon("chevronDown", "studieinfo-select-icon"));
+  return shell;
+}
+
 /** "Høst 2026" / "Vår 2027" — the label every surface uses for a semester. */
 function semesterLabel(semester: SemesterSummary): string {
   const season = /h$/i.test(semester.id) ? "Høst" : "Vår";
@@ -199,6 +221,13 @@ export function mountStudieinfo(deps: StudieinfoDeps, signal: AbortSignal): Stud
   const dialog = el("dialog", "np-frame studieinfo-dialog") as HTMLDialogElement;
   dialog.id = "studieinfo-dialog";
   dialog.setAttribute("aria-labelledby", "studieinfo-title");
+  // Light dismiss: Esc *and* a backdrop click (owner's call, 2026-07-30).
+  // Unlike the other two modals this one stages its edits, so a backdrop click
+  // discards them — deliberately the same outcome Esc and Avbryt already have,
+  // and the store is never touched before Lagre, so there is nothing to undo.
+  // The keydown handler below still keeps Escape away from the dialog while
+  // the programme listbox is open; a click has no such conflict.
+  dialog.setAttribute("closedby", "any");
 
   // The same masthead the session card and the course modal open on
   // (`.np-head`), in its paper variant: a programme has no hue of its own, so
@@ -266,7 +295,7 @@ export function mountStudieinfo(deps: StudieinfoDeps, signal: AbortSignal): Stud
   retningSection.append(retningLabel);
   const retningSelect = el("select", "studieinfo-select") as HTMLSelectElement;
   retningSelect.id = "studieinfo-retning-select";
-  retningSection.append(retningSelect);
+  retningSection.append(selectShell(retningSelect));
   const retningNote = el("p", "np-note studieinfo-note", "");
   retningNote.hidden = true;
   retningSection.append(retningNote);
@@ -303,7 +332,7 @@ export function mountStudieinfo(deps: StudieinfoDeps, signal: AbortSignal): Stud
     option.value = semester.id;
     semesterSelect.append(option);
   }
-  semesterSection.append(semesterSelect);
+  semesterSection.append(selectShell(semesterSelect));
   body.append(semesterSection);
 
   // Hint + footer ---------------------------------------------------------

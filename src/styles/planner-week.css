@@ -753,21 +753,28 @@ button.planner-board-row:hover {
   max-width: 9rem;
 }
 
-/* The collision is a bracket in the margin joining the two departures it
-   applies to — not a filled row, which reads as an error state rather than as
-   two things you have to choose between. */
-.planner-board-clash {
+/* The collision is a rule in the margin beside the departures it applies to —
+   not a filled row, which reads as an error state rather than as two things
+   you have to choose between.
+
+   It sits on the clashing ROWS, never on a wrapper around the day: the earlier
+   shape bracketed every row the day contained, so one 10:15 overlap drew the
+   rule past an unrelated 16:00 øving and the mark claimed the whole day. Two
+   marked rows next to each other still read as one bracket — `bottom: -1px`
+   bridges `.planner-board-row`'s hairline so the segments meet — while a
+   marked row with a clean one under it simply stops. The -18px lands inside
+   `.planner-board`'s own `padding-inline-start`, so nothing is clipped and no
+   row shifts. */
+.planner-board-row.is-clashing {
   position: relative;
-  padding-inline-start: 18px;
-  margin-inline-start: -18px;
 }
 
-.planner-board-clash::before {
+.planner-board-row.is-clashing::before {
   content: "";
   position: absolute;
-  left: 0;
-  top: var(--space-2);
-  bottom: var(--space-6);
+  left: -18px;
+  top: 0;
+  bottom: -1px;
   width: 2px;
   background: var(--clash);
 }

@@ -46,6 +46,13 @@ const ICONS = {
     ["path", { d: "M5 12h14" }],
     ["path", { d: "m12 5 7 7-7 7" }],
   ],
+  /**
+   * `chevron-down` — a control that opens something under itself. The open
+   * state is the same mark turned 180°, not a second glyph: two chevrons drawn
+   * separately drift in stroke and optical centre, and a rotation is what the
+   * eye reads as "this one control changed state".
+   */
+  chevronDown: [["path", { d: "m6 9 6 6 6-6" }]],
 } as const satisfies Record<string, readonly IconShape[]>;
 
 export type IconName = keyof typeof ICONS;

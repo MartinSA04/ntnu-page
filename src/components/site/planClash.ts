@@ -1,9 +1,16 @@
 /**
- * Plan-aware clash preview for the catalog surfaces (PRODUCT.md §6 — "the
- * verb, everywhere"; REVIEW U11). `/emne/[code]/` and `/emner/` both have to
- * answer *does this fit my week* **before** the student commits, so both run
- * the candidate course and the plan through the same engine `/planlegger/`
- * uses (`lib/planner/conflicts.ts`) rather than growing a second one.
+ * Plan-aware clash preview for the course page (PRODUCT.md §6 — "the verb,
+ * everywhere"; REVIEW U11). `/emne/[code]/` has to answer *does this fit my
+ * week* **before** the student commits, so it runs the candidate course and
+ * the plan through the same engine `/planlegger/` uses
+ * (`lib/planner/conflicts.ts`) rather than growing a second one.
+ *
+ * **One caller, deliberately** (2026-07-30, owner's call): this used to run on
+ * `/emner/`'s rows and in the add-course dialog too, lazily per row. Both
+ * search surfaces dropped it — searching is not the moment a plan is judged,
+ * and a verdict per visible row is a timetable fetch per row per plan course.
+ * Everything below is unchanged and still fully tested; don't wire it back
+ * into a result list on consistency grounds.
  *
  * Lecture×lecture only, per DR-1: an øving overlap is not a hard conflict,
  * and a false red is the one failure mode DR-1 exists to prevent. Entries are

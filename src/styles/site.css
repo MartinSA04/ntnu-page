@@ -166,11 +166,19 @@
 .studieinfo-dialog {
   width: min(34rem, calc(100vw - 2rem));
   max-width: calc(100vw - 2rem);
-  max-height: min(90vh, 48rem);
-  /* base.css's `* { margin: 0 }` beats the UA `dialog { margin: auto }`, so
-     without this a showModal()'d dialog pins to the top-left instead of
-     centering. */
-  margin: auto;
+  max-height: min(84vh, 48rem);
+  /* Pinned near the top, NOT centred (`margin: auto`, which is what this
+     replaces — base.css's `* { margin: 0 }` beats the UA rule, so the margin
+     has to be stated either way).
+
+     This dialog grows as it is used: picking a programme adds the kull chips,
+     picking a kull can add a studieretning select and a hint under it. Centred,
+     every one of those made the whole card jump upward while the student was
+     reading it, and the control they were about to press moved out from under
+     the pointer. A fixed top offset holds the masthead and the programme field
+     still and lets the card grow downward instead. `margin-block-end: auto`
+     absorbs the slack against the UA's `inset: 0`. */
+  margin: min(8vh, 4rem) auto auto;
   padding: 0;
   color: var(--fg);
 }
@@ -316,16 +324,58 @@
 }
 
 /* Native selects on the field grammar: the control fill, no border, no edge
-   rule, focus is the global ink outline. */
+   rule, focus is the global ink outline — and this product's own indicator
+   rather than the platform arrow, which renders differently in every engine,
+   sits hard against the right edge with nothing answering the text inset on
+   the left, and cannot say whether the picker is open.
+
+   `--select-inset` is the single number the two sides are measured from, so
+   they cannot drift: the text starts one inset in from the leading edge, and
+   the chevron ends one inset in from the trailing one. The end padding is
+   `2 × inset + 1em` — one inset of clear air past the chevron, the chevron
+   itself, and one more between it and the longest option's last glyph. */
+.studieinfo-select-shell {
+  --select-inset: var(--space-3);
+  position: relative;
+  display: grid;
+}
+
 .studieinfo-select {
+  appearance: none;
   min-height: var(--control-h);
-  padding: 0 var(--space-3);
+  padding-block: 0;
+  padding-inline: var(--select-inset) calc(var(--select-inset) * 2 + 1em);
   background: var(--control-bg);
   color: var(--fg);
   font-family: var(--font-sans);
   font-size: var(--text-sm);
   border: 0;
   border-radius: var(--radius-sm);
+}
+
+/* Optically centred on the control, not on the text box: `top: 50%` plus a
+   half-height pull is stable whatever `--control-h` the pointer type resolves
+   to (44px under `pointer: coarse`). `pointer-events: none` keeps the mark out
+   of the way of the select underneath, which is still an ordinary <select>
+   with its native picker and keyboard behaviour. */
+.studieinfo-select-icon {
+  position: absolute;
+  inset-inline-end: var(--select-inset);
+  top: 50%;
+  width: 1em;
+  height: 1em;
+  margin-top: -0.5em;
+  color: var(--muted);
+  pointer-events: none;
+  transition: transform var(--dur-fast) var(--ease);
+}
+
+/* Open is the same mark turned over — a chevron-up drawn separately would
+   drift in stroke and optical centre, and the rotation is what reads as one
+   control changing state. Engines without `:open` on <select> simply leave the
+   chevron down; nothing else about the control depends on it. */
+.studieinfo-select:open + .studieinfo-select-icon {
+  transform: rotate(180deg);
 }
 
 .studieinfo-select:focus-visible {
@@ -370,8 +420,16 @@
 .add-course-dialog {
   width: min(30rem, calc(100vw - 2rem));
   max-width: calc(100vw - 2rem);
-  max-height: min(85vh, 44rem);
-  margin: auto;
+  max-height: min(84vh, 44rem);
+  /* Pinned near the top rather than centred. A centred search dialog is one
+     whose search field moves every time the result list changes length: empty
+     query → one status line, "tma" → twelve rows, "tma41" → three, and the
+     card re-centred on each keystroke, so the caret travelled up and down the
+     screen while the student was still typing into it. With the top edge fixed
+     the field and the masthead never move and the results grow downward under
+     them — which is also the only stable option here, since reserving
+     twelve rows of height would leave a mostly-empty box at rest. */
+  margin: min(8vh, 4rem) auto auto;
   padding: 0;
   color: var(--fg);
 }
@@ -426,9 +484,16 @@
   flex-direction: column;
 }
 
+/* `nowrap`, since the clash/credits note that used to force a line break of
+   its own is gone (see addCourse.ts's header). Wrapping now would only ever
+   be triggered by a long course name, and dropping the verb onto its own line
+   for "Prosedyre- og objektorientert programmering" made that one row twice
+   the height of its neighbours in a twelve-row window. The name wraps inside
+   its own space instead — `.add-course-row-head` shrinks, the button does
+   not. */
 .add-course-row {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   align-items: center;
   gap: var(--gap-3);
   padding: var(--space-2) 0;
@@ -441,6 +506,9 @@
   gap: var(--gap-3);
   flex: 1 1 auto;
   min-width: 0;
+  /* A name too long for one line drops under the code rather than truncating:
+     a course name a student cannot read is not a search result. */
+  flex-wrap: wrap;
 }
 
 .add-course-row-code {
@@ -450,27 +518,6 @@
 .add-course-row-name {
   font-size: var(--text-sm);
   min-width: 0;
-}
-
-/* The lazy clash/credits line (or the not-taught note). Always its own
-   row so it never fights the head/actions line for space, and the space is
-   reserved while it is still empty so a hover cannot reflow the list under the
-   pointer.
-
-   `order` moves it under BOTH the name and the button without moving it in the
-   DOM: it is written between them so a screen reader hears the note as part of
-   the course rather than after the control, but visually a row that keeps the
-   empty line in the middle is three lines tall and only ever says anything on
-   two of them. Nothing here is focusable, so visual and tab order cannot
-   disagree. */
-.add-course-row-note {
-  flex-basis: 100%;
-  order: 1;
-  margin: 0;
-}
-
-.add-course-row-note.is-clash {
-  color: var(--clash);
 }
 
 .add-course-row-actions {
