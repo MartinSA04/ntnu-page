@@ -1123,12 +1123,21 @@ export function renderGrid(
     const dayClash = clashWindowFor(dayEntries);
     if (dayClash) field.append(buildClashZone(dayClash, minMinutes, span));
 
-    // All-day drop-in windows sit behind the day as a band; letting one take a
-    // lane is what turns a Monday with an 08:00–18:00 lab into a slab that
-    // pushes every real session down a row.
+    // A drop-in window gets a strip along the bottom of the row rather than a
+    // lane, because letting one take a lane is what turns a Monday with an
+    // 08:00–18:00 lab into a slab that pushes every real session down a row.
+    // The row reserves height for that strip (`--planner-bands`), so unlike
+    // the backdrop it replaces, nothing is ever drawn over its label.
     const bands = dayEntries.filter(isBandEntry);
+    field.style.setProperty("--planner-bands", bands.length > 0 ? "1" : "0");
     for (const entry of bands) {
-      const block = buildBlock(entry, { ...geometryBase, clashWindow: null }, 0, [], undefined);
+      const block = buildBlock(
+        entry,
+        { ...geometryBase, clashWindow: null },
+        0,
+        [],
+        options.onBlockClick,
+      );
       nodeByEntry.set(entry, block);
       field.append(block);
       blockCount++;

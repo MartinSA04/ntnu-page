@@ -176,6 +176,13 @@
 }
 
 .site-footer a {
+  /* Inline in a sentence, so WCAG 2.5.8 exempts it — but it is also the only
+     catalog link on three of four pages, and 18px is not a thumb target on a
+     phone. Padded to 24 and pulled back out of the line box (a11y-8). */
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  margin-block: -3px;
   color: var(--muted);
 }
 
@@ -582,6 +589,11 @@
 }
 
 .course-settings-link {
+  display: inline-flex;
+  align-items: center;
+  /* The one way out of the modal to the course page, so it is a target and
+     not a tail: 24px tall (WCAG 2.5.8), width unchanged. */
+  min-height: 24px;
   font-size: var(--text-sm);
   color: var(--muted);
   text-decoration: none;
@@ -695,6 +707,9 @@
 }
 
 .block-popover-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
   font-size: var(--text-sm);
   color: var(--muted);
   text-decoration: none;

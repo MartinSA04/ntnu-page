@@ -67,6 +67,7 @@ const gridBlocks = (page: Page) => page.locator("#planner-grid-frame .planner-bl
  */
 const planTitle = (page: Page) => page.locator("#planner-title");
 const editPlan = (page: Page) => page.locator("#planner-edit-plan");
+const editPlanLabel = (page: Page) => page.locator("#planner-edit-plan-label");
 
 /**
  * Waits for `#planner-grid-status` to settle and returns it, failing loudly if
@@ -183,7 +184,7 @@ test("share: a program-less link clears the profile chip", async ({ page }) => {
   // its own name — and the hint carries the invitation instead of a programme.
   await expect(planTitle(page)).toHaveText("Semesterplan");
   await expect(planTitle(page)).not.toContainText("MTDT");
-  await expect(editPlan(page)).toHaveText("velg studieprogram");
+  await expect(editPlanLabel(page)).toHaveText("Velg studieprogram");
 });
 
 test("overlap: two colliding courses stack, both full width and readable", async ({ page }) => {
@@ -1047,7 +1048,10 @@ test("ett navn: the plan is named once, and the switch is not a third toggle", a
     }));
   const atGrid = await ruleAt();
   expect(Number.parseFloat(atGrid.w)).toBeGreaterThan(0);
-  expect(atGrid.x).toBe("0px");
+  // At the first tab, so at the container's own inline start (the tab carries
+  // a negative inline margin, which is how its 24px target is bought without
+  // widening the head — see a11y-8).
+  expect(Number.parseFloat(atGrid.x)).toBeLessThanOrEqual(0);
 
   await page.click("#planner-view-tavle");
   await expect(page.locator(".planner-board").first()).toBeVisible();
@@ -1063,4 +1067,55 @@ test("ett navn: the plan is named once, and the switch is not a third toggle", a
   await expect(others).toHaveAttribute("aria-pressed", "false");
   await others.click();
   await expect(others).toHaveAttribute("aria-pressed", "true");
+});
+
+test.describe("target sizes", () => {
+  /**
+   * WCAG 2.5.8 Target Size (Minimum), AA: every pointer target is at least
+   * 24x24 CSS px. It shipped with six controls under it — the view switch and
+   * the layer tickbox at 21px tall, "endre" at 22, the margin notes at 21, the
+   * modal's course-page link at 21 and the footer's catalog link at 18 — and
+   * nothing could see them (a11y-8). This can.
+   */
+  const MIN = 24;
+
+  const undersized = (page: Page) =>
+    page.evaluate((min) => {
+      const SEL =
+        'a[href], button, input:not([type="hidden"]), select, textarea, summary, [tabindex]:not([tabindex="-1"]), [role="button"]';
+      const out: string[] = [];
+      for (const el of Array.from(document.querySelectorAll(SEL))) {
+        const r = el.getBoundingClientRect();
+        if (r.width === 0 && r.height === 0) continue;
+        const cs = getComputedStyle(el);
+        if (cs.display === "none" || cs.visibility === "hidden") continue;
+        if (r.width >= min && r.height >= min) continue;
+        out.push(
+          `${Math.round(r.width)}x${Math.round(r.height)} ${el.tagName.toLowerCase()}.${(el.className || "").toString().split(/\s+/)[0]}#${el.id}`,
+        );
+      }
+      return out;
+    }, MIN);
+
+  for (const [label, width, height] of [
+    ["desktop", 1440, 900],
+    ["phone", 390, 844],
+  ] as const) {
+    test(`every target on the planner clears ${MIN}px — ${label}`, async ({ page }) => {
+      await page.setViewportSize({ width, height });
+      await page.goto("/planlegger/#26h;MTDT.2026;");
+      await expect(gridBlocks(page).first()).toBeVisible({ timeout: 45_000 });
+      expect(await undersized(page)).toEqual([]);
+
+      // The øving layer brings the margin notes with it, and the list view
+      // swaps the whole week for rows — both add targets the grid has not.
+      await page.locator("#planner-others-toggle").click();
+      await expect(page.locator(".planner-note-groups").first()).toBeVisible();
+      expect(await undersized(page)).toEqual([]);
+
+      await page.locator("#planner-view-tavle").click();
+      await expect(page.locator(".planner-board").first()).toBeVisible();
+      expect(await undersized(page)).toEqual([]);
+    });
+  }
 });

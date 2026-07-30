@@ -99,6 +99,7 @@
   --planner-spine: clamp(5.5rem, 11vw, 9.5rem);
   --planner-lane-h: 34px;
   --planner-bar-h: 28px;
+  --planner-band-h: 18px;
   position: relative;
   /* Eight hours across needs room to stay legible: below this the frame
      scrolls sideways rather than squeezing a lecture into 40 px. The old
@@ -116,6 +117,7 @@
     --planner-spine: 4.25rem;
     --planner-lane-h: 30px;
     --planner-bar-h: 26px;
+    --planner-band-h: 17px;
   }
 }
 
@@ -194,7 +196,17 @@
    week has (DESIGN §4) — it just runs the way time now runs. */
 .planner-grid-field {
   position: relative;
-  min-height: calc(var(--planner-lanes, 1) * var(--planner-lane-h) + 12px);
+  /* Lanes stack from the top; a drop-in band gets its own strip under them
+     (`--planner-bands`, written by `renderGrid`) so the two can never
+     overlap. That reservation is the whole fix for a band whose label used to
+     sit behind a lecture. */
+  min-height: calc(
+    var(--planner-lanes, 1) *
+    var(--planner-lane-h) +
+    var(--planner-bands, 0) *
+    (var(--planner-band-h) + 4px) +
+    12px
+  );
   padding: 6px 0;
   background-image: linear-gradient(to right, var(--ruling-hour) 1px, transparent 1px);
   background-size: calc(100% / var(--planner-hours, 8)) 100%;
@@ -251,13 +263,22 @@
   color: var(--fg);
 }
 
-/* An all-day drop-in window is a backdrop for the day, not a bar in it. */
+/* A drop-in window is not a session you attend at a time — TDT4120's
+   øvingsveiledning is 08:15–14:00 every weekday — so it may not take a lane
+   and push every real session down a row. It used to be a full-height
+   backdrop at 50 % opacity instead, drawn BEHIND the bars: on any day with a
+   lecture in the same hours its own label sat under that lecture and could
+   not be read at all, and what was left looked like a grey slab rather than
+   a course (REWORK-2026-07-30c).
+
+   So it is a strip along the bottom of the row now, in its own reserved band
+   — subordinate by size and position rather than by being hidden, and at full
+   opacity, because nothing is drawn on top of it any more. */
 .planner-block.is-band {
   z-index: 0;
-  top: 4px;
+  top: auto;
   bottom: 4px;
-  height: auto;
-  opacity: 0.5;
+  height: var(--planner-band-h);
 }
 
 .planner-block-code {
@@ -508,6 +529,11 @@
   text-decoration: underline;
   text-decoration-color: color-mix(in srgb, var(--clash) 40%, transparent);
   text-underline-offset: 2px;
+  /* A margin note is a sentence, but it is also the only route to the picker
+     that answers it — so it is a real target, not an inline link. 21px of
+     line box plus this clears WCAG 2.5.8's 24 without moving the note (a11y-8). */
+  padding-block: 3px;
+  margin-block: -3px;
 }
 
 .planner-note-link:hover {

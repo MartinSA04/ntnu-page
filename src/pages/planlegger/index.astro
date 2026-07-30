@@ -44,7 +44,28 @@ const programOptionsJson = JSON.stringify(programOptions).replaceAll("<", "\\u00
         The verdict shares the title's baseline — PRODUCT §1's question and
         its answer on one line, rather than two paragraphs apart. */}
     <div class="planner-head">
-      <h1 class="planner-title" id="planner-title">Semesterplan</h1>
+      <div class="planner-id">
+        <h1 class="planner-title" id="planner-title">Semesterplan</h1>
+        {/* The page's one permanent opener for studieinfo. It was an underlined
+            word in the hint line — 37x22, under WCAG 2.5.8's 24px floor, and
+            reading as a footnote rather than as the control that changes
+            everything above it. Same sliders mark the course rows use for
+            "settings for this thing", one scope up. */}
+        <button type="button" class="np-btn planner-edit-plan" id="planner-edit-plan">
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.8"
+            stroke-linecap="round"
+            aria-hidden="true"
+          >
+            <path d="M20 7h-9M14 17H5M17 3v8M7 13v8" />
+            <path d="M4 7h3M17 17h3" />
+          </svg>
+          <span id="planner-edit-plan-label">Endre</span>
+        </button>
+      </div>
       <p class="planner-status" id="planner-status">
         <span class="planner-verdict" id="planner-grid-status" aria-live="polite"></span>
       </p>
@@ -238,20 +259,27 @@ const programOptionsJson = JSON.stringify(programOptions).replaceAll("<", "\\u00
     margin-top: var(--space-1);
   }
 
-  /* The one control in the banner. A bare underlined word, not a button:
-     it changes a fact stated on the line it sits in, and a filled control
-     there would out-shout the fact. */
-  :global(.planner-edit-plan) {
-    font: inherit;
-    color: var(--muted);
-    border-bottom: 1px solid var(--border-strong);
-    border-radius: 0;
-    transition: color var(--dur-fast) var(--ease);
+  /* The title and the control that changes it, as one group — so the verdict
+     still lands at the far end under `space-between` and does not get spaced
+     out between them. */
+  .planner-id {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: var(--gap-3);
   }
 
-  :global(.planner-edit-plan:hover) {
-    color: var(--ui);
-    border-bottom-color: currentColor;
+  /* A real `.np-btn`: 36px of target, a paper surface, and a mark. It is a
+     paper control rather than an ink fill, so it still does not out-shout the
+     fact beside it — but it no longer hides from the pointer either. */
+  .planner-edit-plan {
+    flex: none;
+  }
+
+  .planner-edit-plan svg {
+    width: 16px;
+    height: 16px;
+    flex: none;
   }
 
   /* The unanswered studieretning, pulled out of a muted line. It asks you to
@@ -411,11 +439,21 @@ const programOptionsJson = JSON.stringify(programOptions).replaceAll("<", "\\u00
      It replaces two `.np-toggle`s, which were the same height, the same
      uppercase mono and the same fill as the øving toggle beside them —
      three identical controls, two completely different behaviours. */
+  /* The negative block margin is what lets the targets be 24px tall without
+     the head growing 15px: the buttons pad out to a real hit area and the
+     container pulls that padding back out of the layout. WCAG 2.5.8 asks for
+     24x24, and a bare word set at --text-sm is 21 (a11y-8). */
+  /* The BUTTONS carry the padding, not this box — a target is only a target
+     where the pointer actually lands, and padding on the container is dead
+     space. The negative margins pull that height back out of the layout, so
+     the head keeps the rhythm it had while each word becomes a 34px target
+     (WCAG 2.5.8 asks 24; a bare word at --text-sm is 21). */
   .planner-view-tabs {
     position: relative;
     display: flex;
     gap: var(--gap-4);
-    padding-bottom: 7px;
+    margin-block: -9px -8px;
+    padding-bottom: 2px;
   }
 
   /* The travelling rule. `--view-x` / `--view-w` are written by
@@ -443,7 +481,11 @@ const programOptionsJson = JSON.stringify(programOptions).replaceAll("<", "\\u00
     font-size: var(--text-sm);
     font-weight: var(--weight-normal);
     color: var(--muted);
-    padding: 0;
+    /* 9px above and 4px below: the rule has to stay ~6px under the word, so
+       the target grows mostly upward, into the gap the section head already
+       has. */
+    padding: 9px var(--space-1) 4px;
+    margin-inline: calc(-1 * var(--space-1));
     border-radius: var(--radius-xs);
     transition: color var(--dur-fast) var(--ease);
   }
@@ -467,6 +509,10 @@ const programOptionsJson = JSON.stringify(programOptions).replaceAll("<", "\\u00
     font-family: var(--font-sans);
     font-size: var(--text-sm);
     color: var(--muted);
+    /* Same trade as the tabs: a 24px target, none of it spent on layout. */
+    margin-block: -7px;
+    padding-block: 7px;
+    border-radius: var(--radius-xs);
     transition: color var(--dur-fast) var(--ease);
   }
 

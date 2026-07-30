@@ -569,3 +569,52 @@ describe("identity across the øving toggle", () => {
     expect(ticks.length).toBeGreaterThan(1);
   });
 });
+
+describe("drop-in windows get a strip, not a lane (REWORK-2026-07-30c)", () => {
+  // TDT4120's øvingsveiledning is 08:15–14:00 every weekday. Long enough to be
+  // a drop-in window rather than a session you attend at a time, so it may not
+  // take a lane and push every real session down a row.
+  const dropIn = entry("Øvingsveiledning", { startTime: "08:15", endTime: "14:00" });
+  const lecture = entry("Forelesning", { startTime: "08:15", endTime: "10:00" });
+
+  const draw2 = () =>
+    draw([state({ code: "TDT4120", bundle: bundleFromEntries([lecture, dropIn]) })], false, true);
+
+  test("the band is a bottom strip and the lecture keeps lane 0", () => {
+    const frame = draw2();
+    const blocks = frame.find("planner-block");
+    const band = blocks.find((b) => b.classes.has("is-band"));
+    const bar = blocks.find((b) => !b.classes.has("is-band"));
+    expect(band).toBeDefined();
+    expect(bar).toBeDefined();
+    // The band does NOT consume a lane — that is the whole reason it exists.
+    expect(bar?.props.get("--planner-lane")).toBe("0");
+    const field = frame.find("planner-grid-field")[0];
+    expect(field?.props.get("--planner-lanes")).toBe("1");
+  });
+
+  test("the row reserves height for the strip, so nothing is drawn over it", () => {
+    // The band used to be a full-height backdrop behind the bars: on a day with
+    // a lecture in the same hours its own label sat under that lecture and
+    // could not be read. The reservation is what makes that impossible.
+    const monday = draw2().find("planner-grid-field")[0];
+    expect(monday?.props.get("--planner-bands")).toBe("1");
+
+    // A day with no drop-in reserves nothing.
+    const quiet = draw(
+      [state({ code: "TMA4400", bundle: bundleFromEntries([entry("Forelesning")]) })],
+      false,
+    ).find("planner-grid-field")[0];
+    expect(quiet?.props.get("--planner-bands")).toBe("0");
+  });
+
+  test("a drop-in is clickable, like every other bar", () => {
+    // As a 50 %-opacity backdrop it took no click handler at all, so the one
+    // thing that could tell you its weeks and its full room list was
+    // unreachable.
+    const band = draw2()
+      .find("planner-block")
+      .find((b) => b.classes.has("is-band"));
+    expect(band?.tagName).toBe("BUTTON");
+  });
+});

@@ -159,6 +159,8 @@ function saveWeekView(view: WeekView): void {
 interface PlannerElements {
   title: HTMLElement;
   contextLine: HTMLElement;
+  editPlan: HTMLButtonElement;
+  editPlanLabel: HTMLElement;
   linkNote: HTMLElement;
   creditLine: HTMLElement;
   creditNote: HTMLElement;
@@ -194,6 +196,8 @@ function getElements(): PlannerElements | null {
   const found = {
     title: byId<HTMLElement>("planner-title"),
     contextLine: byId<HTMLElement>("planner-context-line"),
+    editPlan: byId<HTMLButtonElement>("planner-edit-plan"),
+    editPlanLabel: byId<HTMLElement>("planner-edit-plan-label"),
     linkNote: byId<HTMLElement>("planner-link-note"),
     creditLine: byId<HTMLElement>("planner-credit-line"),
     creditNote: byId<HTMLElement>("planner-credit-note"),
@@ -801,12 +805,11 @@ export async function mountPlannerApp(
     if (semester && !semester.timetablePublished) {
       append(`timeplan publiseres ~${publishMonthFor(semester.id)}`);
     }
-    // Last, so it reads as the action on everything said before it.
-    const edit = el("button", "planner-edit-plan", program ? "endre" : "velg studieprogram");
-    edit.type = "button";
-    edit.id = "planner-edit-plan";
-    edit.addEventListener("click", () => studieinfo.open());
-    append(edit);
+    elements.editPlanLabel.textContent = program ? "Endre" : "Velg studieprogram";
+    elements.editPlan.setAttribute(
+      "aria-label",
+      program ? `Endre studieinfo — ${program.code}` : "Velg studieprogram og kull",
+    );
   }
 
   /**
@@ -1043,6 +1046,7 @@ export async function mountPlannerApp(
     { signal: lifeSignal },
   );
 
+  elements.editPlan.addEventListener("click", () => studieinfo.open(), { signal });
   elements.viewUke.addEventListener("click", () => setWeekView("uke"));
   elements.viewTavle.addEventListener("click", () => setWeekView("tavle"));
   // The travelling rule is measured, so it has to be re-measured whenever the
