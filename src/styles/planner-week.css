@@ -229,9 +229,11 @@
      a one-lane row: a 28 px bar sat 8 px down a 51 px row with 15 px under it.
      Padding cannot fix that; only measuring from the middle can. */
   --planner-content-h: calc(
-    var(--planner-lanes, 1) * var(--planner-lane-h) -
+    var(--planner-lanes, 1) *
+    var(--planner-lane-h) -
     (var(--planner-lane-h) - var(--planner-bar-h)) +
-    var(--planner-bands, 0) * (var(--planner-band-h) + var(--planner-row-pad))
+    var(--planner-bands, 0) *
+    (var(--planner-band-h) + var(--planner-row-pad))
   );
   min-height: calc(var(--planner-content-h) + 2 * var(--planner-row-pad));
   background-image: linear-gradient(to right, var(--ruling-hour) 1px, transparent 1px);
@@ -512,7 +514,6 @@
 .planner-grid.is-settling.is-closing .planner-grid-field {
   transition-delay: calc(var(--planner-departs, 0) * 32ms + var(--dur-fast));
 }
-
 
 /* The arriving layer, struck in with the view switch's own wipe — after the
    room for it has been made. A ruler tick or a newly needed Saturday row is

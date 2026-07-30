@@ -44,9 +44,12 @@ const programOptionsJson = JSON.stringify(programOptions).replaceAll("<", "\\u00
         The verdict shares the title's baseline — PRODUCT §1's question and
         its answer on one line, rather than two paragraphs apart. */}
     <div class="planner-head">
-      <div class="planner-id">
-        <h1 class="planner-title" id="planner-title">Semesterplan</h1>
-        {/* The page's one permanent opener for studieinfo. It was an underlined
+      <h1 class="planner-title" id="planner-title">Semesterplan</h1>
+      <p class="np-hint planner-context-line" id="planner-context-line"></p>
+      <p class="planner-status" id="planner-status">
+        <span class="planner-verdict" id="planner-grid-status" aria-live="polite"></span>
+      </p>
+      {/* The page's one permanent opener for studieinfo. It was an underlined
             word in the hint line: 37x22, under WCAG 2.5.8's 24px floor, and
             reading as a footnote rather than as the control that changes
             everything above it.
@@ -55,8 +58,8 @@ const programOptionsJson = JSON.stringify(programOptions).replaceAll("<", "\\u00
             course rows — "settings for this thing", one scope up. It was a
             hand-drawn approximation of that icon, which is worse than either
             using it or using something else. */}
-        <button type="button" class="np-btn planner-edit-plan" id="planner-edit-plan">
-          <svg
+      <button type="button" class="np-btn planner-edit-plan" id="planner-edit-plan">
+        <svg
             viewBox="0 0 24 24"
             fill="none"
             stroke="currentColor"
@@ -71,14 +74,9 @@ const programOptionsJson = JSON.stringify(programOptions).replaceAll("<", "\\u00
             <circle cx="17" cy="17" r="3" />
             <circle cx="7" cy="7" r="3" />
           </svg>
-          <span id="planner-edit-plan-label">Endre</span>
-        </button>
-      </div>
-      <p class="planner-status" id="planner-status">
-        <span class="planner-verdict" id="planner-grid-status" aria-live="polite"></span>
-      </p>
+        <span id="planner-edit-plan-label">Endre</span>
+      </button>
     </div>
-    <p class="np-hint planner-context-line" id="planner-context-line"></p>
   </div>
 
   <p class="np-hint planner-link-note" id="planner-link-note" hidden></p>
@@ -101,7 +99,10 @@ const programOptionsJson = JSON.stringify(programOptions).replaceAll("<", "\\u00
       </div>
 
       <div class="planner-section-head">
-        <h2 class="planner-section-name" id="planner-week-heading">Uke</h2>
+        {/* Kept for the region's accessible name and hidden from the page: a
+            grid of weekdays with an hour ruler over it does not need to be
+            told it is a week (REWORK-2026-07-30j). */}
+        <h2 class="planner-section-name sr-only" id="planner-week-heading">Uke</h2>
         {/* Two ways of looking at one week, and one layer you can add to it —
             and they used to be three identical uppercase mono `.np-toggle`s in
             a row, so nothing in the form said that one PICKS and the other
@@ -202,18 +203,54 @@ const programOptionsJson = JSON.stringify(programOptions).replaceAll("<", "\\u00
   /* The question and its answer on one baseline. The verdict pushes to the
      far end on a wide screen and drops under the title when there is no room
      — it is never squeezed against the plan's name. */
+  /* A grid rather than a wrapping flex row, because two of these four things
+     are a PAIR and wrapping cannot be told that.
+
+     `MTDT · 2026 · Høst 2026` and `Datateknologi – master (5-årig)` are one
+     statement said twice, short then long. On a phone the flex version wrapped
+     the verdict and the Endre button in between them, so the plan's own name
+     was separated from its own code by a green sentence and a button
+     (REWORK-2026-07-30j). Areas keep the pair adjacent at every width and let
+     the other two move around it. */
   .planner-head {
-    display: flex;
-    align-items: baseline;
-    flex-wrap: wrap;
-    /* `space-between`, not `margin-left: auto` on the verdict: a flex line
-       holding a single item lays it out at main-start under space-between, so
-       the verdict sits at the far end of the title's line when they share one
-       and returns to the left margin when it wraps to its own. The margin
-       version pinned it right in both cases, which on a phone left it floating
-       in the gutter between the title and the hint. */
-    justify-content: space-between;
-    gap: var(--gap-3) var(--gap-6);
+    display: grid;
+    grid-template-areas:
+      "title"
+      "hint"
+      "verdict"
+      "edit";
+    justify-items: start;
+    gap: var(--space-2) var(--gap-6);
+  }
+
+  .planner-title {
+    grid-area: title;
+  }
+
+  .planner-context-line {
+    grid-area: hint;
+  }
+
+  .planner-status {
+    grid-area: verdict;
+  }
+
+  /* Wide enough for all three on the title's line: the code, the control that
+     changes it, and the verdict at the far end. The hint still sits directly
+     under the title, which is the whole point of the areas. */
+  @media (min-width: 46rem) {
+    .planner-head {
+      grid-template-areas:
+        "title edit verdict"
+        "hint  hint hint";
+      grid-template-columns: auto auto minmax(0, 1fr);
+      align-items: center;
+      gap: var(--space-1) var(--gap-6);
+    }
+
+    .planner-status {
+      justify-self: end;
+    }
   }
 
   .planner-verdict {
@@ -264,23 +301,16 @@ const programOptionsJson = JSON.stringify(programOptions).replaceAll("<", "\\u00
 
   .planner-context-line {
     max-width: none;
-    margin-top: var(--space-1);
   }
 
   /* The title and the control that changes it, as one group — so the verdict
      still lands at the far end under `space-between` and does not get spaced
      out between them. */
-  .planner-id {
-    display: flex;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: var(--gap-3);
-  }
-
   /* A real `.np-btn`: 36px of target, a paper surface, and a mark. It is a
      paper control rather than an ink fill, so it still does not out-shout the
      fact beside it — but it no longer hides from the pointer either. */
   .planner-edit-plan {
+    grid-area: edit;
     flex: none;
   }
 

@@ -1337,3 +1337,49 @@ test("the list's own height animates too, so nothing under it jumps", async ({ p
     .poll(() => board.evaluate((el: HTMLElement) => el.style.height), { timeout: 3000 })
     .toBe("");
 });
+
+test.describe("the banner's pair", () => {
+  test.use({ viewport: { width: 390, height: 844 } });
+
+  test("the code and the programme name stay adjacent on a phone", async ({ page }) => {
+    // REWORK-2026-07-30j. `MTDT · 2026 · Høst 2026` and `Datateknologi –
+    // master (5-årig)` are one statement said twice, short then long. The
+    // wrapping flex row put the verdict and the Endre button between them, so
+    // the plan's name was separated from its own code by a green sentence and
+    // a button. Grid areas keep the pair together at every width.
+    await page.goto("/planlegger/#26h;MTDT.2026;");
+    await expect(gridBlocks(page).first()).toBeVisible({ timeout: 45_000 });
+
+    const box = (sel: string) =>
+      page.locator(sel).evaluate((el: HTMLElement) => {
+        const r = el.getBoundingClientRect();
+        return { top: r.top, bottom: r.bottom };
+      });
+    const title = await box("#planner-title");
+    const hint = await box("#planner-context-line");
+    const verdict = await box("#planner-grid-status");
+    const edit = await box("#planner-edit-plan");
+
+    // Nothing fits between them.
+    expect(hint.top - title.bottom).toBeLessThan(16);
+    // And both of the things that used to are below the pair, not inside it.
+    expect(verdict.top).toBeGreaterThanOrEqual(hint.bottom);
+    expect(edit.top).toBeGreaterThanOrEqual(verdict.bottom);
+  });
+});
+
+test("the week is not labelled 'Uke', but the region still has that name", async ({ page }) => {
+  // A grid of weekdays under an hour ruler does not need to be told it is a
+  // week. The heading stays in the tree because the section is named by it.
+  await page.goto("/planlegger/#26h;MTDT.2026;");
+  await expect(gridBlocks(page).first()).toBeVisible({ timeout: 45_000 });
+  const heading = page.locator("#planner-week-heading");
+  await expect(heading).toHaveText("Uke");
+  expect(await heading.evaluate((el: HTMLElement) => el.getBoundingClientRect().width)).toBeLessThan(
+    2,
+  );
+  await expect(page.locator("#planner-region-week")).toHaveAttribute(
+    "aria-labelledby",
+    "planner-week-heading",
+  );
+});

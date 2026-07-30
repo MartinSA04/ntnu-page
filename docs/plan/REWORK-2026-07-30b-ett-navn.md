@@ -37,6 +37,28 @@ the product's own — the one moment the wordmark and the page title are allowed
 to agree, because until you pick a programme the page really is only
 Semesterplan. It swaps back to the grotesk for that state.
 
+## D1b — The code and the programme name are a pair (2026-07-30j)
+
+They are one statement said twice, short then long. The banner was a wrapping
+flex row, and wrapping cannot be told that: on a phone it put the verdict and
+the Endre button *between* them, so the plan's name was separated from its own
+code by a green sentence and a button.
+
+It is a grid of named areas now — `title` / `hint` / `verdict` / `edit` — so
+the pair is adjacent at every width and the other two move around it. Above
+46rem the areas become `title edit verdict` over `hint hint hint`, which is
+the layout D2 describes; below it they stack in that order.
+
+The DOM order is title, hint, verdict, edit, which reads correctly on its own:
+name, description, answer, action. Only the button is focusable, so the
+visual/DOM difference above 46rem costs no focus order.
+
+## D1c — The week is not labelled "Uke" (2026-07-30j)
+
+A grid of weekdays under an hour ruler does not need to be told it is a week.
+The heading stays in the tree as `.sr-only` because `#planner-region-week` is
+named by it; only the visible text goes.
+
 ## D2 — The verdict shares the title's baseline
 
 PRODUCT §1's question and its answer on one line rather than two paragraphs
