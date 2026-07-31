@@ -141,7 +141,7 @@ test("onboarding: modal → programme + kull + retning → a full week", async (
   await expect(dialog).toBeHidden();
 
   await expect(gridBlocks(page).first()).toBeVisible({ timeout: 45_000 });
-  await expect(planTitle(page)).toHaveText("MTDT · 2024 · Høst 2026");
+  await expect(planTitle(page)).toHaveText("MTDT Kull 24 H26");
   expect(page.url()).toMatch(/#26h;MTDT\.2024/);
 });
 
@@ -477,8 +477,9 @@ test("one control opens studieinfo, and semester lives only inside it", async ({
 
   // The banner still STATES the term; it just no longer switches it. It is
   // part of the TITLE now — the plan is one string, in the notation a student
-  // types — with the programme's own name demoted to the hint beside "endre".
-  await expect(planTitle(page)).toHaveText("MTDT · 2026 · Høst 2026");
+  // writes on a timetable — with the programme's own name demoted to the hint
+  // beside "endre".
+  await expect(planTitle(page)).toHaveText("MTDT Kull 26 H26");
   await expect(page.locator("#planner-context-line")).toContainText("Datateknologi");
 
   // With a plan set, the week is a real grid — so no empty-state card is on
@@ -1215,7 +1216,7 @@ test("MTIØT: a programme code containing Æ/Ø/Å resolves, not a 400 (B1)", as
     )
     .toBe(true);
 
-  await expect(planTitle(page)).toContainText("MTIØT · 2024");
+  await expect(planTitle(page)).toContainText("MTIØT Kull 24");
 });
 
 test("BSPL: a campus choice whose own code contains Ø survives a reload (B10)", async ({
@@ -1459,7 +1460,7 @@ test("ett navn: the plan is named once, and the switch is not a third toggle", a
   await page.goto("/planlegger/#26h;MTDT.2026;");
   await expect(gridBlocks(page).first()).toBeVisible({ timeout: 45_000 });
 
-  await expect(planTitle(page)).toHaveText("MTDT · 2026 · Høst 2026");
+  await expect(planTitle(page)).toHaveText("MTDT Kull 26 H26");
   await expect(page.locator("#studieinfo-chip")).toHaveCount(0);
   // Three topbar children on every page now (the ThemeToggle ships a <script>
   // beside its button, which is not one): wordmark, nav, toggle. The chip that
@@ -1776,18 +1777,111 @@ test.describe("the banner's pair", () => {
     const box = (sel: string) =>
       page.locator(sel).evaluate((el: HTMLElement) => {
         const r = el.getBoundingClientRect();
-        return { top: r.top, bottom: r.bottom };
+        return { top: r.top, bottom: r.bottom, left: r.left, right: r.right };
       });
     const title = await box("#planner-title");
     const hint = await box("#planner-context-line");
     const verdict = await box("#planner-grid-status");
     const edit = await box("#planner-edit-plan");
+    const banner = await box(".planner-banner");
 
-    // Nothing fits between them.
-    expect(hint.top - title.bottom).toBeLessThan(16);
-    // And both of the things that used to are below the pair, not inside it.
-    expect(verdict.top).toBeGreaterThanOrEqual(hint.bottom);
-    expect(edit.top).toBeGreaterThanOrEqual(verdict.bottom);
+    // Nothing fits between them: the gap is smaller than a line of text at any
+    // step on the page's scale, so no sentence can have got in there. It is
+    // wider than it was (8 px of grid gap plus the slack a 44 px control leaves
+    // around a 22 px title) and still nothing fits.
+    expect(hint.top - title.bottom).toBeLessThan(20);
+    // The two things that used to break the pair up are still not inside it —
+    // and neither costs a row of its own any more: the edit control shares the
+    // title's line, and a clean verdict is not printed here at all.
+    expect(edit.top).toBeLessThan(title.bottom);
+    expect(edit.left).toBeGreaterThan(title.right);
+    expect(verdict.bottom - verdict.top).toBe(0);
+    // Two rows, not four. It was 138 px, which is 16 % of this screen spent
+    // naming a plan before any of it is drawn.
+    expect(banner.bottom - banner.top).toBeLessThan(100);
+  });
+
+  test("the verdict appears on a phone exactly when it has something to report", async ({
+    page,
+  }) => {
+    // "ingen kollisjoner" is the answer to a question nobody asked; a
+    // collision is not. TDT4120's Friday lecture collides with TDT4109's, the
+    // clash the suite already establishes elsewhere.
+    await page.goto("/planlegger/#26h;MTDT.2026;%2BTDT4120");
+    await expect(gridBlocks(page).first()).toBeVisible({ timeout: 45_000 });
+
+    const verdict = page.locator("#planner-grid-status");
+    await expect(verdict).toBeVisible({ timeout: 30_000 });
+    await expect(verdict).toContainText("kollisjon");
+  });
+});
+
+test.describe("the phone's week", () => {
+  test.use({ viewport: { width: 390, height: 844 } });
+
+  test("a room is printed whole or not printed", async ({ page }) => {
+    // `TFY4345 KJL…` for a room called KJL2: one ellipsis standing in for one
+    // character, because the room and the activity name shared a box. They are
+    // two boxes now and `fitBlockLabels` drops whichever the bar cannot hold —
+    // the room whole or not at all, the activity only while a cut still leaves
+    // something to read.
+    await page.goto("/planlegger/#26h;MTDT.2026;");
+    await expect(gridBlocks(page).first()).toBeVisible({ timeout: 45_000 });
+
+    // `Array.from`, not a spread, and no generic type arguments: this file is
+    // in the Node typecheck pass, whose `lib` has neither DOM.Iterable nor the
+    // typed `querySelector` overloads.
+    const cut = await page.evaluate(() =>
+      Array.from(document.querySelectorAll(".planner-grid .planner-block-room"))
+        .filter((room) => getComputedStyle(room).display !== "none")
+        .filter((room) => room.scrollWidth > room.clientWidth + 1)
+        .map((room) => room.textContent),
+    );
+    expect(cut).toEqual([]);
+  });
+
+  test("the days stay put while the week is dragged", async ({ page }) => {
+    // Five days and eight hours do not fit a phone, so the axis scrolls — and
+    // the one thing that may not scroll with it is the column that says which
+    // row you are reading. Dragged to the right edge, `.planner-grid-spine`
+    // measured x = −162: the gesture the page asks for was the gesture that
+    // took the weekday labels off the screen.
+    await page.goto("/planlegger/#26h;MTDT.2026;");
+    await expect(gridBlocks(page).first()).toBeVisible({ timeout: 45_000 });
+
+    const frame = page.locator("#planner-grid-frame");
+    const spine = page.locator(".planner-grid-spine").first();
+    const before = await spine.evaluate((el) => Math.round(el.getBoundingClientRect().x));
+
+    await frame.evaluate((el) => {
+      el.scrollLeft = el.scrollWidth;
+    });
+    await page.waitForTimeout(200);
+    const after = await spine.evaluate((el) => Math.round(el.getBoundingClientRect().x));
+    expect(after).toBe(before);
+
+    // And the fade that says "there is more" is never drawn over it: the left
+    // ramp used to veil MANDAG…FREDAG while the bars behind them stayed crisp.
+    const mask = await frame.evaluate((el) => getComputedStyle(el).maskImage);
+    expect(mask).not.toContain("transparent 0");
+  });
+
+  test("the margin notes fold to one line that still qualifies the verdict", async ({ page }) => {
+    // mob-D. HMS0002 publishes no lecture-classified activity, so MTDT's week
+    // carries exactly one note — 83 px of paragraph under a 233 px week.
+    await page.goto("/planlegger/#26h;MTDT.2026;");
+    await expect(gridBlocks(page).first()).toBeVisible({ timeout: 45_000 });
+
+    const fold = page.locator("#planner-grid-notes details.planner-notes-fold");
+    await expect(fold).toBeVisible();
+    // Closed on a phone, and the line still says the check is incomplete —
+    // the fold may take the explanation, never the qualification.
+    expect(await fold.evaluate((el: HTMLDetailsElement) => el.open)).toBe(false);
+    await expect(fold.locator("summary")).toContainText("kollisjonssjekken er ufullstendig");
+    await expect(fold.locator(".planner-grid-note")).toBeHidden();
+
+    await fold.locator("summary").click();
+    await expect(fold.locator(".planner-grid-note")).toBeVisible();
   });
 });
 

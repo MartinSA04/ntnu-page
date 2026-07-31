@@ -646,7 +646,13 @@ function buildGridShell(
   const rulerTrack = el("div", "planner-grid-ruler-track");
   rulerTrack.setAttribute("aria-hidden", "true");
   for (let hour = Math.ceil(minMinutes / 60); hour <= Math.floor(maxMinutes / 60); hour++) {
-    const tick = el("span", "planner-grid-tick np-data", String(hour).padStart(2, "0"));
+    // The mark and the figure are two elements because they are pinned
+    // differently: the hairline sits exactly on the minute, the figure is
+    // centred on it — except at the two ends of the axis, where centring puts
+    // half of "08" under the sticky spine and half of the last hour past the
+    // frame's edge (mob-E). Only the figure moves; the mark never does.
+    const tick = el("span", "planner-grid-tick");
+    tick.append(el("span", "planner-grid-tick-figure np-data", String(hour).padStart(2, "0")));
     // The hour is the tick's identity across a re-render: when the øving layer
     // stretches the axis, 10:00 has to travel to its new percentage rather
     // than be replaced by a different element that happens to say "10"
@@ -667,7 +673,18 @@ function buildGridShell(
     // A real word, not an abbreviation: the spine has the width for it, and
     // "mandag" is a sentence fragment, so it is the grotesk, not the mono
     // (Data-Is-Mono cuts the other way here).
-    row.append(el("div", "planner-grid-spine", dayName(day)));
+    //
+    // On a phone it does not have the width for it — 68 px of a 358 px screen,
+    // in front of a week that is already wider than the screen — so the
+    // three-letter form rides along, `aria-hidden`, and the CSS shows one or
+    // the other. The full word stays in the accessibility tree at every width:
+    // "man" is an abbreviation a screen reader has no way to expand.
+    const spine = el("div", "planner-grid-spine");
+    spine.append(el("span", "planner-grid-spine-long", dayName(day)));
+    const short = el("span", "planner-grid-spine-short", dayName(day).slice(0, 3));
+    short.setAttribute("aria-hidden", "true");
+    spine.append(short);
+    row.append(spine);
 
     // Bars are absolutely positioned against this box, so it — not the grid —
     // has to be the positioned ancestor, or every day's bars would resolve
@@ -917,12 +934,15 @@ function buildBlock(
   // what it is, rather than when it is (REWORK-2026-07-29b D1).
   block.append(el("span", "planner-block-code np-data", entry.courseCode));
   if (durationMinutes(entry) >= COMPACT_BLOCK_MINUTES) {
-    // Room FIRST: the bar has room for one of the two and the ellipsis eats
-    // whatever is last, so the fact a student is walking somewhere to find out
-    // survives and the activity label is what gets cut (the same reasoning as
-    // week-4, re-aimed now that the axis carries the time).
-    const what = [entry.rooms, label].filter(Boolean).join(" · ");
-    if (what) block.append(el("span", "planner-block-what", what));
+    // Room and activity are two facts and get two boxes. Joined into one
+    // string they shared one ellipsis, and the ellipsis is wider than what it
+    // stood in for: `TFY4345 KJL…` for a four-character room called KJL2, and
+    // `TFE4146 S1 · F…` where the whole of "· F…" said nothing at all. A room
+    // is now printed whole or not printed, and an activity name that has no
+    // room to say anything is dropped rather than abbreviated to a letter —
+    // `fitBlockLabels` decides both from the bar's real width.
+    if (entry.rooms) block.append(el("span", "planner-block-room np-data", entry.rooms));
+    if (label) block.append(el("span", "planner-block-what", label));
   }
 
   if (onBlockClick) {
@@ -934,6 +954,89 @@ function buildBlock(
   return block;
 }
 
+/** How far the edge fade reaches once you have dragged at least that far. */
+const SCROLL_FADE_PX = 16;
+
+/**
+ * The edge fades, written as two lengths the mask reads (planner-week.css).
+ *
+ * Each one GROWS with the drag instead of switching on with it: at rest the
+ * near edge fades over nothing, and by 16 px of scrolling it has reached its
+ * full depth. Toggled by `[data-scroll]` alone, a 40 px veil appeared over the
+ * week the instant a finger moved one pixel, which reads as the page flinching
+ * rather than as an edge saying "there is more this way".
+ *
+ * The third length is the horizontal scrollbar's own strip. The mask is on the
+ * scroll container, so without it the fade greys out the scrollbar — the one
+ * part of the frame that is not the week, and the part that says most plainly
+ * that the week scrolls. It is 0 on every platform with overlay scrollbars.
+ */
+export function setScrollFade(frame: HTMLElement, left: number, maxScroll: number): void {
+  const near = Math.min(Math.max(left, 0), SCROLL_FADE_PX);
+  const far = Math.min(Math.max(maxScroll - left, 0), SCROLL_FADE_PX);
+  frame.style.setProperty("--planner-fade-start", `${Math.round(near)}px`);
+  frame.style.setProperty("--planner-fade-end", `${Math.round(far)}px`);
+  const scrollbar = Math.max(0, (frame.offsetHeight || 0) - (frame.clientHeight || 0));
+  frame.style.setProperty("--planner-scrollbar", `${scrollbar}px`);
+}
+
+/**
+ * Decides what each bar has room to SAY — never where it says it.
+ *
+ * A bar carries up to three facts, in the order they may be given up in: the
+ * course code, the room, and what the session is called. Only the last of them
+ * may ever be cut, and only where a cut still leaves something worth reading.
+ * The rule this enforces, in one line: **an ellipsis must never be wider than
+ * the text it replaces.**
+ *
+ * It is purely subtractive — it hides, it never moves anything out of a bar or
+ * changes a bar's width, because a bar's width is its duration. Where even the
+ * code will not fit, the code is what stays and it clips: at that point the
+ * bar is a colour and a tap target, and the popover has the rest.
+ *
+ * Measure-then-mutate in two passes: reading a box after writing a class is a
+ * forced reflow per block, and a week can hold thirty of them.
+ */
+export function fitBlockLabels(frame: HTMLElement): void {
+  const blocks = Array.from(frame.querySelectorAll<HTMLElement>(".planner-grid .planner-block"));
+  const first = blocks[0];
+  if (!first) return;
+  for (const block of blocks) block.classList.remove("is-roomless", "is-typeless");
+
+  const style = globalThis.getComputedStyle?.(first);
+  const padding = style
+    ? (Number.parseFloat(style.paddingInlineStart) || 0) +
+      (Number.parseFloat(style.paddingInlineEnd) || 0)
+    : 0;
+  const GAP = 8; // --gap-2, between two facts on a bar
+  // Below this an activity name has nothing to say: `Forelesningsparallell 1`
+  // cut to three characters and an ellipsis is noise where the fact it is
+  // crowding out — the room — is the one a student walks by.
+  const MIN_TYPE = 44;
+
+  const hide: { block: HTMLElement; mode: "is-roomless" | "is-typeless" }[] = [];
+  for (const block of blocks) {
+    const room = block.querySelector<HTMLElement>(".planner-block-room");
+    const what = block.querySelector<HTMLElement>(".planner-block-what");
+    if (!room && !what) continue;
+    const avail = block.clientWidth - padding;
+    const code = block.querySelector<HTMLElement>(".planner-block-code")?.offsetWidth ?? 0;
+    const roomWidth = room ? GAP + room.offsetWidth : 0;
+    if (code + roomWidth > avail + 1) {
+      // The room would be cut, so it is not printed at all — and neither is
+      // anything that would have followed it.
+      hide.push({ block, mode: "is-roomless" });
+      continue;
+    }
+    if (!what) continue;
+    const left = avail - code - roomWidth - GAP;
+    // Whole, or long enough that the ellipsis is earning its place.
+    if (what.scrollWidth > left && left < MIN_TYPE) hide.push({ block, mode: "is-typeless" });
+  }
+
+  for (const { block, mode } of hide) block.classList.add(mode);
+}
+
 function blockId(entry: GridEntry): string {
   // The ordinal is load-bearing: (code, day, start) is NOT unique — EXPH0300
   // publishes "Forelesningsparallell 2 Trondheim" and "…3 Gjøvik" at the same
@@ -943,6 +1046,40 @@ function blockId(entry: GridEntry): string {
 }
 
 // --- Notes ----------------------------------------------------------------
+
+/**
+ * The margin notes, folded behind one line (mob-D, 2026-07-31).
+ *
+ * What a fold may and may not take with it is the whole design here. It takes
+ * the *explanations* — which course NTNU publishes no timetable for, which one
+ * is not taught this semester, which one has no lecture to draw. It does not
+ * take the *count*, which stays on the line, and it does not take the
+ * qualification: if any folded note means the collision check does not cover
+ * the whole plan, the summary says so itself, so the fold can never leave a
+ * green verdict standing on an incomplete check. Nor does it take anything
+ * with a verb in it: collisions and the "velg din gruppe" lines are appended
+ * above this and stay open, because they are things to act on.
+ *
+ * Open by default above 40rem, the same boundary the column cap uses: on a
+ * desktop the notes sit beside a week that has room for them and nothing is
+ * gained by hiding them. Crossing that boundary re-renders the grid
+ * (plannerApp's `change` listener), so a rotation lands on the right state.
+ */
+function foldNotes(notes: HTMLElement[], count: number, incomplete: boolean): HTMLElement {
+  const fold = el("details", "planner-notes-fold");
+  fold.open = globalThis.matchMedia?.("(max-width: 40rem)").matches !== true;
+
+  const summary = el("summary", "np-summary planner-notes-summary");
+  summary.append(el("span", "np-data", String(count)));
+  summary.append(count === 1 ? " merknad" : " merknader");
+  // The half of the sentence a student has to act on, said without opening
+  // anything. Ink, never red: an incomplete check is a gap, not a clash
+  // (DESIGN §2, and the same rule `renderVerdict` follows).
+  summary.append(incomplete ? " · kollisjonssjekken er ufullstendig" : " om uka");
+  fold.append(summary);
+  fold.append(...notes);
+  return fold;
+}
 
 /**
  * Builds the collision sentence into `host` and returns the same text flat,
@@ -1345,6 +1482,7 @@ export function renderGrid(
   // is a whole weekday arriving at once.
   shell.element.style.setProperty("--planner-step", `${staggerStep(strikeIndex, 55)}ms`);
   frame.replaceChildren(shell.element);
+  fitBlockLabels(frame);
   wirePointer(shell.element, minMinutes, span);
   syncNowMarker(frame);
 
@@ -1353,53 +1491,81 @@ export function renderGrid(
   // damage and buries the actionable fact (U3).
   notesHost.replaceChildren();
 
+  // The notes that EXPLAIN are collected first and folded (mob-D).
+  // Under a 265 px week these paragraphs ran to 83 px on a phone — a third of
+  // the week's own height spent qualifying it — and the fold is what buys the
+  // week that back without deleting a word: the count stays on screen, and so
+  // does the half of the sentence that qualifies the verdict (`incomplete`
+  // below).
+  //
+  // What may NOT be folded is anything that asks the student to DO something.
+  // Collisions, because red is the one mark on this page that may never be one
+  // tap away; and the "velg din gruppe / velg di forelesning" lines, because
+  // they are the controls that change what the week draws, not sentences about
+  // it. A fold takes explanations only.
+  const folded: HTMLElement[] = [];
+  let noteCount = 0;
+  // Set by any note that says the collision check does not cover everything.
+  // It is hoisted into the summary, so a folded note can never leave a green
+  // "ingen kollisjoner" standing unqualified.
+  let incomplete = false;
+
   // The gaps come first: they qualify every sentence below them. A course we
   // could not fetch makes the whole collision check incomplete; a course NTNU
   // publishes nothing for — or nothing in this semester — is a real answer,
   // but it is one the week cannot draw, so it is said instead of vanishing
   // (pc-3/ux-4).
   if (gaps.failed.length > 0) {
-    notesHost.append(
+    folded.push(
       gapNote(
         "Fikk ikke hentet timeplan for ",
         gaps.failed,
         ". Kollisjonssjekken er ufullstendig.",
       ),
     );
+    noteCount += 1;
+    incomplete = true;
   }
   if (gaps.pending.length > 0) {
-    notesHost.append(
+    folded.push(
       gapNote("Mangler timeplan for ", gaps.pending, ". Kollisjonssjekken er ufullstendig."),
     );
+    noteCount += 1;
+    incomplete = true;
   }
   if (gaps.empty.length > 0) {
-    notesHost.append(gapNote("NTNU har ingen timeplan for ", gaps.empty, "."));
+    folded.push(gapNote("NTNU har ingen timeplan for ", gaps.empty, "."));
+    noteCount += 1;
   }
   if (gaps.offSemester.length > 0) {
-    notesHost.append(gapNote("", gaps.offSemester, " undervises ikke i valgt semester."));
+    folded.push(gapNote("", gaps.offSemester, " undervises ikke i valgt semester."));
+    noteCount += 1;
   }
 
   if (mutedLayerAutoRevealed) {
-    notesHost.append(
+    folded.push(
       el(
         "p",
         "planner-grid-note np-hint",
         "Ingen aktiviteter er merket som forelesning i disse emnene. Viser all undervisning.",
       ),
     );
+    noteCount += 1;
   } else if (!revealOthers) {
     // The plan-global auto-reveal above did not fire because SOME course has a
     // lecture — which is exactly when a lecture-less course disappears without
     // a word. Name it rather than draw it (`lectureLessCourses`).
     const silent = lectureLessCourses(rawEntries);
     if (silent.length > 0) {
-      notesHost.append(
+      folded.push(
         gapNote(
           "Ingen aktiviteter er merket som forelesning i ",
           silent,
           ". Timene vises ikke her, og de er ikke med i kollisjonssjekken. Slå på «Øvinger og labber» for å se dem.",
         ),
       );
+      noteCount += 1;
+      incomplete = true;
     }
   }
   if (conflictGroups.length > 0) {
@@ -1468,6 +1634,11 @@ export function renderGrid(
     }
     notesHost.append(list);
   }
+
+  // Last, under the things there is something to do about: the explanations,
+  // behind one line that carries their count and — where it applies — the fact
+  // that the collision check does not cover the whole plan.
+  if (folded.length > 0) notesHost.append(foldNotes(folded, noteCount, incomplete));
 
   return {
     conflictCount: conflictGroups.length,

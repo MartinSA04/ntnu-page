@@ -61,8 +61,22 @@ class FakeEl {
   private text = "";
   classList: FakeClassList = new FakeClassList(this);
   dataset: Record<string, string> = {};
-  /** `display` is real state: plannerApp sets it to defeat `.np-btn`'s author rule (plan-8). */
-  style = { setProperty: () => {}, removeProperty: () => {}, display: "" };
+  /**
+   * `display` is real state: plannerApp sets it to defeat `.np-btn`'s author
+   * rule (plan-8). Custom properties are real state too — the week's edge fade
+   * is a pair of lengths written here and read by the mask (`setScrollFade`).
+   */
+  props = new Map<string, string>();
+  style = {
+    setProperty: (k: string, v: string) => {
+      this.props.set(k, v);
+    },
+    removeProperty: (k: string) => {
+      this.props.delete(k);
+    },
+    getPropertyValue: (k: string) => this.props.get(k) ?? "",
+    display: "",
+  };
   attrs = new Map<string, string>();
   listeners = new Map<string, ((e: unknown) => void)[]>();
   hidden = false;
@@ -240,7 +254,6 @@ const IDS = [
   "planner-view-uke",
   "planner-view-kolonner",
   "planner-view-tavle",
-  "planner-scroll-hint",
   "planner-grid-frame",
   "planner-grid-notes",
   "planner-grid-status",
@@ -1108,7 +1121,7 @@ describe("mountPlannerApp — audit repro", () => {
     expect(button.style.display).toBe("none");
   });
 
-  it("mob-5: no drag hint or edge mask when the whole grid is on screen", async () => {
+  it("mob-5: no edge mask when the whole grid is on screen", async () => {
     await mount(
       {
         "/data/search-index.json": () => ({ year: 2026, courses: [] }),
@@ -1126,15 +1139,16 @@ describe("mountPlannerApp — audit repro", () => {
     frame.scrollWidth = 384;
     if (grid) grid.rectWidth = 336;
     for (const fn of winListeners.get("resize") ?? []) fn({});
-    expect(find("planner-scroll-hint").hidden).toBe(true);
     expect(frame.dataset.scroll).toBeUndefined();
 
     // 360 px, where the fre column really does hang 8 px past the edge.
     frame.clientWidth = 328;
     frame.scrollWidth = 384;
     for (const fn of winListeners.get("resize") ?? []) fn({});
-    expect(find("planner-scroll-hint").hidden).toBe(false);
     expect(frame.dataset.scroll).toBe("start");
+    // At rest the near edge fades over nothing: the ramp grows with the drag
+    // rather than appearing whole the moment the frame becomes scrollable.
+    expect(frame.style.getPropertyValue("--planner-fade-start")).toBe("0px");
   });
 
   it("ds-5: the exam gap counts reading days and matches its neighbours' ink", async () => {

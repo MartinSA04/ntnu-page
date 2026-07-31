@@ -230,7 +230,7 @@ test.describe("the topbar carries no plan state", () => {
     await expect(page.locator("#studieinfo-chip")).toHaveCount(0);
     // The planner still names whose plan it is, in its own title, and its
     // "Endre" button is the one way into the modal anywhere on the site.
-    await expect(page.locator("#planner-title")).toHaveText("BIT · 2025 · Høst 2026", {
+    await expect(page.locator("#planner-title")).toHaveText("BIT Kull 25 H26", {
       timeout: 30_000,
     });
     await expect(page.locator("#studieinfo-dialog")).toBeHidden();

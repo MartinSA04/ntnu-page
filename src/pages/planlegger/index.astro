@@ -45,10 +45,19 @@ const programOptionsJson = JSON.stringify(programOptions).replaceAll("<", "\\u00
         its answer on one line, rather than two paragraphs apart. */}
     <div class="planner-head">
       <h1 class="planner-title" id="planner-title">Semesterplan</h1>
-      <p class="np-hint planner-context-line" id="planner-context-line"></p>
-      <p class="planner-status" id="planner-status">
-        <span class="planner-verdict" id="planner-grid-status" aria-live="polite"></span>
-      </p>
+      {/* The plan's long name and the plan's verdict, as one band. On a phone
+          they share a line under the title and the whole banner is two rows
+          instead of four (mob-A, 2026-07-31): 138 px of naming before the week
+          was 16 % of the screen, and three of those rows were one sentence
+          each. On a wide screen `display: contents` dissolves this box and the
+          two go back to their own grid areas — the verdict at the far end of
+          the title's line, the hint under the pair. */}
+      <div class="planner-meta">
+        <p class="np-hint planner-context-line" id="planner-context-line"></p>
+        <p class="planner-status" id="planner-status">
+          <span class="planner-verdict" id="planner-grid-status" aria-live="polite"></span>
+        </p>
+      </div>
       {/* The page's one permanent opener for studieinfo. It was an underlined
             word in the hint line: 37x22, under WCAG 2.5.8's 24px floor, and
             reading as a footnote rather than as the control that changes
@@ -152,7 +161,6 @@ const programOptionsJson = JSON.stringify(programOptions).replaceAll("<", "\\u00
           </button>
         </div>
       </div>
-      <p class="np-hint planner-scroll-hint" id="planner-scroll-hint" hidden></p>
       <div class="planner-grid-frame" id="planner-grid-frame"></div>
       <div class="planner-grid-notes" id="planner-grid-notes"></div>
     </section>
@@ -226,19 +234,38 @@ const programOptionsJson = JSON.stringify(programOptions).replaceAll("<", "\\u00
      was separated from its own code by a green sentence and a button
      (REWORK-2026-07-30j). Areas keep the pair adjacent at every width and let
      the other two move around it. */
+  /* Two rows on a phone, not four: the plan's name shares its line with the
+     control that changes it, and the plan's long name shares the next one with
+     the verdict. The four-row stack cost 138 px before a single hour of the
+     week was drawn, and its last row was a 44 px button on a line of its own
+     (mob-A). Nothing is dropped and nothing is collapsed behind a tap — the
+     four facts are still all on screen, said in two lines. */
   .planner-head {
     display: grid;
     grid-template-areas:
-      "title"
-      "hint"
-      "verdict"
-      "edit";
-    justify-items: start;
-    gap: var(--space-2) var(--gap-6);
+      "title edit"
+      "meta  meta";
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: var(--space-2) var(--gap-3);
   }
 
   .planner-title {
     grid-area: title;
+  }
+
+  /* Baseline-aligned rather than centred: the hint is 13 px and the verdict
+     18 px, and centring two sizes on one line makes neither sit on the line
+     the title established. Wrapping is allowed — a long programme name simply
+     drops the verdict to its own line, which is still one row fewer than the
+     stack it replaces. */
+  .planner-meta {
+    grid-area: meta;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: var(--space-1) var(--gap-3);
+    min-width: 0;
   }
 
   .planner-context-line {
@@ -262,6 +289,13 @@ const programOptionsJson = JSON.stringify(programOptions).replaceAll("<", "\\u00
       gap: var(--space-1) var(--gap-6);
     }
 
+    /* The box dissolves and its two children become grid children again, each
+       in the area it has always had. It exists to put them on one line where
+       there is only one line to spare. */
+    .planner-meta {
+      display: contents;
+    }
+
     .planner-status {
       justify-self: end;
     }
@@ -275,10 +309,16 @@ const programOptionsJson = JSON.stringify(programOptions).replaceAll("<", "\\u00
     display: none;
   }
 
-  /* THE TITLE. `MTDT · 2026 · Høst 2026` — the plan in the notation a student
-     types, searches and says out loud, so it is the mono at the page-title
-     step. Data-Is-Mono has always governed times, dates, codes and counts;
-     this just follows it to the top of the scale instead of dropping it there.
+  /* THE TITLE. `MTFYMA Kull 24 H26` — the plan in the notation a student
+     writes on a timetable, so it is the mono at the page-title step.
+     Data-Is-Mono has always governed times, dates, codes and counts; this just
+     follows it to the top of the scale instead of dropping it there.
+
+     No separators between the three parts, only spaces (2026-07-31, owner's
+     call): in a mono face at display size the facts already read as three, and
+     `MTDT · 2026 · Høst 2026` spent two glyphs and four spaces saying so
+     again. The short forms do the rest — "Kull 24" and "H26" instead of "2026"
+     and "Høst 2026" — which is what pays for the code beside them at 390 px.
 
      Slightly under --text-xl because Spline Sans Mono sets wider and taller
      than Schibsted Grotesk at the same nominal size: 1.75rem mono is the
@@ -287,10 +327,6 @@ const programOptionsJson = JSON.stringify(programOptions).replaceAll("<", "\\u00
      has no plan to name (see `renderBanner`). */
   .planner-title {
     font-family: var(--font-mono);
-    /* The floor is measured, not chosen: at 390 px the banner has 358 px, and
-       an 8-character code ("EXPHPHIL · 2026 · Vår 2027") sets 337 px at
-       1.4rem and 427 px at 1.75. So the common case never wraps and the
-       longest one still fits on one line. */
     font-size: clamp(1.4rem, 4.4vw, 1.75rem);
     letter-spacing: -0.02em;
     line-height: var(--leading-tight);
@@ -304,13 +340,6 @@ const programOptionsJson = JSON.stringify(programOptions).replaceAll("<", "\\u00
     font-family: var(--font-sans);
     font-size: var(--text-xl);
     letter-spacing: -0.015em;
-  }
-
-  /* The separators recede so the three facts read as three, not as one
-     seven-token string. */
-  :global(.planner-title-sep) {
-    color: var(--faint);
-    font-weight: var(--weight-normal);
   }
 
   .planner-context-line {
@@ -332,6 +361,47 @@ const programOptionsJson = JSON.stringify(programOptions).replaceAll("<", "\\u00
     width: 16px;
     height: 16px;
     flex: none;
+  }
+
+  /* On the title's own line there is no width to spend on the word: the mark
+     is the same `settings-2` the course rows use, and `renderBanner` already
+     writes the button an aria-label ("Endre studieinfo for MTDT"), so the name
+     it answers to is unchanged — only the ink is. A square --control-h box,
+     which is 44 px on every touch device (tokens.css, `pointer: coarse`). */
+  @media (max-width: 46rem) {
+    .planner-edit-plan {
+      justify-content: center;
+      width: var(--control-h);
+      padding: 0;
+    }
+
+    #planner-edit-plan-label {
+      /* Not `display: none`: the label is this button's visible name on every
+         other width, and a screen reader that ignores aria-label still has to
+         find one. */
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+      clip-path: inset(50%);
+      white-space: nowrap;
+    }
+
+    /* The verdict is not shown here when it is a pass (2026-07-31, owner's
+       call). "ingen kollisjoner" answers a question you only ask when
+       something might be wrong, and on a phone it spent a line of the first
+       screen saying that nothing is. A collision still says so — as does "kan
+       ikke sjekkes", which is not a pass — so the line appears exactly when it
+       has something to report, and keeps its `aria-live` for the moment it
+       starts having something.
+
+       Matched through the wrapper with `:has()`, not on the span: the whole
+       line goes, or its flex gap stays behind in the meta row. `.is-clean` is
+       the only class that survives `renderVerdict`'s own `className =` — which
+       is also why this cannot key on `.planner-verdict`. */
+    .planner-status:has(.is-clean) {
+      display: none;
+    }
   }
 
   /* The unanswered studieretning, pulled out of a muted line. It asks you to
@@ -651,10 +721,6 @@ const programOptionsJson = JSON.stringify(programOptions).replaceAll("<", "\\u00
      to live here, which is exactly how /emne/[code]/ ended up clipping its
      Friday column at 360 px with no fade at all. What follows is only what
      this page adds. */
-
-  .planner-scroll-hint:not([hidden]) {
-    margin-bottom: var(--space-2);
-  }
 
   /* --- Empty / fallback week card ---------------------------------------- */
 

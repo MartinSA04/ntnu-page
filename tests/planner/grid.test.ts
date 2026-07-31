@@ -248,10 +248,13 @@ class ShimEl {
   classes = new Set<string>();
   props = new Map<string, string>();
   attrs = new Map<string, string>();
-  children: ShimEl[] = [];
+  /** Text nodes included: `gapNote` builds its sentence out of raw strings. */
+  children: (ShimEl | string)[] = [];
   text = "";
   title = "";
   hidden = false;
+  /** `<details>`: `foldNotes` sets it from the viewport, so the shim carries it. */
+  open = false;
   offsetWidth = 0;
   id = "";
   constructor(readonly tagName: string) {}
@@ -285,7 +288,7 @@ class ShimEl {
   get textContent(): string {
     return this.children.length === 0
       ? this.text
-      : this.children.map((c) => c.textContent).join("");
+      : this.children.map((c) => (typeof c === "string" ? c : c.textContent)).join("");
   }
   set textContent(value: string) {
     this.text = value;
@@ -300,13 +303,13 @@ class ShimEl {
   removeAttribute(name: string) {
     this.attrs.delete(name);
   }
-  append(...nodes: ShimEl[]) {
+  append(...nodes: (ShimEl | string)[]) {
     this.children.push(...nodes);
   }
-  prepend(...nodes: ShimEl[]) {
+  prepend(...nodes: (ShimEl | string)[]) {
     this.children.unshift(...nodes);
   }
-  replaceChildren(...nodes: ShimEl[]) {
+  replaceChildren(...nodes: (ShimEl | string)[]) {
     this.children = [...nodes];
   }
   addEventListener() {}
@@ -317,6 +320,7 @@ class ShimEl {
   /** Depth-first walk — the shim has no selector engine. */
   *walk(): Generator<ShimEl> {
     for (const child of this.children) {
+      if (typeof child === "string") continue;
       yield child;
       yield* child.walk();
     }
@@ -330,8 +334,13 @@ class ShimEl {
    * be a selector engine, which this shim is explicitly not.
    */
   querySelector(sel: string): ShimEl | null {
-    if (!sel.startsWith(".")) return null;
-    return this.find(sel.slice(1).split("[")[0] ?? "")[0] ?? null;
+    return this.querySelectorAll(sel)[0] ?? null;
+  }
+  /** Same rule as `querySelector`, matching on the selector's last class. */
+  querySelectorAll(sel: string): ShimEl[] {
+    const last = sel.trim().split(/\s+/).pop() ?? "";
+    if (!last.startsWith(".")) return [];
+    return this.find(last.slice(1).split("[")[0] ?? "");
   }
 }
 
@@ -358,6 +367,15 @@ afterEach(() => {
 
 /** Renders one plan into a fresh frame and hands back the frame. */
 function draw(courses: PlanCourseState[], narrow: boolean, showOthers = false): ShimEl {
+  return drawBoth(courses, narrow, showOthers).frame;
+}
+
+/** The same render, when the assertion is about the margin notes instead. */
+function drawBoth(
+  courses: PlanCourseState[],
+  narrow: boolean,
+  showOthers = false,
+): { frame: ShimEl; notes: ShimEl } {
   uninstall = installShim(narrow);
   const frame = new ShimEl("DIV");
   const notes = new ShimEl("DIV");
@@ -368,7 +386,7 @@ function draw(courses: PlanCourseState[], narrow: boolean, showOthers = false): 
     showOthers,
     {},
   );
-  return frame;
+  return { frame, notes };
 }
 describe("renderGrid: the transposed shell (REWORK-2026-07-29b D1)", () => {
   const courses = [state({ code: "TMA4400", bundle: bundleFromEntries([entry("Forelesning")]) })];
@@ -378,13 +396,22 @@ describe("renderGrid: the transposed shell (REWORK-2026-07-29b D1)", () => {
     const rows = frame.find("planner-grid-row");
     expect(rows).toHaveLength(5);
     // The spine carries the whole word: it is the page's typographic event and
-    // the thing a student finds their row by, not a label.
-    expect(frame.find("planner-grid-spine").map((s) => s.textContent)).toEqual([
+    // the thing a student finds their row by, not a label. The three-letter
+    // form rides along beside it for phone widths — `aria-hidden`, hidden by
+    // CSS above 40rem — so the full word is the one always in the tree.
+    expect(frame.find("planner-grid-spine-long").map((s) => s.textContent)).toEqual([
       "mandag",
       "tirsdag",
       "onsdag",
       "torsdag",
       "fredag",
+    ]);
+    expect(frame.find("planner-grid-spine-short").map((s) => s.textContent)).toEqual([
+      "man",
+      "tir",
+      "ons",
+      "tor",
+      "fre",
     ]);
     // Every day has somewhere to append bars, empty ones included.
     expect(frame.find("planner-grid-field")).toHaveLength(5);
@@ -411,7 +438,7 @@ describe("renderGrid: the transposed shell (REWORK-2026-07-29b D1)", () => {
     );
     const marked = frame.find("planner-grid-row").filter((r) => r.attrs.has("data-today"));
     expect(marked).toHaveLength(1);
-    expect(marked[0]?.find("planner-grid-spine")[0]?.textContent).toBe("onsdag");
+    expect(marked[0]?.find("planner-grid-spine-long")[0]?.textContent).toBe("onsdag");
   });
 });
 
@@ -487,6 +514,83 @@ describe("renderGrid: a bar's geometry is its time (D1)", () => {
     // 45 minutes is ~100 px of axis — the code, and nothing that would clip.
     expect(short.find("planner-block-code")).toHaveLength(1);
     expect(short.find("planner-block-what")).toHaveLength(0);
+  });
+
+  test("room and activity are two boxes, so one ellipsis cannot eat both", () => {
+    const frame = draw(
+      [
+        state({
+          code: "TFY4345",
+          bundle: bundleFromEntries([
+            entry("Forelesning", {
+              rooms: [{ building: "Kjelhuset", room: "KJL2", url: null }],
+            }),
+          ]),
+        }),
+      ],
+      false,
+    );
+    // Joined into one string, "KJL2 · Forelesning" ellipsized to "KJL…" — an
+    // ellipsis standing in for a single character. The room is its own box and
+    // is printed whole or dropped; only the activity may be cut, and only when
+    // the cut leaves something to read (`fitBlockLabels`).
+    expect(frame.find("planner-block-code")[0]?.textContent).toBe("TFY4345");
+    expect(frame.find("planner-block-room")[0]?.textContent).toBe("KJL2");
+    expect(frame.find("planner-block-what")[0]?.textContent).toBe("Forelesning");
+  });
+});
+
+describe("margin notes fold behind one line (mob-D)", () => {
+  // A course whose timetable never arrived: one gap note, and one that
+  // qualifies the collision check.
+  const withGap = [
+    state({ code: "TMA4400", bundle: bundleFromEntries([entry("Forelesning")]) }),
+    state({ code: "TDT4120", bundle: failedBundle() }),
+  ];
+
+  test("the count and the qualification stay on the line, the paragraph goes inside", () => {
+    const { notes } = drawBoth(withGap, true);
+    const fold = notes.find("planner-notes-fold")[0];
+    expect(fold).toBeDefined();
+    const summary = notes.find("planner-notes-summary")[0];
+    expect(summary?.textContent).toBe("1 merknad · kollisjonssjekken er ufullstendig");
+    // The sentence itself is inside the fold, not deleted.
+    expect(fold?.find("planner-grid-note")[0]?.textContent).toContain(
+      "Fikk ikke hentet timeplan for",
+    );
+  });
+
+  test("closed on a phone, open where the notes cost nothing", () => {
+    expect(drawBoth(withGap, true).notes.find("planner-notes-fold")[0]?.open).toBe(false);
+    expect(drawBoth(withGap, false).notes.find("planner-notes-fold")[0]?.open).toBe(true);
+  });
+
+  test("nothing with a verb in it is folded", () => {
+    const clashing = [
+      state({
+        code: "TMA4412",
+        bundle: bundleFromEntries([
+          entry("Forelesning", { courseCode: "TMA4412", startTime: "08:15", endTime: "10:00" }),
+        ]),
+      }),
+      state({
+        code: "TDT4136",
+        bundle: bundleFromEntries([
+          entry("Forelesning", { courseCode: "TDT4136", startTime: "09:15", endTime: "11:00" }),
+        ]),
+      }),
+    ];
+    const { notes } = drawBoth(clashing, true);
+    // Red is the one mark on this page that may not be one tap away.
+    expect(notes.find("planner-notes-fold")).toHaveLength(0);
+    expect(notes.find("np-note-clash")).toHaveLength(1);
+
+    // Nor is a control. Nothing inside the fold is pressable at all: the "velg
+    // din gruppe" lines are what change the week, and a folded button is a
+    // button nobody presses. (That the phone really renders them is asserted
+    // in e2e/flows.pw.ts's target-size pass, which is what caught this.)
+    const folded = drawBoth(withGap, true).notes.find("planner-notes-fold")[0];
+    expect(folded?.find("planner-note-link")).toHaveLength(0);
   });
 });
 

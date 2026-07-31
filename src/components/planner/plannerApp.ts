@@ -71,9 +71,11 @@ import {
 } from "./examList.js";
 import {
   type BlockDetail,
+  fitBlockLabels,
   type GridRenderResult,
   renderGrid,
   renderGridMessage,
+  setScrollFade,
   syncNowMarker,
   unresolvedLectureChoices,
 } from "./grid.js";
@@ -187,7 +189,6 @@ interface PlannerElements {
   viewUke: HTMLButtonElement;
   viewKolonner: HTMLButtonElement;
   viewTavle: HTMLButtonElement;
-  scrollHint: HTMLElement;
   gridFrame: HTMLElement;
   gridNotes: HTMLElement;
   gridStatus: HTMLElement;
@@ -225,7 +226,6 @@ function getElements(): PlannerElements | null {
     viewUke: byId<HTMLButtonElement>("planner-view-uke"),
     viewKolonner: byId<HTMLButtonElement>("planner-view-kolonner"),
     viewTavle: byId<HTMLButtonElement>("planner-view-tavle"),
-    scrollHint: byId<HTMLElement>("planner-scroll-hint"),
     gridFrame: byId<HTMLElement>("planner-grid-frame"),
     gridNotes: byId<HTMLElement>("planner-grid-notes"),
     gridStatus: byId<HTMLElement>("planner-grid-status"),
@@ -283,6 +283,19 @@ function semesterLabel(semester: SemesterSummary | undefined): string {
   const season = /h$/i.test(semester.id) ? "Høst" : "Vår";
   const year = semesterYear(semester.id);
   return year !== null ? `${season} ${year}` : semester.name;
+}
+
+/**
+ * The same semester in the notation a student writes on a timetable: `H26`,
+ * `V27`. It is the title's form only (`renderBanner`) — everywhere there is
+ * room for a word, `semesterLabel` above says "Høst 2026" in full.
+ */
+function semesterShort(semester: SemesterSummary | undefined): string {
+  if (!semester) return "";
+  const year = semesterYear(semester.id);
+  if (year === null) return semester.name;
+  const season = /h$/i.test(semester.id) ? "H" : /s$/i.test(semester.id) ? "S" : "V";
+  return `${season}${String(year).slice(-2)}`;
 }
 
 /**
@@ -763,8 +776,8 @@ export async function mountPlannerApp(
   /**
    * The banner — ETT NAVN (REWORK-2026-07-30b).
    *
-   * The title is the plan in the notation a student actually types:
-   * `MTDT · 2026 · Høst 2026`, three facts and two separators, all of them
+   * The title is the plan in the notation a student actually writes on a
+   * timetable: `MTFYMA Kull 24 H26` — three facts, no separators, all of them
    * data and therefore all of them mono. It replaces a 2 rem rendering of
    * NTNU's own programme string — hyphen, parenthetical and all — which took
    * three lines on a phone before anything actionable appeared, and which the
@@ -788,22 +801,24 @@ export async function mountPlannerApp(
     title.replaceChildren();
     title.classList.toggle("is-empty", !program);
     if (program) {
-      const parts = [program.code, program.cohort, semester ? semesterLabel(semester) : ""].filter(
-        Boolean,
+      // `MTFYMA Kull 24 H26` — the plan as a student writes it on a timetable,
+      // in three unbreakable parts separated by a space and nothing else. The
+      // middle dots are gone (2026-07-31, owner's call): three facts in a mono
+      // face already read as three, and the separators were doing the work of
+      // the spaces that were there anyway.
+      const parts = [
+        program.code,
+        `Kull ${String(program.cohort).slice(-2)}`,
+        semesterShort(semester),
+      ].filter(Boolean);
+      // Each part is unbreakable, so a title that has to wrap breaks between
+      // facts — never inside "Kull 24".
+      title.append(
+        ...parts.flatMap((part, i) => [
+          ...(i > 0 ? [" "] : []),
+          el("span", "planner-title-part", String(part)),
+        ]),
       );
-      // The separator belongs to the part BEFORE it, and each part is
-      // unbreakable. When the title has to wrap on a phone it therefore
-      // breaks as "MTDT ·" / "2026 · Høst 2026" rather than orphaning a
-      // lone "·" at the head of the second line.
-      parts.forEach((part, i) => {
-        const seg = el("span", "planner-title-part", String(part));
-        if (i < parts.length - 1) {
-          seg.append(el("span", "planner-title-sep", " ·"));
-          title.append(seg, " ");
-        } else {
-          title.append(seg);
-        }
-      });
     } else {
       title.textContent = "Semesterplan";
     }
@@ -1661,16 +1676,16 @@ export async function mountPlannerApp(
    * `scrollWidth`: the frame's 24 px padding counts as scrollable content, so
    * `scrollWidth - clientWidth` stayed ~26 px at 390 px where all five days are
    * on screen (the 21rem `min-width` in planner-week.css fixed the overflow the
-   * old comment here described). The result was a sentence telling the student
-   * to drag sideways to see a week they could already see in full, both edges
-   * faded, and the left ramp washing out the hour rail's own labels (mob-5).
+   * old comment here described). The result was both edges faded on a week the
+   * student could already see in full, with the left ramp washing out the hour
+   * rail's own labels (mob-5).
    */
   function syncGridScroll(): void {
     const frame = elements.gridFrame;
     // Whichever week is mounted: the transposed grid or the column grid. Asking
-    // for `.planner-grid` alone left the column view with no edge mask, no
-    // `data-scroll` and a hint that stayed hidden — on the view that scrolls
-    // sideways by design, which is the one that needs all three.
+    // for `.planner-grid` alone left the column view with no edge mask and no
+    // `data-scroll` — on the view that scrolls sideways by design, which is the
+    // one that needs both.
     const week =
       frame.querySelector<HTMLElement>(".planner-grid") ??
       frame.querySelector<HTMLElement>(".planner-cols");
@@ -1679,13 +1694,11 @@ export async function mountPlannerApp(
     const hidden = week ? week.getBoundingClientRect().width - frame.clientWidth : 0;
     if (hidden <= 1) {
       delete frame.dataset.scroll;
-      elements.scrollHint.hidden = true;
       return;
     }
     const left = frame.scrollLeft;
     frame.dataset.scroll = left <= 1 ? "start" : left >= maxScroll - 1 ? "end" : "middle";
-    elements.scrollHint.hidden = false;
-    elements.scrollHint.textContent = "Dra sidelengs for å se hele uken.";
+    setScrollFade(frame, left, maxScroll);
   }
 
   /**
@@ -1720,7 +1733,16 @@ export async function mountPlannerApp(
   }
 
   elements.gridFrame.addEventListener("scroll", syncGridScroll, { passive: true, signal });
-  window.addEventListener("resize", syncGridScroll, { passive: true, signal });
+  // A resize changes what an hour is worth in pixels, so it changes both
+  // whether the week is off-frame and what each bar has room to say.
+  window.addEventListener(
+    "resize",
+    () => {
+      syncGridScroll();
+      fitBlockLabels(elements.gridFrame);
+    },
+    { passive: true, signal },
+  );
 
   // The week's column cap is viewport-dependent since grid-3 (a 2-deep cluster
   // is 27 px wide on a phone, so it piles instead of splitting), and crossing

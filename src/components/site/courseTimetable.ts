@@ -27,7 +27,7 @@ import {
 import { hueForIndex } from "../../lib/planner/hues.js";
 import { entriesInSemester } from "../../lib/planner/schedule.js";
 import { el } from "../planner/dom.js";
-import { renderGrid } from "../planner/grid.js";
+import { fitBlockLabels, renderGrid, setScrollFade } from "../planner/grid.js";
 import { beginLayerChange } from "../planner/layerMotion.js";
 import type { PlanCourseState } from "../planner/types.js";
 
@@ -225,43 +225,43 @@ export async function mountCourseTimetable(
   frame.dataset.static = "true";
   const notes = el("div", "planner-grid-notes");
   // mob-2: at 360 px the frame closes just after TOR and more than half of
-  // TDT4109's only lecture hangs behind the edge — no fade, no hint, no
-  // scroll offset, because A4's mobile-week fix lives on /planlegger/ (its
-  // `[data-scroll]` mask and `#planner-scroll-hint`) and this surface shares
-  // only the geometry. The frame is swipeable; nothing said so. The mask and
-  // the hint's spacing are in planner-week.css now, so both surfaces get them
-  // from one place.
+  // TDT4109's only lecture hangs behind the edge — no fade and no scroll
+  // offset, because A4's mobile-week fix lived on /planlegger/ and this surface
+  // shared only the geometry. The frame is swipeable; nothing said so. The mask
+  // is in planner-week.css now, so both surfaces get it from one place.
   //
-  // The third part of that fix — /planlegger/'s `scrollToToday`, which happens
-  // to consume the frame's own `var(--cell)` padding and so recovers ~24 px on
-  // the right — is deliberately NOT ported. There is no "today" in a week that
-  // repeats for one course, and any non-zero starting scrollLeft puts the
-  // frame in `[data-scroll="middle"]`, whose left ramp then washes out the
-  // hour rail the student reads the grid against (mob-5) for every visit.
-  // Fading the rail permanently to win 24 px of a 56 px clip the hint already
-  // names is the wrong trade.
-  const scrollHint = el("p", "np-hint planner-scroll-hint");
-  scrollHint.hidden = true;
-  body.append(scrollHint, frame, notes);
+  // The other part of that fix — /planlegger/'s `scrollToToday`, which happens
+  // to consume the frame's own padding and so recovers ~24 px on the right — is
+  // deliberately NOT ported. There is no "today" in a week that repeats for one
+  // course, and a non-zero starting scrollLeft would fade the near edge of a
+  // week nobody has touched yet.
+  body.append(frame, notes);
 
-  /** Mirrors plannerApp's `syncGridScroll`: masks and hints only when a day really is off-frame. */
+  /** Mirrors plannerApp's `syncGridScroll`: the edge fades only when a day really is off-frame. */
   function syncScroll(): void {
     const grid = frame.querySelector<HTMLElement>(".planner-grid");
     const hiddenPx = grid ? grid.getBoundingClientRect().width - frame.clientWidth : 0;
     if (hiddenPx <= 1) {
       delete frame.dataset.scroll;
-      scrollHint.hidden = true;
       return;
     }
     const maxScroll = frame.scrollWidth - frame.clientWidth;
     const left = frame.scrollLeft;
     frame.dataset.scroll = left <= 1 ? "start" : left >= maxScroll - 1 ? "end" : "middle";
-    scrollHint.textContent = "Dra sidelengs for å se hele uken.";
-    scrollHint.hidden = false;
+    setScrollFade(frame, left, maxScroll);
   }
 
   frame.addEventListener("scroll", syncScroll, { passive: true, signal: options.signal });
-  window.addEventListener("resize", syncScroll, { passive: true, signal: options.signal });
+  // Same pair as the planner's: a resize moves both the frame's edge and what
+  // each bar has room to say (`fitBlockLabels`).
+  window.addEventListener(
+    "resize",
+    () => {
+      syncScroll();
+      fitBlockLabels(frame);
+    },
+    { passive: true, signal: options.signal },
+  );
 
   // One-course plan: the grid's conflict pass is lecture×lecture across
   // *different* courses, so a single course can never paint itself red here.
