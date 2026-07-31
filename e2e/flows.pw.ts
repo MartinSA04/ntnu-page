@@ -897,20 +897,8 @@ test("landing page: Nå answers with the room, not a course count", async ({ pag
   // The page stops introducing itself once it has an answer.
   await expect(page.locator("#home-pitch")).toHaveClass(/is-secondary/);
 
-  // The resume line still states whose plan this is. It used to be a
-  // descendant of the pitch, which meant the pitch's own demotion set
-  // `display: none` on it while its script was setting `hidden = false`: two
-  // owners of one element's visibility, and the loser was the only place the
-  // landing page names the plan now that the topbar chip is gone.
-  const resume = page.locator("#home-resume");
-  await expect(resume).toBeVisible();
-  await expect(resume).toContainText("MTDT");
-  await expect(resume).toContainText("emner");
-  // The onward mark is a drawn glyph like every other link-out in the system,
-  // not an arrow character sitting on the baseline in whatever face the text
-  // fell back to.
-  await expect(resume.locator("a svg")).toHaveCount(1);
-  await expect(await resume.textContent()).not.toContain("→");
+  // The card is the only way back in; the old "Planen din" resume line is gone.
+  await expect(page.locator("#home-resume")).toHaveCount(0);
 });
 
 test("week: the øving layer shows picked groups, not the whole cohort's", async ({ page }) => {

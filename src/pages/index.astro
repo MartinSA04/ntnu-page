@@ -27,32 +27,6 @@ const seasonWord = isAutumn ? "høsten" : "våren";
     <ul class="home-now-next" id="home-now-next"></ul>
   </section>
 
-  {/* Whose plan this is, and the way back into it. It sits OUTSIDE the pitch:
-      as a child of it, the pitch's own demotion (`.is-secondary`) set
-      `display: none` on this line while the script below was setting
-      `hidden = false`, so the one place the landing page names the plan was
-      invisible in exactly the case where there was a plan to name. The
-      script owns `hidden`, the plan owns whether there is anything to say,
-      and nothing else touches it. */}
-  <p class="home-resume np-hint" id="home-resume" hidden>
-    <a href="/planlegger/" id="home-resume-link">
-      <span id="home-resume-text"></span>
-      <svg
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        stroke-width="2"
-        stroke-linecap="round"
-        stroke-linejoin="round"
-        aria-hidden="true"
-        focusable="false"
-      >
-        <path d="M5 12h14"></path>
-        <path d="m12 5 7 7-7 7"></path>
-      </svg>
-    </a>
-  </p>
-
   <div class="home-pitch" id="home-pitch">
     <p class="np-kicker home-kicker">Semesterplan</p>
     <h1 class="home-title">Se timeplanen din for {seasonWord}.</h1>
@@ -77,23 +51,6 @@ const seasonWord = isAutumn ? "høsten" : "våren";
   }
   .home-subcopy {
     margin-bottom: var(--space-5);
-  }
-  .home-resume {
-    margin-bottom: var(--space-5);
-    font-size: var(--text-md);
-    max-width: none;
-  }
-  .home-resume a {
-    display: inline-flex;
-    align-items: center;
-    gap: var(--gap-2);
-    min-height: 24px;
-    color: var(--ui);
-  }
-  .home-resume svg {
-    width: 15px;
-    height: 15px;
-    flex: none;
   }
   /* --- Nå (REWORK-2026-07-29b D3) ---------------------------------------- */
 
@@ -247,41 +204,10 @@ const seasonWord = isAutumn ? "høsten" : "våren";
   const DAYS = ["mandag", "tirsdag", "onsdag", "torsdag", "fredag", "lørdag", "søndag"];
 
   // Per page-load, not per module: ClientRouter evaluates this module once,
-  // so wiring at top level left the resume line frozen at whatever it read
-  // on the very first visit.
+  // so wiring at top level left the card frozen at whatever it read on the
+  // very first visit.
   onPage((signal) => {
     const store = createPlanStore(defaultSemesterId);
-    const resumeEl = document.getElementById("home-resume") as HTMLElement | null;
-    const resumeLink = document.getElementById("home-resume-link") as HTMLAnchorElement | null;
-    const resumeText = document.getElementById("home-resume-text") as HTMLElement | null;
-    if (!resumeEl || !resumeLink || !resumeText) return;
-
-    // Quiet by default, prominent the moment a plan actually exists — the
-    // landing page's one piece of state, everything else here is static.
-    function renderResume(): void {
-      if (!resumeEl || !resumeLink || !resumeText) return;
-      const plan = store.loadPlan();
-      const active = plan.courses.filter((c) => !c.dropped);
-      if (active.length === 0) {
-        resumeEl.hidden = true;
-        return;
-      }
-      resumeEl.hidden = false;
-      const programLabel = plan.program ? `${plan.program.code} · ` : "";
-      const count = active.length;
-      const noun = count === 1 ? "emne" : "emner";
-      // The TEXT, not the link: the link also holds the arrow mark, and
-      // writing `textContent` on it would delete the svg on the first render.
-      const label = `Planen din: ${programLabel}${count} ${noun}`;
-      resumeText.textContent = label;
-      // The visible line is a fact; the accessible name has to name the
-      // destination too, because "5 emner, lenke" says nothing about where it
-      // goes (2.4.4).
-      resumeLink.setAttribute("aria-label", `${label}. Åpne planleggeren`);
-    }
-
-    renderResume();
-    signal.addEventListener("abort", store.onPlanChange(renderResume));
 
     // --- Nå (REWORK-2026-07-29b D3) ---------------------------------------
 
