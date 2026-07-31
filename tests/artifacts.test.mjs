@@ -1,22 +1,15 @@
 /**
  * Contract tests over the REAL crawled artifacts.
  *
- * `tests/crawler.test.mjs` proves the transforms against inline fixtures whose
- * largest catalog is two courses. Nothing anywhere read what the crawler
- * actually produced, so every invariant docs/SPEC.md ("Crawled data
- * contracts") states was asserted nowhere and `npm test` stayed green on a
- * zero-course catalog. These tests close that gap: `prebuild` runs
- * `crawler/ensure-data.mjs`, so ci.yml has all four files on disk before
- * vitest starts.
+ * `crawler.test.mjs` proves the transforms against fixtures whose largest
+ * catalog is two courses, so every invariant docs/SPEC.md states was asserted
+ * nowhere and `npm test` stayed green on a zero-course catalog. `prebuild` runs
+ * `crawler/ensure-data.mjs`, so CI has all four files before vitest starts.
  *
- * They complement, and do not replace, the in-crawler floors in
- * `crawler/transform.mjs`: `.github/workflows/crawl.yml` runs crawl → build →
+ * They complement the in-crawler floors: `crawl.yml` runs crawl → build →
  * deploy with no test step, so nothing here protects the nightly deploy path.
  *
- * The artifacts are gitignored build output — a fresh checkout that has run
- * neither `npm run build` nor `npm run crawl` has none. This file SKIPS in
- * that case rather than failing, using the same existence check as
- * `crawler/ensure-data.mjs`.
+ * The artifacts are gitignored build output; this SKIPS when they are absent.
  */
 import { existsSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -64,12 +57,9 @@ const MIN_ROWS = 3000;
 const COURSE_CODE_RE = /^[A-ZÆØÅ0-9_-]{2,16}$/i;
 
 /**
- * Programme codes need a wider class than course codes: `EMNE/HF`, `EMNE/SU`,
- * `MSECT+OH` and `MSØK/5` are real codes in `data/programs.json`. The worker
- * validates programme codes with the course regex above and therefore 400s
- * those four — that is audit finding crawler-1, fixed in worker/src/routes.ts,
- * not here. This asserts the grammar the data actually uses so a *new* kind of
- * upstream code cannot slip in unnoticed.
+ * Programme codes need a wider class than course codes: `EMNE/HF`, `MSECT+OH`
+ * and `MSØK/5` are real. This asserts the grammar the data actually uses, so a
+ * *new* kind of upstream code cannot slip in unnoticed.
  */
 const PROGRAM_CODE_RE = /^[A-ZÆØÅ0-9_+/-]{2,16}$/i;
 

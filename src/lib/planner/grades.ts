@@ -1,34 +1,18 @@
 /**
- * Pure grade-distribution model for `/emne/[code]/`'s Karakterer figure.
+ * Pure grade-distribution model for `/emne/[code]/`'s Karakterer figure. Source
+ * is DBH table 308 unchanged: **one row per (course version, year, semester,
+ * grade)**. Four upstream facts this module absorbs:
  *
- * Source is the worker's `/api/course/:code/grades`, which passes DBH table
- * 308 through `ntnu-api` unchanged: **one row per (course version, year,
- * semester, grade)**. A course taught in both terms of four years with six
- * letter grades is ~48 rows, and the figure wants eight buckets.
- *
- * Three upstream facts this module exists to absorb:
- *
- * - **Versions double up.** DBH keys courses as `TDT4100-1`, and a course that
- *   has been re-versioned reports the same (year, semester, grade) once per
- *   version. Counts are summed across versions — a candidate sat the course,
- *   not a version of it.
- * - **Counts are privacy-masked.** `total` is `null` where DBH suppresses a
+ * - **Versions double up** — a re-versioned course reports the same tuple once
+ *   per version; counts are summed, because a candidate sat the course.
+ * - **Counts are privacy-masked** — `total` is `null` where DBH suppresses a
  *   small cell. A masked cell is NOT a zero: it is folded into `masked` and
- *   left out of the percentage base, so a bar never claims 0 % for something
- *   that merely could not be published.
- * - **Not every course uses letters.** Pass/fail courses report `G`/`H`
- *   (bestått/ikke bestått), not `A`–`F`. Ordering puts the letter scale first
- *   in its own order, then anything else alphabetically, so a pass/fail course
- *   still renders a truthful two-bar figure instead of an empty one. Each
- *   bucket carries the `scale` it is measured on so the figure never sizes a
- *   letter chart against a two-bucket pass/fail one (course-5/cpc-5).
- * - **Not every sitting is a semester.** DBH reports the utsatt/kont sitting
- *   as its own (year, semester) row, so a spring-taught course grows an
- *   autumn "semester" made entirely of candidates who already failed once.
- *   Drawn as a peer it manufactures a difficulty signal (pc-2/cpc-6): TMA4115
- *   reads 54 % F on n=26 beside 6 % F on n=697. `ordinarySeasons` — derived
- *   by the caller from the scraped exam `occasion`, the same signal
- *   `examList.ts` uses for DR-3 — separates those buckets out.
+ *   left out of the percentage base.
+ * - **Not every course uses letters** — pass/fail courses report `G`/`H`, so
+ *   each bucket carries the `scale` it is measured on.
+ * - **Not every sitting is a semester** — the utsatt/kont sitting is its own
+ *   (year, semester) row, and drawn as a peer it manufactures a difficulty
+ *   signal. `ordinarySeasons` separates those out.
  *
  * No DOM and no fetch — `gradeChart.ts` renders the `GradeModel`.
  */
@@ -53,8 +37,7 @@ export interface GradeBar {
 
 /**
  * Which grade scale a semester's bars are measured on. `mixed` is real and
- * rare — a re-versioned course can change its grade rule mid-year, and DBH
- * then reports A–F and G/H rows for the same (year, semester).
+ * rare — a re-versioned course can change its grade rule mid-year.
  */
 export type GradeScale = "letter" | "passfail" | "mixed";
 
@@ -90,10 +73,9 @@ export interface GradeModelOptions {
   limit?: number;
   /**
    * Season words ("Vår" / "Høst") in which this course holds an **ordinary**
-   * exam, from the scraped `occasion` (see `gradeChart.ts`). Null or empty
-   * means we do not know, and then nothing is held out — the same fail-open
-   * stance `examList.ts` takes, for the same reason: hiding a real cohort is
-   * worse than showing one too many.
+   * exam, from the scraped `occasion`. Null or empty means we do not know, and
+   * then nothing is held out — hiding a real cohort is worse than showing one
+   * too many.
    */
   ordinarySeasons?: readonly string[] | null;
 }
@@ -112,8 +94,8 @@ function seasonOf(row: GradeRowInput): string | null {
 
 /**
  * Grade sort: the letter scale in its own order first, then every other code
- * alphabetically. A course mixing letters and pass/fail codes (it happens —
- * a re-versioned course can change its grade rule) stays readable either way.
+ * alphabetically, so a course mixing letters and pass/fail codes stays
+ * readable.
  */
 function compareGrades(a: string, b: string): number {
   const ia = LETTER_ORDER.indexOf(a);
@@ -139,11 +121,10 @@ function scaleOf(grades: Iterable<string>): GradeScale {
 /**
  * A deferred bucket must be *small* as well as off-season.
  *
- * The season test alone would misread a course that moved term: the scrape
- * only knows this year's exam rhythm, so a course now examined in spring
- * would have every one of its real 600-candidate autumn cohorts relabelled
- * "utsatt". A re-sit cohort is by construction a fraction of the cohort it
- * re-sits (TDT4100: 62–85 against 508–596), so anything at least half the
+ * The season test alone misreads a course that moved term: the scrape only
+ * knows this year's rhythm, so a course now examined in spring would have every
+ * real 600-candidate autumn cohort relabelled "utsatt". A re-sit cohort is by
+ * construction a fraction of the one it re-sits, so anything at least half the
  * size of the biggest ordinary cohort is kept and drawn.
  */
 const DEFERRED_MAX_SHARE = 0.5;
@@ -183,10 +164,9 @@ function compareSemesters(a: GradeSemester, b: GradeSemester): number {
  * Folds raw DBH rows into one bucket per (year, semester), newest first, and
  * separates the utsatt/kont sittings from the ordinary ones.
  *
- * `limit` keeps the figure to the most recent N ordinary semesters; pass
- * `Infinity` for all of them. Semesters whose every cell was masked
- * (candidates === 0) are dropped — there is no distribution to draw, and a
- * row of six 0 % bars asserts something DBH explicitly declined to publish.
+ * `limit` keeps the figure to the most recent N ordinary semesters. Semesters
+ * whose every cell was masked are dropped — a row of six 0 % bars asserts
+ * something DBH explicitly declined to publish.
  */
 export function buildGradeSemesters(
   rows: GradeRowInput[],
@@ -250,12 +230,11 @@ export function buildGradeSemesters(
 
 /**
  * The tallest bar across the semesters handed in — the shared y-scale that
- * makes small multiples comparable. Returns 0 for an empty list (the caller
- * draws nothing rather than dividing by it).
+ * makes small multiples comparable. 0 for an empty list.
  *
- * Feed it ONE grade scale at a time. A pass/fail semester peaks near 100 %
- * by construction, so measuring letter charts against it flattens them to
- * 4–29 px of a 96 px plot (cpc-5) — the comparability this exists to give.
+ * Feed it ONE grade scale at a time: a pass/fail semester peaks near 100 % by
+ * construction, so measuring letter charts against it flattens them to 4–29 px
+ * of a 96 px plot.
  */
 export function peakPercent(semesters: GradeSemester[]): number {
   let peak = 0;
@@ -266,9 +245,9 @@ export function peakPercent(semesters: GradeSemester[]): number {
 }
 
 /**
- * Under this many published candidates a semester has no share worth drawing.
- * HIST1505's "Vår 2023 · 3 kandidater" rendered a full-height 100 % D — the
- * loudest mark in the whole figure, made by one candidate (course-5).
+ * Under this many published candidates a semester has no share worth drawing:
+ * "3 kandidater" rendered a full-height 100 % D, the loudest mark in the
+ * figure, made by one candidate.
  */
 export const MIN_CHART_CANDIDATES = 10;
 
@@ -282,21 +261,17 @@ export function awardedBars(semester: GradeSemester): GradeBar[] {
 
 /**
  * Does this semester earn bars at all? Two facts do not need a plot: a cohort
- * too small for a share to mean anything, and a single grade at 100 %
- * (course-4 measured four identical full-width "100,0 % G" slabs on
- * /emne/HMS0006/). Both are rendered as a sentence instead — and neither may
- * set the shared y-scale.
+ * too small for a share to mean anything, and a single grade at 100 %. Both
+ * render as a sentence instead — and neither may set the shared y-scale.
  */
 export function drawsChart(semester: GradeSemester): boolean {
   return semester.candidates >= MIN_CHART_CANDIDATES && awardedBars(semester).length > 1;
 }
 
 /**
- * One peak per grade scale, over the semesters that actually draw bars.
- *
- * This is the whole of the cpc-5 fix: a pass/fail term peaks near 100 % by
- * construction, and measuring A–F charts against it left them 4–29 px tall
- * with their value labels stranded 70 px above their own bars.
+ * One peak per grade scale, over the semesters that actually draw bars: a
+ * pass/fail term peaks near 100 % by construction, and measuring A–F charts
+ * against it left them 4–29 px tall with their labels stranded above them.
  */
 export function peaksByScale(semesters: GradeSemester[]): Map<GradeScale, number> {
   const peaks = new Map<GradeScale, number>();

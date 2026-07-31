@@ -1,47 +1,24 @@
 /**
- * The session popover — what a bar in the week says when you click it
- * (REWORK-2026-07-29f, retypeset 2026-07-30 "Kvittering").
+ * The session popover — what a bar in the week says when you click it.
  *
- * It is a READ surface: the facts of the one session you pointed at, anchored
- * to it, with a way through to the editor rather than being the editor.
- * `show()`, not `showModal()`, so the week stays visible and clicking a different
- * bar just re-targets the same dialog.
+ * A READ surface: the facts of the session you pointed at, anchored to it, with
+ * a way through to the editor rather than being the editor. `show()`, not
+ * `showModal()`, so the week stays visible and clicking another bar re-targets
+ * the same dialog. A non-modal `<dialog>` gets no free dismissal — Esc and
+ * backdrop are wired by hand below, and a real close button is always rendered
+ * because neither gesture is visible.
  *
- * A non-modal `<dialog>` gets no free dismissal: no Esc, no backdrop. Both are
- * wired by hand at the bottom of this file, and because neither is visible —
- * least of all in the bottom-sheet layout below 60rem, where "outside" is a
- * sliver of screen — a real close button is always rendered.
+ * The head carries the bar's own printed fill with the code knocked out, so the
+ * card is visibly the bar you pressed. The clock is its largest figure. The
+ * room names its building, which the bar has no width for. A collision gets a
+ * sentence, or pressing the red bar answers every question except the one the
+ * red raised. A lecture drawn on an unresolved guess says so. The button is a
+ * verb that names its outcome (DESIGN §7).
  *
- * **What the retypesetting changed, and why each half of it exists.** The card
- * used to be a neutral panel with a square hue dot and a `NÅR / ROM / HVA /
- * UKER` label column: four uppercase mono labels spending a third of a 20 rem
- * card to name facts that say what they are. Now:
- *
- *  - The head carries the bar's own printed fill with the code knocked out of
- *    it, so the card is visibly the bar you pressed rather than a panel that
- *    happens to mention its code. The hue never colours text (DESIGN §8); it
- *    is a fill with `--on-block` on top, exactly as `.planner-block` does it.
- *  - The clock is the card's largest figure, because it is the fact a student
- *    copies into a calendar; the weekday, the duration and the weeks read as
- *    one quiet line under it.
- *  - The room names its building. `roomLabel` throws it away for the bar,
- *    which has no width for it, but "F1" alone is not a place you can walk
- *    to, and the card has the room for "IT-bygget, sydfløy".
- *  - A collision gets a sentence (`.np-note-clash`). The week draws the red
- *    zone and the margin names the pair; the card in between used to say
- *    nothing, so pressing the red bar answered every question except the one
- *    the red raised.
- *  - A lecture drawn on an unresolved guess says so, in the same words the
- *    margin note uses ("N alternative forelesninger"), instead of printing the
- *    provisional parallel as though it had been chosen.
- *  - The button is a verb that names its outcome (DESIGN §7): "Velg parallell"
- *    / "Velg gruppe" / "Endre emnet", not "Innstillinger".
- *
- * There is deliberately **no tail** pointing at the bar. `.np-frame` clips its
- * own corners (`overflow: hidden`), the card flips above the anchor when there
- * is no room below and becomes a bottom sheet under 60rem. A pointer that has
- * to be right in three layouts, on top of a head that already carries the
- * bar's colour, is the accessory to leave off.
+ * Deliberately **no tail** pointing at the bar: the frame clips its own
+ * corners, the card flips above the anchor and becomes a bottom sheet under
+ * 60rem, and a pointer that has to be right in three layouts is the accessory
+ * to leave off.
  */
 import { dayName, el, icon } from "./dom.js";
 import type { BlockClash, BlockDetail } from "./grid.js";
@@ -53,8 +30,8 @@ const ANCHOR_MARGIN = 8;
 
 /**
  * What the editor behind the button can change for the layer the clicked
- * session belongs to: this course's lecture parallels, its øving/lab groups,
- * or, when the layer offers no choice at all, the course itself.
+ * session belongs to: lecture parallels, øving/lab groups, or — when the layer
+ * offers no choice — the course itself.
  */
 export type SessionChoice = "parallel" | "group" | "course";
 
@@ -67,8 +44,7 @@ export interface BlockPopoverContext {
   choice: SessionChoice;
   /**
    * How many alternative lectures the week is drawing ONE of, unasked. 0 when
-   * the drawn parallel is not a guess (`unresolvedLectureChoices`). Only ever
-   * says anything on a lecture bar.
+   * the drawn parallel is not a guess. Only ever says anything on a lecture.
    */
   lectureAlternatives: number;
 }
@@ -84,10 +60,9 @@ const toMinutes = (time: string): number => {
 };
 
 /**
- * How long the session runs, as a sentence fragment: "1 t 45 min", "3 t",
- * "45 min". Empty for a zero-length or reversed pair, which is upstream
- * nonsense, and
- * "0 min" printed beside a real clock reads as a fact.
+ * How long the session runs, as a sentence fragment: "1 t 45 min", "3 t".
+ * Empty for a zero-length or reversed pair — "0 min" beside a real clock reads
+ * as a fact.
  */
 export function durationLabel(startTime: string, endTime: string): string {
   const total = toMinutes(endTime) - toMinutes(startTime);
@@ -100,8 +75,8 @@ export function durationLabel(startTime: string, endTime: string): string {
 
 /**
  * The shared minutes, when they are not simply the session's own slot. A
- * collision that covers the whole session would otherwise print the clock the
- * card has already set at 1.6rem two lines above.
+ * collision covering the whole session would print the clock the card already
+ * set at 1.6rem two lines above.
  */
 export function clashClock(
   session: { startTime: string; endTime: string },
@@ -129,12 +104,9 @@ function codeList(codes: string[]): (HTMLElement | string)[] {
 }
 
 /**
- * Mounts the popover once. Idempotent against a stale dialog left by a
- * previous mount and self-removes on `signal` abort (a page swap under
- * ClientRouter) — the same idiom as the other surfaces here.
- *
- * `onOpenSettings` is the way out to the editor: the popover answers "what is
- * this", the modal answers "change it", and one verb joins them.
+ * Mounts the popover once. Idempotent against a stale dialog and self-removes
+ * on `signal` abort. `onOpenSettings` is the way out to the editor: the popover
+ * answers "what is this", the modal answers "change it".
  */
 export function mountBlockPopover(
   onOpenSettings: (code: string) => void,
@@ -158,8 +130,7 @@ export function mountBlockPopover(
     dialog.replaceChildren();
     const { detail } = ctx;
     // The head's fill is the bar's fill, so it follows the same reduced branch
-    // a øving/lab bar takes (`.planner-block.is-muted`) rather than printing a
-    // lecture-strength colour over a reduced one.
+    // an øving/lab bar takes rather than printing a lecture-strength colour.
     dialog.style.setProperty("--dot", `var(${ctx.hueVar})`);
 
     const head = el(
@@ -199,9 +170,8 @@ export function mountBlockPopover(
     when.append(meta);
     body.append(when);
 
-    // Room and activity, each as its own fact with its own second line: the
-    // building under the room, the guess under the parallel. No label column:
-    // a room code and an activity name do not need to be told apart.
+    // Room and activity, each its own fact with its own second line: the
+    // building under the room, the guess under the parallel. No label column.
     const facts = el("div", "block-popover-facts");
     if (detail.rooms) {
       const fact = el("div", "np-fact");
@@ -299,8 +269,8 @@ export function mountBlockPopover(
   );
   dialog.addEventListener("close", () => {
     // `close` fires from a queued task, so clicking straight from one bar to
-    // another can run it AFTER `showFor` has re-targeted the dialog. Acting
-    // then would steal focus back from the bar being opened.
+    // another can run it AFTER `showFor` re-targeted the dialog, which would
+    // steal focus back from the bar being opened.
     if (dialog.open) return;
     if (invoker?.isConnected) invoker.focus();
     invoker = null;

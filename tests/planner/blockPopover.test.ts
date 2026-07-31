@@ -2,11 +2,8 @@ import { describe, expect, test } from "vitest";
 import { clashClock, durationLabel, editVerb } from "../../src/components/planner/blockPopover.js";
 
 /**
- * The pure half of the session popover. Mounting it needs a DOM (this suite
- * runs in vitest's default Node environment — the repo has no jsdom), so the
- * card's assembly is covered by `e2e/flows.pw.ts` and what lives here is the
- * two decisions it makes before rendering anything: how long the session is,
- * and what its one button is called.
+ * The pure half of the session popover — mounting it needs a DOM this repo does
+ * not ship, so the card's assembly is covered by `e2e/flows.pw.ts`.
  */
 
 describe("durationLabel", () => {

@@ -1,11 +1,10 @@
 /**
- * Worker entry point: routes `/api/*` to `routes.ts` handlers, everything
- * else to the static Astro build via the `ASSETS` binding.
+ * Worker entry point: routes `/api/*` to `routes.ts` handlers, everything else
+ * to the static Astro build via the `ASSETS` binding.
  *
- * `NTNUClient`/`TTLCache`/`RateLimiter` are module-level singletons shared per
- * isolate (no options → library defaults); a fresh `TieredCache` wraps the
- * shared memory tier around the per-request `env.CACHE` KV binding (optional —
- * absent locally, so the cache degrades to memory-only).
+ * `NTNUClient`/`TTLCache`/`RateLimiter` are per-isolate singletons; a fresh
+ * `TieredCache` wraps the shared memory tier around the per-request
+ * `env.CACHE` KV binding (absent locally, so the cache degrades to memory).
  */
 import { NTNUClient } from "ntnu-api";
 import { type KVCacheBinding, TieredCache, TTLCache } from "./cache.js";
@@ -23,12 +22,9 @@ import {
 } from "./routes.js";
 
 /**
- * Cloudflare Workers Assets binding + optional KV cache binding, typed
- * structurally (not against `@cloudflare/workers-types`' `Fetcher`/
- * `KVNamespace`) so this file — included by both `worker/tsconfig.json`
- * (workers-types) and `tsconfig.test.json` (node types) — type-checks under
- * either pass. `KVCacheBinding` is the same structural slice `TieredCache`
- * accepts.
+ * Cloudflare Workers Assets + optional KV cache bindings, typed structurally
+ * rather than against `@cloudflare/workers-types`, so this file type-checks
+ * under both the Workers and the Node passes.
  */
 export interface Env {
   ASSETS: { fetch(request: Request): Promise<Response> };
@@ -39,27 +35,22 @@ const client = new NTNUClient();
 const memoryCache = new TTLCache();
 
 /**
- * Bounds how fast one client can make this worker fetch from NTNU (sec-5).
- * Tokens are spent by `routes.ts` only after the cache has missed, so a
- * returning visitor — whose courses are all warm — never touches it; what it
- * meters is our egress, which is the thing the project owes NTNU politeness
- * about.
+ * Bounds how fast one client can make this worker fetch from NTNU. Tokens are
+ * spent by `routes.ts` only after the cache has missed, so what it meters is
+ * our egress — the thing this project owes NTNU politeness about — and a
+ * returning visitor with warm courses never touches it.
  *
- * Calibration: a cold planner load is one plan fetch plus two calls per course
- * (~15 upstream for a full plan), so a 120-token burst absorbs several cold
- * page loads back to back, and 15/s sustained is far above any human session
- * while still being a hard ceiling where there was none. `mise run e2e` runs
- * one browser serially against a worker that warms after the first test, so it
- * stays well inside the burst (miniflare does set `CF-Connecting-IP` locally,
- * so the throttle is live there — it is not a production-only code path).
+ * Calibration: a cold planner load is ~15 upstream calls, so a 120-token burst
+ * absorbs several cold loads back to back and 15/s sustained is far above any
+ * human session. Miniflare sets `CF-Connecting-IP`, so `mise run e2e` exercises
+ * this path too — it is not production-only.
  */
 const rateLimiter = new RateLimiter(120, 15);
 
 /**
- * The only client identifier a Worker can trust; Cloudflare sets it on every
- * edge request (`X-Forwarded-For` is caller-supplied and must not be used).
- * When it is absent there is no honest key to bucket on, and throttling
- * everyone into one shared bucket would let a single abuser deny service to
+ * The only client identifier a Worker can trust (`X-Forwarded-For` is
+ * caller-supplied and must not be used). When it is absent there is no honest
+ * key, and bucketing everyone together would let one abuser deny service to
  * all callers — so the throttle stands down instead.
  */
 function clientKey(request: Request): string | null {
@@ -68,10 +59,9 @@ function clientKey(request: Request): string | null {
 }
 
 /**
- * `/emne/<code>/` pages are built with the catalog's own casing, which is
- * uppercase for all 5 470 codes (and has no case-insensitive collisions), so a
- * lowercase link 404s on a page that exists one casing change away (astro-7).
- * Returns the canonical path when it differs from `pathname`, else `null`.
+ * `/emne/<code>/` pages are built with the catalog's own casing, uppercase for
+ * all 5 470 codes, so a lowercase link 404s on a page that exists one casing
+ * change away. Returns the canonical path when it differs, else `null`.
  */
 export function canonicalCoursePath(pathname: string): string | null {
   const match = pathname.match(/^\/emne\/([^/]+)\/?$/);
@@ -95,7 +85,7 @@ export default {
 
     // `/api` (no trailing slash) is part of the API surface too: falling
     // through to ASSETS answered it with the HTML 404 page while every other
-    // /api path answered with the JSON envelope (worker-7).
+    // /api path answered with the JSON envelope.
     if (pathname !== "/api" && !pathname.startsWith("/api/")) {
       const assetResponse = await env.ASSETS.fetch(request);
       if (assetResponse.status === 404) {
@@ -110,7 +100,7 @@ export default {
     }
 
     // Read-only surface: anything but GET/HEAD used to be served as a GET,
-    // payload and all, marked publicly cacheable (worker-7).
+    // payload and all, marked publicly cacheable.
     if (request.method !== "GET" && request.method !== "HEAD") {
       return methodNotAllowed();
     }

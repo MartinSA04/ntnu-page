@@ -108,7 +108,7 @@ describe("layoutDay", () => {
     expect(layoutDay([])).toEqual([]);
   });
 
-  // grid-3: at 390 px a day column is ~56 px, so a 2-column cluster draws 27 px
+  // at 390 px a day column is ~56 px, so a 2-column cluster draws 27 px
   // blocks and "FRA1010" comes out one character per line over seven lines.
   // The renderer passes 1 there (grid.ts's `maxColumnsForViewport`).
   test("a phone cap of 1 piles a 2-deep cluster instead of splitting it", () => {

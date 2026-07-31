@@ -1,27 +1,22 @@
 /**
- * `/planlegger/` orchestrator (PRODUCT.md §0 — the mandate). Schedule-first:
- * programme + kull picked once → the weekly schedule for the chosen semester
- * renders immediately, prefilled with the courses the study plan says the
- * student has (NTNU auto-enrolls programme students — DR-7's pre-fill IS the
- * default plan, not a hedged suggestion).
+ * `/planlegger/` orchestrator (PRODUCT.md §0). Schedule-first: programme +
+ * kull picked once → the week for the chosen semester renders immediately,
+ * prefilled with the courses the study plan says the student has (DR-7's
+ * pre-fill IS the default plan, not a hedged suggestion).
  *
- * The page is **two regions**, not four tabs: *Uke* (grid + exam list —
- * both answer "when") and *Emner* (what's in the plan + how to change it).
- * Side by side on wide screens, tab-switched below 60rem. They stay
- * co-visible where there is room because the product's core loop is
- * add/drop → watch the collision appear or vanish; splitting cause from
- * effect would put a click in the middle of the one interaction that matters.
+ * The page is **two regions**, not four tabs: *Uke* (grid + exam list) and
+ * *Emner* (the plan and how to change it), side by side above 60rem. They stay
+ * co-visible because the core loop is add/drop → watch the collision appear or
+ * vanish, and splitting cause from effect puts a click in the middle of it.
  *
- * Two things the study plan forces, both handled here (see programPlan.ts):
+ * Two things the study plan forces (see programPlan.ts):
  * - **The studieretning question.** Later-year sivilingeniør periods have no
- *   top-level courses at all. The cross-direction obligatory intersection is
+ *   top-level courses. The cross-direction obligatory intersection is
  *   prefilled so the week is never blank, and the question is asked *on the
- *   Uke region* — an empty grid with "velg studieretning" is a complete
- *   screen; the same question hidden behind a tab is a dead end.
- * - **The choice pool.** A 4th/5th-year period offers 30–60+ courses. That is
- *   not a list — its count/copy surfaces in the gap line and the "period is
- *   elective" question, and the actual picking happens in the add-course
- *   dialog's flat catalog search (`addCourse.ts`, Task 12), not on the surface.
+ *   Uke region* — the same question behind a tab is a dead end.
+ * - **The choice pool.** A 4th/5th-year period offers 30–60+ courses. Its
+ *   count surfaces in the gap line; the picking happens in the add-course
+ *   dialog's flat catalog search (`addCourse.ts`).
  *
  * Render work is delegated to grid.ts/examList.ts.
  */
@@ -111,15 +106,15 @@ export interface SemestersFile {
 
 /**
  * The trimmed programme catalog passed in from the page (see index.astro).
- * `studyLevel`/`cities` are what separate two identically-named rows — MIDT
- * and MTDT are both "Datateknologi" and lead to opposite outcomes (B6).
+ * `studyLevel`/`cities` separate two identically-named rows — MIDT and MTDT
+ * are both "Datateknologi" and lead to opposite outcomes.
  */
 export type ProgramOption = [code: string, name: string, studyLevel: string, cities: string[]];
 
 /**
- * One row of the study plan's own choice pool (`availablePool` below) — used
- * only for the gap line's/question's counts and copy now. The actual add
- * surface is the add-course dialog's flat catalog search (Task 12).
+ * One row of the study plan's own choice pool (`availablePool`) — feeds the
+ * gap line's counts and copy only. The add surface is the dialog's catalog
+ * search.
  */
 interface PickerRow {
   code: string;
@@ -136,9 +131,9 @@ const FULL_LOAD_CREDITS = 30;
 const RAIL_WIDTH_PX = 48;
 
 /**
- * The three week views: the transposed grid (days as rows, REWORK-2026-07-29b
- * D1), the column grid (days as columns — the timetable shape, REWORK-2026-07-30h)
- * and Tavla (no geometry, D2). Views of one plan, never three plans.
+ * The three week views: the transposed grid (days as rows), the column grid
+ * (days as columns — the timetable shape) and Tavla (no geometry). Views of
+ * one plan, never three plans.
  */
 export type WeekView = "uke" | "kolonner" | "tavle";
 
@@ -147,13 +142,11 @@ const WEEK_VIEWS: readonly WeekView[] = ["uke", "kolonner", "tavle"];
 const WEEK_VIEW_KEY = "np:weekView";
 
 /**
- * The remembered view. A preference, not plan state: it lives in
- * localStorage rather than in the hash, so it follows the student across
- * their own visits without riding along on a link they share.
+ * The remembered view. A preference, not plan state: localStorage rather than
+ * the hash, so it follows the student without riding along on a shared link.
  *
- * Storage can throw (Safari private mode) and can hold anything (a hand-edited
- * value, an older build's vocabulary), so both directions are total: an
- * unrecognised value reads as the grid rather than as a blank week.
+ * Storage can throw (Safari private mode) and can hold anything, so both
+ * directions are total: an unrecognised value reads as the grid.
  */
 function loadWeekView(): WeekView {
   try {
@@ -170,17 +163,15 @@ function saveWeekView(view: WeekView): void {
   } catch {
     // A student who cannot persist the choice still gets to make it.
   }
-  // The reservation for the NEXT load reads this off `<html>`, and a soft
+  // The reservation for the NEXT load reads this off `<html>`; a soft
   // navigation away and back would otherwise arrive holding the old view's
   // height (planner-week.css, `#planner-grid-frame`).
   const root = document.documentElement;
   root.setAttribute("data-view", view);
-  // `--planner-box` is the height of the view we are LEAVING, and the frame is
-  // about to draw a different one. Belt to `settleWeekBox`'s braces: that
-  // releases the lease on the first drawn week, but a student who switches view
-  // while the bundles are still in flight would otherwise reserve Liste's
-  // height around Rader's week until they landed.
-  root.style.removeProperty("--planner-box");
+  // `--planner-box` is the height of the view we are LEAVING. Belt to
+  // `settleWeekBox`'s braces: that releases on the first drawn week, but a
+  // view switch while bundles are in flight would otherwise reserve the old
+  // view's height around the new one until they land.
 }
 
 const WEEK_BOX_KEY = "np:weekBox";
@@ -189,22 +180,20 @@ const WEEK_BOX_KEY = "np:weekBox";
  * How tall this browser's week actually came out, per view, with the width it
  * was measured at: `{ "tavle": [390, 891] }`.
  *
- * The three views have three unrelated geometries — Rader is five day rows,
- * Kolonner is the drawn hours at 4.5rem each, Liste is as long as the week has
- * sessions — so the frame cannot reserve one height for all of them, and
- * reserving Rader's for Liste is what left 0.14 CLS on a first load in Liste.
- * Kolonner can be computed; Liste cannot, because its height is a session count
- * and nothing before the fetch knows that.
+ * The three views have unrelated geometries — Rader is five day rows, Kolonner
+ * is drawn hours × 4.5rem, Liste is a session count — so the frame cannot
+ * reserve one height for all of them, and reserving Rader's for Liste left
+ * 0.14 CLS. Kolonner can be computed; Liste cannot, because nothing before the
+ * fetch knows the session count.
  *
- * So the page measures itself and remembers, and Layout.astro's pre-paint probe
- * hands the number back as `--planner-box` before the next first frame. That
- * this works at all rests on one fact: a load in Kolonner or Liste is by
- * construction a return visit, because the only way into either is the tab that
- * put you there.
+ * So the page measures itself and Layout.astro's pre-paint probe hands the
+ * number back as `--planner-box` before the next first frame. Sound because a
+ * load in Kolonner or Liste is by construction a return visit — the only way
+ * into either is the tab that put you there.
  *
- * The width rides along because it is what makes the height meaningful — a list
- * measured in a 390px column wraps differently at 1440 — and the probe throws
- * the entry away rather than trusting it outside a small tolerance.
+ * The width rides along because it is what makes the height meaningful (a list
+ * measured in 390px wraps differently at 1440); the probe discards the entry
+ * outside a small tolerance.
  */
 function saveWeekBox(view: WeekView, width: number, height: number): void {
   if (!(height > 0)) return;
@@ -214,14 +203,14 @@ function saveWeekBox(view: WeekView, width: number, height: number): void {
       raw !== null && typeof raw === "object" ? (raw as Record<string, [number, number]>) : {};
     const previous = boxes[view];
     const next: [number, number] = [Math.round(width), Math.round(height)];
-    // Nothing to write on the overwhelming majority of renders — the week is
-    // re-rendered on every plan edit, group pick and layer toggle.
+    // Nothing to write on most renders — the week is re-rendered on every plan
+    // edit, group pick and layer toggle.
     if (previous && previous[0] === next[0] && previous[1] === next[1]) return;
     boxes[view] = next;
     localStorage.setItem(WEEK_BOX_KEY, JSON.stringify(boxes));
   } catch {
-    // Same as the view above: a student who cannot persist it still gets the
-    // page, just without the reservation on the next load.
+    // A student who cannot persist it still gets the page, just without the
+    // reservation on the next load.
   }
 }
 
@@ -302,12 +291,10 @@ function getElements(): PlannerElements | null {
 }
 
 /**
- * Today in Oslo as "YYYY-MM-DD". `new Date().toISOString().slice(0, 10)` is
- * the UTC date, which is *yesterday* between local midnight and 01:00 CET /
- * 02:00 CEST — long enough to put "i dag" on the exam the student sat
- * yesterday and leave this morning's exam with no countdown (exams-2). The
- * week already uses local time (`new Date().getDay()`), so the two surfaces
- * also disagreed with each other in that window.
+ * Today in Oslo as "YYYY-MM-DD". `toISOString().slice(0, 10)` is the UTC date,
+ * which is *yesterday* between local midnight and 01:00 CET / 02:00 CEST —
+ * long enough to put "i dag" on yesterday's exam. The week uses local time
+ * (`getDay()`), so the two surfaces disagreed with each other in that window.
  */
 function todayInOslo(): string {
   const parts = new Intl.DateTimeFormat("en-CA", {
@@ -340,9 +327,8 @@ function semesterLabel(semester: SemesterSummary | undefined): string {
 }
 
 /**
- * The same semester in the notation a student writes on a timetable: `H26`,
- * `V27`. It is the title's form only (`renderBanner`) — everywhere there is
- * room for a word, `semesterLabel` above says "Høst 2026" in full.
+ * The semester as a student writes it on a timetable: `H26`, `V27`. Title form
+ * only — elsewhere `semesterLabel` says "Høst 2026" in full.
  */
 function semesterShort(semester: SemesterSummary | undefined): string {
   if (!semester) return "";
@@ -353,16 +339,13 @@ function semesterShort(semester: SemesterSummary | undefined): string {
 }
 
 /**
- * Obligatory courses of a classified period, shaped as `AddCourseInput`s for
- * `setProgramPlan`. `credits` and the plan's own course name travel with them
- * (B9.1): 39 of 1 383 period-1 obligatory references are absent from the
- * catalog, and without the study plan's figure each one silently
- * under-reported the semester's load.
+ * Obligatory courses of a classified period, shaped for `setProgramPlan`.
+ * `credits` and the plan's own course name travel with them: 39 of 1 383
+ * period-1 obligatory references are absent from the catalog, and without the
+ * study plan's figure each silently under-reported the semester's load.
  *
- * A >30 sp prefill is **kept**, not discarded. It is a bug signal, but
- * CMEDFORSK period 1 legitimately sums to 42,5 sp and MJORM to 45 — dropping
- * them produced "0 av 30 sp" with zero rows and no explanation. The caller
- * says so instead (see `suspiciousPrefillCredits`).
+ * A >30 sp prefill is **kept**, not discarded — CMEDFORSK period 1 legitimately
+ * sums to 42,5 sp. The caller says so instead (`suspiciousPrefillCredits`).
  */
 function obligatoryToAdd(classified: PeriodCourses | null): AddCourseInput[] {
   return (classified?.obligatory ?? []).map((c) => ({
@@ -375,10 +358,9 @@ function obligatoryToAdd(classified: PeriodCourses | null): AddCourseInput[] {
 }
 
 /**
- * Does the plan's programme course set already equal `next`? Guards the B4
+ * Does the plan's programme course set already equal `next`? Guards the
  * re-derive against a write (and therefore a render) that changes nothing.
- * Compares credits too, so a plan stored before B9.1 picks them up on the
- * next visit rather than staying priceless forever.
+ * Compares credits too, so a plan stored without them picks them up.
  */
 function sameProgramSet(courses: PlanCourse[], next: AddCourseInput[]): boolean {
   const current = courses.filter((c) => c.source === "program");
@@ -396,15 +378,13 @@ function sameProgramSet(courses: PlanCourse[], next: AddCourseInput[]): boolean 
 
 /**
  * Mounts the planner page. `semestersFile` is `data/semesters.json`,
- * `programOptions` is the trimmed `[code, name]` catalog from
- * `data/programs.json` (both build-time crawler artifacts imported by the
- * caller, not fetched at runtime — see SPEC.md's crawled-data contracts).
+ * `programOptions` the trimmed catalog from `data/programs.json` (both
+ * build-time crawler artifacts imported by the caller, not fetched).
  *
- * Called once per `astro:page-load` (see the page's `onPage` wrapper), so it
- * runs again after every client-side navigation back to `/planlegger/`.
- * `signal` aborts just before the next swap: element listeners die with the
- * DOM, but the plan-store subscription lives on `window` and would otherwise
- * accumulate one stale re-render per visit.
+ * Called once per `astro:page-load`, so it runs again after every client-side
+ * navigation back to `/planlegger/`. `signal` aborts just before the next
+ * swap: element listeners die with the DOM, but the plan-store subscription
+ * lives on `window` and would accumulate one stale re-render per visit.
  */
 export async function mountPlannerApp(
   semestersFile: SemestersFile,
@@ -418,26 +398,23 @@ export async function mountPlannerApp(
   const defaultSemesterId = semestersFile.current?.id ?? "26h";
   const store: PlanStore = createPlanStore(defaultSemesterId);
   const semesters = candidateSemesters(semestersFile);
-  // One AbortSignal for everything this page mounts (studieinfo + popover) and
-  // binds, so it all tears down together on the next `astro:before-swap`. In
-  // the no-signal path (some tests) it is a controller that never aborts.
+  // One AbortSignal for everything this page mounts and binds, so it all tears
+  // down together on the next `astro:before-swap`.
   const lifeSignal = signal ?? new AbortController().signal;
 
   // The studieinfo modal owns all four plan choices (programme/kull/retning/
-  // semester); the course-settings modal owns everything per-course — group
-  // selection AND drop/remove (REWORK-2026-07-29 D1/D3). Both hang off the
-  // single store this app owns — one mount each. Studieinfo opens from the
-  // banner "Endre" button, the week's studieretning question and every
-  // empty-state button, and from nowhere else on the site; course settings
-  // from a course row and from any block in the week or day view.
+  // semester); the course-settings modal owns everything per-course, group
+  // selection AND drop/remove. One mount each off the single store. Studieinfo
+  // opens from the banner "Endre", the week's studieretning question and the
+  // empty-state buttons, and nowhere else on the site.
   const studieinfo = mountStudieinfo(
     { store, semesters, programOptions, defaultSemesterId },
     lifeSignal,
   );
   const courseSettings = mountCourseSettings(store, lifeSignal);
   // A click in the week asks "what is this session", not "let me edit this
-  // course" — so it opens a read popover anchored to the bar, which carries a
-  // way through to the editor rather than being it (REWORK-2026-07-29f).
+  // course" — so it opens a read popover anchored to the bar, carrying a way
+  // through to the editor rather than being it.
   const blockPopover = mountBlockPopover(openCourseSettings, lifeSignal);
 
   /** Opens the session popover for a clicked bar or board row. */
@@ -445,19 +422,17 @@ export async function mountPlannerApp(
     const state = courseStates.get(detail.code);
     const course = plan.courses.find((c) => c.code === detail.code);
 
-    // What the card's verb may promise comes from the editor's OWN material:
-    // `groups` is narrowed exactly as the picker lists it, so a layer with one
-    // option, or none, cannot offer a choice the modal would not show
-    // ("Velg parallell" on a course with a single parallel is a dead end).
+    // What the card's verb may promise comes from the editor's OWN material,
+    // so a layer with one option (or none) cannot offer a choice the modal
+    // would not show.
     const layerOptions = (buildCourseSettingsContext(detail.code)?.groups ?? []).filter(
       (option) => (option.kind === "lecture") === detail.isLecture,
     );
     const choice: SessionChoice =
       layerOptions.length > 1 ? (detail.isLecture ? "parallel" : "group") : "course";
-
     // Whether the drawn lecture is a guess is the same question the margin
-    // note answers, so it is the same function. A second rule here is how the
-    // note and the card would start disagreeing about what was chosen.
+    // note answers, so it is the same function — a second rule here is how the
+    // note and the card start disagreeing.
     const guess = state ? unresolvedLectureChoices([state], false)[0] : undefined;
 
     blockPopover.showFor(
@@ -475,41 +450,24 @@ export async function mountPlannerApp(
   /**
    * The material the course-settings modal opens on, for one course code.
    *
-   * Keyed by CODE, not by a clicked block: both entrances — a course row in
-   * the Emner list and a block in the week/day grid — reach the same course
-   * the same way, and the row has no block to hand over (REWORK-2026-07-29
-   * D1). That is the point of the rewrite: a course whose sessions were
-   * swallowed by a pile, or which has no timetable at all, is now reachable.
+   * Keyed by CODE, not by a clicked block: both entrances — a course row and a
+   * block in the week — reach the same course the same way, and the row has no
+   * block to hand over. A course with no timetable still opens (credits, status
+   * notes, drop/remove), and so does a DROPPED programme course, which has no
+   * `PlanCourseState` at all. `null` only for a code not in the plan.
    *
-   * A course with no timetable yet still opens: it has no group picker, but it
-   * does have credits, its status notes and its drop/remove action, and those
-   * are exactly what a student wants from a course the week cannot draw. So
-   * does a DROPPED programme course, which has no `PlanCourseState` at all
-   * (`syncCourseStates` tracks the active courses only) — and it has to, since
-   * "Legg tilbake" is now the modal's job (D3). `null` comes back only for a
-   * code that is not in the plan at all.
-   *
-   * The picker lists the groups this student could plausibly be in, not every
-   * group the course publishes all year: this semester's weeks, and — for the
-   * øving/lab layer — the programme's own sections. EXPH0300 for an MTTK
-   * student listed 44 rows across Trondheim, Gjøvik and Ålesund, which on a
-   * phone put the Dropp/emneside actions ~1 000 px below the fold behind
-   * seminar groups in another city; it now lists 17 (groups-4/groups-3).
-   * `entriesForProgram` is a no-op for a course that never names the
-   * programme, so an ordinary course still lists everything it has.
-   *
-   * A key the student picked *explicitly* is kept in the list whatever the
-   * narrowing says — an explicit pick beats the programme filter in
-   * `applyGroupSelection` (groups.ts), so the control that unticks it has to
-   * stay reachable.
+   * The picker lists groups this student could plausibly be in — this
+   * semester's weeks, and for øving/lab the programme's own sections — because
+   * EXPH0300 otherwise listed 44 rows across three cities. A key picked
+   * *explicitly* stays listed whatever the narrowing says, or the control that
+   * unticks it is unreachable.
    */
   function buildCourseSettingsContext(code: string): CourseSettingsContext | null {
     const course = plan.courses.find((c) => c.code === code);
     if (!course) return null;
     const state = courseStates.get(code) ?? null;
 
-    // The status sentences the course row used to concatenate into one
-    // run-on meta line (D2). They live here now, one per line.
+    // The status sentences, one per line (they used to run on in the row).
     const notes: string[] = [];
     const stale = notTaughtIn(code);
     if (stale) {
@@ -517,8 +475,7 @@ export async function mountPlannerApp(
     } else if (state) {
       if (isOffSemester(state)) notes.push("Undervises ikke i valgt semester.");
       // `errors` is Norwegian on both sides of the colon (data.ts's
-      // `failureMessage`); the raw upstream English lives on `.detail` and is
-      // never rendered (copy-2).
+      // `failureMessage`); the raw upstream English lives on `.detail`.
       for (const error of state.bundle?.errors ?? []) notes.push(`Fikk ikke hentet ${error}.`);
     }
     const failed = !stale && (state?.bundle?.errors.length ?? 0) > 0;
@@ -526,9 +483,8 @@ export async function mountPlannerApp(
     const base = {
       code,
       name: state?.bundle?.details?.courseName ?? course.name,
-      // A dropped course has no state and therefore no assigned hue — it is
-      // excluded from the week, the credit total and the exam list, which is
-      // what the hue ramp indexes. The dot still has to resolve to a colour.
+      // A dropped course has no state and no assigned hue — it is out of the
+      // week, the total and the exam list. The dot still needs a colour.
       hueVar: state?.hueVar ?? "--muted",
       credits: state ? creditsOf(state) : (course.credits ?? null),
       source: course.source,
@@ -548,29 +504,21 @@ export async function mountPlannerApp(
       };
     }
 
-    // `defaults` is read off exactly the set the GRID narrows — the week's
-    // entries, programme narrowing left to `applyGroupSelection` (groups.ts) —
-    // so the picker's ticked default is the block on screen. Its LENGTH also
-    // decides radios vs checkboxes, so it must stay
-    // `resolveLectureDefaults(...).keys` verbatim (groups-2/groups-3).
-    // `resolved` travels with it so the picker can stop labelling a
-    // provisional pick "(din parallell)" — for BDIGSEC/EXPH0300 the week draws
-    // one of two campus parallels and neither is the student's own until they
-    // say so (groups-5).
+    // `defaults` is read off exactly the set the GRID narrows, so the picker's
+    // ticked default is the block on screen. Its LENGTH decides radios vs
+    // checkboxes, so it must stay `resolveLectureDefaults(...).keys` verbatim.
+    // `resolved` travels with it so the picker can stop labelling a provisional
+    // pick "(din parallell)" when neither campus parallel is the student's own.
     const week = semesterWeekEntries(state.bundle);
     const lectures = resolveLectureDefaults(week, state.programCode);
     const selected = state.course.groups ?? [];
     const inWeek = new Set(groupOptions(week).map((o) => o.key));
     // Programme narrowing on the ØVING/LAB layer only. That is where the flood
-    // is (39 of EXPH0300's 44 rows are seminar groups, most of them another
-    // campus's) and it is the layer `applyGroupSelection`'s default branch
-    // already narrows the same way. The lecture layer keeps every parallel the
-    // semester publishes: picking a parallel tagged for ANOTHER programme is a
-    // documented capability (groups.ts, tests/planner/groups.test.ts) and this
-    // picker is the only place it can be exercised — narrowing it away would
-    // make an MTDT student unable to choose TMA4400's "Forelesning 2 MTBYGG",
-    // which e2e/flows.pw.ts's "a non-default parallel renders with a programme
-    // set" ticks by hand.
+    // is (39 of EXPH0300's 44 rows are seminar groups, mostly another campus's)
+    // and it is the layer `applyGroupSelection`'s default branch narrows the
+    // same way. The lecture layer keeps every parallel the semester publishes:
+    // picking a parallel tagged for ANOTHER programme is a documented capability
+    // and this picker is the only place to exercise it.
     const ownOther = new Set(
       groupOptions(entriesForProgram(week, state.programCode))
         .filter((o) => o.kind !== "lecture")
@@ -579,7 +527,7 @@ export async function mountPlannerApp(
     return {
       ...base,
       // From the YEAR's options, so a pick made for another semester (or one
-      // upstream has since retitled) is still listed and can be unticked.
+      // upstream has retitled) is still listed and can be unticked.
       groups: groupOptions(timetable).filter(
         (o) =>
           (o.kind === "lecture" ? inWeek.has(o.key) : ownOther.has(o.key)) ||
@@ -588,11 +536,10 @@ export async function mountPlannerApp(
       selected,
       defaults: lectures.keys,
       resolved: lectures.resolved,
-      // What the week actually draws, through the SAME call the grid and the
-      // board render from — not `lectures.keys`, which is empty both for a
-      // course with nothing left to switch to and for one whose other
-      // parallels are simply another programme's. `pickableGroups` needs to
-      // tell those apart; only this can.
+      // What the week actually draws, through the SAME call the grid and board
+      // render from — not `lectures.keys`, which is empty both for a course
+      // with nothing to switch to and for one whose other parallels are another
+      // programme's. `pickableGroups` must tell those apart.
       drawnLectures: groupOptions(applyGroupSelection(week, selected, state.programCode))
         .filter((o) => o.kind === "lecture")
         .map((o) => o.key),
@@ -609,12 +556,10 @@ export async function mountPlannerApp(
   let linkNote: string | null = null;
 
   /**
-   * Only a semester this build ships plannable data for is allowed into the
-   * state. `#v2;25h;…` used to be taken verbatim: `currentSemester()` fell
-   * back to 26h for teaching weeks while `loadBundles` fetched 2025, so 2025
-   * entries were filtered against 26h's weeks; `#v2;banana;…` produced a
-   * course list with a permanently empty grid, no spinner and no error — and
-   * then `syncHash()` wrote the bad id straight back (C4).
+   * Only a semester this build ships plannable data for may enter the state.
+   * A verbatim `#v2;25h;…` filtered 2025 entries against 26h's teaching weeks,
+   * and `#v2;banana;…` produced a permanently empty grid with no error — then
+   * `syncHash()` wrote the bad id straight back.
    */
   function knownSemester(id: string): boolean {
     return semesters.some((s) => s.id === id);
@@ -647,8 +592,7 @@ export async function mountPlannerApp(
         version: c.version,
         source: c.source,
         ...(c.dropped ? { dropped: true } : {}),
-        // A shared link's group picks (`~groupKey`) must survive the hash → plan
-        // hop, or the recipient loses the sender's parallel/øving selections.
+        // A shared link's group picks must survive the hash → plan hop.
         ...(c.groups.length > 0 ? { groups: c.groups } : {}),
       })),
       ...(program ? { program } : {}),
@@ -658,18 +602,14 @@ export async function mountPlannerApp(
   /**
    * Carries the two facts the hash grammar cannot hold — `credits` and the
    * course's real `name` — from the plan already on disk onto the hash-derived
-   * one (store-4).
+   * one.
    *
-   * The page writes its own hash on every render (`syncHash`), so a plain F5
-   * goes through the hash-wins branch below, and replacing outright used to
-   * *persist* `{name: code}` with no credits: an elective added from the study
-   * plan panel — the only path that supplies `credits` at all — lost the 7,5 sp
-   * only the study plan could know, on disk, permanently. That is B9.1's
-   * fallback destroyed by its own reload.
+   * The page writes its own hash on every render, so a plain F5 goes through
+   * the hash-wins branch below; replacing outright *persisted* `{name: code}`
+   * with no credits, losing the 7,5 sp only the study plan knows.
    *
-   * Only same-semester storage is read: `np:plans` is keyed by semester and
-   * another semester's row says nothing about this one. Everything the hash
-   * *does* carry (version, source, dropped, groups) still wins outright.
+   * Only same-semester storage is read (`np:plans` is keyed by semester).
+   * Everything the hash *does* carry still wins outright.
    */
   function withStoredFacts(next: PlanState, stored: PlanState): PlanState {
     if (stored.semesterId !== next.semesterId) return next;
@@ -689,21 +629,18 @@ export async function mountPlannerApp(
   }
 
   // Hash wins over storage on load (PRODUCT.md §7) — but only a hash that
-  // actually carries a plan. Every load ends by writing the *current* plan
-  // back into the hash (syncHash below), so on a later visit a trivially-empty
-  // hash (`#v2;26h;-;`, no program, no courses) is indistinguishable from "no
-  // hash was ever set" and must defer to localStorage instead of wiping it.
+  // carries a plan. Every load ends by writing the current plan back into the
+  // hash, so a trivially-empty hash (`#v2;26h;-;`) is indistinguishable from
+  // "no hash was ever set" and must defer to localStorage instead of wiping it.
   const hashPlan = parsePlanHash(location.hash);
   const hashHasPlan =
     hashPlan !== null && (hashPlan.program !== null || hashPlan.courses.length > 0);
   let plan: PlanState = store.loadPlan();
   if (hashPlan && hashHasPlan) {
     plan = withStoredFacts(planFromHash(hashPlan), plan);
-    // A program-less link (`#…;-;…courses`) must clear any stored profile, not
-    // just omit one: `savePlan` can only ever *write* `np:profile`, never clear
-    // it (store.ts), so the header chip would keep naming the old programme
-    // while the planner shows none (finding 2). `removeProgram` clears it first;
-    // `savePlan` then writes exactly the hash's own courses.
+    // A program-less link must CLEAR any stored profile, not just omit one:
+    // `savePlan` can only ever write `np:profile`, never clear it, so the
+    // header chip would keep naming the old programme.
     if (hashPlan.program === null) store.removeProgram();
     store.savePlan(plan);
   } else if (!knownSemester(plan.semesterId)) {
@@ -715,38 +652,33 @@ export async function mountPlannerApp(
   let plannerIndex: PlannerIndex | null = null;
   /**
    * The `/data/search-index.json` download failed. Kept apart from
-   * `plannerIndex === null` ("still in flight"): conflating the two left the
-   * exam column spinning forever and made the provenance line state that NTNU
-   * had published no exam dates — a failed download of our *own* build
-   * artifact reported as an upstream fact (pd-3/ux-fail-7).
+   * `plannerIndex === null` ("still in flight"): conflating them left the exam
+   * column spinning forever and reported a failed download of our own build
+   * artifact as an upstream fact.
    */
   let plannerIndexFailed = false;
   /** Lazy by-code lookup over the raw index (`offeredYears` etc.). Reset with the index. */
   let indexByCodeMemo: Map<string, PlannerIndexCourse> | null = null;
   let showOthers = false;
   /**
-   * Which of the two week views is on screen (REWORK-2026-07-29b D2).
-   *
-   * Deliberately NOT in the hash: it is how you are looking at the plan, not
-   * what you are looking at, and a shared link that forced the recipient into
-   * a list because the sender happened to be on a phone would be a worse
-   * answer to "here is my week" than the week itself. It IS remembered in
-   * localStorage, because a student who prefers the list prefers it every
-   * time.
+   * Which week view is on screen. Deliberately NOT in the hash: it is how you
+   * are looking at the plan, not what you are looking at, and a link that
+   * forced the recipient into a list because the sender was on a phone is a
+   * worse answer to "here is my week" than the week. It IS remembered in
+   * localStorage.
    */
   let weekView: WeekView = loadWeekView();
   /**
-   * Set by a view switch and consumed by the next render, which is the only
-   * render allowed to play the strike-in. A plan edit re-renders the week too,
-   * and replaying the animation there would be entrance choreography.
+   * Set by a view switch and consumed by the next render, the only one allowed
+   * to play the strike-in. A plan edit re-renders the week too, and replaying
+   * the animation there would be entrance choreography.
    */
   let pendingViewAnimation = false;
   /**
-   * Where `renderGrid` builds a grid nobody will see, while Tavla is on
+   * Where `renderGrid` builds a grid nobody will see, while another view is on
    * screen. The grid is still the single owner of the margin notes, the
    * conflict count and the honest-verdict logic; only its geometry is
-   * redundant in list view, and eight detached bars is a cheaper price than a
-   * second implementation of "what could this week not draw".
+   * redundant, and eight detached bars is cheaper than a second implementation.
    */
   const discardHost = document.createElement("div");
   let periodCourses: PeriodCourses | null = null;
@@ -756,7 +688,7 @@ export async function mountPlannerApp(
   /**
    * What actually happened to the study-plan fetch, so the provenance line can
    * stop asserting "studieplan for kull N" over a 404, an error, or another
-   * cohort's document silently substituted by the step-back (plan-3/ux-fail-4).
+   * cohort's document silently substituted by the step-back.
    */
   let studyPlanOutcome:
     | { kind: "pending" }
@@ -782,9 +714,8 @@ export async function mountPlannerApp(
   /**
    * `history.state` is carried through, never replaced with `null`: Astro's
    * ClientRouter seeds every entry with `{index, scrollX, scrollY}` and its
-   * `onPopState` returns early on a null state, so writing `null` here left
-   * the planner's own entry dead — Back (and Forward) onto it changed the URL
-   * and never swapped the page (app-1, CLAUDE.md's ClientRouter rule).
+   * `onPopState` returns early on a null state, so writing `null` here leaves
+   * this entry dead — Back onto it changes the URL and never swaps the page.
    */
   function syncHash(): void {
     lastWrittenHash = formatPlanHash(plan);
@@ -803,14 +734,12 @@ export async function mountPlannerApp(
 
   /**
    * A bundle's timetable narrowed to this semester's teaching weeks ONLY — not
-   * to the programme's own sections. This is what the grid draws, because the
-   * grid's `applyGroupSelection` (groups.ts) is the single owner of programme
-   * narrowing: its default branch runs `entriesForProgram` for the programme's
-   * parallel, but an *explicit* group pick wins over the programme filter.
-   * Pre-narrowing by programme here too stripped a cross-programme parallel the
-   * student had explicitly selected before the grid ever saw it — the course's
-   * lecture block vanished silently (finding 1). `semesterEntries` keeps the
-   * programme narrowing where it belongs: the off-semester/credit accounting.
+   * to the programme's sections. This is what the grid draws, because
+   * `applyGroupSelection` (groups.ts) is the single owner of programme
+   * narrowing and an *explicit* group pick wins over it. Pre-narrowing here too
+   * stripped a cross-programme parallel the student had selected before the
+   * grid saw it. `semesterEntries` keeps the programme narrowing where it
+   * belongs: off-semester/credit accounting.
    */
   function semesterWeekEntries(bundle: CourseBundle | null): TimetableEntry[] {
     const semester = currentSemester();
@@ -820,61 +749,46 @@ export async function mountPlannerApp(
 
   // --- Banner ------------------------------------------------------------
 
-  // The on-page "Bytt semester" disclosure is gone. It was the second surface
-  // offering the same choice as the studieinfo modal's own semester select,
-  // which already commits unconditionally and first (studieinfo.ts's
-  // `commit`). The resolved term is still *stated* in the context line below
-  // — DR-9/U6's point was that the tool resolves the term itself and says so;
-  // it never required a switcher on the fold.
+  // No on-page "Bytt semester" disclosure: the studieinfo modal's semester
+  // select already commits unconditionally and first. The resolved term is
+  // still *stated* in the context line — DR-9/U6 asks the tool to resolve the
+  // term and say so, not to put a switcher on the fold.
 
   /**
-   * The banner — ETT NAVN (REWORK-2026-07-30b).
+   * The banner — ETT NAVN.
    *
-   * The title is the plan in the notation a student actually writes on a
-   * timetable: `MTFYMA Kull 24 H26` — three facts, no separators, all of them
-   * data and therefore all of them mono. It replaces a 2 rem rendering of
-   * NTNU's own programme string — hyphen, parenthetical and all — which took
-   * three lines on a phone before anything actionable appeared, and which the
-   * topbar chip was simultaneously saying in miniature 100 px above.
+   * The title is the plan as a student writes it on a timetable: `MTFYMA Kull
+   * 24 H26` — three facts, no separators, all of them data and therefore mono.
    *
-   * The programme's full name is not lost, it is demoted: it is a 42-character
-   * database field, and the hint line is where those belong. Beside it sits
-   * "endre", the page's one opener for the studieinfo modal now that the chip
-   * has left this page.
+   * The programme's full name is not lost, it is demoted to the hint line: it
+   * is a 42-character database field. Beside it sits "endre", the page's one
+   * opener for the studieinfo modal.
    *
-   * With no programme there is nothing to name, and the title falls back to
-   * being the product's own — the one moment the wordmark and the page title
-   * are allowed to agree, because until you pick a plan the page really is
-   * only Semesterplan.
+   * With no programme there is nothing to name and the title falls back to the
+   * product's own — the one moment the wordmark and the page title may agree,
+   * because until you pick a plan the page really is only Semesterplan.
    */
   function renderBanner(): void {
     const program = plan.program;
     const semester = currentSemester();
 
-    // The title's FACE is CSS's, keyed on the plan probe (see the scoped block
-    // in /planlegger/'s template): the grotesk when there is no plan to name,
-    // the mono when there is. It used to be an `.is-empty` class added here,
-    // which is one frame too late — the server had already painted the title
-    // in the other face and the whole page hung off the difference. Writing
-    // the probe here keeps the attribute true for every later change, and this
-    // is the one function that runs on all of them.
+    // The title's FACE is CSS's, keyed on the plan probe: grotesk when there is
+    // no plan to name, mono when there is. A class added here would be one
+    // frame too late — the server has already painted the other face. This is
+    // the one function that runs on every later change.
     syncPlanProbe(plan);
 
     const title = elements.title;
     title.replaceChildren();
     if (program) {
-      // `MTFYMA Kull 24 H26` — the plan as a student writes it on a timetable,
-      // in three unbreakable parts separated by a space and nothing else. The
-      // middle dots are gone (2026-07-31, owner's call): three facts in a mono
-      // face already read as three, and the separators were doing the work of
-      // the spaces that were there anyway.
+      // `MTFYMA Kull 24 H26`, in three unbreakable parts separated by a space
+      // and nothing else: three facts in a mono face already read as three.
       const parts = [
         program.code,
         `Kull ${String(program.cohort).slice(-2)}`,
         semesterShort(semester),
       ].filter(Boolean);
-      // Each part is unbreakable, so a title that has to wrap breaks between
-      // facts — never inside "Kull 24".
+      // Each part is unbreakable, so a wrapping title breaks between facts.
       title.append(
         ...parts.flatMap((part, i) => [
           ...(i > 0 ? [" "] : []),
@@ -898,8 +812,7 @@ export async function mountPlannerApp(
         append(el("span", "planner-context-direction", program.direction.name));
       }
     } else if (semester) {
-      // No plan yet: the hint carries the semester the empty week is for, so
-      // the title can stay the product's name without dropping the fact.
+      // No plan yet: the hint carries the semester the empty week is for.
       append(el("span", "np-data", semesterLabel(semester)));
     }
     if (semester && !semester.timetablePublished) {
@@ -913,11 +826,10 @@ export async function mountPlannerApp(
   }
 
   /**
-   * The credit total, and the four ways it used to be wrong (B9):
-   * study-plan credits were discarded, off-semester courses were counted,
-   * an overload was painted the same green as a full load, and a >30 sp
-   * prefill was silently thrown away. `null` credits stay `null` — DR-6's
-   * honest gap — but "not fetched yet" is not a gap, it is a spinner (U5).
+   * The credit total. Study-plan credits count, off-semester courses do not, an
+   * overload is not painted the same green as a full load, and a >30 sp prefill
+   * is not thrown away. `null` credits stay `null` — DR-6's honest gap — but
+   * "not fetched yet" is a spinner, not a gap.
    */
   interface CreditSummary {
     total: number;
@@ -934,10 +846,9 @@ export async function mountPlannerApp(
   }
 
   /**
-   * The course has a timetable, that timetable has entries for this
-   * programme, and none of them fall in the planned semester — so the row
-   * already says "undervises ikke i valgt semester" and DR-10 excludes it
-   * from the total. An *absent* timetable is unknown, not off-semester.
+   * The course has a timetable with entries for this programme, and none fall
+   * in the planned semester — so DR-10 excludes it from the total. An *absent*
+   * timetable is unknown, not off-semester.
    */
   function isOffSemester(state: PlanCourseState): boolean {
     const timetable = state.bundle?.timetable;
@@ -966,26 +877,20 @@ export async function mountPlannerApp(
 
   /**
    * The load strip: the semester's 30 credits as a track, each counted course a
-   * segment in its own printed hue, its width its own credits
-   * (REWORK-2026-07-29d).
+   * segment in its own printed hue, its width its own credits. It does for
+   * credits what the exam band does for the exam period, so a colour means one
+   * thing in three places.
    *
-   * It does for credits what the exam band does for the exam period — answers
-   * the section's own question before a row is read — so the two sections end
-   * up the same shape, and a colour means one thing in three places: the bar in
-   * the week, the cell in the band, the segment here.
-   *
-   * Only what the TOTAL counts: an off-semester course is excluded from the
-   * figure (DR-10), so drawing it in the strip would make the segments and the
-   * number disagree. A 0 sp course cannot be drawn in a strip about credits at
-   * all — it is a real course and it is in the list; it is simply not a load.
+   * Only what the TOTAL counts: an off-semester course is excluded (DR-10), or
+   * the segments and the number disagree. A 0 sp course cannot be drawn in a
+   * strip about credits — it is real and it is in the list, it is not a load.
    */
   function renderCreditStrip(): void {
     const counted = orderedActiveStates().filter(
       (state) => !isOffSemester(state) && (creditsOf(state) ?? 0) > 0,
     );
-    // Emptied, never hidden: `[hidden]` would take the track's 15px out of the
-    // flow and every course row under it would move when the first segment is
-    // drawn. `.planner-load:empty` holds that height instead.
+    // Emptied, never hidden: `[hidden]` takes the track's 15px out of the flow
+    // and every row under it moves when the first segment is drawn.
     elements.creditStrip.replaceChildren();
     if (counted.length === 0) return;
 
@@ -1000,8 +905,8 @@ export async function mountPlannerApp(
       seg.title = `${state.course.code} · ${formatCreditNumber(credits)} sp`;
       track.append(seg);
     }
-    // The gap to a full load is drawn as empty track, not as another segment:
-    // it is the absence of a course, and it must not read as one.
+    // The gap to a full load is empty track, not a segment: it is the absence
+    // of a course and must not read as one.
     if (total < FULL_LOAD_CREDITS) {
       const rest = el("span", "planner-load-rest");
       rest.style.flexGrow = String(FULL_LOAD_CREDITS - total);
@@ -1026,8 +931,8 @@ export async function mountPlannerApp(
       text += ` (+${summary.unpriced} ${emner} uten oppgitt sp)`;
     }
     elements.creditLine.textContent = text;
-    // Green means it *fits*: exactly a full load. Painting 37,5 the same
-    // green as 30 spends Green-Means-Fits on the opposite of the truth.
+    // Green means it *fits*: exactly a full load. Painting 37,5 the same green
+    // spends Green-Means-Fits on the opposite of the truth.
     elements.creditLine.classList.toggle(
       "is-full",
       Math.abs(summary.total - FULL_LOAD_CREDITS) < 0.05,
@@ -1041,16 +946,12 @@ export async function mountPlannerApp(
       );
     }
     // No "X sp over normal semesterbelastning" line: "37,5 av 30 sp" sits
-    // directly above it and already says exactly that. The two notes that
-    // remain both carry something the numbers cannot — a row excluded from
-    // the arithmetic, and a defect in the study plan itself.
+    // directly above and already says it. The two notes that remain each carry
+    // something the numbers cannot.
     if (suspiciousPrefillCredits !== null) {
-      // "Fjern det du ikke tar" needs something to remove. MSCHEM kull 2025 at
-      // Vår 2027 is one mandatory 60 sp masteroppgave — the study plan hangs a
-      // multi-semester course's whole credit on its final period — so the
-      // imperative told a student to prune a semester holding exactly one
-      // course they cannot drop (plan-6). Over 30 sp on a single course is a
-      // course spanning several semesters, not a defective study plan.
+      // "Fjern det du ikke tar" needs something to remove. A single mandatory
+      // 60 sp masteroppgave — the study plan hangs a multi-semester course's
+      // whole credit on its final period — is not a defective study plan.
       const single = (periodCourses?.obligatory.length ?? 0) === 1;
       notes.push(
         single
@@ -1064,17 +965,16 @@ export async function mountPlannerApp(
 
   /**
    * The gap sentence under the course list, and the door into the picker.
-   * Deliberately phrased as remaining credits, never "velg 2 av 5": the study
-   * plan carries no cardinality (DR-5), but the credit arithmetic is real.
+   * Phrased as remaining credits, never "velg 2 av 5": the study plan carries
+   * no cardinality (DR-5), but the credit arithmetic is real.
    */
   function renderGapLine(): void {
     const summary = creditSummary();
     const gap = FULL_LOAD_CREDITS - summary.total;
     const anyLoading = summary.loading;
-    // An *empty* plan still gets the gap sentence as long as a programme is
-    // set — that is exactly the 3rd-year bachelor whose period prefills
-    // nothing at all (BIT period 5: zero `O` courses, eight electives). For
-    // them "Mangler 30 sp · velg fra studieplanen (8)" is the whole flow.
+    // An *empty* plan still gets the sentence as long as a programme is set —
+    // that is the 3rd-year bachelor whose period prefills nothing at all, for
+    // whom "Mangler 30 sp · velg fra studieplanen (8)" is the whole flow.
     const hasContext = plan.program !== undefined || plan.courses.length > 0;
     if (gap <= 0 || anyLoading || !hasContext) {
       elements.gapLine.hidden = true;
@@ -1082,42 +982,26 @@ export async function mountPlannerApp(
     }
     elements.gapLine.hidden = false;
     elements.gapText.textContent = `Mangler ${formatCreditNumber(gap)} sp`;
-    // The button is only worth showing when it goes somewhere the standing
-    // "Legg til emne" button (right below it) does not. With an empty study
-    // plan pool it fell back to that same label and opened that same dialog,
-    // so the rail carried two identical buttons a line apart — the sentence
-    // alone is what's left in that case.
+    // Only worth showing when it goes somewhere the standing "Legg til emne"
+    // button below it does not. With an empty pool it fell back to that same
+    // label and dialog, so the rail carried two identical buttons.
     const pool = availablePool();
     const noPool = pool.length === 0;
     elements.gapButton.hidden = noPool;
-    // `hidden` alone does not hide it: `.np-btn { display: inline-flex }`
-    // (primitives.css) is an author rule and beats the UA's `[hidden]`, so on a
-    // programme+kull whose period offers no electives the rail kept a
-    // count-less "Velg fra studieplanen" promising the study plan and opening
-    // the whole catalog (plan-8). Belt and braces until `[hidden]` is enforced
-    // for `.np-btn` in the stylesheets — clearing it back to "" restores
-    // whatever the sheet says.
+    // `hidden` alone does not hide it: `.np-btn { display: inline-flex }` is an
+    // author rule and beats the UA's `[hidden]`, so the rail kept a count-less
+    // "Velg fra studieplanen" promising the study plan and opening the whole
+    // catalog. Clearing back to "" restores whatever the sheet says.
     elements.gapButton.style.display = noPool ? "none" : "";
     if (!noPool) elements.gapButton.textContent = `Velg fra studieplanen (${pool.length})`;
   }
 
-  // The Uke/Emner region tabs are gone (REWORK-2026-07-29c): they existed
-  // because a phone could not scroll past a 768 px week to reach the course
-  // list, and the transposed week is ~290 px. One column, no switch.
-
-  // --- The clock (REWORK-2026-07-30) ---------------------------------------
+  // --- The clock ----------------------------------------------------------
   //
-  // A planner is a page people leave open. The marker was nudged every minute
-  // for exactly that reason — but the marker was the only thing on a clock,
-  // and it is not the only thing that reads a date. WHICH DAY IT IS was read
-  // once, at render: `todayWeekday()` for the row drawn at full ink,
-  // `todayInOslo()` for every exam countdown.
-  //
-  // So a page left open overnight kept Wednesday's spine bold and Wednesday's
-  // row tinted while the now line had already stepped down into Thursday —
-  // the marker looked misplaced because the highlight, which is the louder
-  // signal, was pointing at the wrong day. Every "om N dager" was a day long
-  // on top of that.
+  // A planner is a page people leave open. The now marker was nudged every
+  // minute, but WHICH DAY IT IS was read once, at render — so a page left open
+  // overnight kept yesterday's spine bold and its row tinted while the marker
+  // had stepped into today, and every "om N dager" was a day long.
   //
   // The tick therefore has two jobs, and the expensive one only runs when the
   // date has actually rolled.
@@ -1126,9 +1010,8 @@ export async function mountPlannerApp(
   function tickNow(): void {
     const stamp = todayStamp();
     if (stamp === dayStamp) {
-      // The ordinary minute: one element moves, nothing re-renders. Both
-      // grids are asked; each does nothing when it is not the one on screen,
-      // which is cheaper than teaching the tick which view is drawn.
+      // The ordinary minute: one element moves, nothing re-renders. Both grids
+      // are asked; each no-ops when it is not the one on screen.
       syncNowMarker(elements.gridFrame);
       syncColumnNow(elements.gridFrame);
       return;
@@ -1140,9 +1023,8 @@ export async function mountPlannerApp(
 
   const nowTimer = setInterval(tickNow, 60_000);
   lifeSignal.addEventListener("abort", () => clearInterval(nowTimer));
-  // A sleeping laptop runs no timers, and coming back to the tab is precisely
-  // when a stale day gets looked at. Waiting up to a minute to correct it is
-  // waiting through the moment that matters.
+  // A sleeping laptop runs no timers, and returning to the tab is exactly when
+  // a stale day gets looked at.
   document.addEventListener(
     "visibilitychange",
     () => {
@@ -1155,21 +1037,18 @@ export async function mountPlannerApp(
   elements.viewUke.addEventListener("click", () => setWeekView("uke"));
   elements.viewKolonner.addEventListener("click", () => setWeekView("kolonner"));
   elements.viewTavle.addEventListener("click", () => setWeekView("tavle"));
-  // The travelling rule is measured, so it has to be re-measured whenever the
-  // measurement could change: a resize, and the frame after the webfont swaps
-  // the labels out from under it.
+  // The travelling rule is measured, so re-measure whenever the measurement
+  // could change: a resize, and the frame after the webfont swaps.
   window.addEventListener("resize", renderViewTabs, { passive: true, signal });
   document.fonts?.ready.then(() => renderViewTabs());
 
-  // --- Rader ⇄ Kolonner ⇄ Liste (REWORK-2026-07-29b D2, -07-30h) ----------
+  // --- Rader ⇄ Kolonner ⇄ Liste ----------
 
   /**
-   * Switches which of the three views draws the week.
-   *
-   * Only the week is re-rendered: the exam list, the credit line and the
-   * course rows say the same thing in both views, and rebuilding them would
-   * throw away the student's scroll position for a change they did not ask
-   * those surfaces to make.
+   * Switches which of the three views draws the week. Only the week
+   * re-renders: the exam list, credit line and course rows say the same thing
+   * in every view, and rebuilding them would throw away the student's scroll
+   * position for a change they did not ask those surfaces to make.
    */
   function setWeekView(view: WeekView): void {
     if (weekView === view) return;
@@ -1182,15 +1061,14 @@ export async function mountPlannerApp(
   /**
    * The pressed state, and the rule that travels to it.
    *
-   * The offsets are measured rather than declared because "Rader", "Kolonner"
-   * and "Liste" are different widths — in every face, at every zoom step, and
-   * again once the webfont lands. A hard-coded 50 % is wrong at all of them.
-   * `offsetLeft` is relative to the tabs container, which is the positioned
-   * ancestor of the rule, so no further arithmetic is needed.
+   * Offsets are measured rather than declared because the three labels are
+   * different widths in every face, at every zoom step, and again once the
+   * webfont lands. `offsetLeft` is relative to the tabs container, which is the
+   * rule's positioned ancestor.
    *
-   * Guarded on `offsetWidth` because the unit suite renders into a hand-rolled
-   * DOM with no layout: there the tabs still get their `aria-pressed`, and the
-   * decoration that has nothing to measure is simply skipped.
+   * Guarded on `offsetWidth` because the unit suite renders into a DOM with no
+   * layout: there the tabs still get `aria-pressed` and the decoration with
+   * nothing to measure is skipped.
    */
   function renderViewTabs(): void {
     let active: HTMLElement | null = null;
@@ -1218,16 +1096,11 @@ export async function mountPlannerApp(
   }
 
   /**
-   * What "today" the page is currently drawn for — the thing `tickNow` watches
-   * for a change.
+   * What "today" the page is drawn for — what `tickNow` watches for a change.
    *
-   * BOTH dates are in it because the planner genuinely has two: the week's row
-   * comes from the local weekday and the exam countdowns from the calendar
-   * date in Oslo (`todayInOslo`, exams-2). For a student in Norway they roll
-   * together; elsewhere they do not, and this fires on whichever moves first
-   * rather than leaving the other surface a day behind. It does not try to
-   * settle which one is right — that disagreement predates this and is a
-   * separate question.
+   * BOTH dates are in it: the week's row comes from the local weekday and the
+   * exam countdowns from the calendar date in Oslo. In Norway they roll
+   * together; elsewhere they do not, and this fires on whichever moves first.
    */
   function todayStamp(): string {
     return `${todayInOslo()}|${todayWeekday()}`;
@@ -1236,25 +1109,18 @@ export async function mountPlannerApp(
   // --- Programme / kull / retning / semester: the studieinfo modal --------
   //
   // All four plan choices live in the one studieinfo modal, and exactly one
-  // persistent control opens it: this page's own "Endre" button
-  // (`#planner-edit-plan`). The topbar chip that used to be the other one is
-  // deleted, and the clickable page title before it. What remains below are
+  // persistent control opens it: this page's "Endre" button. What follows are
   // the *contextual* openers — the week's studieretning question and the
-  // empty-state cards — which only ever appear when the week has nothing else
-  // in it.
+  // empty-state cards — which appear only when the week has nothing else in it.
 
   // --- Studieretning question --------------------------------------------
 
   /**
    * The one open question the week is waiting on, whatever its shape.
    *
-   * All three shapes get the same treatment for the same reason: the answer
-   * belongs *on* the primary surface. A studieretning question in a quiet
-   * side panel while the grid renders as a failure is B2; an elective-only
-   * period whose next step sits in the other column — behind a tab on mobile
-   * — is U8, the identical shape with the opposite treatment; and a semester
-   * the study plan has no period for is B4's honest dead end. The
-   * studieretning is now *chosen in the studieinfo modal* (its select), so its
+   * All shapes get the same treatment for the same reason: the answer belongs
+   * *on* the primary surface, not in a side panel while the grid renders as a
+   * failure. The studieretning is chosen in the studieinfo modal, so its
    * question renders as a sentence + "Endre studieinfo" button, not inline
    * chips.
    */
@@ -1270,14 +1136,9 @@ export async function mountPlannerApp(
     const program = plan.program;
     const label = semesterLabel(currentSemester());
 
-    // NTNU publishes no study plan for this programme at all — KNOAND, MTPROD
-    // and 5 of 31 sampled programmes have none at 2026, 2025 or 2024. Reachable
-    // in normal use since studieinfo stopped refusing to save such a programme
-    // (ux-fail-5): before this the banner named the programme, the week said
-    // the generic "Legg til emner for å se ukeplanen." and nothing anywhere
-    // explained why the prefill was empty. Only the `not-found` outcome —
-    // `error` is a fetch that failed, which the provenance line names as such
-    // and which is not NTNU's publication fact.
+    // NTNU publishes no study plan for this programme at all — 5 of 31 sampled
+    // programmes have none at 2026, 2025 or 2024. Only the `not-found` outcome:
+    // `error` is a fetch that failed, which is not NTNU's publication fact.
     if (program && studyPlanOutcome.kind === "not-found") {
       const note = `NTNU publiserer ingen studieplan for ${program.name}. Legg til emnene du tar selv.`;
       return {
@@ -1298,11 +1159,9 @@ export async function mountPlannerApp(
       };
     }
 
-    // The period exists and names nothing at all (MPPR kull 2026 at Høst 2026:
-    // `{courseGroups: [], waypoints: []}`). Without this it rendered exactly
-    // like a normal period — "0 av 30 sp", no rows, no sentence — and looked
-    // identical to a network failure (plan-2). `empty` comes from
-    // `classifyPeriod`; nothing here re-derives it.
+    // The period exists and names nothing at all. Without this it rendered like
+    // a normal period — "0 av 30 sp", no rows, no sentence — indistinguishable
+    // from a network failure. `empty` comes from `classifyPeriod`.
     if (program && periodCourses?.empty === true) {
       const note = `Studieplanen for kull ${program.cohort} oppgir ingen emner for ${label}. Legg til emnene du tar selv.`;
       return {
@@ -1327,9 +1186,8 @@ export async function mountPlannerApp(
       };
     }
 
-    // U8: a period that is elective by design (BIT kull 2024, period 5: zero
-    // `O` courses, eight electives). Nothing is wrong and nothing is missing
-    // — the student simply has not chosen yet, and that is a question.
+    // A period that is elective by design (zero `O` courses, eight electives).
+    // Nothing is wrong and nothing is missing — the student has not chosen yet.
     const pool = availablePool();
     const noCourses = activeCourses(plan).length === 0;
     if (program && noCourses && periodCourses !== null && pool.length > 0) {
@@ -1367,24 +1225,20 @@ export async function mountPlannerApp(
 
   // --- Add-course dialog ---------------------------------------------------
   //
-  // The inline add field + typeahead is gone (Task 12): one button opens
-  // `addCourse.ts`'s dialog, which searches the whole catalog (not just the
-  // study plan's own choice pool below) and stays open for multiple adds.
+  // One button opens `addCourse.ts`'s dialog, which searches the whole catalog
+  // (not just the study plan's choice pool) and stays open for multiple adds.
   //
   // `addCourseDeps` is mutated in place rather than re-passed when the catalog
-  // index (still loading at mount) arrives — see addCourse.ts's own header for
-  // why that's safe without re-mounting the dialog. It carried the semester
-  // and the programme code too until the clash preview was removed from the
-  // search surfaces; the dialog reads neither now.
+  // index (still loading at mount) arrives — see addCourse.ts's header for why
+  // that is safe without re-mounting the dialog.
   const addCourseDeps: AddCourseDeps = { store, index: null };
   const addCourseDialog: AddCourseHandle = mountAddCourse(addCourseDeps, lifeSignal);
 
   /**
-   * The study plan's own choice pool for this period, minus what's already
-   * in the plan — feeds only the gap line's/question's counts and copy now
-   * (Task 12 moved the actual add surface to the dialog's flat catalog
-   * search). Memoised on (period, plan courses): half a dozen callers ask
-   * for it per render and a late-year period's pool runs to 300+ entries.
+   * The study plan's choice pool for this period, minus what is already in the
+   * plan — feeds the gap line's/question's counts and copy only. Memoised on
+   * (period, plan courses): half a dozen callers ask per render and a late-year
+   * pool runs to 300+ entries.
    */
   let poolMemo: { period: PeriodCourses | null; codes: string; rows: PickerRow[] } | null = null;
 
@@ -1422,12 +1276,9 @@ export async function mountPlannerApp(
   let bundlesForSemester = plan.semesterId;
 
   function syncCourseStates(): void {
-    // Bundles are dropped on a semester switch because the ENTRIES are
-    // filtered against the new semester's teaching weeks — not because the
-    // fetch is year-scoped. It is not: `?year=` is a documented no-op upstream
-    // (byte-identical responses for 2023/2025/2026/2027, pd-8), so a switch
-    // costs one timetable request per course for data we may already hold. The
-    // details leg is memoised by code alone in data.ts and is genuinely free.
+    // Bundles are dropped on a semester switch because the ENTRIES are filtered
+    // against the new semester's teaching weeks — not because the fetch is
+    // year-scoped. It is not: `?year=` is a documented no-op upstream.
     if (bundlesForSemester !== plan.semesterId) {
       bundlesForSemester = plan.semesterId;
       for (const state of courseStates.values()) {
@@ -1444,16 +1295,15 @@ export async function mountPlannerApp(
       if (existing) {
         existing.hueVar = hueForIndex(index);
         existing.course = course;
-        // The programme can change under a persisted state (switch/clear), so
-        // its code is refreshed here too — grid group-narrowing depends on it.
+        // The programme can change under a persisted state, and grid group
+        // narrowing depends on its code.
         existing.programCode = programCode;
       } else {
         courseStates.set(course.code, {
           course,
           hueVar: hueForIndex(index),
-          // A course previewed in the add-course dialog already has its
-          // bundle in `fetchCourseBundle`'s own module-level memo (data.ts) —
-          // this fetch (loadBundles, below) is free, not a second round trip.
+          // A course previewed in the add dialog already has its bundle in
+          // `fetchCourseBundle`'s module-level memo — this fetch is free.
           bundle: null,
           loading: false,
           programCode,
@@ -1474,27 +1324,18 @@ export async function mountPlannerApp(
   // --- Render: EMNER course rows ------------------------------------------
 
   /**
-   * The plan itself, and nothing else: courses being taken, plus programme
+   * The plan itself and nothing else: courses being taken, plus programme
    * courses the student dropped (grayed — §0.3). The study plan's choice pool
-   * deliberately does *not* live here; at 30–60 rows it would bury the six
+   * deliberately does not live here; at 30–60 rows it would bury the six
    * courses this list exists to show.
    *
-   * A row is identity and nothing else — hue dot, code, name, credits
-   * (REWORK-2026-07-29 D2). What it used to also carry has moved:
-   * vurderingsform to the exam list (D6), and the run-on status line, the
-   * retry and the Dropp/Fjern button into the settings modal the whole row now
-   * opens (D1/D3). "Which parallel am I in" was considered for this line and
-   * cut by the user: once it is set, nobody looks at it again.
-   *
-   * The row is a `<button>`, so it is one tab stop with one action, and
-   * `pendingFocusCode` — the dance that put focus back on a row action the
-   * rebuild had just destroyed (app-4) — is gone with the action itself. A
-   * drop now happens inside a modal that closes onto its own invoker.
+   * A row is identity and nothing else — hue dot, code, name, credits.
+   * Vurderingsform lives in the exam list; the status line, the retry and the
+   * Dropp/Fjern button live in the settings modal the row opens.
    */
   function renderCourseRows(): void {
-    // The rows come straight out of the store, so this pass is the end of the
-    // gap the reservation was bridging (paint → mount). Handing the lease back
-    // here means a one-course plan never sits at the top of five rows of air.
+    // The rows come straight out of the store, so this pass ends the gap the
+    // reservation was bridging (paint → mount).
     delete elements.courseRows.dataset.reserve;
     elements.courseRows.replaceChildren();
     if (plan.courses.length === 0) {
@@ -1510,21 +1351,17 @@ export async function mountPlannerApp(
     for (const course of ordered) {
       const state = courseStates.get(course.code);
       const isDropped = course.source === "program" && course.dropped === true;
-      // A row is not a control. It was a full-width `<button>`, which gave the
-      // whole thing a pointer cursor and a hover wash while showing nothing
-      // that looked pressable — so the affordance was a promise the row's
-      // appearance never made. The row is inert now and carries ONE explicit
-      // target: a settings button at its end.
+      // A row is not a control: as a full-width `<button>` it had a pointer
+      // cursor and a hover wash while showing nothing pressable. It is inert
+      // now and carries ONE explicit target: a settings button at its end.
       const row = el("div", `planner-course-row${isDropped ? " is-dropped" : ""}`);
       row.dataset.code = course.code;
       const details = state?.bundle?.details;
       const name = details?.courseName ?? course.name;
 
-      // The chip is the week's own bar at label size: printed hue, code knocked
-      // out of it. A course therefore looks the same in the grid, in the exam
-      // band and here, and the colour is learned once. A dropped course keeps
-      // the chip's shape and loses its fill (CSS), so the row reads as switched
-      // off rather than as missing.
+      // The chip is the week's own bar at label size, so a course looks the
+      // same in the grid, the exam band and here. A dropped course keeps the
+      // shape and loses the fill, so it reads as switched off, not missing.
       const chip = el("span", "planner-course-chip np-data", course.code);
       if (state) chip.style.setProperty("--dot", `var(${state.hueVar})`);
       row.append(chip);
@@ -1534,23 +1371,17 @@ export async function mountPlannerApp(
       row.append(nameCell);
 
       // Right-aligned in its own column so the figures stack into something a
-      // student can add up by eye — which is the whole reason this list quotes
-      // credits at all.
+      // student can add up by eye.
       if (isDropped) {
-        // The one status a row still says for itself: a dropped course is
-        // excluded from the week, the credits and the exams, so a grayed row
-        // with no explanation is a course that looks broken (§0.3).
+        // The one status a row still says for itself: a dropped course is out
+        // of the week, the credits and the exams, so a grayed row with no
+        // explanation looks broken (§0.3).
         row.append(el("span", "planner-course-sp np-data", "droppet"));
       } else {
-        // A course the week cannot draw gets ONE mark, not the sentence — the
-        // sentence is in the modal this row opens. Without it a course that is
-        // silently missing from the week looks like every other row
-        // (crawler-3/S13/pd-5).
-        //
-        // It goes UNDER THE NAME, not in the credit column. Putting it there
-        // was tried and it ate the figure: a flagged course showed "se
-        // detaljer" where its credits belong, so the one course whose credits
-        // you might question was the one course that would not quote them.
+        // A course the week cannot draw gets ONE mark; the sentence is in the
+        // modal this row opens. It goes UNDER THE NAME, not in the credit
+        // column — there it ate the figure, so the one course whose credits you
+        // might question was the one that would not quote them.
         const needsAttention =
           notTaughtIn(course.code) !== null ||
           (state !== undefined && isOffSemester(state)) ||
@@ -1562,15 +1393,12 @@ export async function mountPlannerApp(
         if (credits != null) {
           row.append(el("span", "planner-course-sp np-data", `${formatCreditNumber(credits)} sp`));
         } else {
-          // The column still has to exist, or the settings button jumps left on
-          // the one row whose credits are unknown.
+          // The column still has to exist, or the settings button jumps left.
           row.append(el("span", "planner-course-sp"));
         }
       }
 
-      // The row's ONE target. It was the row itself, which gave the whole thing
-      // a pointer cursor and a hover wash while showing nothing that looked
-      // pressable — an affordance the row's appearance never promised.
+      // The row's ONE target.
       const open = el("button", "np-icon-btn planner-course-open");
       open.type = "button";
       open.dataset.code = course.code;
@@ -1593,10 +1421,10 @@ export async function mountPlannerApp(
   }
 
   /**
-   * The study plan's choice courses (`periodCourses.choice`) grouped by their
-   * verbatim group title, preserving order. Obligatory courses are prefilled
-   * into the plan already and never surface here — this panel is the *offered*
-   * pool with the group prose that says how to choose (DR-5), nothing more.
+   * The study plan's choice courses grouped by their verbatim group title,
+   * preserving order. Obligatory courses are prefilled already and never
+   * surface here — this panel is the *offered* pool with the group prose that
+   * says how to choose (DR-5).
    */
   function planPanelGroups(): PlanPanelGroup[] {
     const groups: PlanPanelGroup[] = [];
@@ -1615,10 +1443,8 @@ export async function mountPlannerApp(
   }
 
   /** One offered course row: code · name · credits + a "Legg til"/"I planen"
-   *  affordance (the add-dialog's row pattern, simplified — reuses the store).
-   *  The in-plan word is DESIGN §7's mandated half of the pair, spelled the
-   *  same way on every surface — this row said "I planen ✓" while /emner/
-   *  said "Lagt til" and the add dialog "Lagt til ✓" (copy-6). */
+   *  affordance. The in-plan word is DESIGN §7's mandated half of the pair and
+   *  must be spelled the same way on every surface. */
   function buildPlanPanelRow(course: ClassifiedCourse): HTMLElement {
     const row = el("div", "planner-plan-row");
 
@@ -1655,9 +1481,8 @@ export async function mountPlannerApp(
 
   /**
    * The collapsible "Fra studieplanen" panel: the study plan's choice groups,
-   * each with its verbatim prose (DR-5) and its courses. Shown only when a
-   * programme is set AND the resolved period actually has choice groups —
-   * otherwise there is nothing to offer and the panel stays hidden.
+   * each with its verbatim prose (DR-5) and courses. Shown only when a
+   * programme is set AND the resolved period has choice groups.
    */
   function renderPlanPanel(): void {
     const groups = plan.program ? planPanelGroups() : [];
@@ -1682,11 +1507,10 @@ export async function mountPlannerApp(
   // --- Render: grid + exams + pre-publish fallback ------------------------
 
   /**
-   * The planner index with every row's exams narrowed to the planned
-   * semester's own `fromDate`…`examFinalDate` window (C3). Memoised because
-   * it is one pass over ~5 500 rows and the semester only changes when the
-   * student says so — but the exam list reaches into the index itself, so
-   * the filter has to be baked in rather than passed per call.
+   * The planner index with every row's exams narrowed to the planned semester's
+   * `fromDate`…`examFinalDate` window. Memoised: it is one pass over ~5 500
+   * rows. The exam list reaches into the index itself, so the filter has to be
+   * baked in rather than passed per call.
    */
   let examIndexMemo: { semesterId: string; index: PlannerIndex } | null = null;
 
@@ -1700,8 +1524,8 @@ export async function mountPlannerApp(
 
   /**
    * One course's row in the RAW index — the un-narrowed one, so `offeredYears`
-   * (element 5) is readable. Used to tell "we could not fetch this" from "this
-   * course is simply not taught this year" in the course rail (crawler-3).
+   * (element 5) is readable. Tells "we could not fetch this" from "not taught
+   * this year".
    */
   function indexRowFor(code: string): PlannerIndexCourse | undefined {
     if (!plannerIndex) return undefined;
@@ -1713,10 +1537,9 @@ export async function mountPlannerApp(
 
   /**
    * The catalog year and the course's last taught year, when this year's
-   * catalog does not carry the course at all — the same test `/emner/` and
-   * `/emne/[code]/` make (`!offeredYears.includes(index.year)`), against the
-   * CATALOG's canonical year, not the plan semester's. `null` while the index
-   * has not landed: "ikke undervist" is not something to guess at.
+   * catalog does not carry the course — the same test `/emner/` makes, against
+   * the CATALOG's canonical year, not the plan semester's. `null` while the
+   * index has not landed: "ikke undervist" is not something to guess at.
    */
   function notTaughtIn(code: string): { year: number; lastYear: number } | null {
     const catalogYear = plannerIndex?.year;
@@ -1734,26 +1557,20 @@ export async function mountPlannerApp(
   }
 
   /**
-   * Below ~370 px the week frame is narrower than the grid and its own rounded
-   * border closes mid-column — no fade, no arrow, no visible scrollbar, and the
-   * page itself does not scroll horizontally, so the clip reads as an edge and
-   * a student can conclude they have no Friday lecture. `data-scroll` drives the
-   * edge mask; the hint is one fixed sentence (S15).
+   * Below ~370 px the week frame is narrower than the grid and its rounded
+   * border closes mid-column — no fade, no arrow, no visible scrollbar — so the
+   * clip reads as an edge and a student can conclude they have no Friday
+   * lecture. `data-scroll` drives the edge mask.
    *
    * What is hidden is measured from the GRID's own box, not the frame's
    * `scrollWidth`: the frame's 24 px padding counts as scrollable content, so
-   * `scrollWidth - clientWidth` stayed ~26 px at 390 px where all five days are
-   * on screen (the 21rem `min-width` in planner-week.css fixed the overflow the
-   * old comment here described). The result was both edges faded on a week the
-   * student could already see in full, with the left ramp washing out the hour
-   * rail's own labels (mob-5).
+   * both edges faded on a week the student could already see in full.
    */
   function syncGridScroll(): void {
     const frame = elements.gridFrame;
-    // Whichever week is mounted: the transposed grid or the column grid. Asking
-    // for `.planner-grid` alone left the column view with no edge mask and no
-    // `data-scroll` — on the view that scrolls sideways by design, which is the
-    // one that needs both.
+    // Whichever week is mounted: the transposed grid or the column grid.
+    // Asking for `.planner-grid` alone left the view that scrolls sideways by
+    // design with no edge mask and no `data-scroll`.
     const week =
       frame.querySelector<HTMLElement>(".planner-grid") ??
       frame.querySelector<HTMLElement>(".planner-cols");
@@ -1771,12 +1588,8 @@ export async function mountPlannerApp(
 
   /**
    * Once per mount: put today's column in view rather than always Monday's.
-   *
-   * Only the column view has columns to scroll to. It queried
-   * `.planner-grid-day-header` — a class the transposed week stopped rendering
-   * in REWORK-2026-07-29b — and so did nothing at all for four weeks; it is
-   * pointed at the class that exists now, and no-ops in the other two views
-   * because they have no day headers to find.
+   * Only the column view has columns to scroll to; it no-ops in the other two,
+   * which have no day headers to find.
    */
   let didScrollToToday = false;
 
@@ -1787,7 +1600,7 @@ export async function mountPlannerApp(
     const weekday = new Date().getDay(); // 0 = Sunday
     const dayNumber = weekday === 0 ? 7 : weekday;
     if (dayNumber > 5) return;
-    // `Array.from`, not a spread: this module is now reachable from the Node
+    // `Array.from`, not a spread: this module is reachable from the Node
     // typecheck pass (tsconfig.test.json), whose `lib` has no `DOM.Iterable`.
     const headers = Array.from(frame.querySelectorAll<HTMLElement>(".planner-cols-day-header"));
     const header = headers[dayNumber - 1];
@@ -1812,28 +1625,24 @@ export async function mountPlannerApp(
     { passive: true, signal },
   );
 
-  // The week's column cap is viewport-dependent since grid-3 (a 2-deep cluster
-  // is 27 px wide on a phone, so it piles instead of splitting), and crossing
-  // that boundary — a rotation, a desktop window drag — changes no plan state,
-  // so nothing else would redraw the grid. Only the boundary fires, not every
-  // resize frame, which is why this is a `change` listener and not more work
-  // on the `resize` above.
+  // The week's column cap is viewport-dependent, and crossing that boundary — a
+  // rotation, a window drag — changes no plan state, so nothing else would
+  // redraw the grid. Only the boundary fires, not every resize frame.
   globalThis
     .matchMedia?.("(max-width: 40rem)")
     .addEventListener("change", () => renderGridAndExams(), { signal });
 
   /**
-   * The verdict beside the Ukeplan kicker — PRODUCT §1's primary job, *kan
-   * jeg ta disse emnene sammen?*, answered on the page. `renderGrid` has
-   * always computed and returned this number and the caller has always
-   * thrown it away (U4). Counts are grouped slots, so a three-way clash is
-   * one problem, and nothing is asserted while a fetch could still change it.
+   * The verdict beside the Ukeplan kicker — PRODUCT §1's primary job, *kan jeg
+   * ta disse emnene sammen?*, answered on the page. Counts are grouped slots,
+   * so a three-way clash is one problem, and nothing is asserted while a fetch
+   * could still change it.
    *
-   * When a course's timetable never arrived the check is INCOMPLETE, and the
-   * line says so out loud rather than going quiet: silence still reads as
-   * "nothing to report" beside a drawn week (pc-3, audit §1). It is a gap, not
-   * a clash, so it keeps `.planner-section-sub`'s muted ink — neither
-   * Green-Means-Fits nor Red-Is-Collision may be spent on "we do not know".
+   * When a course's timetable never arrived the check is INCOMPLETE and the
+   * line says so rather than going quiet: silence reads as "nothing to report"
+   * beside a drawn week. It is a gap, not a clash, so it keeps the muted ink —
+   * neither Green-Means-Fits nor Red-Is-Collision may be spent on "we do not
+   * know".
    */
   function renderVerdict(grid: GridRenderResult | null, loading: boolean): void {
     const host = elements.gridStatus;
@@ -1862,10 +1671,9 @@ export async function mountPlannerApp(
   }
 
   /**
-   * The same verdict for the exam head. C3's "we cannot speak for that year"
-   * is NOT repeated here — it is the frame's sentence now (see
-   * `examUncovered` below), and printing it twice within 40 px is noise. When
-   * the index cannot cover the semester there is simply no verdict to give.
+   * The same verdict for the exam head. C3's "we cannot speak for that year" is
+   * NOT repeated here — it is the frame's sentence (`examUncovered`), and
+   * printing it twice within 40 px is noise.
    */
   function renderExamVerdict(exam: ExamRenderResult, loading: boolean): void {
     const host = elements.examStatus;
@@ -1883,10 +1691,8 @@ export async function mountPlannerApp(
 
   /**
    * Reloads every course bundle from scratch. The module-level fetch memo is
-   * cleared first (so a real refetch happens, not a cached failure replayed)
-   * and each state reset to "not loaded" before `loadBundles` runs again.
-   * Wired to the "Prøv igjen" fallback — the honest recovery from a timetable
-   * fetch that came back `null`.
+   * cleared first, so a real refetch happens rather than a cached failure
+   * replayed. Wired to the "Prøv igjen" fallback.
    */
   function retryBundles(): void {
     clearCourseBundleMemo();
@@ -1895,16 +1701,15 @@ export async function mountPlannerApp(
       state.loading = false;
     }
     // loadBundles flips the reset states to loading and paints the skeleton
-    // itself, so there is no need to render the (momentarily empty) grid first.
+    // itself, so there is no need to render the empty grid first.
     void loadBundles();
   }
 
   /**
-   * Reloads ONE course's bundle — the recovery a partial failure needs, and
-   * the one `retryBundles` could never offer because it is mounted in a
-   * fallback branch that requires every bundle to be empty (pd-5). No memo
-   * clear: `fetchCourseBundle` drops a bundle carrying failures as it settles,
-   * so this really refetches.
+   * Reloads ONE course's bundle — the recovery a partial failure needs, which
+   * `retryBundles` cannot offer because it is mounted in a branch requiring
+   * every bundle to be empty. No memo clear: `fetchCourseBundle` drops a bundle
+   * carrying failures as it settles, so this really refetches.
    */
   function retryCourse(code: string): void {
     const state = courseStates.get(code);
@@ -1916,10 +1721,9 @@ export async function mountPlannerApp(
   }
 
   /**
-   * A centered card where the week would be, for the empty/fallback states
-   * that carry an action button rather than just a sentence. Resets the frame
-   * the same way `renderGridMessage` does (unruled, cleared) so the ruling
-   * never frames an apology (D5), then mounts the card `build` fills.
+   * A centered card where the week would be, for the empty/fallback states that
+   * carry an action button rather than a sentence. Resets the frame the way
+   * `renderGridMessage` does, then mounts the card `build` fills.
    */
   function renderWeekCard(build: (card: HTMLElement) => void): void {
     renderGridMessage(elements.gridFrame, elements.gridNotes, null);
@@ -1935,28 +1739,25 @@ export async function mountPlannerApp(
     const question = weekQuestion();
 
     // Week-only narrowing (NOT programme-narrowed): the grid's own
-    // `applyGroupSelection` owns programme narrowing so an explicit
-    // cross-programme parallel pick still draws (finding 1). See
-    // `semesterWeekEntries`.
+    // `applyGroupSelection` owns that, so an explicit cross-programme parallel
+    // pick still draws. See `semesterWeekEntries`.
     const filteredStates: PlanCourseState[] = states.map((s) => {
       if (!s.bundle?.timetable) return s;
       return { ...s, bundle: { ...s.bundle, timetable: semesterWeekEntries(s.bundle) } };
     });
 
     // The four empty/fallback states (REWORK §3). Never a blank grid: always
-    // the course list + exams + a card that names the one next action.
+    // the course list + exams + a card naming the one next action.
     const published = semester?.timetablePublished ?? true;
     const anyBundlesLoaded = states.some((s) => s.bundle !== null);
-    // A *failed* timetable fetch leaves the raw bundle `timetable === null`;
-    // a successful-but-empty one leaves `[]`. The old `?? []` coalesce erased
-    // that difference and showed the "publiseres" copy over a network failure
-    // (S6/T10). Checked on the RAW states, before semester/programme narrowing.
+    // A *failed* fetch leaves `timetable === null`; a successful-but-empty one
+    // leaves `[]`. Coalescing the two showed the "publiseres" copy over a
+    // network failure. Checked on the RAW states, before any narrowing.
     const failed = states.some((s) => s.bundle !== null && s.bundle.timetable === null);
-    // Every loaded bundle has zero entries for this programme this semester —
-    // the grid would be blank. Computed from the programme-narrowed
-    // `semesterEntries` (NOT the grid's week-only `filteredStates`), so the
-    // fallback-card decision is unchanged by the grid path no longer
-    // pre-narrowing by programme (finding 1).
+    // Every loaded bundle has zero entries for this programme this semester.
+    // Computed from the programme-narrowed `semesterEntries` (NOT the grid's
+    // week-only `filteredStates`), so the fallback-card decision is unchanged
+    // by the grid path no longer pre-narrowing by programme.
     const empty =
       anyBundlesLoaded &&
       states.every((s) => s.bundle === null || semesterEntries(s.bundle).length === 0);
@@ -1966,16 +1767,15 @@ export async function mountPlannerApp(
 
     let gridResult: GridRenderResult | null = null;
     if (noProfile) {
-      // State 1: no plan at all. The onboarding card — the modal is the way in;
-      // the add field is the "I already know a code" escape hatch.
+      // State 1: no plan at all.
       renderWeekCard((card) => {
         card.append(el("p", "np-hint planner-week-card-hint", "Ingen plan ennå."));
         const primary = el("button", "np-btn", "Velg studieprogram");
         primary.type = "button";
         primary.addEventListener("click", () => studieinfo.open());
         card.append(primary);
-        // The modal is the way in; the add-course dialog is the "I already
-        // know a code" escape hatch (Task 12).
+        // The modal is the way in; the dialog is the "I already know a code"
+        // escape hatch.
         const secondary = el(
           "button",
           "np-navlink planner-week-card-secondary",
@@ -1986,21 +1786,16 @@ export async function mountPlannerApp(
         card.append(secondary);
       });
     } else if (showFallback && semester) {
-      // Ordered by severity, not by narrative (ux-3/ux-fail-2). A question used
-      // to win over both branches below it, so an MTDT student who lost
-      // connectivity was told to pick a studieretning — with no mention of the
-      // failure and no "Prøv igjen" anywhere on the page — and an MTDT student
-      // planning an unpublished term was promised the week "fylles ut med en
-      // gang". Neither is answerable by the student. The question is not lost:
-      // `#planner-direction` renders it in its own panel directly above this
-      // frame on every render where `weekQuestion()` is non-null.
+      // Ordered by severity, not by narrative. A question used to win over both
+      // branches below, so a student who lost connectivity was told to pick a
+      // studieretning with no "Prøv igjen" anywhere. Neither is answerable by
+      // the student. The question is not lost: `#planner-direction` renders it
+      // in its own panel directly above this frame.
       if (failed) {
         // State 3: a fetch failed. NEVER the "publiseres" copy — offer a retry.
         renderWeekCard((card) => {
-          // `.np-hint`, like the card's three other branches: DESIGN §3 gives
-          // sentences to `.np-hint` and mono fragments to `.np-note`, and this
-          // one rendered the only explanation of an empty week as the smallest,
-          // most label-like text on the page (ds-5).
+          // `.np-hint`, like the card's other branches: DESIGN §3 gives
+          // sentences to `.np-hint` and mono fragments to `.np-note`.
           card.append(el("p", "np-hint planner-week-card-hint", "Fikk ikke hentet timeplanen."));
           const retry = el("button", "np-btn", "Prøv igjen");
           retry.type = "button";
@@ -2016,8 +1811,7 @@ export async function mountPlannerApp(
         );
       } else if (question) {
         // A studieretning/elective/period question owns the empty week — its
-        // sentence, not a fallback card, is what the student acts on. Rendered
-        // through renderGridMessage (D5), same as the pre-publish note.
+        // sentence, not a fallback card, is what the student acts on.
         renderGridMessage(elements.gridFrame, elements.gridNotes, question.weekMessage);
       } else {
         // State 4: published, courses exist, none taught this term.
@@ -2037,10 +1831,9 @@ export async function mountPlannerApp(
       }
     } else if (weekView === "kolonner") {
       // The column grid draws into the same frame from the same states, on the
-      // same terms as Tavla below: `renderGrid` still owns the margin notes,
-      // the conflict count and the honest-verdict logic, because which courses
-      // we could not draw and which parallels are a guess are facts about the
-      // WEEK, not about which way round it is drawn.
+      // same terms as Tavla below: `renderGrid` still owns the margin notes and
+      // the conflict count, because which courses we could not draw is a fact
+      // about the WEEK, not about which way round it is drawn.
       gridResult = renderGrid(discardHost, elements.gridNotes, filteredStates, showOthers, {
         loading: anyLoading,
         pendingChoiceMessage: question?.weekMessage ?? null,
@@ -2057,10 +1850,8 @@ export async function mountPlannerApp(
         },
       );
       // Nothing to draw is a message branch, not an empty frame. The messages
-      // (the loading skeleton, "Ingen timeplandata", an unanswered
-      // studieretning question) live in `renderGrid` and only there, so the
-      // fallback is to let it draw them into the real frame — it cannot draw a
-      // week here, because the guard is that it did not have one.
+      // live in `renderGrid` and only there, so the fallback is to let it draw
+      // them into the real frame.
       if (columns.blockCount === 0 && gridResult.state !== "grid") {
         gridResult = renderGrid(
           elements.gridFrame,
@@ -2074,11 +1865,9 @@ export async function mountPlannerApp(
         );
       }
     } else if (weekView === "tavle") {
-      // Tavla renders into the same frame from the same states — it is a view
-      // of the plan, not a second plan (REWORK-2026-07-29b D2). The grid's own
-      // margin notes still belong under it: which courses we could not draw and
-      // which parallels are a guess are facts about the week, not about how it
-      // is being drawn, so `renderGrid` is still the one that owns them.
+      // Tavla renders into the same frame from the same states — a view of the
+      // plan, not a second plan. `renderGrid` still owns the margin notes for
+      // the same reason as the column branch above.
       gridResult = renderGrid(discardHost, elements.gridNotes, filteredStates, showOthers, {
         loading: anyLoading,
         pendingChoiceMessage: question?.weekMessage ?? null,
@@ -2105,37 +1894,30 @@ export async function mountPlannerApp(
       });
     }
     // The strike-in plays once, on the render a view switch caused — never on
-    // the re-render a group pick or a plan edit causes. Replaying the whole
-    // week because one checkbox moved is exactly the entrance choreography
-    // DESIGN §6 forbids, and it is also just irritating.
+    // the re-render a group pick or a plan edit causes.
     pendingViewAnimation = false;
     renderViewTabs();
 
     // B7a: the grid can reveal the muted øving layer on its own when nothing
-    // classifies as a lecture. The toggle has to say so, or it lies about
-    // what is on screen. This is not the student's `showOthers` — it is not
-    // persisted, only mirrored.
+    // classifies as a lecture, and the toggle has to say so. This is not the
+    // student's `showOthers` — not persisted, only mirrored.
     elements.othersToggle.setAttribute(
       "aria-pressed",
       String(showOthers || gridResult?.mutedLayerAutoRevealed === true),
     );
 
-    // `anyLoading` stays in: since the kont join (exams-1) the list reads
-    // `bundle.details.exams` to tell an ordinary sitting from an "Utsatt" one,
-    // so a list painted before the bundles land really is provisional — and
-    // exactly the deferred rows and the false "tett" connector the join
-    // removes. `plannerIndexFailed` is the half that had to come out: with the
-    // index download dead, waiting is not a state that ever ends (pd-3).
+    // `anyLoading` stays in: the list reads `bundle.details.exams` to tell an
+    // ordinary sitting from an "Utsatt" one, so a list painted before the
+    // bundles land really is provisional. `plannerIndexFailed` is the half that
+    // had to come out: with the index dead, waiting never ends.
     const examLoading =
       anyLoading || (states.length > 0 && plannerIndex === null && !plannerIndexFailed);
 
-    // C3: the shipped index only carries this academic year's exam dates. For
-    // a semester beyond it the list's own "Ingen eksamensdatoer funnet ennå"
-    // is a finding reported by something that never looked — say what is
-    // actually true instead, in the frame where the student is looking.
-    // A *failed download* is not that: it is our own artifact, and saying NTNU
-    // has published nothing would report our network as an upstream fact
-    // (pd-3/ux-fail-7), so it takes its own branch below.
+    // The shipped index only carries this academic year's exam dates. For a
+    // semester beyond it, the list's "Ingen eksamensdatoer funnet ennå" is a
+    // finding reported by something that never looked. A *failed download* is
+    // not that — it is our own artifact, and saying NTNU published nothing
+    // would report our network as an upstream fact, so it takes its own branch.
     const examUncovered =
       !examLoading &&
       !plannerIndexFailed &&
@@ -2169,10 +1951,8 @@ export async function mountPlannerApp(
     renderVerdict(gridResult, anyLoading);
     renderExamVerdict(examResult, examLoading);
     // The exam list's lease, handed back the moment the list stops waiting —
-    // whichever of the three branches above answered, including the two that
-    // answer with one sentence. Held any longer and a "Fikk ikke hentet
-    // eksamensdatoene." would sit at the top of five courses' worth of
-    // reserved air (the failure mode `/emne/[code]/`'s own lease documents).
+    // whichever branch answered, including the two that answer with one
+    // sentence. Held longer, an apology sits atop five courses of reserved air.
     if (!examLoading) delete elements.examList.dataset.reserve;
     syncGridScroll();
     if (gridResult?.state === "grid") scrollToToday();
@@ -2183,19 +1963,16 @@ export async function mountPlannerApp(
    * Ends the frame's reservation, and files what the week actually measured for
    * the next load to reserve from (`saveWeekBox`).
    *
-   * The lease is the important half. Every number the frame reserves from is an
-   * estimate of a week that has not been drawn; once one HAS been drawn the
-   * estimate has no further claim on the page, and leaving it standing is how
-   * loading in Liste and then pressing Rader left 600px of white paper above the
-   * exam list for the rest of the visit.
+   * The lease is the important half: every reserved number is an estimate of a
+   * week that has not been drawn, and leaving it standing is how loading in
+   * Liste and then pressing Rader left 600px of white paper for the rest of the
+   * visit.
    *
    * Three states are deliberately neither released nor remembered: a skeleton,
    * an apology and an onboarding card are all shorter than the week they stand
-   * in for, so releasing on one would collapse the frame a moment before the
-   * real week fills it, and remembering one would under-reserve the next load
-   * into exactly the shift this exists to remove. A week mid-`is-settling` is
-   * not evidence either — its height is being transitioned, so measuring it
-   * files a frame of an animation.
+   * in for, so releasing collapses the frame just before the real week fills it
+   * and remembering under-reserves the next load. A week mid-`is-settling` is
+   * not evidence either — measuring it files a frame of an animation.
    */
   function settleWeekBox(): void {
     const inner = elements.gridFrame.firstElementChild as HTMLElement | null;
@@ -2209,13 +1986,11 @@ export async function mountPlannerApp(
       return;
     }
     // Synchronously, in the frame the week landed in: the content is at least
-    // as tall as the reservation in every case except the ones this releases
-    // ON PURPOSE (a Kolonner week of three drawn hours under an eight-hour
-    // reservation), and those should collapse now rather than a paint later.
+    // as tall as the reservation except in the cases this releases ON PURPOSE,
+    // and those should collapse now rather than a paint later.
     delete elements.gridFrame.dataset.reserve;
     // The measurement waits for layout, and only counts if this is still the
-    // element that was drawn: a plan edit landing in the same frame would
-    // otherwise have its height filed under the render that preceded it.
+    // element that was drawn.
     requestAnimationFrame(() => {
       if (!inner.isConnected) return;
       saveWeekBox(weekView, window.innerWidth, inner.getBoundingClientRect().height);
@@ -2225,53 +2000,39 @@ export async function mountPlannerApp(
   // --- Provenance line -----------------------------------------------------
 
   /**
-   * DR-8's provenance line, reduced to the half that is worth reading: **what
-   * we could not verify**.
+   * DR-8's provenance line, reduced to the half worth reading: **what we could
+   * not verify**. It is silent when the join is clean and speaks only when it
+   * is not — "the join admits its gaps" is the MUST; stating that it has none
+   * is not part of it, and boilerplate printed every time carried the failure
+   * clauses down with it.
    *
-   * It used to open with the routine sources on every render — "Timeplan
-   * hentet direkte fra NTNU nå · eksamensdatoer fra katalogen (hentet 28. jul
-   * 2026) · studieplan for kull 2024. Uoffisiell." — which is a sentence
-   * saying everything worked, printed under a week that visibly worked, on a
-   * page whose footer already carries the crawl date and the caveat. Boilerplate
-   * that appears every time is boilerplate nobody reads, and it was carrying
-   * the failure clauses with it.
-   *
-   * So the line is silent when the join is clean and speaks only when it is
-   * not (REWORK-2026-07-30e). "The join admits its gaps" is the MUST; stating
-   * that it has none is not part of it.
-   *
-   * Still RE-COMPOSED whenever anything it describes changes: `loadBundles`
-   * re-rendered four things and not this one, so the line froze and the
-   * per-course failure clause was structurally unreachable
-   * (copy-4/pd-2/ux-2/ux-fail-3/pc-4/edit-5 — six findings, one missing call).
+   * RE-COMPOSED whenever anything it describes changes: `loadBundles` used to
+   * re-render four things and not this one, which made the per-course failure
+   * clause structurally unreachable.
    */
   function renderProvenance(): void {
     const semester = currentSemester();
     const states = orderedActiveStates();
     const notes: string[] = [];
 
-    // Nothing to be provenance about, or the answer is still arriving. The
-    // week draws its own skeleton and its own "publiseres vanligvis i …".
+    // Nothing to be provenance about, or the answer is still arriving.
     const settled = states.length > 0 && !states.some((s) => s.loading);
 
     if (settled && semester) {
       const indexCovers = indexCoversSemester(plannerIndex, plan.semesterId);
       if (plannerIndexFailed) {
         // Our own artifact, not NTNU's: "ikke publisert" here would be a
-        // statement about NTNU derived from our own failed download
-        // (pd-3/ux-fail-7).
+        // statement about NTNU derived from our own failed download.
         notes.push("Fikk ikke hentet eksamensdatoene.");
       } else if (!indexCovers) {
         notes.push(`Eksamensdatoer ikke publisert for ${semesterLabel(semester)}.`);
       }
     }
 
-    // Which study plan we actually read, but ONLY when it is not the one that
-    // was asked for. The 404 step-back walks back up to two cohorts and used
-    // to be invisible: 184BG/MTMT kull 2026 got a confident full 30 sp week
-    // off the 2024 curriculum under the words "studieplan for kull 2026"
-    // (plan-3/ux-fail-4). Silent while the fetch is in flight — a plan we have
-    // not received yet is not a gap.
+    // Which study plan we actually read, but ONLY when it is not the one asked
+    // for. The 404 step-back walks back up to two cohorts and used to be
+    // invisible: kull 2026 got a confident 30 sp week off the 2024 curriculum
+    // under the words "studieplan for kull 2026". Silent while in flight.
     const program = plan.program;
     if (program) {
       if (studyPlanOutcome.kind === "found" && studyPlanOutcome.year !== program.cohort) {
@@ -2285,8 +2046,8 @@ export async function mountPlannerApp(
       }
     }
 
-    // The per-course gaps, named. Saying nothing over a course whose timetable
-    // 404'd is the failure mode that makes the whole verdict untrustworthy.
+    // The per-course gaps, named. Silence over a course whose timetable 404'd
+    // is what makes the whole verdict untrustworthy.
     const failures: string[] = [];
     for (const state of states) {
       for (const error of state.bundle?.errors ?? []) {
@@ -2296,11 +2057,9 @@ export async function mountPlannerApp(
     }
     if (failures.length > 0) notes.push(`Fikk ikke hentet ${failures.join(", ")}.`);
 
-    // Only when the index can actually speak for this semester. Otherwise the
-    // count came from last catalog year's dateless rows (which survive the
-    // window by design — a dateless exam carries no year to be wrong about)
-    // and was stated inside a sentence that had just said we have no exam data
-    // for the semester at all (exams-3).
+    // Only when the index can speak for this semester. Otherwise the count came
+    // from last catalog year's dateless rows (which survive the window by
+    // design) inside a sentence that had just said we have no exam data at all.
     const dateless =
       settled && indexCoversSemester(plannerIndex, plan.semesterId) && !plannerIndexFailed
         ? countDatelessExams()
@@ -2318,9 +2077,7 @@ export async function mountPlannerApp(
   /**
    * Exams the catalog lists for this semester but has set no date for
    * (DR-3/U9). Built through the exam list's own `collectExamInputs` so the
-   * number and the rows can never disagree — that also makes the kont join
-   * (exams-1) count once: a course whose only sittings this semester are
-   * deferred contributes exactly the one "dato ikke satt" row it renders.
+   * number and the rows can never disagree.
    */
   function countDatelessExams(): number {
     return collectExamInputs(
@@ -2335,8 +2092,8 @@ export async function mountPlannerApp(
 
   /**
    * Loads `/data/search-index.json` — our own build artifact, so a failure is
-   * never worded as an NTNU fact. A rejection is no longer memoised in
-   * `data.ts`, so `retryIndex` genuinely refetches (pd-3/ux-fail-7).
+   * never worded as an NTNU fact. A rejection is not memoised, so `retryIndex`
+   * genuinely refetches.
    */
   function loadIndex(): void {
     loadPlannerIndex()
@@ -2344,8 +2101,8 @@ export async function mountPlannerApp(
         plannerIndex = index;
         plannerIndexFailed = false;
         indexByCodeMemo = null;
-        // The add-course dialog searches this same index (mutated in place —
-        // see its mount call above); it renders "henter emner …" until it's set.
+        // The add-course dialog searches this same index (mutated in place);
+        // it renders "henter emner …" until it is set.
         addCourseDeps.index = index;
         addCourseDeps.indexFailed = false;
         const indexByCode = new Map(index.courses.map((c) => [c[0], c]));
@@ -2365,9 +2122,9 @@ export async function mountPlannerApp(
         renderProvenance();
       })
       .catch(() => {
-        // Not swallowed any more: the exam column used to spin forever, the
-        // add dialog forever said "Henter emner …", and the provenance line
-        // claimed NTNU had published no exam dates (pd-3).
+        // Not swallowed: the exam column used to spin forever, the add dialog
+        // forever said "Henter emner …", and the provenance line claimed NTNU
+        // had published no exam dates.
         plannerIndexFailed = true;
         addCourseDeps.indexFailed = true;
         renderGridAndExams();
@@ -2385,10 +2142,8 @@ export async function mountPlannerApp(
 
   function renderAll(): void {
     syncCourseStates();
-    // An empty plan (no programme, no courses) is not a dead end: the week
-    // frame shows the onboarding card (renderGridAndExams' state 1), and the
-    // Emner rail keeps its "Legg til emne" button mounted for a student who
-    // knows a code.
+    // An empty plan is not a dead end: the week frame shows the onboarding card
+    // and the Emner rail keeps its "Legg til emne" button mounted.
     elements.linkNote.textContent = linkNote ?? "";
     elements.linkNote.hidden = linkNote === null;
     renderBanner();
@@ -2404,13 +2159,11 @@ export async function mountPlannerApp(
   async function loadBundles(): Promise<void> {
     const year = semesterYear(plan.semesterId);
     if (year === null) return;
-    // The generation token `loadPeriodCourses` has had all along
-    // (`studyPlanFetchToken`). Bundles are year- and week-scoped, the memo key
-    // includes the year, and `syncCourseStates` clears every held bundle on a
-    // switch — so without this a 26h fetch still in flight when the student
-    // switches to 27h lands afterwards and writes 2026 rooms and times into the
-    // 27h state. `bundle !== null` then hides it from the `toLoad` filter below,
-    // so nothing refetches it for the rest of the page load (app-5).
+    // The same generation token `loadPeriodCourses` has. Bundles are year- and
+    // week-scoped and `syncCourseStates` clears every held bundle on a switch,
+    // so without this a 26h fetch in flight when the student switches to 27h
+    // lands afterwards and writes 2026 rooms into the 27h state — and
+    // `bundle !== null` then hides it from `toLoad` for the rest of the load.
     const forSemester = plan.semesterId;
 
     const toLoad = orderedActiveStates().filter((s) => s.bundle === null && !s.loading);
@@ -2421,10 +2174,9 @@ export async function mountPlannerApp(
 
     await Promise.all(
       toLoad.map(async (state) => {
-        // `lifeSignal` (plus data.ts's own 15 s cap) so a stalled socket does
-        // not hold the page, and so a page swap cancels what is in flight. It
-        // is the PAGE's signal, not the semester's, so it cannot stand in for
-        // the token above.
+        // `lifeSignal` (plus data.ts's 15 s cap) so a stalled socket does not
+        // hold the page and a page swap cancels what is in flight. It is the
+        // PAGE's signal, not the semester's, so it cannot replace the token.
         const bundle = await fetchCourseBundle(state.course.code, year, state.course.version, {
           signal: lifeSignal,
         });
@@ -2434,8 +2186,7 @@ export async function mountPlannerApp(
         current.bundle = bundle;
         current.loading = false;
         // Per course, not after `Promise.all`: one slow course used to withhold
-        // the whole page — skeleton and three "henter …" spinners — even when
-        // every other bundle had landed in under a second (pd-4).
+        // the whole page even when every other bundle had landed.
         scheduleBundleRender();
       }),
     );
@@ -2443,7 +2194,7 @@ export async function mountPlannerApp(
     scheduleBundleRender();
   }
 
-  /** Coalesces the post-fetch re-renders that land in the same tick (pd-4). */
+  /** Coalesces the post-fetch re-renders that land in the same tick. */
   let bundleRenderQueued = false;
 
   function scheduleBundleRender(): void {
@@ -2455,9 +2206,8 @@ export async function mountPlannerApp(
       renderCourseRows();
       renderGapLine();
       renderGridAndExams();
-      // The one that was missing, and the reason DR-8's moat sentence froze at
-      // "Henter timeplan fra NTNU nå" on every passive load while its failure
-      // clause could never fire (copy-4/pd-2/ux-2/ux-fail-3/pc-4/edit-5).
+      // The one that was missing, and the reason DR-8's line used to freeze
+      // while its failure clause could never fire.
       renderProvenance();
     });
   }
@@ -2485,28 +2235,23 @@ export async function mountPlannerApp(
   /**
    * (Re)fetches the study plan for `plan.program` and rebuilds `periodCourses`
    * (DR-5/DR-7), classifying through the chosen studieretning when there is
-   * one. Also backfills display names the hash couldn't carry.
+   * one. Also backfills display names the hash could not carry.
    *
-   * **B4.** The programme course set is derived from (semester, programme,
-   * kull, studieretning) and is re-derived whenever any of those change. The
-   * old guard was `if (!hasProgramCourses)`, which froze the prefill at
-   * whatever semester it was first built in: switching MTDT kull 2026 to
-   * "2027 VÅR" kept all five autumn courses, each tagged "undervises ikke i
-   * valgt semester", with the credit line still reading "30 av 30 sp" in
-   * accent green — a confident, full, green plan of courses the student is
-   * not taking, in a semester whose unpublished timetable cannot contradict
-   * it. When the new period doesn't resolve the set is *cleared* and the week
-   * says so, because an empty honest state beats a wrong confident one.
+   * The programme course set is derived from (semester, programme, kull,
+   * studieretning) and MUST be re-derived whenever any of those change. Guarded
+   * on "has program courses" instead, the prefill froze at whatever semester it
+   * was first built in: a switch to spring kept all five autumn courses under a
+   * green "30 av 30 sp". When the new period does not resolve the set is
+   * *cleared* — an empty honest state beats a wrong confident one.
    */
   async function loadPeriodCourses(): Promise<void> {
     const program = plan.program;
     if (!program) {
-      // The token is bumped HERE too, or an in-flight fetch for the programme
-      // we just cleared still passes its own `token !== studyPlanFetchToken`
-      // guard and resurrects it — profile, prefilled courses, title and hash
-      // all flipping back seconds after a program-less shared link was opened
-      // (store-2). `findProgramPlan` can spend three sequential round trips on
-      // a 404 ladder, so the window is real.
+      // Bumped HERE too, or an in-flight fetch for the programme we just
+      // cleared still passes its own token guard and resurrects it — profile,
+      // courses, title and hash all flipping back seconds after a program-less
+      // link was opened. `findProgramPlan` can spend three round trips on a 404
+      // ladder, so the window is real.
       ++studyPlanFetchToken;
       periodCourses = null;
       periodMissing = false;
@@ -2539,8 +2284,8 @@ export async function mountPlannerApp(
       renderPlanDependents();
       return;
     }
-    // The year the 404 step-back actually landed on — MTMT/184BG kull 2026
-    // resolve to the 2024 document. The provenance line says which (plan-3).
+    // The year the 404 step-back actually landed on; the provenance line says
+    // which.
     studyPlanOutcome = { kind: "found", year: result.year };
 
     const resolved = resolvePeriodFor(
@@ -2554,11 +2299,10 @@ export async function mountPlannerApp(
     const obligatory = resolved.courses?.obligatory ?? [];
     suspiciousPrefillCredits = isSuspiciousPrefill(obligatory) ? prefillCredits(obligatory) : null;
 
-    // Backfill names a hash could not carry (programme, studieretning). This
-    // deliberately does *not* return: the derivation key does not include the
-    // display names, so the change listener would skip the re-entry (C5d) and
-    // the prefill below would never run. `savePlan` dispatches synchronously,
-    // so `plan` is already the corrected state when it returns.
+    // Backfill names a hash could not carry. Deliberately does *not* return:
+    // the derivation key excludes display names, so the change listener would
+    // skip the re-entry and the prefill below would never run. `savePlan`
+    // dispatches synchronously, so `plan` is already corrected when it returns.
     const planName = result.plan.name;
     const applied = resolved.courses?.appliedDirection;
     const needsProgramName = planName !== null && program.name === program.code;
@@ -2592,29 +2336,26 @@ export async function mountPlannerApp(
   elements.othersToggle.addEventListener("click", () => {
     showOthers = !showOthers;
     elements.othersToggle.setAttribute("aria-pressed", String(showOthers));
-    // One layer arriving or leaving, not a new week: what was already on
-    // screen travels, what changed is what moves (REWORK-2026-07-29g). The
-    // snapshot has to be taken before the re-render tears the subtree down —
-    // hence the two calls around it rather than a flag passed into the render.
+    // One layer arriving or leaving, not a new week: what was already on screen
+    // travels, what changed is what moves. The snapshot has to be taken before
+    // the re-render tears the subtree down, hence the two calls around it.
     const settle = beginLayerChange(elements.gridFrame, showOthers ? "reveal" : "hide");
     renderGridAndExams();
     settle();
   });
 
   /**
-   * Skipped when nothing the study plan depends on changed: `onPlanChange`
-   * used to refetch unconditionally, so picking a kull cost three sequential
-   * round trips and every Dropp/Legg tilbake cost another (C5d). Combined
-   * with the memo in programPlan.ts, a repeat is now free *and* not made.
+   * Skipped when nothing the study plan depends on changed: `onPlanChange` used
+   * to refetch unconditionally, so picking a kull cost three sequential round
+   * trips and every Dropp/Legg tilbake cost another.
    */
   let lastDerivationKey: string | null = null;
 
   const unsubscribe = store.onPlanChange((next) => {
-    // C4's note only ever explains a semester we SUBSTITUTED for the link's
-    // own, so a deliberate switch is exactly when it stops being true. Nothing
-    // else clears it on this path: studieinfo's Lagre goes through savePlan and
-    // `syncHash`'s replaceState, which fires no `hashchange` (app-3) — so the
-    // banner said Høst 2027 while a line above it insisted on Høst 2026.
+    // C4's note only explains a semester we SUBSTITUTED for the link's own, so
+    // a deliberate switch is when it stops being true. Nothing else clears it:
+    // studieinfo's Lagre goes through `savePlan` and `syncHash`'s replaceState,
+    // which fires no `hashchange`.
     if (next.semesterId !== plan.semesterId) linkNote = null;
     plan = next;
     syncHash();
@@ -2629,12 +2370,11 @@ export async function mountPlannerApp(
   signal?.addEventListener("abort", unsubscribe);
 
   /**
-   * B10.3: the hash was read once at mount, so pasting a shared plan into an
-   * already-open planner changed the address bar and nothing else — and the
-   * next edit rewrote the hash from local state, destroying what was pasted.
-   * Our own `replaceState` writes are ignored by comparing against the exact
-   * string we last wrote (which is pure ASCII, so the browser does not
-   * re-normalise it behind our back).
+   * The hash is re-read on every change, or pasting a shared plan into an
+   * already-open planner would change the address bar and nothing else — and
+   * the next edit would rewrite the hash from local state. Our own
+   * `replaceState` writes are ignored by comparing against the exact string we
+   * last wrote (pure ASCII, so the browser does not re-normalise it).
    */
   window.addEventListener(
     "hashchange",
@@ -2645,10 +2385,10 @@ export async function mountPlannerApp(
       if (parsed.program === null && parsed.courses.length === 0) return;
       linkNote = null;
       // Same as the initial load: a program-less link clears the stored profile
-      // (savePlan cannot), so the chip stops naming the old programme (finding 2).
+      // (savePlan cannot), so the chip stops naming the old programme.
       if (parsed.program === null) store.removeProgram();
-      // Same merge as the initial load: a pasted link that re-states courses
-      // already in the plan must not strip their credits either (store-4).
+      // Same merge as the initial load: a pasted link re-stating courses
+      // already in the plan must not strip their credits.
       store.savePlan(withStoredFacts(planFromHash(parsed), plan));
     },
     { signal },
@@ -2659,11 +2399,6 @@ export async function mountPlannerApp(
   // First paint from the initial (hash-or-storage) plan, then kick off fetches.
   syncHash();
   renderAll();
-
-  // There is no `?studieinfo` entrance any more. It existed for one caller,
-  // Layout's topbar chip navigating in from another page, and the chip is
-  // deleted (2026-07-30, owner's call): the "Endre" button below is the only
-  // way into the modal.
 
   lastDerivationKey = derivationKey();
   await Promise.all([loadBundles(), loadPeriodCourses()]);

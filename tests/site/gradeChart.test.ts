@@ -1,6 +1,6 @@
 /**
  * Render-level lock on the Karakterer figure's four audited defects
- * (pc-2/cpc-6, course-4, course-5/cpc-5). The model itself is covered by
+ *. The model itself is covered by
  * tests/planner/grades.test.ts; what is asserted here is what actually
  * reaches the page — which chart leads, which semesters get bars at all, and
  * how tall those bars end up.
@@ -77,7 +77,7 @@ const rowsOf = (specs: GradeSpec[]) =>
     })),
   );
 
-/** Every URL the module asked for, in order — pc-2 is about which one. */
+/** Every URL the module asked for, in order is about which one. */
 let requested: string[] = [];
 
 /**
@@ -98,7 +98,7 @@ function stubFetch(specs: GradeSpec[], exams: ExamSpec[] | null, examYear?: numb
   };
 }
 
-/** The `[data-role="status"]` line, which carries perf-1's height lease. */
+/** The `[data-role="status"]` line, which carries 's height lease. */
 let status: FakeEl;
 
 beforeEach(() => {
@@ -168,7 +168,7 @@ describe("deferred sittings (pc-2/cpc-6)", () => {
   });
 
   /**
-   * pc-2's completeness half. 703 of 5 470 courses are carried over from last
+   * 's completeness half. 703 of 5 470 courses are carried over from last
    * year's catalog, and `/api/course/:code` 404s for every one of them without
    * a `?year=`. The page passes `mountCourseDetails` and `mountGradeChart` the
    * SAME year for exactly that reason — one URL, one cache entry, and an
@@ -313,7 +313,7 @@ describe("y-scales (course-5/cpc-5)", () => {
 });
 
 /**
- * perf-1: `#grades-section` is the second-biggest post-paint grower on the
+ * `#grades-section` is the second-biggest post-paint grower on the
  * course page and its growth moves `#details-section` under the reader's
  * thumb. The page now reserves the figure's height on the status line, so the
  * module owns the other half of the lease: every terminal branch that LEAVES

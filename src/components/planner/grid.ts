@@ -1,64 +1,28 @@
 /**
  * UKEPLAN — the weekly spread (PRODUCT.md §0/DR-1). **Days are rows and time
- * is the horizontal axis** (REWORK-2026-07-29b D1): one row per weekday, its
- * name in the left spine, its sessions as bars along a labelled hour ruler.
+ * is the horizontal axis**: one row per weekday, its name in the left spine,
+ * its sessions as bars along a labelled hour ruler. A day row is the full page
+ * width, so a 1 t 45 lecture is 22 % of it, and overlaps stack downward into
+ * lanes where vertical space is free.
  *
- * That orientation is the whole design, and it is arithmetic rather than
- * taste. A day COLUMN is ~150 px and cannot get wider — there are five of
- * them. A day ROW is the full page width, so a 1 t 45 lecture is 22 % of it
- * instead of a sliver, and overlapping sessions stack downward into lanes
- * where vertical space is free. Every rule the old vertical grid needed to
- * survive its own narrowness — the two-column cap, the phone cap, the pile
- * block that swallowed anything deeper — is deleted rather than tuned.
+ * The axis is labelled and a bar starts at its own minute, so a bar prints
+ * `room · activity` rather than repeating its start time.
  *
- * It also relocates what a bar has to say. The axis above it is labelled and
- * the bar starts at its own minute, so a start time printed inside the bar
- * would be the same fact twice; the width that frees goes to `room ·
- * activity` — what it is, rather than when it is.
+ * Overlap is a *supported* state. What keeps it readable:
+ *   1. each course renders only its selected group set (`applyGroupSelection`);
+ *   2. identical parallel slots collapse to one bar ("Lab · 4 grupper");
+ *   3. an all-day drop-in window becomes a band behind the day, not a lane;
+ *   4. `layoutDay` packs the rest into uncapped lanes.
  *
- * Legibility is a correctness property here, not polish (REVIEW.md U1/U3, and
- * the REWORK mandate's "render simultaneous courses properly"). Overlap is a
- * *supported* state — people deliberately take colliding courses — and what
- * keeps it readable is now:
+ * Lectures render by default; `showOthers` adds øving/lab/seminar bars —
+ * muted, never red, never fed to the conflict engine. Only lecture×lecture
+ * overlaps mark a collision, drawn as ONE zone per day across the overlapping
+ * minutes. `renderBoard` (board.ts) is the second view of the same data.
  *
- *   1. each course renders only its *selected* group set — the programme's
- *      own lecture parallel by default (`applyGroupSelection`), so the week
- *      is what the student actually attends, not every section overlaid;
- *   2. identical parallel slots that survive that filter collapse to one
- *      bar ("Lab · 4 grupper") — DR-1 concedes they are indistinguishable;
- *   3. an all-day non-lecture drop-in window becomes a band behind the day
- *      rather than a lane that pushes every real session down a row;
- *   4. `layoutDay` packs the rest into lanes, uncapped (`LANE_CAP`). A bar
- *      opens that course's settings via `onBlockClick`.
- *
- * Lectures render by default; `showOthers` (the page's "Vis øvinger og
- * labber" toggle) additionally renders øving/lab/seminar bars — muted, never
- * red, never fed to the conflict engine. Only lecture×lecture overlaps mark a
- * collision, and it is drawn as ONE zone per day across the minutes that
- * actually overlap; `.np-note-clash` margin notes below link to and flash the
- * bars.
- *
- * `renderBoard` (board.ts) is the second view of this same data, for the
- * widths and the media where a bar whose meaning is its width says nothing.
- *
- * The øving/lab layer additionally shows only groups the student has PICKED —
- * a service course publishes a dozen, and drawing them all made the toggle a
- * switch between "my week" and "the cohort's week" (`visibleLayer`, which
- * board.ts shares so the two views can never disagree about what is in the
- * week).
- *
- * What the week does NOT do is answer for teaching it never saw. Every course
- * carries a `TimetableOutcome` from the fetch (data.ts), and `planGaps` turns
- * the ones the grid cannot draw into named margin notes: a fetch we never got
- * an answer for makes the collision check incomplete (`incompleteCourses`, so
- * the caller must not print a clean verdict), while a course NTNU publishes
- * nothing for — or nothing in this semester — is drawn nowhere and said out
- * loud instead of vanishing (audit §1 / pc-3 / ux-4).
- *
- * The frame's ruling is owned here, not by the markup: it is stripped in
- * every empty/message branch (Ruling-Marks-The-Plan — the ruling appears
- * exactly where planning happens, never around an apology) and restored when
- * a grid is drawn.
+ * The week never answers for teaching it never saw: `planGaps` turns each
+ * course's `TimetableOutcome` into a named margin note, so a failed fetch
+ * makes the check incomplete (`incompleteCourses`) and a course NTNU publishes
+ * nothing for is said out loud instead of vanishing.
  */
 import { classifyActivity } from "../../lib/planner/activity.js";
 import {
@@ -91,28 +55,15 @@ const SKELETON_DAYS = 5;
 /** A non-lecture window at least this long is a drop-in band, not a lane (U1). */
 const ALL_DAY_MINUTES = 5 * 60;
 /**
- * Below this DURATION a bar carries its course code and nothing else.
- *
- * Time is the horizontal axis now (REWORK-2026-07-29b D1), so a session's
- * minutes are its *width*: 45 minutes is ~9 % of an eight-hour axis, about
- * 100 px on a laptop, which holds a seven-character code and no more. Above an
- * hour there is room for the activity and the room beside it. This used to be
- * a height rule at 90 minutes, back when a block was a narrow vertical sliver
- * and the extra lines clipped mid-word.
+ * Below this DURATION a bar carries its course code and nothing else — time is
+ * the horizontal axis, so 45 minutes is ~100 px on a laptop, a code's worth.
  */
 const COMPACT_BLOCK_MINUTES = 60;
 
 /**
- * Lanes a day's row may stack before … nothing. There is no cap.
- *
- * The old cap existed because a cluster deeper than two could not be split
- * across a ~150 px day column without breaking course codes one character per
- * line (grid-3), so anything deeper collapsed into a pile. Transposing the
- * axes deletes the problem rather than managing it: a lane is a row of
- * vertical space, vertical space is free, and a session's *width* now comes
- * from its duration instead of from how many things it collides with. So
- * `layoutDay` is called uncapped and can never return `piled` — the pile block
- * and every rule that fed it are gone (REWORK-2026-07-29b D1).
+ * No cap: a lane is vertical space, which is free, and a bar's width comes
+ * from its duration rather than from how many things it collides with. So
+ * `layoutDay` can never return `piled`.
  */
 const LANE_CAP = Number.POSITIVE_INFINITY;
 
@@ -124,19 +75,17 @@ export interface GridEntry extends ScheduleEntry {
   name: string;
   rooms: string;
   /**
-   * The building(s) those rooms sit in ("IT-bygget, sydfløy"), or "" when
-   * upstream gave none, or gave one the room label is already showing. The
-   * bar has no width for it; the popover does, and "F1" alone is not a place
-   * you can walk to.
+   * The building(s) those rooms sit in, or "" when upstream gave none or gave
+   * one the room label already shows. Bar has no width for it; the popover
+   * does, and "F1" alone is not a place you can walk to.
    */
   buildings: string;
   weeksNumbers: number[];
   weeksLabel: string;
   isLecture: boolean;
   /**
-   * The student explicitly picked this entry's group (or it has none to
-   * pick). False only for an øving/lab group in a course where they have
-   * picked nothing — see `renderGrid`'s øving layer.
+   * The student explicitly picked this entry's group (or it has none to pick).
+   * False only for an øving/lab group in a course they picked nothing in.
    */
   groupPicked: boolean;
   /** Identical parallel slots this block stands for. 1 = a single session. */
@@ -146,29 +95,24 @@ export interface GridEntry extends ScheduleEntry {
 }
 
 /**
- * What a clicked block (or pile) hands its listener — the material for the
- * course-settings modal (REWORK-2026-07-29 D1). A pile's `code` is its
- * courses' codes joined with " · " (plannerApp reads that separator to route
- * the click to the day view instead); a single block's is one course code.
+ * What a clicked block hands its listener — material for the course-settings
+ * modal. A pile's `code` is its courses' codes joined with " · " (plannerApp
+ * reads that separator to route the click to the day view).
  */
 export interface BlockDetail {
   /** Course code, or the pile's codes joined with " · ". */
   code: string;
   /**
+  /**
    * The weekday the block sits in (1 = mandag). A pile carries its cluster's
-   * day, which is what lets the caller route a pile click to that day's
-   * expanded view — a pile has no single course to open settings for (D5).
+   * day, which is what routes a pile click to that day's expanded view.
    */
   dayNumber: number;
   /** Course name (the proper name), or joined names for a pile. */
   name: string;
   /** The activity/group label ("Forelesningsparallell 2"), when the block is one entry. */
   entryName: string | null;
-  /**
-   * The slot as its two figures, not as a pre-joined sentence: the card sets
-   * the clock as its largest figure and the weekday beside it, and it derives
-   * the duration from the pair.
-   */
+  /** Two figures, not a pre-joined sentence: the card derives the duration. */
   startTime: string;
   endTime: string;
   rooms: string;
@@ -177,15 +121,10 @@ export interface BlockDetail {
   weeksLabel: string;
   isLecture: boolean;
   /**
-   * The lecture(s) this session collides with, and the minutes they share.
-   * `null` when it collides with nothing.
-   *
-   * The week already draws the collision as a red zone across the lane, and
-   * the margin names it in a sentence; the card in between said nothing at
-   * all, so a click on the red bar answered every question except the one the
-   * red raised. Red-Is-Collision requires the copy to name both things, which
-   * is why the partner codes travel with the window rather than the card
-   * inferring "something here clashes" from the zone.
+   * The lecture(s) this session collides with and the minutes they share;
+   * `null` when it collides with nothing. Red-Is-Collision requires the card
+   * to name both things, so the partner codes travel with the detail rather
+   * than the card inferring "something clashes" from the zone.
    */
   clash: BlockClash | null;
 }
@@ -200,55 +139,46 @@ export interface BlockClash {
 
 export interface GridRenderOptions {
   /**
-   * A bundle fetch is still in flight. With nothing to draw yet the grid
-   * renders a skeleton instead of asserting "Ingen timeplandata" — a loud
-   * false statement, and the 500 px reflow when the data lands throws the
-   * exam ribbon off screen mid-read (U5).
+   * A bundle fetch is still in flight, so the grid draws a skeleton instead of
+   * asserting "Ingen timeplandata" — false, and the reflow when data lands
+   * throws the exam ribbon off screen mid-read.
    */
   loading?: boolean;
   /**
    * The plan is waiting on a studieretning/campus answer. The week is not a
-   * failure while a question is open, so this message replaces the canned
-   * "Ingen forelesninger funnet" recovery copy, which points the wrong way
-   * (B2). It is the *empty* week's message only — see `renderGrid`.
+   * failure while a question is open, so this replaces the canned recovery
+   * copy. It is the *empty* week's message only — see `renderGrid`.
    */
   pendingChoiceMessage?: string | null;
   /**
-   * Called when a block, a pile or a "velg din gruppe" margin note is
-   * clicked, with the detail and the clicked element (the popover's anchor).
-   * Optional: the one-course `/emne/` reuse passes none, so its blocks are
-   * inert.
+   * Called when a block, pile or "velg din gruppe" note is clicked, with the
+   * detail and the clicked element (the popover's anchor). The one-course
+   * `/emne/` reuse passes none, so its blocks are inert.
    */
   onBlockClick?: (detail: BlockDetail, anchor: HTMLElement) => void;
   /**
-   * Bypasses `applyGroupSelection` entirely — every entry (every lecture
-   * parallel, every øving/lab group) draws, not just the programme's own
-   * default or the student's explicit pick. `/emne/[code]/` is a reference
-   * page for the course itself, not for one student's plan (Task 7 ruling):
-   * a visitor deciding *which* parallel to register for needs to see all of
-   * them, not the one `entriesForProgram`/`defaultLectureKeys` happens to
-   * guess is theirs (`/emne/` has no programme context to guess from at
-   * all). `/planlegger/`'s own render never sets this.
+   * Bypasses `applyGroupSelection` entirely — every parallel and group draws.
+   * `/emne/[code]/` is a reference page for the course, not one student's
+   * plan: a visitor deciding which parallel to register for needs all of them,
+   * and there is no programme context to guess from. `/planlegger/` never sets
+   * this.
    */
   showAllGroups?: boolean;
   /**
-   * The weekday to mark as today (1 = mandag), so its row carries the spine at
-   * full ink while the rest of the week recedes. `null`/omitted marks none —
-   * `/emne/[code]/`'s reference week is nobody's particular Tuesday.
+   * The weekday to mark as today (1 = mandag). `null` marks none — `/emne/`'s
+   * reference week is nobody's particular Tuesday.
    */
   todayNumber?: number | null;
   /**
-   * A margin note naming a course whose groups were narrowed on a guess was
-   * clicked. Distinct from `onBlockClick` because the two ask different
-   * questions: a bar asks "what is this session", a note asks "which group is
-   * mine" — and only the second is an edit.
+   * A margin note naming a course narrowed on a guess was clicked. Distinct
+   * from `onBlockClick`: a bar asks "what is this session", a note asks "which
+   * group is mine" — and only the second is an edit.
    */
   onChoiceClick?: (code: string) => void;
   /**
-   * Stagger the bars in left-to-right on this render (REWORK-2026-07-29b D4).
-   * Set by a view switch, never by a re-render caused by a group pick or a
-   * plan edit: replaying the whole week because one checkbox moved is exactly
-   * the entrance choreography DESIGN §6 forbids.
+   * Stagger the bars in on this render. Set by a view switch only, never by a
+   * re-render from a group pick or plan edit — replaying the whole week
+   * because one checkbox moved is the entrance choreography DESIGN §6 forbids.
    */
   animate?: boolean;
 }
@@ -256,16 +186,15 @@ export interface GridRenderOptions {
 export interface GridRenderResult {
   /**
    * Distinct collision *slots* — one per (day, overlap window), so a 3-way
-   * clash counts once. This is the number for the page's verdict line.
+   * clash counts once. The number for the page's verdict line.
    */
   conflictCount: number;
   /** Raw pairwise conflicts behind those slots. Diagnostics; not for display. */
   conflictPairCount: number;
   /**
-   * The plan's courses have timetable entries but none classify as a lecture,
-   * so the muted øving/lab layer was revealed without being asked for (B7a).
-   * The caller must mirror this into the "Vis øvinger og labber" toggle's
-   * `aria-pressed`, or the control lies about what is on screen.
+   * The plan's courses have entries but none classify as a lecture, so the
+   * muted layer was revealed unasked. The caller must mirror this into the
+   * toggle's `aria-pressed`, or the control lies about what is on screen.
    */
   mutedLayerAutoRevealed: boolean;
   /** Cells drawn (after merging and collapsing) — 0 in every message branch. */
@@ -273,17 +202,15 @@ export interface GridRenderResult {
   /** Which branch rendered. Only `"grid"` carries meaningful counts. */
   state: "grid" | "empty" | "loading" | "pending-choice";
   /**
-   * The plan's courses whose timetable we do not have and therefore could
-   * not check: the fetch failed, or it was never made. NOT the courses NTNU
-   * publishes nothing for — those are a known, drawable-as-nothing answer
-   * (see `planGaps`). Non-empty ⇒ `conflictCount` is a floor, not the truth,
-   * and the caller must not print a clean verdict (pc-3).
+   * Courses whose timetable we do not have and could not check: the fetch
+   * failed, or was never made. NOT courses NTNU publishes nothing for — those
+   * are a known answer (`planGaps`). Non-empty ⇒ `conflictCount` is a floor
+   * and the caller must not print a clean verdict.
    */
   incompleteCourses: string[];
   /**
-   * The counts are not the whole truth: a fetch is still in flight, or one
-   * came back without an answer (`incompleteCourses`). Either way the verdict
-   * line must stay quiet about "ingen kollisjoner".
+   * The counts are not the whole truth (a fetch in flight, or one without an
+   * answer), so the verdict line must stay quiet about "ingen kollisjoner".
    */
   partial: boolean;
 }
@@ -296,13 +223,10 @@ function roomLabel(rooms: { building: string | null; room: string | null }[]): s
 }
 
 /**
- * The building(s) behind a session's rooms, deduped: the half of the room fact
- * the bar has to throw away.
- *
- * A room with no code of its own already prints its building as its label
- * (`roomLabel` falls back to it), and upstream does publish rows where the two
- * fields carry the same string. Either way naming it again underneath would
- * print the same string twice, so those entries are skipped rather than joined.
+ * The building(s) behind a session's rooms, deduped. A room with no code of
+ * its own already prints its building as its label, and upstream publishes
+ * rows where both fields carry the same string — those are skipped rather than
+ * joined, or the same string prints twice.
  */
 export function buildingLabel(rooms: { building: string | null; room: string | null }[]): string {
   return [
@@ -333,15 +257,10 @@ function blockAriaLabel(entry: GridEntry, conflictPartners: string[]): string {
 }
 
 /**
- * Collects every timetable entry (with course context) for courses that have
- * a loaded bundle. Each course's raw entries pass through
- * `applyGroupSelection` FIRST (§5 mandate point 1): the grid never shows a
- * parallel the student did not select — the programme's own lecture parallel
- * is the default, unpicked øving/lab groups stay all-muted until chosen. The
- * programme code and any explicit selection ride on the course state.
- *
- * `showAllGroups` bypasses that narrowing entirely (Task 7 ruling) — see
- * `GridRenderOptions.showAllGroups`.
+ * Every timetable entry (with course context) for courses with a loaded
+ * bundle. Each course's entries pass through `applyGroupSelection` FIRST: the
+ * grid never shows a parallel the student did not select. `showAllGroups`
+ * bypasses that — see `GridRenderOptions.showAllGroups`.
  */
 function collectEntries(courses: PlanCourseState[], showAllGroups: boolean): GridEntry[] {
   const entries: GridEntry[] = [];
@@ -352,10 +271,8 @@ function collectEntries(courses: PlanCourseState[], showAllGroups: boolean): Gri
       ? timetable
       : applyGroupSelection(timetable, state.course.groups, state.programCode);
     const picked = new Set(state.course.groups ?? []);
-    // A course offering exactly ONE øving/lab group offers no choice, so it
-    // is treated as already picked and simply drawn. Same rule the popover's
-    // group picker follows: a control that cannot change anything is noise,
-    // and "HMS0002 har 1 gruppe — velg din" is that noise as a sentence.
+    // A course offering exactly ONE øving/lab group offers no choice, so it is
+    // treated as already picked. Same rule the popover's group picker follows.
     const otherKeys = new Set<string>();
     for (const raw of selected) {
       if (classifyActivity(raw) === "lecture") continue;
@@ -380,9 +297,7 @@ function collectEntries(courses: PlanCourseState[], showAllGroups: boolean): Gri
         weeksNumbers,
         weeksLabel: weekLabel(weeksNumbers),
         isLecture: classifyActivity(raw) === "lecture",
-        // `showAllGroups` is the course page, which is a reference for the
-        // course rather than one student's plan — every group counts as
-        // shown there.
+        // `showAllGroups` is the course page: every group counts as shown.
         groupPicked: showAllGroups || key === null || soleGroup || picked.has(key),
         groupCount: 1,
         ordinal: entries.length,
@@ -406,15 +321,10 @@ export interface PlanGaps {
 
 /**
  * Why each course is missing from the week, from the fetch outcome the bundle
- * carries — never re-derived from the entry array. The semester-narrowed
- * clone plannerApp hands us keeps the *fetch's* outcome (data.ts), so
- * "fetched fine, nothing this semester" (`offSemester`) stays a different
- * sentence from "we never got an answer" (`failed`). Only the second kind
- * makes the collision check incomplete; the first two are answers.
- *
- * A course whose fetch is still in flight is in none of the lists — the
- * caller's `loading` flag already says so, and "mangler timeplan" about a
- * request that is running is not true yet.
+ * carries — never re-derived from the entry array. "Fetched fine, nothing this
+ * semester" (`offSemester`) must stay a different sentence from "we never got
+ * an answer" (`failed`); only the second makes the collision check incomplete.
+ * A fetch still in flight is in no list — the caller's `loading` says so.
  */
 export function planGaps(courses: PlanCourseState[]): PlanGaps {
   const gaps: PlanGaps = { failed: [], pending: [], empty: [], offSemester: [] };
@@ -441,14 +351,9 @@ export interface LectureChoice {
 
 /**
  * Courses whose lecture parallel we could NOT resolve and the student has not
- * picked (audit edit-4/ux-1/groups-5/week-5). `resolveLectureDefaults` draws
- * one provisional session per ambiguous family rather than all nine of
- * TMA4400's — which is only honest if the week says so, so each of these
- * becomes the same "velg din" note the øving layer already gets, in the
- * lecture-only view too.
- *
- * `showAllGroups` (the `/emne/` reuse) narrows nothing, so nothing there is a
- * guess and the list is empty.
+ * picked. `resolveLectureDefaults` draws one provisional session per ambiguous
+ * family, which is only honest if the week says so — each becomes a "velg
+ * din" note. `showAllGroups` narrows nothing, so the list is empty there.
  */
 export function unresolvedLectureChoices(
   courses: PlanCourseState[],
@@ -461,8 +366,7 @@ export function unresolvedLectureChoices(
     if (!timetable || timetable.length === 0) continue;
     const resolution = resolveLectureDefaults(timetable, state.programCode);
     if (resolution.resolved) continue;
-    // An explicit lecture pick is an answer, even a wrong one — the picker is
-    // where it gets changed, not a margin note repeating the question.
+    // An explicit lecture pick is an answer, even a wrong one.
     const lectureKeys = new Set(
       groupOptions(timetable)
         .filter((o) => o.kind === "lecture")
@@ -480,11 +384,9 @@ export function unresolvedLectureChoices(
 }
 
 /**
- * Collapses a course's identical parallel slots into one block (U1). Kept
- * apart by activity title and by lecture/other, so we never have to invent a
- * joint label for two things the student would read as different — the
- * EXPH0300 "Forelesningsparallell 2 Trondheim" / "…3 Gjøvik" pair stays two
- * blocks, the four byte-identical "Lab" rows become one.
+ * Collapses a course's identical parallel slots into one block. Kept apart by
+ * activity title and by lecture/other, so we never invent a joint label for
+ * two things the student reads as different.
  */
 function mergeSlots(entries: GridEntry[]): GridEntry[] {
   return mergeParallelSlots(entries, (e) => `${e.isLecture ? "L" : "O"}|${e.name}`).map(
@@ -528,14 +430,11 @@ function durationMinutes(entry: GridEntry): number {
 }
 
 /**
- * An all-day drop-in window (08:00–18:00 lab). Never a lecture — see the
- * module docs.
+ * An all-day drop-in window (08:00–18:00 lab). Never a lecture.
  *
- * Exported because the column view (`columnGrid.ts`) has to make the same call
- * and may not make it differently: a window that is a strip in one view and a
- * lane in the other is two views disagreeing about what the week contains.
- * Takes the three fields the rule actually reads, so the caller's own entry
- * shape does not have to be a `GridEntry`.
+ * Exported because `columnGrid.ts` must make the same call: a window that is a
+ * strip in one view and a lane in the other is two views disagreeing about
+ * what the week contains.
  */
 export function isDropIn(entry: {
   isLecture: boolean;
@@ -555,21 +454,14 @@ function isBandEntry(entry: GridEntry): boolean {
 // --- Frame state ----------------------------------------------------------
 
 /*
- * There is no `setFrameRuled` any more. The ruling used to be a spreadsheet
- * tiling on the FRAME (`np-ruled`/`np-ruled--hours`), which every branch here
- * had to remember to strip so the ruling never framed an apology (D5). It is
- * now a single hour hairline on `.planner-grid-rail`/`.planner-grid-day`
- * (planner-week.css) — children only a drawn week has — so
- * Ruling-Marks-The-Plan holds by construction: a message branch builds no
- * grid, so there is nothing to strip. The skeleton is the one case that
- * builds a shell without a plan, and `.planner-grid.is-skeleton` drops its
- * lines in CSS.
+ * The ruling is an hour hairline on `.planner-grid-rail`/`.planner-grid-day` —
+ * children only a drawn week has — so Ruling-Marks-The-Plan holds by
+ * construction: a message branch builds no grid, so there is nothing to strip.
  */
 
 /**
- * Renders a message where the week would be, in `.np-hint` (a sentence, so
- * grotesk). Exported so the page's pre-publish branch (DR-2) can clear the
- * frame through the same door.
+ * Renders a message where the week would be. Exported so the page's
+ * pre-publish branch (DR-2) can clear the frame through the same door.
  */
 export function renderGridMessage(
   frame: HTMLElement,
@@ -582,9 +474,8 @@ export function renderGridMessage(
 }
 
 /**
- * A week-shaped placeholder while the bundles load: the rail, the day names
- * and the height the real grid will need. Nothing here claims anything about
- * the plan — the caller's status line already says "henter timeplan …".
+ * A week-shaped placeholder while bundles load: the rail, the day names and
+ * the height the real grid will need. Claims nothing about the plan.
  */
 function renderSkeleton(frame: HTMLElement, notesHost: HTMLElement): void {
   notesHost.replaceChildren();
@@ -607,18 +498,13 @@ interface GridShell {
 
 /**
  * The empty week: an hour ruler across the top, then one row per weekday —
- * the day's name in the left spine, its lanes in the field beside it
- * (REWORK-2026-07-29b D1).
+ * the day's name in the left spine, its lanes in the field beside it.
  *
- * The spine is the signature and it is load-bearing, not decoration: at
- * display size with the current day at full ink and the rest of the week
- * receding, it is how a student finds their row without reading. Three
- * letters of `.np-kicker` in a 3rem column did not do that.
+ * The spine is load-bearing, not decoration: with the current day at full ink
+ * and the rest receding, it is how a student finds their row without reading.
  *
- * `--planner-span` is the axis's own length in minutes. Every bar's `left` and
- * `width` are percentages of it, so the ruler's ticks and the bars share one
- * coordinate system by construction — there is no second place where a time
- * becomes a position.
+ * `--planner-span` is the axis's length in minutes; every bar's `left`/`width`
+ * is a percentage of it, so ticks and bars share one coordinate system.
  */
 function buildGridShell(
   minMinutes: number,
@@ -631,32 +517,30 @@ function buildGridShell(
   const grid = el("div", "planner-grid");
   grid.style.setProperty("--planner-span", String(span));
   grid.style.setProperty("--planner-hours", String(Math.round(span / 60)));
-  // Read back by the pointer readout and the now marker, which have to turn a
-  // pixel into a time and cannot re-derive the clamp the render chose.
+  // Read back by the pointer readout and the now marker, which turn a pixel
+  // into a time and cannot re-derive the clamp this render chose.
   grid.setAttribute("data-min", String(minMinutes));
   grid.setAttribute("data-span", String(span));
-  // role="group", not "img": the grid holds focusable blocks (each with its own
-  // aria-label), and "img" would strip them from the accessibility tree.
+  // role="group", not "img": the grid holds focusable blocks with their own
+  // aria-labels, and "img" would strip them from the accessibility tree.
   grid.setAttribute("role", "group");
   grid.setAttribute("aria-label", ariaLabel);
 
-  // The ruler. Its figures sit ON their tick rather than floating above the
-  // field — the tick is what ties a number to a position.
+  // The ruler. Figures sit ON their tick — the tick ties a number to a place.
   const ruler = el("div", "planner-grid-ruler");
   const rulerTrack = el("div", "planner-grid-ruler-track");
   rulerTrack.setAttribute("aria-hidden", "true");
   for (let hour = Math.ceil(minMinutes / 60); hour <= Math.floor(maxMinutes / 60); hour++) {
-    // The mark and the figure are two elements because they are pinned
-    // differently: the hairline sits exactly on the minute, the figure is
-    // centred on it — except at the two ends of the axis, where centring puts
-    // half of "08" under the sticky spine and half of the last hour past the
-    // frame's edge (mob-E). Only the figure moves; the mark never does.
+    // Mark and figure are two elements because they are pinned differently:
+    // the hairline sits exactly on the minute, the figure is centred on it —
+    // except at the axis ends, where centring puts it under the sticky spine
+    // or past the frame. Only the figure moves; the mark never does.
     const tick = el("span", "planner-grid-tick");
     tick.append(el("span", "planner-grid-tick-figure np-data", String(hour).padStart(2, "0")));
     // The hour is the tick's identity across a re-render: when the øving layer
-    // stretches the axis, 10:00 has to travel to its new percentage rather
-    // than be replaced by a different element that happens to say "10"
-    // (layerMotion.ts).
+    // The tick's identity across a re-render: when the øving layer stretches
+    // the axis, 10:00 travels to its new percentage rather than being replaced
+    // by a different element that happens to say "10" (layerMotion.ts).
     tick.setAttribute("data-hour", String(hour));
     tick.style.setProperty("--planner-x", `${((hour * 60 - minMinutes) / span) * 100}%`);
     rulerTrack.append(tick);
@@ -670,15 +554,10 @@ function buildGridShell(
     row.setAttribute("data-day", String(day));
     if (day === todayNumber) row.setAttribute("data-today", "");
 
-    // A real word, not an abbreviation: the spine has the width for it, and
-    // "mandag" is a sentence fragment, so it is the grotesk, not the mono
-    // (Data-Is-Mono cuts the other way here).
-    //
-    // On a phone it does not have the width for it — 68 px of a 358 px screen,
-    // in front of a week that is already wider than the screen — so the
-    // three-letter form rides along, `aria-hidden`, and the CSS shows one or
-    // the other. The full word stays in the accessibility tree at every width:
-    // "man" is an abbreviation a screen reader has no way to expand.
+    // A real word, not an abbreviation: "mandag" is a sentence fragment, so
+    // grotesk, not mono. A phone has no width for it, so the three-letter form
+    // rides along `aria-hidden` and CSS shows one or the other — the full word
+    // stays in the accessibility tree, since "man" cannot be expanded.
     const spine = el("div", "planner-grid-spine");
     spine.append(el("span", "planner-grid-spine-long", dayName(day)));
     const short = el("span", "planner-grid-spine-short", dayName(day).slice(0, 3));
@@ -686,27 +565,25 @@ function buildGridShell(
     spine.append(short);
     row.append(spine);
 
-    // Bars are absolutely positioned against this box, so it — not the grid —
-    // has to be the positioned ancestor, or every day's bars would resolve
-    // their percentages against the whole week and land in the same strip.
+    // Bars position absolutely against this box, so it — not the grid — must
+    // be the positioned ancestor, or every day's bars land in the same strip.
     const field = el("div", "planner-grid-field");
     row.append(field);
     grid.append(row);
     dayFields.set(day, field);
   }
 
-  // The readout that makes the axis legible to the minute. The ruler labels
-  // whole hours only, and a bar no longer prints its own start time — which is
-  // the trade that bought the bar its width — so without this there is nowhere
-  // on the surface to learn that a lecture starts 08:15 rather than 08:00.
+  // The readout that makes the axis legible to the minute: the ruler labels
+  // whole hours and a bar no longer prints its start time, so without this
+  // there is nowhere to learn that a lecture starts 08:15 rather than 08:00.
   const pointer = el("div", "planner-grid-pointer");
   pointer.hidden = true;
   pointer.setAttribute("aria-hidden", "true");
   pointer.append(el("span", "planner-grid-pointer-time np-data"));
   grid.append(pointer);
 
-  // "Now", drawn once through the whole week: faint everywhere so the hour
-  // reads across every day, solid in today's row where it is literal.
+  // "Now", drawn through the whole week: faint everywhere so the hour reads
+  // across every day, solid in today's row where it is literal.
   const now = el("div", "planner-grid-now");
   now.hidden = true;
   now.setAttribute("aria-hidden", "true");
@@ -722,18 +599,12 @@ function clockLabel(minutes: number): string {
 }
 
 /**
- * Places the needle, or hides it (REWORK-2026-07-30f).
+ * Places the needle, or hides it. Drawn on TODAY'S ROW ONLY and only inside
+ * the drawn hours, so there are two states: on the row at a minute, or absent
+ * — a mark nobody can find is worse than no mark.
  *
- * It is drawn on TODAY'S ROW ONLY and only inside the drawn hours, so there
- * are exactly two states: on the row at a minute, or absent. Both of the cases
- * that used to get a faint week-wide hairline — a weekend, and a moment past
- * the axis — now get nothing, because a mark nobody can find is worse than no
- * mark, and a week clamped to its own sessions has no honest place to put
- * 21:10.
- *
- * Exported because it has to be re-run on a timer: a line that says "now" and
- * means "an hour ago" is worse than no line, and re-rendering the whole week
- * every minute to move one element would be absurd.
+ * Exported because it must re-run on a timer: a line that says "now" and means
+ * "an hour ago" is worse than no line.
  */
 export function syncNowMarker(frame: HTMLElement, at: Date = new Date()): void {
   const grid = frame.querySelector<HTMLElement>(".planner-grid");
@@ -762,11 +633,9 @@ export function syncNowMarker(frame: HTMLElement, at: Date = new Date()): void {
 }
 
 /**
- * Wires the hover readout: a hairline that follows the pointer across the time
- * axis with the minute under it.
- *
- * Mouse only. A finger covers the very pixel the readout is about, and a line
- * that appears under a tap and stays there reads as a selection nobody made.
+ * Wires the hover readout: a hairline following the pointer across the time
+ * axis with the minute under it. Mouse only — a finger covers the very pixel
+ * the readout is about, and a line left under a tap reads as a selection.
  */
 function wirePointer(grid: HTMLElement, minMinutes: number, span: number): void {
   const pointer = grid.querySelector<HTMLElement>(".planner-grid-pointer");
@@ -785,9 +654,8 @@ function wirePointer(grid: HTMLElement, minMinutes: number, span: number): void 
     }
     pointer.hidden = false;
     pointer.style.left = `${event.clientX - gridBox.left}px`;
-    // Rounded to five minutes: the axis cannot be read more finely than that
-    // at any width the week is drawn at, and a jittering unit figure invites a
-    // precision the geometry does not have.
+    // Rounded to five minutes: the axis cannot be read more finely at any
+    // width, and a jittering unit figure invites precision it does not have.
     time.textContent = clockLabel(Math.round((minMinutes + ratio * span) / 5) * 5);
   });
 
@@ -808,12 +676,8 @@ interface BlockGeometry {
 
 /**
  * Places a bar on the time axis: `left`/`width` as percentages of the day's
- * own span, `--planner-lane` for which stacked lane it sits in.
- *
- * Percentages, not pixels, because the axis is fluid — the same grid has to
- * hold up from a 22rem phone to a 90rem desktop, and a bar that resolved its
- * position against a fixed cell size would drift off its own hour tick at
- * every width but the one it was measured at.
+ * span, `--planner-lane` for its stacked lane. Percentages, not pixels,
+ * because the axis is fluid from a 22rem phone to a 90rem desktop.
  */
 function positionBlock(
   block: HTMLElement,
@@ -829,15 +693,10 @@ function positionBlock(
 }
 
 /**
- * The collision, drawn once per day rather than once per block: a zone cut
- * through every lane in the row across exactly the minutes that overlap,
- * edged in `--clash` on both sides (REWORK-2026-07-29b D4).
- *
- * It is the only element in the week that crosses lanes, which is precisely
- * what a collision is — two things in one moment. The old per-block band
- * could only shade its own bar, so a three-way clash read as three unrelated
- * stripes; and on a solid printed bar a translucent red wash just muddies the
- * hue instead of out-shouting it, which Red-Is-Collision requires.
+ * The collision, drawn once per day rather than once per block: a zone through
+ * every lane in the row across exactly the overlapping minutes, edged in
+ * `--clash`. It is the only element that crosses lanes, which is what a
+ * collision is — two things in one moment.
  */
 function buildClashZone(
   window: { start: number; end: number },
@@ -857,21 +716,18 @@ function groupLabel(entry: GridEntry): string {
 }
 
 /**
- * The block's second line: `start · room` (just the start when there is no
- * room). The start time comes FIRST because `.planner-block-meta` is
- * `nowrap` + ellipsis and a 73 px block clips whatever is last — with the
- * room first, the time was the one fact a student copies into a calendar and
- * the only one the hour rail (whole hours) cannot give back (week-4). The
- * room survives in the block's `title`, its aria-label and the popover.
+ * The block's second line: `start · room`. The start comes FIRST because
+ * `.planner-block-meta` is nowrap + ellipsis and a narrow block clips whatever
+ * is last — the time is the fact the whole-hour rail cannot give back. The
+ * room survives in the block's `title`, aria-label and popover.
  */
 export function metaLine(entry: { rooms: string; startTime: string }): string {
   return [entry.startTime, entry.rooms].filter(Boolean).join(" · ");
 }
 
 /**
- * The popover material for a single block. `clash` comes from the render's own
- * conflict pass, the same `ConflictGroup`s the red zone is drawn from, so the
- * card and the zone can never disagree about which minutes collide.
+ * Popover material for a block. `clash` comes from the render's own conflict
+ * pass, so the card and the red zone can never disagree.
  */
 export function blockDetailFor(
   entry: GridEntry,
@@ -927,20 +783,14 @@ function buildBlock(
     .filter(Boolean)
     .join(" · ");
 
-  // One line, and the code is the half that may never be cut. The bar no
-  // longer prints its own start time: the axis above it is labelled and the
-  // bar begins at its own minute, so a time inside the bar would be the same
-  // fact said twice. That is what frees the width for `activity · room` —
-  // what it is, rather than when it is (REWORK-2026-07-29b D1).
+  // One line, and the code is the half that may never be cut. The bar prints
+  // no start time — the labelled axis already says it — which is what frees
+  // the width for `activity · room`.
   block.append(el("span", "planner-block-code np-data", entry.courseCode));
   if (durationMinutes(entry) >= COMPACT_BLOCK_MINUTES) {
-    // Room and activity are two facts and get two boxes. Joined into one
-    // string they shared one ellipsis, and the ellipsis is wider than what it
-    // stood in for: `TFY4345 KJL…` for a four-character room called KJL2, and
-    // `TFE4146 S1 · F…` where the whole of "· F…" said nothing at all. A room
-    // is now printed whole or not printed, and an activity name that has no
-    // room to say anything is dropped rather than abbreviated to a letter —
-    // `fitBlockLabels` decides both from the bar's real width.
+    // Room and activity are two facts and get two boxes: joined into one
+    // string they shared one ellipsis wider than what it replaced. A room is
+    // printed whole or not at all; `fitBlockLabels` decides from real width.
     if (entry.rooms) block.append(el("span", "planner-block-room np-data", entry.rooms));
     if (label) block.append(el("span", "planner-block-what", label));
   }
@@ -958,18 +808,12 @@ function buildBlock(
 const SCROLL_FADE_PX = 16;
 
 /**
- * The edge fades, written as two lengths the mask reads (planner-week.css).
+ * The edge fades, as two lengths the mask reads (planner-week.css).
  *
- * Each one GROWS with the drag instead of switching on with it: at rest the
- * near edge fades over nothing, and by 16 px of scrolling it has reached its
- * full depth. Toggled by `[data-scroll]` alone, a 40 px veil appeared over the
- * week the instant a finger moved one pixel, which reads as the page flinching
- * rather than as an edge saying "there is more this way".
- *
- * The third length is the horizontal scrollbar's own strip. The mask is on the
- * scroll container, so without it the fade greys out the scrollbar — the one
- * part of the frame that is not the week, and the part that says most plainly
- * that the week scrolls. It is 0 on every platform with overlay scrollbars.
+ * Each GROWS with the drag rather than switching on with it: toggled outright,
+ * a 40 px veil appeared the instant a finger moved one pixel, which reads as
+ * the page flinching. The third length is the scrollbar's own strip — the mask
+ * is on the scroll container, so without it the fade greys out the scrollbar.
  */
 export function setScrollFade(frame: HTMLElement, left: number, maxScroll: number): void {
   const near = Math.min(Math.max(left, 0), SCROLL_FADE_PX);
@@ -983,19 +827,14 @@ export function setScrollFade(frame: HTMLElement, left: number, maxScroll: numbe
 /**
  * Decides what each bar has room to SAY — never where it says it.
  *
- * A bar carries up to three facts, in the order they may be given up in: the
- * course code, the room, and what the session is called. Only the last of them
- * may ever be cut, and only where a cut still leaves something worth reading.
- * The rule this enforces, in one line: **an ellipsis must never be wider than
- * the text it replaces.**
- *
- * It is purely subtractive — it hides, it never moves anything out of a bar or
- * changes a bar's width, because a bar's width is its duration. Where even the
- * code will not fit, the code is what stays and it clips: at that point the
- * bar is a colour and a tap target, and the popover has the rest.
+ * Three facts in the order they may be given up: course code, room, session
+ * name. Only the last may be cut, and only where a cut leaves something worth
+ * reading. The rule: **an ellipsis must never be wider than the text it
+ * replaces.** Purely subtractive — it hides, it never moves anything or
+ * changes a bar's width, because a bar's width is its duration.
  *
  * Measure-then-mutate in two passes: reading a box after writing a class is a
- * forced reflow per block, and a week can hold thirty of them.
+ * forced reflow per block, and a week can hold thirty.
  */
 export function fitBlockLabels(frame: HTMLElement): void {
   const blocks = Array.from(frame.querySelectorAll<HTMLElement>(".planner-grid .planner-block"));
@@ -1009,9 +848,8 @@ export function fitBlockLabels(frame: HTMLElement): void {
       (Number.parseFloat(style.paddingInlineEnd) || 0)
     : 0;
   const GAP = 8; // --gap-2, between two facts on a bar
-  // Below this an activity name has nothing to say: `Forelesningsparallell 1`
-  // cut to three characters and an ellipsis is noise where the fact it is
-  // crowding out — the room — is the one a student walks by.
+  // Below this an activity name has nothing to say, and it crowds out the
+  // room — the fact a student actually walks by.
   const MIN_TYPE = 44;
 
   const hide: { block: HTMLElement; mode: "is-roomless" | "is-typeless" }[] = [];
@@ -1023,8 +861,7 @@ export function fitBlockLabels(frame: HTMLElement): void {
     const code = block.querySelector<HTMLElement>(".planner-block-code")?.offsetWidth ?? 0;
     const roomWidth = room ? GAP + room.offsetWidth : 0;
     if (code + roomWidth > avail + 1) {
-      // The room would be cut, so it is not printed at all — and neither is
-      // anything that would have followed it.
+      // The room would be cut, so neither it nor anything after it prints.
       hide.push({ block, mode: "is-roomless" });
       continue;
     }
@@ -1039,30 +876,24 @@ export function fitBlockLabels(frame: HTMLElement): void {
 
 function blockId(entry: GridEntry): string {
   // The ordinal is load-bearing: (code, day, start) is NOT unique — EXPH0300
-  // publishes "Forelesningsparallell 2 Trondheim" and "…3 Gjøvik" at the same
-  // Monday 10:15, and duplicate DOM ids made a conflict note flash the wrong
-  // block (REVIEW.md C5b).
+  // publishes two parallels at the same Monday 10:15, and duplicate DOM ids
+  // made a conflict note flash the wrong block.
   return `planner-block-${entry.ordinal}`;
 }
 
 // --- Notes ----------------------------------------------------------------
 
 /**
- * The margin notes, folded behind one line (mob-D, 2026-07-31).
+ * The margin notes, folded behind one line.
  *
- * What a fold may and may not take with it is the whole design here. It takes
- * the *explanations* — which course NTNU publishes no timetable for, which one
- * is not taught this semester, which one has no lecture to draw. It does not
- * take the *count*, which stays on the line, and it does not take the
- * qualification: if any folded note means the collision check does not cover
- * the whole plan, the summary says so itself, so the fold can never leave a
- * green verdict standing on an incomplete check. Nor does it take anything
- * with a verb in it: collisions and the "velg din gruppe" lines are appended
- * above this and stay open, because they are things to act on.
+ * A fold takes the *explanations* only. It does not take the count, and it
+ * does not take the qualification: if any folded note means the collision
+ * check does not cover the whole plan, the summary says so, so a fold can
+ * never leave a green verdict standing on an incomplete check. Nor anything
+ * with a verb in it — collisions and "velg din gruppe" lines stay open,
+ * because they are things to act on.
  *
- * Open by default above 40rem, the same boundary the column cap uses: on a
- * desktop the notes sit beside a week that has room for them and nothing is
- * gained by hiding them. Crossing that boundary re-renders the grid
+ * Open by default above 40rem. Crossing that boundary re-renders the grid
  * (plannerApp's `change` listener), so a rotation lands on the right state.
  */
 function foldNotes(notes: HTMLElement[], count: number, incomplete: boolean): HTMLElement {
@@ -1072,9 +903,8 @@ function foldNotes(notes: HTMLElement[], count: number, incomplete: boolean): HT
   const summary = el("summary", "np-summary planner-notes-summary");
   summary.append(el("span", "np-data", String(count)));
   summary.append(count === 1 ? " merknad" : " merknader");
-  // The half of the sentence a student has to act on, said without opening
-  // anything. Ink, never red: an incomplete check is a gap, not a clash
-  // (DESIGN §2, and the same rule `renderVerdict` follows).
+  // The half of the sentence to act on, said without opening anything. Ink,
+  // never red: an incomplete check is a gap, not a clash (DESIGN §2).
   summary.append(incomplete ? " · kollisjonssjekken er ufullstendig" : " om uka");
   fold.append(summary);
   fold.append(...notes);
@@ -1082,9 +912,8 @@ function foldNotes(notes: HTMLElement[], count: number, incomplete: boolean): HT
 }
 
 /**
- * Builds the collision sentence into `host` and returns the same text flat,
- * for the button's accessible name. `.np-note-clash` is grotesk now, so the
- * day, time, codes and weeks it quotes carry `.np-data` (Data-Is-Mono).
+ * Builds the collision sentence into `host` and returns it flat, for the
+ * button's accessible name. The day, time, codes and weeks carry `.np-data`.
  */
 function fillConflictNote(host: HTMLElement, group: ConflictGroup): string {
   const day = capitalize(dayName(group.dayNumber));
@@ -1108,11 +937,7 @@ function fillConflictNote(host: HTMLElement, group: ConflictGroup): string {
   return `${day} ${time} · ${joinList(group.codes)} kolliderer${weeks ? ` · ${weeks}` : ""}`;
 }
 
-/**
- * A margin sentence about courses the week could not draw: grotesk (it has a
- * verb) with the course codes in `.np-data` (Data-Is-Mono), same idiom as the
- * conflict note above.
- */
+/** A margin sentence about undrawable courses; codes in `.np-data`. */
 function gapNote(lead: string, codes: string[], tail: string): HTMLElement {
   const note = el("p", "planner-grid-note np-hint");
   if (lead) note.append(lead);
@@ -1127,26 +952,19 @@ function gapNote(lead: string, codes: string[], tail: string): HTMLElement {
 // --- Render ---------------------------------------------------------------
 
 /**
- * Which entries the week actually draws, and whether the muted layer had to
- * reveal itself to have anything to draw at all.
+ * Which entries the week draws, and whether the muted layer had to reveal
+ * itself to have anything to draw. Two guards meet here:
  *
- * Two guards meet here and their COMPOSITION is what broke (ux-fail-1):
+ *  - B7a: 47 programmes have entries and not one that classifies as a lecture.
+ *    When that layer is all there is, it is shown and the margin says why.
+ *  - The øving/lab layer shows PICKED groups only: EXPH0300 alone ships nine
+ *    seminar groups and drawing them all put 41 blocks in one week.
  *
- *  - B7a: 47 programmes have timetable entries and not one that classifies as
- *    a lecture. DR-1 accepts under-classification *because* the toggle layer
- *    still shows the entry, so when that layer is all there is, it is shown
- *    and the margin says why — rather than shipping a blank week.
- *  - The øving/lab layer shows the groups the student PICKED, not every group
- *    the course publishes: EXPH0300 alone ships nine seminar groups at nine
- *    different times and drawing them all put 41 blocks in an MTDT week.
- *
- * Applied together, the second emptied the first: in the auto-reveal branch
- * nothing is a lecture *by definition*, so `isLecture || groupPicked` kept
- * exactly nothing for a student who had picked no group — BI1006's eleven
- * real sessions rendered as a blank, green-verdict week. An auto-revealed
- * layer therefore draws every entry it has; the "har N grupper — velg din"
- * note is the narrowing invitation, and narrowing is only allowed to remove
- * teaching when something else is left standing.
+ * Composed naively the second empties the first — in the auto-reveal branch
+ * nothing is a lecture by definition, so `isLecture || groupPicked` kept
+ * nothing at all under a green verdict. An auto-revealed layer therefore draws
+ * every entry it has: narrowing may only remove teaching when something else
+ * is left standing.
  */
 export function visibleLayer<T extends { isLecture: boolean; groupPicked: boolean }>(
   entries: T[],
@@ -1160,24 +978,17 @@ export function visibleLayer<T extends { isLecture: boolean; groupPicked: boolea
 }
 
 /**
- * Courses that published sessions but not one this app can call a lecture, in
- * plan order.
+ * Courses that published sessions but not one this app can call a lecture.
  *
- * `visibleLayer`'s B7a auto-reveal is plan-GLOBAL: it fires only when NOT ONE
- * course in the plan has a lecture. Add an ordinary course alongside a
- * lecture-less one and the reveal stops firing, so the lecture-less course
- * drops out of the drawn week AND out of the (lecture-only, DR-1) collision
- * check with nothing said about it. That silence is the defect — TFY4220's
- * autumn hit it before its bucket-titles were classified (activity.ts), and a
- * measured ~22% of course-terms still cannot be lecture-classified at all and
- * never will be: Kunstakademiet publishes "allmøte" and "atelierflyt/rydding",
- * the conservatory "Gehør gruppe 1".
+ * `visibleLayer`'s auto-reveal is plan-GLOBAL — it fires only when NOT ONE
+ * course has a lecture. Add an ordinary course alongside a lecture-less one
+ * and the reveal stops, so the lecture-less course drops out of the week AND
+ * out of the (lecture-only, DR-1) collision check silently. ~22% of
+ * course-terms cannot be lecture-classified at all and never will be.
  *
- * The fix is to SAY it, not to draw it. Auto-revealing these per-course was
- * considered and rejected on the data: BK1151 alone would add 36 blocks
- * including four all-day "examn week" rows, and feeding those to the conflict
- * engine would collide every other course in the plan against them — mass
- * false reds, the precise failure DR-1 exists to prevent.
+ * The fix is to SAY it, not draw it: auto-revealing per course would feed
+ * all-day "examn week" rows to the conflict engine and collide every other
+ * course against them — mass false reds, which DR-1 exists to prevent.
  */
 export function lectureLessCourses<T extends { courseCode: string; isLecture: boolean }>(
   entries: T[],
@@ -1193,12 +1004,10 @@ export function lectureLessCourses<T extends { courseCode: string; isLecture: bo
 
 /**
  * Renders the weekly spread + its margin notes into `frame` / `notesHost`.
- * `showOthers` (the page's "Vis øvinger og labber" toggle) decides whether
- * non-lecture entries are drawn at all — see `visibleLayer` for that rule and
- * its auto-reveal. Hour clamping follows the SHOWN entries so the default
- * view stays compact. The margin carries three kinds of sentence: what the
- * week could not draw and why (`planGaps`), which slots collide, and which
- * courses are still waiting for the student to pick a group.
+ * `showOthers` decides whether non-lecture entries draw at all — see
+ * `visibleLayer`. Hour clamping follows the SHOWN entries. The margin carries
+ * three kinds of sentence: what the week could not draw and why (`planGaps`),
+ * which slots collide, and which courses still need a group picked.
  */
 export function renderGrid(
   frame: HTMLElement,
@@ -1209,14 +1018,11 @@ export function renderGrid(
 ): GridRenderResult {
   const loading = options.loading ?? false;
   const rawEntries = collectEntries(courses, options.showAllGroups ?? false);
-  // What the week has no answer for, straight from each fetch's own outcome
-  // (pc-3/ux-4). A failed or never-made fetch is the only kind that makes the
-  // collision check incomplete; the other two gaps are answers, and get said
-  // out loud in the margin instead of vanishing.
+  // What the week has no answer for, from each fetch's own outcome. Only a
+  // failed or never-made fetch makes the collision check incomplete.
   const gaps = planGaps(courses);
   const incompleteCourses = [...gaps.failed, ...gaps.pending];
-  // Courses whose lecture layer is one provisional pick out of several — the
-  // week draws it, the margin says so (edit-4/ux-1/groups-5/week-5).
+  // Courses whose lecture layer is one provisional pick out of several.
   const lectureChoices = unresolvedLectureChoices(courses, options.showAllGroups ?? false);
 
   const empty = (state: GridRenderResult["state"], message?: string): GridRenderResult => {
@@ -1233,15 +1039,10 @@ export function renderGrid(
   };
 
   // An unanswered studieretning/campus question is what the *empty* week says
-  // instead of the canned recovery copy (B2) — it is not a curtain drawn over
-  // a week that already has something true to show. `programPlan.ts`'s
-  // intersection rule prefills every course that is obligatory in *all*
-  // directions precisely so a gated period still renders the student's real
-  // blocks before they answer; suppressing them re-created B2's symptom from
-  // the other side (a primary surface that says nothing while the data is
-  // there) and broke §0.1's "programme + kull → your week, instantly". The
-  // question panel sits directly above the frame and already says the week
-  // fills in on answering, so a partial week is read as partial.
+  // instead of the canned recovery copy — never a curtain over a week that has
+  // something true to show. `programPlan.ts` prefills every course obligatory
+  // in ALL directions precisely so a gated period still renders real blocks;
+  // suppressing them breaks §0.1's "programme + kull → your week, instantly".
   const pending = options.pendingChoiceMessage ?? null;
   if (courses.length === 0) {
     return pending
@@ -1261,18 +1062,14 @@ export function renderGrid(
     };
   }
   if (rawEntries.length === 0) {
-    // Ordered by severity, the same way the caller's own fallback chain is
-    // (ux-3): a fetch that failed is not a question the student can answer, so
-    // telling them to pick a studieretning over it sends them to a control
-    // that cannot fix the week. The question is not lost — `#planner-direction`
-    // keeps its own panel above the frame.
+    // Ordered by severity: a fetch that failed is not a question the student
+    // can answer, so telling them to pick a studieretning over it sends them
+    // to a control that cannot fix the week.
     if (gaps.failed.length > 0) {
       return empty("empty", `Fikk ikke hentet timeplan for ${joinList(gaps.failed)}.`);
     }
     if (pending) return empty("pending-choice", pending);
-    // "Ingen timeplandata … ennå" is a claim about NTNU's data. It may only
-    // be made when we actually got an answer; a failed fetch says so instead
-    // (pc-3).
+    // A claim about NTNU's data, so it may only be made once we got an answer.
     return empty("empty", "Ingen timeplandata for emnene i planen ennå.");
   }
 
@@ -1280,7 +1077,6 @@ export function renderGrid(
   const revealOthers = showOthers || mutedLayerAutoRevealed;
   const entries = mergeSlots(shown);
 
-  // Courses with øving/lab groups and no pick, with how many they offer.
   // Counted from the RAW entries, so the note names what the filter withheld.
   const unpickedGroups = new Map<string, { name: string; hueVar: string; keys: Set<string> }>();
   if (revealOthers) {
@@ -1318,10 +1114,9 @@ export function renderGrid(
     return Number.isFinite(start) && Number.isFinite(end) ? { start, end } : null;
   };
 
-  // Clamp displayed hours to the entries actually shown — the grid is as
-  // tall as the visible week needs, not a fixed 08–20 canvas (a lecture-only
-  // week ending 16:00 shouldn't drag four empty hours). Toggling øvinger may
-  // grow the grid; that reflow is expected.
+  // Clamp displayed hours to the entries actually shown, so a lecture-only
+  // week ending 16:00 doesn't drag four empty hours. Toggling øvinger may grow
+  // the grid; that reflow is expected.
   let minMinutes = Number.POSITIVE_INFINITY;
   let maxMinutes = Number.NEGATIVE_INFINITY;
   for (const e of entries) {
@@ -1349,22 +1144,15 @@ export function renderGrid(
   );
   if (options.animate) shell.element.classList.add("is-striking");
 
-  // Every rendered entry resolves to the element that represents it.
-  // Conflict notes flash through this map rather than through
-  // getElementById (C5b).
+  // Conflict notes flash through this map rather than through getElementById.
   const nodeByEntry = new Map<ScheduleEntry, HTMLElement>();
   const geometryBase = { minMinutes, span };
   let blockCount = 0;
   /**
-   * Stagger index — ONE continuous count across the week, so the bars strike in
-   * in reading order rather than restarting on every row.
-   *
-   * Every drawn thing takes a number from it, drop-in strips included. They
-   * used to take none, which is not "no stagger" but `--planner-strike: 0`:
-   * five strips fired together on the first frame and the sessions then
-   * trickled in behind them, so the quietest thing in the week arrived first
-   * and loudest. A strip is part of the week printing, not a curtain raised
-   * before it.
+   * Stagger index — ONE continuous count across the week, so bars strike in in
+   * reading order rather than restarting each row. Every drawn thing takes a
+   * number, drop-in strips included: at index 0 they all fire on frame one and
+   * the quietest thing in the week arrives first and loudest.
    */
   let strikeIndex = 0;
 
@@ -1374,22 +1162,18 @@ export function renderGrid(
     const dayEntries = entries.filter((e) => e.dayNumber === day);
 
     // A day's collision zone is drawn once, behind its bars, spanning every
-    // lane. Appended FIRST so the bars paint over it — the zone marks the
-    // minutes, the bars stay legible.
+    // lane. Appended FIRST so the bars paint over it.
     const dayClash = clashWindowFor(dayEntries);
     if (dayClash) field.append(buildClashZone(dayClash, minMinutes, span));
 
     // A drop-in window gets a strip along the bottom of the row rather than a
-    // lane, because letting one take a lane is what turns a Monday with an
-    // 08:00–18:00 lab into a slab that pushes every real session down a row.
-    // The row reserves height for that strip (`--planner-bands`), so unlike
-    // the backdrop it replaces, nothing is ever drawn over its label.
+    // lane, which would turn a Monday with an 08:00–18:00 lab into a slab that
+    // pushes every real session down a row. The row reserves height for it
+    // (`--planner-bands`), so nothing is drawn over its label.
     //
-    // `--planner-bands` is the COUNT, and each strip carries its own index: a
-    // day with two open windows (TDT4120's øvingsveiledning and a lab's) used
-    // to draw both at the same offset, one exactly on top of the other, so the
-    // week silently lost a course. The row's height arithmetic was already
-    // written for a count — only this line was passing a boolean.
+    // `--planner-bands` is the COUNT and each strip carries its own index: a
+    // day with two open windows drew both at the same offset, one exactly on
+    // top of the other, and the week silently lost a course.
     const bands = dayEntries.filter(isBandEntry);
     field.style.setProperty("--planner-bands", String(bands.length));
     bands.forEach((entry, index) => {
@@ -1407,9 +1191,7 @@ export function renderGrid(
       blockCount++;
     });
 
-    // Everything else is lane-packed by layoutDay, uncapped: overlapping
-    // sessions stack downward and every one of them stays full width and
-    // readable. There is no pile any more — see LANE_CAP.
+    // Everything else is lane-packed uncapped — see LANE_CAP.
     const packable = dayEntries.filter((e) => !isBandEntry(e));
     const layoutInput: LayoutInput[] = packable.map((e) => ({
       id: blockId(e),
@@ -1418,9 +1200,8 @@ export function renderGrid(
     }));
     const slotById = new Map(layoutDay(layoutInput, LANE_CAP).map((slot) => [slot.id, slot]));
 
-    // How tall this row has to be: the deepest cluster in it. Rows are not a
-    // uniform height, and that is the honest shape of a week — a Monday with a
-    // collision genuinely occupies more of the page than an empty Friday.
+    // Row height is the deepest cluster in it. Rows are not uniform, and that
+    // is the honest shape of a week.
     const laneCount = Math.max(1, ...[...slotById.values()].map((s) => s.col + 1));
     field.style.setProperty("--planner-lanes", String(laneCount));
 
@@ -1470,16 +1251,11 @@ export function renderGrid(
     first?.focus({ preventScroll: true });
   };
 
-  // Blocks own their click now (a single block opens the course-settings
-  // modal — see `GridRenderOptions.onBlockClick`); the conflict-note links
-  // below are what drive `flash`, resolving each entry to its bar through
-  // `nodeByEntry`.
   // The rhythm the strike-in prints at, decided once the week's length is
-  // known: 55 ms a bar until a week is long enough that 55 ms a bar would run
-  // past the budget, then tighter (`staggerStep`). It is computed rather than
-  // fixed because the alternative — capping the INDEX — makes every bar past
-  // the ceiling land on one frame, and in a sequence that runs day by day that
-  // is a whole weekday arriving at once.
+  // known: 55 ms a bar until that would run past the budget, then tighter
+  // (`staggerStep`). Computed rather than fixed because capping the INDEX
+  // instead lands every bar past the ceiling on one frame — a whole weekday
+  // arriving at once.
   shell.element.style.setProperty("--planner-step", `${staggerStep(strikeIndex, 55)}ms`);
   frame.replaceChildren(shell.element);
   fitBlockLabels(frame);
@@ -1487,34 +1263,23 @@ export function renderGrid(
   syncNowMarker(frame);
 
   // Margin notes: one per collision slot, not one per pair — a 3-way clash is
-  // one Thursday afternoon to fix, and reporting it three times inflates the
-  // damage and buries the actionable fact (U3).
+  // one afternoon to fix, and reporting it thrice buries the actionable fact.
   notesHost.replaceChildren();
 
-  // The notes that EXPLAIN are collected first and folded (mob-D).
-  // Under a 265 px week these paragraphs ran to 83 px on a phone — a third of
-  // the week's own height spent qualifying it — and the fold is what buys the
-  // week that back without deleting a word: the count stays on screen, and so
-  // does the half of the sentence that qualifies the verdict (`incomplete`
-  // below).
+  // The notes that EXPLAIN are collected first and folded: on a phone they ran
+  // to a third of the week's own height. The count stays on screen, and so does
+  // the half of the sentence that qualifies the verdict (`incomplete`).
   //
-  // What may NOT be folded is anything that asks the student to DO something.
-  // Collisions, because red is the one mark on this page that may never be one
-  // tap away; and the "velg din gruppe / velg di forelesning" lines, because
-  // they are the controls that change what the week draws, not sentences about
-  // it. A fold takes explanations only.
+  // What may NOT be folded is anything asking the student to DO something:
+  // collisions (red may never be one tap away) and the "velg din" lines (they
+  // are controls, not sentences about the week).
   const folded: HTMLElement[] = [];
   let noteCount = 0;
-  // Set by any note that says the collision check does not cover everything.
-  // It is hoisted into the summary, so a folded note can never leave a green
-  // "ingen kollisjoner" standing unqualified.
+  // Set by any note saying the check does not cover everything; hoisted into
+  // the summary so a folded note can't leave "ingen kollisjoner" unqualified.
   let incomplete = false;
 
-  // The gaps come first: they qualify every sentence below them. A course we
-  // could not fetch makes the whole collision check incomplete; a course NTNU
-  // publishes nothing for — or nothing in this semester — is a real answer,
-  // but it is one the week cannot draw, so it is said instead of vanishing
-  // (pc-3/ux-4).
+  // The gaps come first: they qualify every sentence below them.
   if (gaps.failed.length > 0) {
     folded.push(
       gapNote(
@@ -1552,9 +1317,8 @@ export function renderGrid(
     );
     noteCount += 1;
   } else if (!revealOthers) {
-    // The plan-global auto-reveal above did not fire because SOME course has a
-    // lecture — which is exactly when a lecture-less course disappears without
-    // a word. Name it rather than draw it (`lectureLessCourses`).
+    // The plan-global auto-reveal did not fire because SOME course has a
+    // lecture — exactly when a lecture-less course disappears without a word.
     const silent = lectureLessCourses(rawEntries);
     if (silent.length > 0) {
       folded.push(
@@ -1583,14 +1347,11 @@ export function renderGrid(
   }
 
   // Nothing a narrowing withheld is hidden silently: one line per course we
-  // narrowed on a guess or on nothing, and clicking it opens that course's
-  // picker (the same settings modal a block opens).
+  // narrowed on a guess, and clicking it opens that course's picker.
   //
-  // The lecture lines come first and are NOT gated on the øving toggle: an
-  // unresolved lecture parallel is drawn provisionally (groups.ts picks one
-  // per session family), and a provisional pick the student is never told
-  // about is how MTIØT's week showed one of TMA4400's nine alternatives — or,
-  // before that, all nine — under a green verdict (edit-4/ux-1/week-5).
+  // Lecture lines come first and are NOT gated on the øving toggle: an
+  // unresolved parallel is drawn provisionally, and a provisional pick nobody
+  // is told about is a wrong week under a green verdict.
   const choiceNotes = [
     ...lectureChoices.map((choice) => ({
       code: choice.code,
@@ -1621,10 +1382,8 @@ export function renderGrid(
       link.append(el("span", "np-data", note.code));
       link.append(note.text);
       link.setAttribute("aria-label", note.aria);
-      // A margin note is about a whole COURSE — "TMA4400 har fire parallellar,
-      // vel di" — so it opens the group picker, not the session popover a bar
-      // opens. They used to share `onBlockClick`, which sent a note asking you
-      // to choose a group to a read-only card about one session.
+      // A margin note is about a whole COURSE, so it opens the group picker,
+      // not the session popover a bar opens.
       if (options.onChoiceClick) {
         const code = note.code;
         link.addEventListener("click", () => options.onChoiceClick?.(code));
@@ -1635,9 +1394,7 @@ export function renderGrid(
     notesHost.append(list);
   }
 
-  // Last, under the things there is something to do about: the explanations,
-  // behind one line that carries their count and — where it applies — the fact
-  // that the collision check does not cover the whole plan.
+  // Last, under the things there is something to do about: the explanations.
   if (folded.length > 0) notesHost.append(foldNotes(folded, noteCount, incomplete));
 
   return {

@@ -280,7 +280,7 @@ describe("GET /api/course/:code (details)", () => {
   /**
    * `ntnu-api` builds its message as `${method} ${url} -> ${status}` with the
    * whole internal Liferay portlet URL, and the planner rendered it verbatim
-   * into a Norwegian course row (sec-4 / worker-2).
+   * into a Norwegian course row.
    */
   it("does not leak the upstream message (URL, method, status) in the 502 body", async () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
@@ -417,7 +417,7 @@ describe("percent-encoded codes (Æ/Ø/Å)", () => {
  * course grammar rejected. All four reach the planner's typeahead unfiltered,
  * and MSØK/5 has a real 9-period plan upstream, so each one 400'd from our own
  * validator while the UI told the student NTNU had no plan
- * (worker-1 / crawler-1 / plan-7).
+ *.
  */
 describe("programme codes containing / and +", () => {
   const planRoutes = [
@@ -476,7 +476,7 @@ describe("programme codes containing / and +", () => {
 /**
  * A `null` from `ntnu-api` also covers "NTNU answered 200 with an empty body",
  * so caching it for the positive TTL turned one blip into up to 24 h of
- * "this cohort has no plan" (worker-3). Its own 10-minute TTL keeps the
+ * "this cohort has no plan". Its own 10-minute TTL keeps the
  * no-refetch-storm property and caps the blast radius.
  */
 describe("negative caching", () => {
@@ -531,7 +531,7 @@ describe("negative caching", () => {
     expect(await res.json()).toEqual({ error: "Not found" });
   });
 
-  /** perf-5: a 404 the worker holds itself was `no-store`, so every page load re-asked. */
+  /** a 404 the worker holds itself was `no-store`, so every page load re-asked. */
   it("marks the sentinel 404 cacheable for the miss TTL", async () => {
     const { fetch } = routeFetch(nullPlanRoutes);
     const deps = makeDeps(fetch);
@@ -552,7 +552,7 @@ describe("negative caching", () => {
   });
 });
 
-/** sec-3: no route carried a single security header. */
+/** no route carried a single security header. */
 describe("security headers", () => {
   it("sets CSP, nosniff, Referrer-Policy and X-Frame-Options on a success", async () => {
     const { fetch } = routeFetch([
@@ -599,7 +599,7 @@ describe("security headers", () => {
   });
 });
 
-/** worker-7: /api answered in HTML, and POST/PUT/DELETE were served as GETs. */
+/** /api answered in HTML, and POST/PUT/DELETE were served as GETs. */
 describe("/api envelope and method gate", () => {
   it("answers 404 in the JSON envelope", async () => {
     const res = notFoundJson();
@@ -618,7 +618,7 @@ describe("/api envelope and method gate", () => {
 });
 
 /**
- * sec-5: the proxy had no throttle at all, so one machine could turn a curl
+ * the proxy had no throttle at all, so one machine could turn a curl
  * loop into an unbounded stream of uncacheable requests to www.ntnu.no.
  */
 describe("RateLimiter", () => {
@@ -739,7 +739,7 @@ describe("upstream throttle", () => {
 });
 
 /**
- * sec-5 hygiene: `?version=` reaches both the cache key and the upstream call,
+ * hygiene: `?version=` reaches both the cache key and the upstream call,
  * so an arbitrarily long value was an arbitrarily long cache key. Real values
  * are `1`, `2`, `3`, `A`, `B`, `C` (all six in data/catalog.json).
  */
@@ -771,7 +771,7 @@ describe("?version= validation", () => {
 });
 
 /**
- * astro-7: `/emne/tdt4100/` 404'd though `/emne/TDT4100/` is 200 — all 5 470
+ * `/emne/tdt4100/` 404'd though `/emne/TDT4100/` is 200 — all 5 470
  * catalog codes are uppercase and none collide case-insensitively.
  */
 describe("canonicalCoursePath", () => {

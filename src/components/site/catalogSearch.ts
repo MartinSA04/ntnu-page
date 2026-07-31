@@ -7,11 +7,8 @@
  */
 
 /**
- * One row of `public/data/search-index.json`, positional. Elements 4 and 5
- * were appended by the two-year crawl (C1/C2): the catalog course version
- * that has to ride along on every timetable call, and the catalog years the
- * course is actually offered in. New fields are only ever appended — see
- * docs/SPEC.md's crawled-data-contracts section.
+ * One row of `public/data/search-index.json`, positional. New fields are only
+ * ever appended — see docs/SPEC.md's crawled-data-contracts section.
  */
 export type CatalogRow = [
   code: string,
@@ -24,13 +21,10 @@ export type CatalogRow = [
 
 /**
  * Case/diacritic-insensitive folding, applied to *both* sides so it stays
- * symmetric. NFD decomposes Å but not Æ/Ø, so those two are pre-mapped —
- * "okonomi" has to find "Økonomi" on a Norwegian site, and 238 course codes
- * contain Ø or Æ. The digraph pass after the diacritic strip closes the
- * other direction (search-5): a student on a non-Norwegian keyboard types
- * "maskinlaering"/"oekonomi"/"aalesund" and those have to reach the same
- * rows as "maskinlæring"/"økonomi"/"Ålesund". Folding both sides means the
- * pass can only ever add matches, never remove one.
+ * symmetric. NFD decomposes Å but not Æ/Ø, so those two are pre-mapped — 238
+ * course codes contain Ø or Æ. The digraph pass after the diacritic strip
+ * closes the other direction: "maskinlaering"/"oekonomi"/"aalesund" must reach
+ * the same rows. Folding both sides means it can only ever add matches.
  */
 export function fold(value: string): string {
   return value
@@ -45,15 +39,12 @@ export function fold(value: string): string {
 }
 
 /**
- * The letters a course code opens with — `"TMA4100"` → `"TMA"`, `"MGLU1101"`
- * → `"MGLU"` — or `""` for the 325 catalog codes that do not start with any
- * (`"6MP4210"` and friends).
+ * The letters a course code opens with — `"TMA4100"` → `"TMA"` — or `""` for
+ * the 325 catalog codes that do not start with any.
  *
- * This is a *grouping* rule for this product's result list, not a fact about
- * NTNU's catalog, which is why it lives here rather than in `ntnu-api`: no
- * claim is made about what a prefix means, only that rows sharing one belong
- * together under it. Students already talk this way ("et TMA-emne"), so it
- * makes a subject filter out of a field the index already has.
+ * A *grouping* rule for this product's result list, not a fact about NTNU's
+ * catalog, which is why it lives here rather than in `ntnu-api`: no claim is
+ * made about what a prefix means, only that rows sharing one belong together.
  */
 export function codePrefix(code: string): string {
   return /^[A-ZÆØÅa-zæøå]+/.exec(code.trim())?.[0].toUpperCase() ?? "";
@@ -68,14 +59,11 @@ export interface PrefixFacet {
 /**
  * Subject facets for a *result set*, biggest first.
  *
- * Deliberately computed from the rows a query already matched rather than
- * from the whole catalog: there are 360 prefixes in 5 470 courses, so a
- * standing index of them is a wall nobody reads, while the 6 that survive
- * "matematikk" are a filter worth having. Prefix-less codes contribute no
- * chip — a chip labelled "" filters nothing a student could have meant.
- *
- * Ties break on the prefix so the order is stable across renders; without it
- * the chip row reshuffled under the pointer whenever two subjects drew level.
+ * Computed from the rows a query already matched rather than from the whole
+ * catalog: 360 prefixes in 5 470 courses is a wall nobody reads, while the 6
+ * that survive "matematikk" are a filter worth having. Prefix-less codes
+ * contribute no chip. Ties break on the prefix so the chip row cannot reshuffle
+ * under the pointer.
  */
 export function prefixFacets(rows: readonly CatalogRow[]): PrefixFacet[] {
   const counts = new Map<string, number>();
@@ -93,7 +81,7 @@ export function prefixFacets(rows: readonly CatalogRow[]): PrefixFacet[] {
 export interface CatalogQuery {
   /** Whitespace-separated folded tokens; every one must appear in a row. */
   tokens: string[];
-  /** Tokens joined with no separator — a code typed as "TDT 4100" (search-5). */
+  /** Tokens joined with no separator — a code typed as "TDT 4100". */
   compact: string;
   /** Tokens joined by single spaces — the normalised query as prose. */
   joined: string;
@@ -101,9 +89,8 @@ export interface CatalogQuery {
 
 /**
  * Splits on whitespace and folds. Matching every token independently is what
- * makes "TDT 4100" and "datastrukturer algoritmer" find their courses; a
- * single `includes` of the whole trimmed string returned 0 treff for both
- * (search-5).
+ * makes "TDT 4100" and "datastrukturer algoritmer" find their courses; a single
+ * `includes` of the whole trimmed string returned 0 treff for both.
  */
 export function parseQuery(raw: string): CatalogQuery {
   const tokens = fold(raw.trim())
@@ -124,9 +111,8 @@ function startsWord(hay: string, token: string): boolean {
 
 /**
  * Match quality, higher is better. Ranking exists because the index is
- * crawler-ordered (alphabetical by code), so an unranked `filter().slice()`
- * put TMA4100 at row 77 of 112 for "matematikk" and pushed 42 mostly-
- * Trondheim rows off the end of the 200-cap for "teknologi" (search-1).
+ * crawler-ordered, so an unranked `filter().slice()` put TMA4100 at row 77 of
+ * 112 for "matematikk".
  */
 export function scoreFolded(code: string, name: string, query: CatalogQuery): number {
   if (code === query.compact) return 4;
@@ -139,15 +125,13 @@ export function scoreFolded(code: string, name: string, query: CatalogQuery): nu
 /**
  * Filters and ranks in one pass (one fold per row, not two).
  *
- * Ties inside a code tier keep code order — a student typing "TDT41" expects
- * TDT4100, TDT4102, TDT4105. Ties inside a name tier go to the shorter name,
- * which is what lifts "Matematikk 1" above "Matematikk for økonomer": the
- * query covers more of the title, so it is the closer match.
+ * Ties inside a code tier keep code order — "TDT41" expects TDT4100, TDT4102,
+ * TDT4105. Ties inside a name tier go to the shorter name, which lifts
+ * "Matematikk 1" above "Matematikk for økonomer".
  *
- * Deliberately NOT demoted: `offeredYears`-stale rows. The appendix offered
- * that as optional, but TMA4100 — the canonical example the finding is
- * written around — is itself stale in the 2026 catalog, so demoting stale
- * rows would bury the exact course the ranking exists to surface.
+ * Deliberately NOT demoted: `offeredYears`-stale rows. TMA4100 is itself stale
+ * in the 2026 catalog, so demoting them would bury the exact course the ranking
+ * exists to surface.
  */
 export function searchCatalog(rows: readonly CatalogRow[], raw: string): CatalogRow[] {
   const query = parseQuery(raw);

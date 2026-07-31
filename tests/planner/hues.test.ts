@@ -22,11 +22,10 @@ describe("hueForIndex", () => {
   });
 
   it("never assigns the verdict or the collision ink", () => {
-    // Both are spoken for: green says the term fits, red says two things
-    // cannot coexist, and a course wearing either would make an identity look
-    // like a judgement. The retired --accent is still listed — it is gone
-    // (REWORK-2026-07-30), and a resurrected name must not quietly become
-    // assignable.
+    // Both are spoken for: green says the term fits, red says two things cannot
+    // coexist, and a course wearing either would make an identity look like a
+    // judgement. The retired --accent is still listed so a resurrected name
+    // cannot quietly become assignable.
     for (let i = 0; i < 20; i++) {
       expect(hueForIndex(i)).not.toBe("--verdict");
       expect(hueForIndex(i)).not.toBe("--accent");

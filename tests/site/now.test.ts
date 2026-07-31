@@ -2,7 +2,7 @@ import { describe, expect, test } from "vitest";
 import { type NowSession, nowVerdict, weekMinutes } from "../../src/components/site/now.js";
 
 /**
- * The landing card's decision half (REWORK-2026-07-29b D3). Which session
+ * The landing card's decision half. Which session
  * counts as "now" is an inclusive-start/exclusive-end call, and getting it
  * wrong sends a student to a room they have just walked out of — so it is
  * pure, and it is tested here rather than only in the browser.

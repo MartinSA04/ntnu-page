@@ -65,7 +65,7 @@ const seasonWord = isAutumn ? "høsten" : "våren";
   .home-subcopy {
     margin-bottom: var(--space-5);
   }
-  /* --- Nå (REWORK-2026-07-29b D3) ---------------------------------------- */
+  /* --- Nå ---------------------------------------- */
 
   .home-now[hidden] {
     display: none;
@@ -80,13 +80,10 @@ const seasonWord = isAutumn ? "høsten" : "våren";
      nudge down rather than snatch upward. `--plan-any` is 0 for a first-time
      visitor, so the pitch-only page is untouched.
 
-     The honest cost, stated the way `/emne/[code]/`'s grades reservation
-     states its own: a student with courses whose week has nothing left to
-     report (`verdict.kind === "empty"`) gets an upward collapse of this box
-     that they did not have before. That is the rarer branch of a card that
-     exists precisely because most plans do have a next lecture — and `now.ts`
-     releases the hold on that branch too, so it is one shift rather than a
-     permanent hole. */
+     The cost: a student whose week has nothing left to report gets an upward
+     collapse of this box. That is the rarer branch of a card that exists
+     because most plans do have a next lecture, and `now.ts` releases the hold
+     there too, so it is one shift rather than a permanent hole. */
   .home-now-hold {
     min-height: calc(var(--plan-any) * 15rem);
   }
@@ -171,10 +168,10 @@ const seasonWord = isAutumn ? "høsten" : "våren";
     padding: 0;
   }
 
-  /* :global() because these rows are BUILT IN JS. Astro scopes a page block by
-     stamping a data attribute on the elements it compiled, and a node created
-     at runtime never gets one — so a scoped `.home-now-next li` matches nothing
-     and the list collapses into "ons 10:15EXPH0300 · Seminargruppe 7". */
+  /* :global() because these rows are BUILT IN JS: Astro stamps a data attribute
+     on the elements it compiled, and a node created at runtime never gets one,
+     so a scoped selector matches nothing and the list collapses into one run-on
+     line. */
   :global(.home-now-next li) {
     display: grid;
     grid-template-columns: 6.5rem minmax(0, 1fr) auto;
@@ -202,20 +199,15 @@ const seasonWord = isAutumn ? "høsten" : "våren";
     font-size: var(--text-xs);
   }
 
-  /* Once the page has an answer it stops introducing itself: the pitch drops
-     to a footnote rather than disappearing, because the CTA is still the way
-     to a plan you want to change.
+  /* Once the page has an answer it stops introducing itself: the pitch drops to
+     a footnote rather than disappearing, because the CTA is still the way to a
+     plan you want to change.
 
-     The second selector in each pair is the same demotion PREDICTED — while
-     the hold above is still holding and the probe says a plan exists, the
-     pitch is already the footnote it is about to become. Without it the
-     reservation would only fix half the shift: the card arriving moved the
-     pitch down 299px *and* shrank it from 264px to 78px in the same frame, and
-     holding the card's space alone would still leave the pitch collapsing
-     under it. The prediction is retracted with the hold — a plan whose week
-     has nothing to report releases `is-released`, this stops matching, and the
-     full pitch comes back rather than a headline sized for a card that never
-     came. */
+     The second selector in each pair is the same demotion PREDICTED — while the
+     hold is still holding and the probe says a plan exists. Without it the
+     reservation fixes only half the shift: the card arriving moved the pitch
+     down 299px *and* shrank it from 264px to 78px in the same frame. The
+     prediction is retracted with the hold. */
   .home-pitch.is-secondary .home-title,
   :global(html[data-plan]) .home-now-hold:not(.is-released) ~ .home-pitch .home-title {
     font-size: var(--text-md);
@@ -251,26 +243,26 @@ const seasonWord = isAutumn ? "høsten" : "våren";
   const defaultSemesterId = semestersData.current?.id ?? "";
   const DAYS = ["mandag", "tirsdag", "onsdag", "torsdag", "fredag", "lørdag", "søndag"];
 
-  // Per page-load, not per module: ClientRouter evaluates this module once,
-  // so wiring at top level left the card frozen at whatever it read on the
-  // very first visit.
+  // Per page-load, not per module: ClientRouter evaluates this module once, so
+  // wiring at top level left the card frozen at whatever it read on the first
+  // visit.
   onPage((signal) => {
     const store = createPlanStore(defaultSemesterId);
-    // Keeps `--plan-courses` true for the rest of the visit — a soft
-    // navigation does not reset CLS, so the next page's reservations are still
-    // this page-load's problem.
+    // Keeps `--plan-courses` true for the rest of the visit — a soft navigation
+    // does not reset CLS, so the next page's reservations are still this
+    // page-load's problem.
     watchPlanProbe(store, signal);
 
-    // --- Nå (REWORK-2026-07-29b D3) ---------------------------------------
+    // --- Nå ---------------------------------------
 
     const nowEl = document.getElementById("home-now") as HTMLElement | null;
     if (!nowEl) return;
     const holdEl = document.getElementById("home-now-hold");
     /**
-     * Hands back the space the probe reserved for the card. Called on every
-     * terminal state, the card's and the absence of one alike: the reservation
-     * is a bridge from first paint to the first honest answer, and the moment
-     * there is one it has no further business holding anything.
+     * Hands back the space the probe reserved for the card, on every terminal
+     * state — the card's and the absence of one alike. The reservation is a
+     * bridge to the first honest answer, and the moment there is one it has no
+     * further business holding anything.
      */
     const releaseHold = (): void => holdEl?.classList.add("is-released");
     const el = (id: string) => document.getElementById(id) as HTMLElement | null;
@@ -280,19 +272,16 @@ const seasonWord = isAutumn ? "høsten" : "våren";
     if (!semester) return;
 
     /**
-     * One in-flight load at a time, and only the newest one may paint: a plan
-     * change while the timetables are still arriving would otherwise let the
-     * old week's answer land on top of the new one — the same shape as the
-     * planner's own app-5.
+     * One in-flight load at a time, and only the newest may paint: a plan change
+     * while the timetables are arriving would let the old week's answer land on
+     * top of the new one.
      */
     let token = 0;
 
     /**
      * The week this card is answering from. Held so the clock can repaint
-     * without refetching: the card's own claim is minute-resolution ("Nå · 37
-     * min igjen", "Neste"), and it used to be computed exactly once and then
-     * left — a card named after the present tense that was wrong within the
-     * hour and pointing at yesterday by morning.
+     * without refetching: the card's claim is minute-resolution, and computed
+     * once and left it was wrong within the hour.
      */
     let sessions: Awaited<ReturnType<typeof loadWeekSessions>> | null = null;
 
@@ -310,8 +299,8 @@ const seasonWord = isAutumn ? "høsten" : "våren";
         loaded = await loadWeekSessions(plan, semester.id, semester.teachingWeeks ?? []);
       } catch {
         // A dead fetch is a terminal state too. Without this the reserved space
-        // above would be held open for the life of the page by the one branch
-        // that never reaches `paintNow`.
+        // is held open for the life of the page by the one branch that never
+        // reaches `paintNow`.
         releaseHold();
         return;
       }
@@ -326,8 +315,8 @@ const seasonWord = isAutumn ? "høsten" : "våren";
 
       const verdict = nowVerdict(sessions, weekMinutes(new Date()));
       // Nothing to answer with (no timetables yet, or a course-less plan): the
-      // resume line above is still true, so the page keeps that and says
-      // nothing here rather than showing an empty card.
+      // resume line above is still true, so the page says nothing here rather
+      // than showing an empty card.
       if (verdict.kind === "empty") {
         nowEl.hidden = true;
         releaseHold();
@@ -367,9 +356,8 @@ const seasonWord = isAutumn ? "høsten" : "våren";
       room.textContent = s.room || "Rom ikke satt";
       room.classList.toggle("is-none", !s.room);
       // The room is the display figure, so a building name that is really a
-      // sentence steps down rather than wrapping across three lines.
-      // Only a real building name steps down; ordinary codes ("R1", "A3-138")
-      // keep the display size, which is the whole point of the figure.
+      // sentence steps down rather than wrapping across three lines. Ordinary
+      // codes keep the display size, which is the point of the figure.
       room.classList.toggle("is-long", !s.room || s.room.length > 8 || /\s/.test(s.room));
       course.textContent = `${s.code} · ${s.courseName}`;
       sub.textContent = [
@@ -418,10 +406,9 @@ const seasonWord = isAutumn ? "høsten" : "våren";
       }),
     );
 
-    // The clock, at the resolution the card itself claims. Repainting is
-    // cheap — the week is already in hand — so this is a minute tick, not a
-    // reload, and a tab that was asleep is corrected the moment it is looked
-    // at rather than up to a minute later.
+    // The clock, at the resolution the card claims. Repainting is cheap — the
+    // week is already in hand — so this is a minute tick, and a tab that was
+    // asleep is corrected the moment it is looked at.
     const clock = setInterval(paintNow, 60_000);
     signal.addEventListener("abort", () => clearInterval(clock));
     document.addEventListener(

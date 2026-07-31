@@ -279,7 +279,7 @@ describe("applyGroupSelection", () => {
   test("an explicit non-lecture pick tagged for another programme is still kept", () => {
     // A student who deliberately selects a foreign-tagged øving group keeps it,
     // programme filter notwithstanding — and the lecture layer, which has no
-    // pick of its own, keeps its default (groups-1: this assertion used to
+    // pick of its own, keeps its default (this assertion used to
     // demand the lecture be dropped, which was the bug).
     const service = [
       e("Forelesning", { studyProgramKeys: ["MTDT"] }),

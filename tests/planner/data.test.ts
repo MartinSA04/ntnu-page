@@ -119,7 +119,7 @@ describe("examsFromIndex", () => {
     ]);
   });
 
-  // exams-4: 68 catalog courses repeat the same (season, date) tuple — FI3202
+  // 68 catalog courses repeat the same (season, date) tuple — FI3202
   // carries three identical {AUTUMN, null}. The tuple holds nothing that could
   // tell them apart, so they render as byte-identical rows.
   it("collapses byte-identical duplicate tuples (exams-4)", () => {

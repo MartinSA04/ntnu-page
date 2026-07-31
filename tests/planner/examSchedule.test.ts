@@ -38,7 +38,7 @@ describe("buildExamList", () => {
   });
 
   // The cases below came over from `analyzeExams`, the dead second engine
-  // deleted under conf-7/exams-6. Its threshold was `gapDays === 1` set on
+  // deleted under /. Its threshold was `gapDays === 1` set on
   // BOTH rows; this module's is `gap <= 2` on the earlier row only, and these
   // pin that difference so the surviving rule cannot drift back.
   it("flags a 1-day gap as tight on the earlier row only, and not as sameDay", () => {
@@ -207,7 +207,7 @@ describe("buildExamList", () => {
   });
 
   it("gives a caller enough to drop clash ink between two exams already sat", () => {
-    // exams-7's live repro: on 11. des, the 9. des → 10. des connector still
+    // 's live repro: on 11. des, the 9. des → 10. des connector still
     // read "1 dags mellomrom · tett" in clash ink about two exams that were
     // both over. `tight` stays true (the spacing WAS tight — that is a fact
     // about the dates, not about now); what the renderer needs is knowing both

@@ -704,7 +704,7 @@ describe("parsePlanHash / formatPlanHash — encoding and validation (B10)", () 
   });
 
   it("survives a hand-mangled percent escape instead of losing the whole plan", () => {
-    // The mangled token itself is now dropped by the code-shape guard (sec-1)
+    // The mangled token itself is now dropped by the code-shape guard
     // — "B%ZZA1100" is not a course code and could only ever 404 — but the
     // point of the case stands: one bad token must not cost the other five.
     const parsed = parsePlanHash("#26h;-;+TDT4100,+B%ZZA1100");

@@ -1,10 +1,9 @@
 // Enough of the WOFF2 header to list a file's sfnt table tags.
 //
-// It lives in its own module because two callers need it and only one of them
-// may touch the network: `fetch-fonts.mjs` asserts on the bytes it just
-// downloaded, and `tests/fonts.test.ts` asserts the same invariant against the
-// files actually committed — which is the only run that happens on every CI
-// build. Importing the fetch script from a test would re-fetch Google Fonts.
+// Its own module because two callers need it and only one may touch the
+// network: `fetch-fonts.mjs` asserts on the bytes it just downloaded, and
+// `tests/fonts.test.ts` asserts the same invariant against the committed files
+// on every CI build.
 //
 import { brotliDecompressSync } from "node:zlib";
 
@@ -71,20 +70,16 @@ export function woff2Tables(buf) {
 }
 
 /**
- * The vertical metrics a metric-matched fallback face needs, in font units
- * plus the em they are measured against.
+ * The vertical metrics a metric-matched fallback face needs, in font units plus
+ * the em they are measured against.
  *
  * Read straight from the file rather than kept in a table beside it, because
- * the two have to agree for the fallback to do its job at all: the whole point
- * of `ascent-override`/`descent-override` is that a line of Arial standing in
- * for a line of Schibsted Grotesk occupies exactly the same height, and a
- * refresh that shifted the real ascender by 20 units would otherwise leave the
- * override quietly wrong. `tests/fonts.test.ts` asserts fonts.css against what
- * this returns, so a drift fails CI instead.
+ * the two have to agree for the fallback to work at all: a refresh that shifted
+ * the real ascender by 20 units would leave the override quietly wrong.
+ * `tests/fonts.test.ts` asserts fonts.css against what this returns.
  *
- * `hhea` is the source for ascent/descent, not OS/2's sTypo* pair: hhea is
- * what browsers use for the default line box on the platforms this ships to,
- * and it is what the override descriptors are compared against.
+ * `hhea` is the source for ascent/descent, not OS/2's sTypo* pair: hhea is what
+ * browsers use for the default line box on the platforms this ships to.
  */
 export function woff2Metrics(buf) {
   const { entries, streamStart } = woff2Directory(buf);

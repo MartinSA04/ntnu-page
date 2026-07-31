@@ -1,36 +1,25 @@
 /**
- * EKSAMENER — the exam section (PRODUCT.md DR-3). Two things, in this order
- * (REWORK-2026-07-29c): a **month band** that shows the shape of the exam
- * period at a glance, and under it a **list** whose only rule runs down its
- * own margin.
+ * EKSAMENER — the exam section (DR-3). A **month band** showing the shape of
+ * the exam period at a glance, and under it a **list** whose only rule runs
+ * down its own margin.
  *
- * The section exists to answer "how brutal is December", not "when is my
- * exam" — and everything that answers it was already in the model and set in
- * the smallest, greyest type on the page: the whole-day gap to the next exam,
- * a `tight` flag under two days, a `sameDay` flag. The date, the one thing a
- * student cannot change, was the largest.
+ * The section answers "how brutal is December", not "when is my exam", so the
+ * gap between exams carries the weight — drawn as a *distance* rather than a
+ * *division*. The one rule left is vertical: exams are knots on it (the same
+ * mark as the course list's dot, so a colour means one thing everywhere) and
+ * the gaps hang between them.
  *
- * So the gap carries the weight now, and it is drawn as a *distance* rather
- * than a *division*. Three gaps used to draw nine horizontal rules — each
- * connector had a border above it, a border below it and a bar through the
- * middle — and a rule across a list divides it in two. The one rule left is
- * vertical: exams are knots on it (the same mark as the course list's dot, so
- * a colour means one thing everywhere) and the gaps hang between them.
+ * A same-day pair gets no connector — zero distance is not a distance. The band
+ * splits that day into both hues with a collision ring, and `clashLines` names
+ * both courses in words, because neither the split nor the ring survives a
+ * screen reader, a printout or colour blindness.
  *
- * A same-day pair gets no connector — zero distance is not a distance. The
- * band splits that day into both courses' hues with a collision ring, and
- * `clashLines` names both courses in words underneath, because neither the
- * split nor the ring survives a screen reader, a printout or colour blindness.
+ * Sourced from catalog `ExamDate` via `examsFromIndex`; the scraped
+ * `CourseExam` list tells an ordinary sitting from a deferred one and nothing
+ * else. Dateless exams stay listed, never dropped.
  *
- * Sourced from catalog `ExamDate` via the planner index (`examsFromIndex`);
- * the scraped `CourseExam` list is used for exactly one thing, telling an
- * ordinary sitting from a deferred one (see `collectExamInputs`). Dateless
- * exams stay listed, never dropped, as `.exam-dateless` rows. A message
- * (nothing found, nothing published) renders in the same host rather than in
- * a box of its own.
- *
- * The sort/gap/tight/sameDay/countdown math itself lives in the pure,
- * unit-tested `buildExamList` (examSchedule.ts) — this module is DOM-only.
+ * The sort/gap/tight/sameDay/countdown math lives in the pure, unit-tested
+ * `buildExamList` (examSchedule.ts) — this module is DOM-only.
  */
 
 import { isDeferredOccasion } from "ntnu-api";
@@ -52,18 +41,12 @@ import type { PlanCourseState } from "./types.js";
 /**
  * Is this scraped sitting a deferred ("utsatt"/kont) one? DR-3 wants ordinary
  * sittings only, and the catalog cannot say: `continuation` is `false` on all
- * 2 438 catalog exam rows, so `crawler/transform.mjs`'s filter is correct code
- * fed a flag upstream never sets (exams-1). `occasion` is the honest signal —
- * "Ordinær eksamen" vs "Utsatt eksamen".
+ * 2 438 catalog exam rows, so a filter on it is correct code fed a flag
+ * upstream never sets. `occasion` is the honest signal.
  *
- * Now `ntnu-api`'s, and re-exported here so DR-3's readers keep one import:
- * which wordings NTNU prints is a fact about NTNU, and `ntnu-mcp` was filtering
- * on the dead `continuation` flag for want of this. `ExamDate.continuation`
- * now documents its own uselessness upstream too, so the next consumer does
- * not have to rediscover it.
- *
- * Still read as a **label only**, never re-parsed for a date (DR-3), and still
- * fail-open: an occasion we do not recognise keeps its exam. Deleting a real
+ * Now `ntnu-api`'s and re-exported here, because which wordings NTNU prints is
+ * a fact about NTNU. Read as a **label only**, never re-parsed for a date, and
+ * fail-open: an unrecognised occasion keeps its exam, since deleting a real
  * exam date is far worse than listing one too many.
  */
 export { isDeferredOccasion };
@@ -72,9 +55,8 @@ export { isDeferredOccasion };
  * Does the scraped exam list say this catalog date is a deferred sitting?
  *
  * The join is on the **exact ISO date** — the one structured field both sides
- * carry — and only decides when the scrape actually knows that date and every
- * sitting it lists there is deferred. No scrape (details 404'd, still in
- * flight), no match, or a mixed day all keep the exam.
+ * carry — and only decides when the scrape knows that date and every sitting
+ * it lists there is deferred. No scrape, no match, or a mixed day keeps it.
  */
 function isDeferredOn(date: string | null, scraped: CourseExam[] | null | undefined): boolean {
   if (date === null || !scraped) return false;
@@ -84,13 +66,12 @@ function isDeferredOn(date: string | null, scraped: CourseExam[] | null | undefi
 }
 
 /**
- * Collects one exam input per catalog-sourced exam occasion (dated or not)
- * across the plan's courses, with deferred sittings joined out (exams-1).
+ * One exam input per catalog-sourced occasion (dated or not) across the plan's
+ * courses, with deferred sittings joined out.
  *
- * When the join removes *every* sitting a course has in this semester, the
- * course still gets one dateless input rather than vanishing: MGLU1106's only
- * dated Høst 2026 sittings are utsatt and its real Vår 2027 ordinary sitting
- * carries no date, so "dato ikke satt" is what we know — "no exam" is not.
+ * When the join removes *every* sitting a course has this semester, the course
+ * still gets one dateless input rather than vanishing: "dato ikke satt" is what
+ * we know — "no exam" is not.
  */
 export function collectExamInputs(
   courses: PlanCourseState[],
@@ -119,10 +100,9 @@ export function collectExamInputs(
 
 export interface ExamRenderOptions {
   /**
-   * A course bundle or the planner index is still loading. Nothing is
-   * asserted about the exam list until it isn't — "Ingen eksamensdatoer
-   * funnet" while the fetch is in flight is the same false-and-loud statement
-   * U5 removed from the week.
+   * A course bundle or the planner index is still loading. Nothing is asserted
+   * about the exam list until it is not — "Ingen eksamensdatoer funnet" mid
+   * fetch is the same false-and-loud statement U5 removed from the week.
    */
   loading?: boolean;
 }
@@ -143,15 +123,13 @@ function renderEmpty(listHost: HTMLElement, message: string | null): ExamRenderR
 
 /**
  * Renders a message where the list would be — the exam half of
- * `renderGridMessage`. Use it when the CALLER knows something the list
- * cannot work out for itself: C3's case is a semester the shipped index does
- * not cover at all, where "Ingen eksamensdatoer funnet ennå" would be a
- * finding reported by something that never looked. Pass no message to just
- * empty the host.
+ * `renderGridMessage`. For what the CALLER knows and the list cannot work out:
+ * a semester the shipped index does not cover at all, where "Ingen
+ * eksamensdatoer funnet ennå" would be a finding reported by something that
+ * never looked. Pass no message to just empty the host.
  *
  * `action` is the one recovery the panel can offer: a failed download of our
- * own catalog is retryable, and without a control the column simply spun
- * forever (pd-3/ux-fail-7).
+ * own catalog is retryable, and without it the column simply spun forever.
  */
 export function renderExamMessage(
   listHost: HTMLElement,
@@ -169,13 +147,10 @@ export function renderExamMessage(
 }
 
 /**
- * The month band (REWORK-2026-07-29c): one row per month the exam period
- * touches, one cell per day, exam days printed in the course's own hue.
- *
- * It answers the question the list answers slowly — *how clustered is this* —
- * before a single date is read, and it costs about 40 px. Weekends carry a
- * heavier ground so the week rhythm reads, which is what makes a cluster look
- * like a cluster rather than like four evenly-spaced marks.
+ * The month band: one row per month the exam period touches, one cell per day,
+ * exam days printed in the course's own hue. It answers *how clustered is this*
+ * before a date is read, for about 40 px. Weekends carry a heavier ground so
+ * the week rhythm reads, which is what makes a cluster look like one.
  */
 function examBand(rows: ExamListRow[], hueByCode: Map<string, string>): HTMLElement | null {
   const dated = rows.filter((r) => r.date);
@@ -233,15 +208,13 @@ function examBand(rows: ExamListRow[], hueByCode: Map<string, string>): HTMLElem
 
 /**
  * The fill for one day cell. One exam is a solid printed hue; several are the
- * same hues split into equal hard-edged bands, in code order so the same pair
- * always splits the same way.
+ * same hues split into hard-edged bands, in code order so a pair always splits
+ * the same way.
  *
- * A colliding day is NOT a flat red square. Red says "something collides
- * here" and throws away the one fact a student would act on — *which two* —
- * so the hues stay and the collision is marked by a ring instead
- * (`.is-clash` in the stylesheet). A ring is a different KIND of mark from a
- * fill, which is what lets it out-shout five hues without erasing them
- * (Red-Is-Collision).
+ * A colliding day is NOT a flat red square — red would throw away the one fact
+ * a student acts on, *which two*. The hues stay and the collision is a ring: a
+ * different KIND of mark from a fill, which is what lets it out-shout five hues
+ * without erasing them (Red-Is-Collision).
  */
 function dayFill(rows: ExamListRow[], hueByCode: Map<string, string>): string {
   const ink = (code: string): string =>
@@ -259,16 +232,11 @@ function dayFill(rows: ExamListRow[], hueByCode: Map<string, string>): string {
 /**
  * One dated row: the date in the left margin, then a knot on the list's single
  * vertical rule carrying the course, its vurderingsform and — on the first
- * upcoming exam only — a countdown.
+ * upcoming exam only — a countdown. The knot is the same mark as the course
+ * list's `.np-dot`.
  *
- * The knot is the same mark as the course list's `.np-dot`, so a colour means
- * one thing wherever it appears.
- *
- * The vurderingsform ("Skriftlig skoleeksamen", "Mappevurdering") used to sit
- * in the Emner course row, where it was one clause of a run-on meta line about
- * a course. It is exam material and this is the exam section
- * (REWORK-2026-07-29 D6): here it is the fact that tells a student whether a
- * date on the list is something to revise for or something to hand in.
+ * The vurderingsform is exam material and this is the exam section (D6): it is
+ * what tells a student whether a date is something to revise for or hand in.
  */
 function examRow(row: ExamListRow, hueVar: string, scheme: string | null): HTMLLIElement {
   const item = el("li", "exam-row");
@@ -288,21 +256,15 @@ function examRow(row: ExamListRow, hueVar: string, scheme: string | null): HTMLL
 
 /**
  * The countdown to the first exam not yet sat — hung on the rule ABOVE its
- * knot, in the same place and the same idiom as the reading-day connectors
- * below it (`examGap`).
+ * knot, in the same idiom as the reading-day connectors below it (`examGap`).
  *
- * It used to be a third cell of the row. On a phone there is no third column
- * for it to be in, so it dropped to a second grid row under the date and made
- * exactly one row in the list two lines tall, with a hole beside it where the
- * course would have been. Every escape from that was worse: as a flex tail
- * inside `.exam-what` it wraps under the course name and reads as though it
- * belonged to the gap below, and there is genuinely no width at 390 px for a
- * date, a code, a vurderingsform and a countdown on one line.
+ * As a third cell of the row it had no column to sit in on a phone, so it
+ * dropped to a second grid row and made one row two lines tall with a hole
+ * beside it. Every escape from that was worse: at 390 px there is genuinely no
+ * width for a date, a code, a vurderingsform and a countdown on one line.
  *
- * Making it a segment is not a dodge, though — it is what it always was. The
- * list is a chain of distances along one rule: today → the next exam → so many
- * lesedager → the one after. This was the only link drawn as a badge on a knot
- * instead of as a link, and the only reason a row needed a third column.
+ * Making it a segment is what it always was: the list is a chain of distances
+ * along one rule, and this was the only link drawn as a badge on a knot.
  */
 function awayLine(row: ExamListRow): HTMLLIElement | null {
   if (row.daysFromToday === null) return null;
@@ -320,30 +282,20 @@ function daysFromTodayText(days: number): string {
 }
 
 /**
- * The distance to the next exam, hung on the rule between two knots.
+ * The distance to the next exam, hung on the rule between two knots. It is a
+ * distance, not a division — the list's only rule runs *along* it.
  *
- * It is a distance, not a division — which is why it is no longer a row with a
- * border above it, a border below it and a bar through the middle. Three gaps
- * used to draw nine horizontal rules; the list's only rule now runs *along* it.
- *
- * `row.gapToNext === 0` is the reliable same-day signal for THIS connector
- * specifically — `row.sameDay` can also be true because of the row's
- * relationship with the PREVIOUS row, which says nothing about the gap to the
- * next one. A same-day pair gets no connector at all: it is named in words
- * under the list instead (`clashLine`), because zero distance is not a
- * distance.
+ * `row.gapToNext === 0` is the reliable same-day signal for THIS connector —
+ * `row.sameDay` can also be true because of the PREVIOUS row, which says
+ * nothing about the gap to the next. A same-day pair gets no connector at all
+ * and is named in words under the list instead (`clashLine`).
  */
 function examGap(row: ExamListRow): HTMLLIElement | null {
   if (row.gapToNext === null || row.gapToNext === 0) return null;
   // LESEDAGER, not the distance between the dates. Exams on the 15th and the
-  // 17th are two days apart and leave exactly one day to revise — you sit an
-  // exam on both of the others — so "2 dagers mellomrom" overstated the room by
-  // a whole day. It is also the word students use for it.
-  //
-  // The genitive "dagers mellomrom" needed (copy-8) does not arise: "lesedager"
-  // is a plain plural noun, not a measure phrase modifying one. And no "· tett"
-  // suffix any more — "ingen lesedager" already says the tight case outright,
-  // in the unit the reader cares about.
+  // 17th are two days apart and leave exactly one day to revise, so "2 dagers
+  // mellomrom" overstated the room by a whole day. "ingen lesedager" already
+  // says the tight case outright, in the unit the reader cares about.
   const days = row.readingDays ?? 0;
   const text = days === 0 ? "ingen lesedager" : days === 1 ? "1 lesedag" : `${days} lesedager`;
   const item = el("li", "exam-gap np-data", text);
@@ -352,11 +304,9 @@ function examGap(row: ExamListRow): HTMLLIElement | null {
 }
 
 /**
- * One sentence per colliding date, naming both courses.
- *
- * The split cell in the band and the red ring around it are the fast read; this
- * is the one that survives a screen reader, a printout and colour blindness.
- * Red-Is-Collision requires the copy to name both things, not just mark them.
+ * One sentence per colliding date, naming both courses. The split cell and the
+ * red ring are the fast read; this is the one that survives a screen reader, a
+ * printout and colour blindness. Red-Is-Collision requires naming both things.
  */
 function clashLines(rows: ExamListRow[]): HTMLElement[] {
   const byDate = new Map<string, ExamListRow[]>();
@@ -376,7 +326,7 @@ function clashLines(rows: ExamListRow[]): HTMLElement[] {
 
 /** One "dato ikke satt" row (DR-3) — kept, not dropped, so the course isn't
  *  silently missing. Also where a course whose only sittings this semester are
- *  deferred lands, so the kont filter never reads as "no exam" (exams-1). */
+ *  deferred lands, so the kont filter never reads as "no exam". */
 function datelessRow(code: string, hueVar: string, scheme: string | null): HTMLLIElement {
   const item = el("li", "exam-row exam-dateless");
   // The date cell is left empty rather than filled with a dash: the row's
@@ -408,8 +358,7 @@ export function renderExamList(
 
   const hueByCode = new Map(courses.map((c) => [c.course.code, c.hueVar]));
   // Vurderingsform per course (D6). `null` where the bundle has not landed or
-  // the catalog does not say — an absent scheme is simply not printed, never
-  // guessed at.
+  // the catalog does not say — an absent scheme is not printed, never guessed.
   const schemeByCode = new Map(
     courses.map((c) => [c.course.code, c.bundle?.details?.assessmentScheme ?? null]),
   );
@@ -464,10 +413,9 @@ export function renderExamList(
   const band = examBand(model.rows, hueByCode);
   listHost.replaceChildren(...(band ? [band] : []), list, ...clashLines(model.rows));
 
-  // How many exam rows actually share their day with another (`sameDay` is set
-  // on EVERY row of a same-date cluster) — so the caller's verdict reads "3
-  // eksamener samme dag" for a 3-way clash, not the 2 adjacent-pair connectors
-  // that `gapToNext === 0` would have counted.
+  // How many rows actually share their day (`sameDay` is set on EVERY row of a
+  // same-date cluster), so the verdict reads "3 eksamener samme dag" for a
+  // 3-way clash rather than the 2 adjacent pairs `gapToNext === 0` counts.
   const collisionCount = model.rows.filter((row) => row.sameDay).length;
 
   return { collisionCount, state: "list" };

@@ -1,10 +1,8 @@
 /**
  * The vendored faces are the one asset whose correctness is invisible on
- * screen: a static instance smuggled in where a variable font is declared
- * renders *something* at every weight, just browser-synthesised rather than
- * drawn (D12). `scripts/fetch-fonts.mjs` asserts this too, but only when
- * someone re-runs the fetch — which is roughly never. These run on every CI
- * build, against the bytes actually committed.
+ * screen: a static instance where a variable font is declared renders
+ * *something* at every weight, just browser-synthesised. `fetch-fonts.mjs`
+ * asserts this too, but only when someone re-runs the fetch.
  */
 import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
@@ -66,12 +64,10 @@ describe("vendored font files", () => {
 });
 
 /**
- * The fallbacks are the half of `font-display: swap` that keeps it from
- * costing a relayout: Arial and Courier New wearing these two faces' metrics,
- * so the pre-swap paint occupies the line box the post-swap paint will. Their
- * whole value is that the numbers agree with the vendored bytes — an override
- * that has drifted is worse than none, because it moves the page in the
- * opposite direction with full confidence. So they are checked against the
+ * The fallbacks are the half of `font-display: swap` that keeps it from costing
+ * a relayout. Their whole value is that the numbers agree with the vendored
+ * bytes — a drifted override is worse than none, because it moves the page in
+ * the opposite direction with full confidence. So they are checked against the
  * files, not against themselves.
  */
 describe("metric-matched fallback faces", () => {

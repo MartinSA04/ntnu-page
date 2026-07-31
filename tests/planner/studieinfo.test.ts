@@ -6,11 +6,9 @@ import {
 } from "../../src/components/planner/studieinfo.js";
 
 /**
- * The modal itself is DOM code and this repo has no jsdom to mount it in — its
- * rendering, focus and Escape behaviour are covered by e2e/flows.pw.ts. What
- * IS testable is the two decisions the audit found wrong: which kull chips a
- * programme with no study plan may offer (modals-2), and what the hint under
- * them is allowed to claim (plan-4/plan-5).
+ * The modal itself is DOM code covered by e2e/flows.pw.ts. What IS testable is
+ * two decisions: which kull chips a programme with no study plan may offer, and
+ * what the hint under them is allowed to claim.
  */
 
 describe("fallbackCohorts", () => {
@@ -29,7 +27,7 @@ describe("fallbackCohorts", () => {
   });
 
   it("never offers an empty chip row for a plannable semester", () => {
-    // modals-2: a kull row with no chips is a Lagre that cannot be satisfied.
+    // a kull row with no chips is a Lagre that cannot be satisfied.
     for (const id of ["26h", "27v", "27h"]) {
       expect(fallbackCohorts(id).length).toBeGreaterThan(0);
     }

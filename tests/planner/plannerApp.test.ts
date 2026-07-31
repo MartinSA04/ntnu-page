@@ -1,23 +1,16 @@
 /**
- * `mountPlannerApp` end to end, against the audit's own degraded-path repros.
+ * `mountPlannerApp` end to end, against the degraded paths where "we don't
+ * know" used to render as "it's fine" — every one of those regressions reached
+ * a green build because nothing below the browser suite ever mounted this
+ * module. So this file mounts it for real: a hand-rolled DOM shim (this repo
+ * ships no jsdom), a stubbed `fetch` per scenario, and assertions on the
+ * verdict line, the provenance line, the week frame and the course rail.
  *
- * The audit's §1 verdict is that "we don't know" renders as "it's fine", and
- * every one of those regressions reached a green build because nothing below
- * the browser suite ever mounted this module. So this file mounts it for real:
- * a hand-rolled DOM shim (this repo deliberately ships no jsdom/happy-dom),
- * a stubbed `fetch` per scenario, and assertions on the four surfaces the
- * findings name — the verdict line, the provenance line, the week frame and
- * the course rail.
- *
- * The shim is minimal ON PURPOSE and implements only what the planner's own
- * render path touches. It is not a DOM: no layout, no CSS, no real selector
- * engine (`querySelectorAll` matches the LAST simple selector of a compound).
- * If a future change reaches for an API it lacks, this file fails loudly —
- * which is the safe direction. Anything visual, focus-related or CSS-dependent
- * belongs in `e2e/*.pw.ts`, not here.
- *
- * Every scenario below was confirmed to FAIL against the pre-fix module and
- * pass after, except the deliberate healthy-plan control.
+ * The shim is minimal ON PURPOSE and implements only what the render path
+ * touches. It is not a DOM: no layout, no CSS, no real selector engine
+ * (`querySelectorAll` matches the LAST simple selector of a compound). A change
+ * that reaches for an API it lacks fails loudly, which is the safe direction.
+ * Anything visual, focus-related or CSS-dependent belongs in `e2e/*.pw.ts`.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -63,8 +56,8 @@ class FakeEl {
   dataset: Record<string, string> = {};
   /**
    * `display` is real state: plannerApp sets it to defeat `.np-btn`'s author
-   * rule (plan-8). Custom properties are real state too — the week's edge fade
-   * is a pair of lengths written here and read by the mask (`setScrollFade`).
+   * rule. Custom properties are too — the week's edge fade is a pair of lengths
+   * written here and read by the mask.
    */
   props = new Map<string, string>();
   style = {
@@ -88,7 +81,7 @@ class FakeEl {
   clientWidth = 800;
   clientHeight = 600;
   scrollLeft = 0;
-  /** The only layout the shim has: what `getBoundingClientRect().width` reports (mob-5). */
+  /** The only layout the shim has: what `getBoundingClientRect.width` reports. */
   rectWidth = 0;
 
   constructor(tag: string) {
@@ -388,9 +381,8 @@ const SEMESTERS = {
 };
 
 /**
- * 26h plus a published spring semester, for the scenarios that switch term
- * (app-3, app-5). `data/semesters.json` only has 26h published today, which is
- * why app-5 is latent on screen — the defect is in the code either way.
+ * 26h plus a published spring semester, for the scenarios that switch term.
+ * `data/semesters.json` only has 26h published today.
  */
 const SEMESTERS_TWO = {
   ...SEMESTERS,
@@ -425,8 +417,8 @@ function entry(code: string, day: number, start: string, end: string, weeks = "3
 
 /**
  * One study-plan course the programme auto-enrolls you in. `studyChoice.code
- * === "O"` is the ONLY structured signal for that (DR-5, programPlan.ts:291) —
- * a fixture without it prefills nothing.
+ * === "O"` is the ONLY structured signal for that (DR-5) — a fixture without it
+ * prefills nothing.
  */
 function obligatory(code: string, name: string, credits: number) {
   return {
@@ -550,11 +542,9 @@ describe("mountPlannerApp — audit repro", () => {
 
   it("the provenance line is silent when the join has no gap to admit", async () => {
     // The counterpart to the failure test below: on a plan where everything
-    // resolved, the line used to print "Timeplan hentet direkte fra NTNU nå ·
-    // eksamensdatoer fra katalogen (hentet …) · studieplan for kull 2024.
-    // Uoffisiell." under a week that visibly worked, with the crawl date and
-    // the caveat already in the sitewide footer. DR-8 asks the join to admit
-    // its gaps, not to announce that it has none (REWORK-2026-07-30e).
+    // resolved, the line used to state its routine sources under a week that
+    // visibly worked, with the crawl date and the caveat already in the footer.
+    // DR-8 asks the join to admit its gaps, not to announce it has none.
     await mount(
       {
         "/data/search-index.json": () => ({ year: 2026, courses: [] }),
@@ -593,7 +583,7 @@ describe("mountPlannerApp — audit repro", () => {
       "#26h;-;%2BTDT4109,%2BTMA4400",
     );
     // The line states ONLY what could not be verified now
-    // (REWORK-2026-07-30e): no "Timeplan hentet direkte fra NTNU nå", because
+    //: no "Timeplan hentet direkte fra NTNU nå", because
     // a sentence saying everything worked, printed under a week that visibly
     // worked, is what stopped anyone reading the clause that matters.
     const prov = find("planner-provenance").textContent;
@@ -848,7 +838,7 @@ describe("mountPlannerApp — audit repro", () => {
       },
       "#26h;-;%2BTDT4109,%2BTMA4400",
     );
-    // REWORK-2026-07-29 D2/D1: the row itself is identity plus one mark that
+    // the row itself is identity plus one mark that
     // there is something to read; the sentence and the retry live in the
     // settings modal the row opens.
     const rows = find("planner-course-rows");
@@ -867,7 +857,7 @@ describe("mountPlannerApp — audit repro", () => {
       ?.descendants()
       .filter((e) => e.tagName === "BUTTON" && e.textContent === "Prøv igjen");
     expect(buttons?.length).toBe(1);
-    // copy-2: nothing on the surface is upstream English.
+    // nothing on the surface is upstream English.
     expect(dialog?.textContent).toContain("Fikk ikke hentet timeplan: NTNU svarte ikke");
     expect(dialog?.textContent).not.toMatch(/Not found|Failed to fetch|boom|Internal/);
   });
@@ -1117,7 +1107,7 @@ describe("mountPlannerApp — audit repro", () => {
     expect(find("planner-gap-line").hidden).toBe(false);
     expect(button.hidden).toBe(true);
     // `.np-btn { display: inline-flex }` beats the UA's `[hidden]`, so the
-    // property alone left a 36 px button on screen (plan-8).
+    // property alone left a 36 px button on screen.
     expect(button.style.display).toBe("none");
   });
 
@@ -1154,9 +1144,7 @@ describe("mountPlannerApp — audit repro", () => {
   it("ds-5: the exam gap counts reading days and matches its neighbours' ink", async () => {
     // The planner index is memoised per module, and a FAILED download is
     // memoised too — so an earlier scenario that stubbed a dead index leaves
-    // this one rendering "Fikk ikke hentet eksamensdatoene" over a perfectly
-    // good stub. Clearing it makes the test independent of its neighbours,
-    // which is what the other index-sensitive scenarios already do.
+    // this one rendering an error over a perfectly good stub.
     const { clearPlannerIndexMemo } = await import("../../src/lib/planner/data.js");
     clearPlannerIndexMemo();
     await mount(
@@ -1185,7 +1173,7 @@ describe("mountPlannerApp — audit repro", () => {
     // spent sitting the first exam.
     expect(host.textContent).toContain("6 lesedager");
     expect(host.textContent).not.toContain("7 lesedager");
-    // Both day-count fragments are mono (ds-5): they used to sit rows apart in
+    // Both day-count fragments are mono: they used to sit rows apart in
     // two typefaces at two sizes. The connector is `.exam-gap np-data` and the
     // countdown `.exam-away np-data` — different roles, one voice, and
     // Data-Is-Mono is the rule that binds them.
@@ -1236,7 +1224,7 @@ describe("mountPlannerApp — audit repro", () => {
     await new Promise((r) => setTimeout(r, 0));
 
     // A bar no longer prints its own start time — the axis above it does
-    // (REWORK-2026-07-29b D1) — so the slot a block stands for is read off its
+    // — so the slot a block stands for is read off its
     // accessible name, which still spells the day and the hours out loud.
     const slots = (): string =>
       find("planner-grid-frame")
@@ -1259,7 +1247,7 @@ describe("mountPlannerApp — audit repro", () => {
   });
 
   // KNOAND/MTPROD: NTNU publishes no study plan at all. The modal now saves
-  // such a programme (studieinfo's half of ux-fail-5), so the planner is where
+  // such a programme (studieinfo's half of), so the planner is where
   // the student lands — and it used to say nothing about why the week is bare.
   it("ux-fail-5: a programme with no study plan says so and offers the way out", async () => {
     await mount(
@@ -1277,7 +1265,7 @@ describe("mountPlannerApp — audit repro", () => {
     expect(find("planner-direction-btn").textContent).toBe("Legg til emne");
     // The week says the same thing instead of the canned "Legg til emner …".
     expect(find("planner-grid-frame").textContent).toContain("publiserer ingen studieplan");
-    // ux-fail-4's provenance half (landed in wave 3) must not contradict it.
+    // 's provenance half (landed in wave 3) must not contradict it.
     expect(find("planner-provenance").textContent).toContain("Fant ingen studieplan for KNOAND.");
     expect(find("planner-provenance").textContent).not.toContain("studieplan for kull 2026");
   });
@@ -1313,7 +1301,7 @@ describe("mountPlannerApp — audit repro", () => {
     expect(body.querySelector(".add-course-status")?.textContent).toBe(
       "Fikk ikke hentet emnekatalogen.",
     );
-    // modals-7: `type="search"` made Chrome swallow the first Escape to clear
+    // `type="search"` made Chrome swallow the first Escape to clear
     // the field, so the dialog took two presses to leave.
     expect(body.querySelector(".add-course-input")?.type).toBe("text");
   });

@@ -10,11 +10,9 @@ interface CacheEntry {
 }
 
 /**
- * Upper bound on live entries. The cache is module-level, so it lives for the
+ * Upper bound on live entries. The cache is module-level and lives for the
  * isolate's whole lifetime; without a cap a long-lived isolate serving many
- * distinct codes grows until the 128 MB limit kills it. Cached values are
- * study plans and timetables (single-digit KB each), so a few hundred entries
- * is a comfortable working set well inside the budget.
+ * distinct codes grows until the 128 MB limit kills it.
  */
 const MAX_ENTRIES = 500;
 
@@ -37,11 +35,10 @@ export class TTLCache {
   }
 
   /**
-   * Stores `value` under `key`, stamped with the current time, evicting in
-   * insertion order once `MAX_ENTRIES` is exceeded. Re-setting an existing key
-   * deletes first so the refreshed entry moves to the back of the queue —
-   * otherwise a hot key keeps its original position and is evicted while cold
-   * keys stored after it survive.
+   * Stores `value` stamped with the current time, evicting in insertion order
+   * past `MAX_ENTRIES`. Re-setting an existing key deletes first so the
+   * refreshed entry moves to the back — otherwise a hot key keeps its original
+   * position and is evicted while colder keys survive.
    */
   set(key: string, value: unknown): void {
     this.entries.delete(key);
@@ -80,18 +77,14 @@ const KV_KEY_PREFIX = "v1:";
 
 /**
  * Two-tier TTL cache: per-isolate memory in front of a shared Workers KV
- * namespace. The KV tier minimizes load on NTNU's servers — without it every
- * isolate refetches independently; with it each upstream resource is fetched
- * roughly once per TTL globally.
+ * namespace, so each upstream resource is fetched roughly once per TTL
+ * globally rather than once per isolate.
  *
- * Notes:
- * - KV failures (quota, transient errors) degrade to a cache miss, never to
- *   a request failure; they are logged for Workers Logs.
+ * - KV failures degrade to a cache miss, never to a request failure.
  * - A KV hit is re-stamped into memory with a fresh TTL, so worst-case
- *   staleness is just under 2x the TTL — acceptable for slow-moving course
- *   data, and it keeps reads on the free tier's quota.
- * - Values must be JSON-serializable; callers revive rich types (e.g. `Date`)
- *   after a KV round-trip.
+ *   staleness is just under 2× the TTL.
+ * - Values must be JSON-serializable; callers revive rich types after a
+ *   round-trip.
  */
 export class TieredCache {
   private readonly memory: TTLCache;

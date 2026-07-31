@@ -10,7 +10,7 @@ import { bundleFromEntries, type TimetableEntry } from "../../src/lib/planner/da
  * no layout, no CSS, no selector engine. It proves which nodes are built and
  * what they carry.
  *
- * What it is here for: `data-motion-key`. The layer change (REWORK-2026-07-29g)
+ * What it is here for: `data-motion-key`. The layer change
  * matches a row across a re-render by that key alone, so a key that shifts
  * when the øving layer arrives would make every row a newcomer and turn the
  * toggle back into the full redraw it replaced. That is not visible in a

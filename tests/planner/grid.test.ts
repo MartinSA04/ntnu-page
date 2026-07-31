@@ -16,10 +16,9 @@ import {
 } from "../../src/lib/planner/data.js";
 
 /**
- * The pure half of the week grid. `renderGrid` itself needs a DOM (this suite
- * runs in vitest's default Node environment — the repo has no jsdom), so the
- * rules it composes are exported and tested here; the DOM assembly around
- * them is covered by `e2e/flows.pw.ts`.
+ * The pure half of the week grid. `renderGrid` itself needs a DOM this repo
+ * does not ship, so the rules it composes are exported and tested here; the DOM
+ * assembly is covered by `e2e/flows.pw.ts`.
  */
 
 const entry = (title: string | null, over: Partial<TimetableEntry> = {}): TimetableEntry => ({
@@ -85,13 +84,11 @@ describe("visibleLayer (ux-fail-1)", () => {
 
 describe("lectureLessCourses", () => {
   /**
-   * The gap the auto-reveal cannot cover. `visibleLayer`'s B7a reveal is
-   * plan-GLOBAL — it only fires when NOT ONE course in the plan has a lecture.
-   * So a lecture-less course sharing a plan with an ordinary one is silently
-   * dropped from both the week and the collision check, with nothing said.
-   * TFY4220's 2026_HØST hit exactly this before its "Formidling" titles were
-   * classified; ~22% of course-terms still do, and always will (Kunstakademiet
-   * publishes "allmøte" and "atelierflyt/rydding", never a lecture).
+   * The gap the auto-reveal cannot cover. `visibleLayer`'s reveal is
+   * plan-GLOBAL — it only fires when NOT ONE course has a lecture — so a
+   * lecture-less course sharing a plan with an ordinary one is silently dropped
+   * from both the week and the collision check. ~22% of course-terms are
+   * lecture-less and always will be.
    */
   const lec = (courseCode: string) => ({ courseCode, isLecture: true, groupPicked: false });
   const oth = (courseCode: string) => ({ courseCode, isLecture: false, groupPicked: false });
@@ -233,16 +230,12 @@ describe("unresolvedLectureChoices (edit-4, ux-1)", () => {
 /* --- The DOM half ------------------------------------------------------
  *
  * Two of `renderGrid`'s decisions are not expressible in the pure helpers
- * above and were shipping unverified below the browser suite: the header
- * row's shape (week-7) and the phone-width column cap (grid-3). This repo
- * ships no jsdom/happy-dom and does not want one, so the shim below is the
- * smallest thing `renderGrid` actually touches — createElement, classList,
- * append/replaceChildren, attributes and a `style.setProperty` that records
- * custom properties, because both findings are asserted on those.
+ * above: the header row's shape and the phone-width column cap. This repo ships
+ * no jsdom and does not want one, so the shim below is the smallest thing
+ * `renderGrid` actually touches.
  *
- * It is NOT a DOM: no layout, no CSS, no selector engine. It proves which
- * nodes are built and what they carry, never how wide they end up.
- */
+ * It is NOT a DOM: no layout, no CSS, no selector engine. It proves which nodes
+ * are built and what they carry, never how wide they end up. */
 
 class ShimEl {
   classes = new Set<string>();
@@ -329,9 +322,8 @@ class ShimEl {
     return [...this.walk()].filter((n) => n.classes.has(className));
   }
   /**
-   * Class selectors only, and deliberately so. `renderGrid` reaches for this
-   * to wire the time readout and place the now marker; anything richer would
-   * be a selector engine, which this shim is explicitly not.
+   * Class selectors only, deliberately: anything richer would be a selector
+   * engine, which this shim is explicitly not.
    */
   querySelector(sel: string): ShimEl | null {
     return this.querySelectorAll(sel)[0] ?? null;
@@ -470,7 +462,7 @@ describe("renderGrid: overlap stacks into lanes and never piles (D1)", () => {
   test("stacks at desktop width", () => laneCheck(false));
 
   // The whole point of transposing: the phone gets the SAME two readable bars,
-  // where the vertical grid collapsed them into one slab of text (grid-3).
+  // where the vertical grid collapsed them into one slab of text.
   test("stacks identically at phone width", () => laneCheck(true));
 
   test("the row reserves the depth its lanes need", () => {
@@ -632,7 +624,7 @@ describe("renderGrid: the collision is one zone per day (D4)", () => {
   });
 });
 
-/* --- What the layer change stands on (REWORK-2026-07-29g) ---------------- */
+/* --- What the layer change stands on ---------------- */
 
 describe("identity across the øving toggle", () => {
   // One lecture and one øving group. A course offering exactly ONE non-lecture

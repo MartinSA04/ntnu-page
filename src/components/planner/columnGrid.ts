@@ -1,74 +1,36 @@
 /**
- * KOLONNER — the week as a timetable: days across, time down (REWORK-2026-07-30h).
+ * KOLONNER — the week as a timetable: days across, time down. The third view of
+ * one plan, beside `grid.ts` and `board.ts`, from the same states through the
+ * same narrowing, engine and popover.
  *
- * The third view of one plan, beside the transposed week (`grid.ts`, days as
- * rows) and Tavla (`board.ts`, no geometry at all). It is the shape every
- * student already owns — school, NTNU's own timeplan, every calendar app — and
- * it exists because that familiarity is worth something the arithmetic cannot
- * price. It is a *view*: same `PlanCourseState[]`, same group narrowing
- * (`collectSessions`), same conflict engine, same popover.
- *
- * ## The law: the day grows, the code never shrinks, and the week is dealt out
- * in whole days
- *
- * Transposing solved the width problem by giving the day the whole page. Here
- * a day is a column again, so the pressure comes back — two overlapping
- * lectures split the column, and at five equal columns each half is narrower
- * than the seven characters that identify the course. The rule this view is
- * built on is the opposite of squeezing:
+ * ## The law: the day grows, the code never shrinks, whole days only
  *
  *   `dager = maks(1, min(ukedager, gulv(plass / dagminimum)))`
  *   `dagbredde = maks(dagminimum, plass / dager)`
  *
- * — and it is expressed in **CSS**, not in a measuring pass here (see THE WIDTH
- * LAW in `src/styles/planner-week.css` for the declarations). `dagminimum` is
- * the deepest cluster's lanes at the width a course code needs; `plass` is the
- * scrollport minus the hour rail. Flooring the count is what keeps the week
- * honest at the edges: the days always divide the visible width exactly, so
- * either the whole week is on screen or the days that are on screen are WHOLE
- * and the rest are wholly off-frame — a strip of Friday hanging past the frame
- * is an overflow someone forgot, and reads like one. A slightly narrower window
- * therefore drops a whole day and makes the remaining ones wider.
+ * Expressed in **CSS**, not in a measuring pass here (see THE WIDTH LAW in
+ * planner-week.css) — hence no resize listener and no `getBoundingClientRect`.
+ * Flooring the count keeps the week honest at the edges: a narrower window
+ * drops a whole day and widens the rest.
  *
- * That is still arithmetic the browser does before paint, which is why there is
- * no resize listener and no `getBoundingClientRect` in this module — the law
- * holds at every width.
+ * This module writes only what CSS cannot know: the deepest cluster
+ * (`--planner-lanes-max`), how many drop-in strips to reserve
+ * (`--planner-bands-max`), and each session's place on the time axis.
  *
- * What this module writes is only what CSS cannot know: how deep the week's
- * deepest cluster is (`--planner-lanes-max`), how many drop-in strips to
- * reserve room for (`--planner-bands-max`), and where each session sits on the
- * time axis (percentages of the drawn span, exactly as the transposed grid
- * does it, so a block and an hour line can never disagree).
+ * ## Kept from the transposed week, deliberately
  *
- * ## What it keeps from the transposed week, deliberately
+ *  - **Lanes are per CLUSTER, not per day** — dividing by the day's worst
+ *    moment makes unrelated sessions half-width for nothing.
+ *  - **A drop-in window is not a session you attend at a time** (`isDropIn`):
+ *    it gets a strip along the column's edge that lanes never overlap.
+ *  - **Red-Is-Collision, crossing the lanes.** One zone per conflict group, not
+ *    one per day.
+ *  - **The code may never be cut.** Room and activity are added only when the
+ *    block is tall enough, by duration.
  *
- *  - **Lanes are per CLUSTER, not per day.** A block in a 2-deep overlap takes
- *    half the column; a lone 16:00 øving in the same day still takes all of
- *    it. Dividing the whole column by the day's worst moment is how a Tuesday
- *    with one clash makes four unrelated sessions half-width for nothing.
- *  - **A drop-in window is not a session you attend at a time** (`isDropIn`,
- *    the grid's own rule): an 08:15–20:00 øvingsvindu drawn as a block would
- *    be a slab down the whole column with a lecture buried in it. It gets a
- *    strip along the column's edge, and the lanes never overlap it because the
- *    column reserves that width for every day.
- *  - **Red-Is-Collision, and it crosses the lanes.** One zone per conflict
- *    group — not one per day: two unrelated overlaps on a Thursday are two
- *    incidents, and a single merged zone would claim the hours between them.
- *  - **The code is the half that may never be cut.** Room and activity are
- *    added only when the block is tall enough to carry them, by duration, the
- *    same way the transposed bar decides (`COMPACT_BLOCK_MINUTES` there).
- *
- * ## The layer change
- *
- * "Vis øvinger og labber" is choreographed here as in the other two views —
- * `beginColumnChange` in `layerMotion.ts`, through the same snapshot/rewind/
- * release wrapper. What this module owes it is identity and geometry in
- * properties: every session carries `data-motion-key` (`board.ts`'s, shared, so
- * the two views cannot disagree about what "the same session" is), every hour
- * figure carries `data-hour`, and every position is a custom property the
- * stylesheet turns into a real length. Add a property the column's box is sized
- * from and you must add it to `COL_GRID_PROPS` too, or that dimension snaps
- * while everything around it travels.
+ * The layer change is choreographed through `beginColumnChange`
+ * (layerMotion.ts). Add a property the column's box is sized from and you must
+ * add it to `COL_GRID_PROPS`, or that dimension snaps while the rest travels.
  */
 import { findConflicts, groupConflicts, mergeParallelSlots } from "../../lib/planner/conflicts.js";
 import type { LayoutInput } from "../../lib/planner/layout.js";
@@ -84,12 +46,9 @@ const DEFAULT_START_HOUR = 8;
 const DEFAULT_END_HOUR = 16;
 
 /**
- * Duration a block needs before it carries more than its code.
- *
- * Height is duration here, so these are the vertical twin of the transposed
- * bar's width rule: at `--planner-hour-h` (4.5rem) a 45-minute session is
- * ~54 px and holds the code and the room; 90 minutes holds the activity too.
- * Below 45 minutes only the code is drawn, and the code is never dropped.
+ * Duration a block needs before it carries more than its code. Height is
+ * duration here, so this is the vertical twin of the transposed bar's width
+ * rule. Below 45 minutes only the code is drawn, and the code is never dropped.
  */
 const ROOM_MINUTES = 45;
 const LABEL_MINUTES = 90;
@@ -148,11 +107,9 @@ const durationOf = (entry: SessionEntry): number =>
   Math.max(0, minutesOf(entry.endTime) - minutesOf(entry.startTime));
 
 /**
- * The week's shape, before any element exists: the drawn hours, each day's
- * lanes and strips, and the two maxima the column width is computed from.
- *
- * Pure and exported so the decision this view rests on is testable without a
- * DOM — the assembly around it is covered by `e2e/flows.pw.ts`.
+ * The week's shape before any element exists: the drawn hours, each day's lanes
+ * and strips, and the two maxima the column width is computed from. Pure and
+ * exported so the decision this view rests on is testable without a DOM.
  */
 export function columnGeometry(entries: SessionEntry[]): WeekGeometry {
   let minMinutes = Number.POSITIVE_INFINITY;
@@ -185,9 +142,8 @@ export function columnGeometry(entries: SessionEntry[]): WeekGeometry {
       start: minutesOf(entry.startTime),
       end: minutesOf(entry.endTime),
     }));
-    // Uncapped: there is no pile in this view either. The pile existed because
-    // a 150 px column could not be divided — a column that GROWS never has
-    // that problem, which is the whole point of the width law above.
+    // Uncapped: no pile in this view either. The pile existed because a 150 px
+    // column could not be divided — a column that GROWS never has that problem.
     const packed = new Map(
       layoutDay(input, Number.POSITIVE_INFINITY).map((slot) => [slot.id, slot]),
     );
@@ -213,10 +169,10 @@ export function columnGeometry(entries: SessionEntry[]): WeekGeometry {
 }
 
 /**
- * The same parallel-slot merge the transposed grid makes before drawing: one
- * session published in two rooms is one block with both rooms, not two blocks
- * that make the day look twice as deep as it is. In a view whose whole subject
- * is column width, that doubling would be the expensive kind of wrong.
+ * The same parallel-slot merge the transposed grid makes: one session published
+ * in two rooms is one block with both rooms, not two blocks that make the day
+ * look twice as deep. In a view whose subject is column width, that doubling
+ * would be the expensive kind of wrong.
  */
 function mergeSessions(entries: SessionEntry[]): SessionEntry[] {
   return mergeParallelSlots(entries, (e) => `${e.isLecture ? "L" : "O"}|${e.label}`).map(
@@ -242,9 +198,8 @@ interface ClashGroup {
 }
 
 /**
- * Marks every entry that collides and returns the incidents themselves.
- *
- * Lecture × lecture only (DR-1), through the same engine both other views use;
+ * Marks every entry that collides and returns the incidents. Lecture × lecture
+ * only (DR-1), through the same engine both other views use;
  * `mergeParallelSlots` first, or a course publishing eleven identical groups
  * reports ten collisions with itself.
  */
@@ -291,14 +246,12 @@ const percent = (minutes: number, min: number, span: number): string =>
   `${((minutes - min) / span) * 100}%`;
 
 /**
- * The half every drawn session shares: its hue, what it says on hover, what a
- * screen reader hears, its place on the time axis, and the click that opens it.
+ * The half every drawn session shares: its hue, its hover text, what a screen
+ * reader hears, its place on the time axis, and the click that opens it.
  *
- * A drop-in window goes through this too. It used to be a bare `<div>` with a
- * colour and nothing else — five 8 px slivers down the week that named nothing,
- * answered nothing and could not be opened, which is a mark a student can only
- * read as damage. A session you can attend is a session you can ask about,
- * whether it takes a lane or a strip.
+ * A drop-in window goes through this too. As a bare `<div>` with a colour it
+ * was a sliver that named nothing and could not be opened — a mark a student
+ * can only read as damage. A session you can attend is one you can ask about.
  */
 function sessionButton(
   entry: SessionEntry,
@@ -377,12 +330,10 @@ function buildBlock(
 /**
  * A drop-in window: the same session, standing up.
  *
- * The strip is narrow because it must not take a lane from the sessions that
- * have a time — but narrow is not the same as anonymous. The type turns 90°
- * with the strip (`writing-mode: vertical-rl`, planner-week.css) and reads down
- * it: the code, then what it is. A window is at least five hours by definition,
- * so at `--planner-hour-h` there is always more than enough length for both —
- * the one axis this label is never short of is the one it now runs along.
+ * The strip is narrow because it must not take a lane from sessions that have a
+ * time — but narrow is not anonymous. The type turns 90° and reads down it. A
+ * window is at least five hours by definition, so the one axis this label is
+ * never short of is the one it runs along.
  */
 function buildBand(
   entry: SessionEntry,
@@ -393,14 +344,12 @@ function buildBand(
 ): HTMLButtonElement {
   const band = sessionButton(entry, "planner-cols-band", geo, onBlockClick);
   band.style.setProperty("--planner-strike", String(strike));
-  // Its own place in the reserved strip margin, counted from the column's edge,
-  // so a day with three open windows draws three strips instead of one on top
-  // of another.
+  // Its own place in the reserved strip margin, so a day with three open
+  // windows draws three strips instead of one on top of another.
   band.style.setProperty("--planner-band", String(index));
   band.append(el("span", "planner-cols-code np-data", entry.courseCode));
   // Room before activity, the same order the bars use: where you have to walk
-  // to find the veiledning is the fact you are reading the strip for, and a
-  // window is long enough that neither has to give way to the other.
+  // is the fact you are reading the strip for.
   const what = [entry.rooms, entry.label].filter(Boolean).join(" · ");
   if (what) band.append(el("span", "planner-cols-sub", what));
   return band;
@@ -408,8 +357,8 @@ function buildBand(
 
 /**
  * Draws the week into `frame`. Returns how many blocks it drew so the caller
- * can fall back to its own message branch at zero, exactly as it does for the
- * other two views.
+ * can fall back to its own message branch at zero, as it does for both other
+ * views.
  */
 export function renderColumnGrid(
   frame: HTMLElement,
@@ -429,9 +378,8 @@ export function renderColumnGrid(
 
   const grid = el("div", "planner-cols");
   if (options.animate) grid.classList.add("is-striking");
-  // An attribute, not a custom property: the column template is written out
-  // per day count in the stylesheet (see planner-week.css), so a Saturday is a
-  // second template rather than a `repeat()` counting a `var()`.
+  // An attribute, not a custom property: the column template is written out per
+  // day count in the stylesheet, so a Saturday is a second template.
   grid.setAttribute("data-days", String(geo.dayCount));
   grid.style.setProperty("--planner-hours", String(geo.hours));
   grid.style.setProperty("--planner-lanes-max", String(geo.lanesMax));
@@ -461,9 +409,8 @@ export function renderColumnGrid(
   for (let hour = Math.ceil(geo.minMinutes / 60); hour <= Math.floor(geo.maxMinutes / 60); hour++) {
     const label = el("span", "planner-cols-hour np-data", String(hour).padStart(2, "0"));
     // The hour is the figure's identity across a re-render: when the øving
-    // layer stretches the axis, 10:00 has to TRAVEL to its new percentage
-    // rather than be replaced by a different element that happens to say "10"
-    // (layerMotion.ts).
+    // layer stretches the axis, 10:00 must TRAVEL to its new percentage rather
+    // than be replaced by a different element that happens to say "10".
     label.setAttribute("data-hour", String(hour));
     label.style.setProperty("--planner-y", percent(hour * 60, geo.minMinutes, geo.span));
     rail.append(label);
@@ -483,10 +430,9 @@ export function renderColumnGrid(
     column.setAttribute("data-day", String(day.dayNumber));
     if (day.dayNumber === options.todayNumber) column.setAttribute("data-today", "");
 
-    // The strips go down FIRST, and take the first numbers in the day's share
-    // of the strike order: an open window is the field the day's appointments
-    // are printed on, so it is laid before them and never after. (Paint order
-    // is settled by z-index, not by this, so nothing is drawn over.)
+    // The strips go down FIRST and take the first numbers in the day's share of
+    // the strike order: an open window is the field the day's appointments are
+    // printed on. (Paint order is z-index's job, not this.)
     day.bands.forEach((entry, index) => {
       const band = buildBand(entry, index, geo, strike++, options.onBlockClick);
       band.setAttribute("data-motion-key", motionKey(entry, keySeen));
@@ -495,8 +441,7 @@ export function renderColumnGrid(
     });
 
     // The lanes live in their own box, inset by the width the strips reserve,
-    // so a block's percentage width is a percentage of the space it may
-    // actually use — and a drop-in strip can never be drawn over.
+    // so a block's percentage is a percentage of the space it may actually use.
     const lanes = el("div", "planner-cols-lanes");
     clashes
       .filter((c) => c.dayNumber === day.dayNumber)
@@ -537,13 +482,10 @@ export function renderColumnGrid(
 }
 
 /**
- * Places the needle in today's column, or hides it (the column view's half of
- * REWORK-2026-07-30f's rule).
+ * Places the needle in today's column, or hides it.
  *
- * Exported because it has to be re-run on a timer: a line that says "now" and
- * means "an hour ago" is worse than no line, and re-rendering the whole week
- * every minute to move one element would be absurd. Silently does nothing when
- * this view is not the one on screen, so the caller may simply call both.
+ * Exported because it must re-run on a timer. Silently does nothing when this
+ * view is not on screen, so the caller may simply call both.
  */
 export function syncColumnNow(frame: HTMLElement, at: Date = new Date()): void {
   const grid = frame.querySelector<HTMLElement>(".planner-cols");

@@ -26,75 +26,48 @@
   --border: #dad8ce;
   --border-strong: #cecdc3;
 
-  /* Controls. Ink-Before-Chrome forbids borders here, so the tonal step is
-     the whole affordance: --card against --bg computes 1.11:1 in light, and in
-     dark the fill lifts a full Flexoki step above --card so it reads there
-     too.
-
-     `.np-field` used to add a 2px --control-edge rule along its inline start
-     for the light theme's sake. It is REMOVED (2026-07-30, owner's call), not
-     reimplemented in another form: the fill is the field. --control-edge stays
-     because `.planner-check`, the øving toggle's 14px indicator, still draws
-     its box with it — a box that has no fill of its own to be seen by. */
+  /* Controls. Ink-Before-Chrome forbids borders here, so the tonal step is the
+     whole affordance: --card against --bg computes 1.11:1 in light, and in dark
+     the fill lifts a full Flexoki step above --card so it reads there too.
+     --control-edge survives only for `.planner-check`, a 14px indicator with no
+     fill of its own. */
   --control-bg: var(--card);
   --control-hover: var(--card-hover);
   --control-edge: var(--faint);
 
-  /* There is no `--accent` (REWORK-2026-07-30). There used to be, and it did
-     five jobs: the collision verdict, the full-credit figure, the "I planen"
-     state, every focus ring and every link. Only the first two are judgements
-     about whether the term works — the rest is interface wearing the verdict's
-     colour, which is exactly what Green-Means-Fits says green may never do.
-     Splitting the token is what makes the rule enforceable: there is no
-     general-purpose accent left to reach for.
+  /* There is no `--accent`. It used to do five jobs: the collision verdict, the
+     full-credit figure, the "I planen" state, every focus ring and every link.
+     Only the first two judge whether the term works; the rest was interface
+     wearing the verdict's colour, which Green-Means-Fits forbids. Splitting the
+     token is what makes that rule enforceable — there is no general-purpose
+     accent left to reach for. */
 
-     It also removes a colour compromise. green-600 measured 4.39:1 on paper —
-     under AA — so text went through a `--accent-ink` mix (65 % toward ink,
-     7.63:1) and fills through a separate `--accent-strong`. Three tokens to
-     make one colour readable, and the mix landed on #48580c, which reads
-     brown. --verdict below needs neither: it clears AA as text AND as a fill
-     on every surface in the system. */
+  /* THE VERDICT. Green, and only where the plan is judged: the collision line
+     and a full 30 sp. Nothing else, ever.
 
-  /* THE VERDICT. Green, and only where the plan is being judged: the collision
-     line and a full 30 sp. Nothing else, ever.
+     Hue 107°, not green-600's 73°: the paper is 48°, so the old olive read as
+     darker paper, while a *true* green (145–160°) would collide with the course
+     hue cyan at 175°. 100–120° is the gap where neither lives.
 
-     Hue 107°, not green-600's 73°. The paper is 48°, so the old olive sat 25°
-     from its own ground and read as darker paper rather than as a colour. A
-     *true* green (145–160°) would have collided with the course hue cyan at
-     175°, which is why Flexoki's green is olive in the first place — 100–120°
-     is the gap where neither the paper nor a course identity lives.
-
-     Measured on #fffcf0 / #f2f0e5 / #e6e4d9: 5.89 / 5.30 / 4.75, and 5.89 the
-     other way round as a fill under paper-coloured text. Dark green-ish 400 on
-     #100f0f / #1c1b1a / #282726: 7.16 / 6.43 / 5.57. One token, both roles,
-     every surface — which is why there is no `-ink` or `-strong` variant. */
+     Clears AA as text AND as a fill on every surface in the system, which is
+     why there is no `-ink` or `-strong` variant. */
   --verdict: #31701f;
   --verdict-contrast: #fffcf0;
 
-  /* THE INTERFACE. Ink — focus rings, pressed and selected fills, links,
-     hover, membership. Ink-Before-Chrome was already the rule everywhere else
-     in this system; the accent was the exception, and it was the exception for
-     no stated reason.
-
-     18.62:1 as a fill or a ring on paper (11.98:1 in dark), against green's
-     4.39. A focus ring is a thing you must not miss, and it was the weakest
-     mark on the page. --ui-ring is the softened variant the arrival flash
-     fades from, never a resting focus indicator. */
+  /* THE INTERFACE. Ink — focus rings, pressed and selected fills, links, hover,
+     membership. 18.62:1 as a fill or ring on paper (11.98:1 dark), against
+     green's 4.39: a focus ring is a thing you must not miss, and it was the
+     weakest mark on the page. --ui-ring is the softened variant the arrival
+     flash fades from, never a resting focus indicator. */
   --ui: var(--fg);
   --ui-contrast: var(--bg);
   --ui-ring: color-mix(in srgb, var(--fg) 50%, transparent);
 
   /* Collision ink: Flexoki red, reserved exclusively for conflicts. It is
-     deliberately a different *kind* of mark from the hue washes below: a wash
-     can never out-shout another wash, and Red-Is-Collision means red has to
-     win on sight. --clash-bg fills the overlapping band only.
-
-     DELETED: --clash-edge, the inset inline-start shadow a colliding block
-     used to carry. The block no longer carries any per-bar mark (the collision
-     is ONE zone per day across the minutes that overlap, planner-week.css), so
-     the token had zero callers. There are no inset shadows left anywhere on
-     this site, and the three others were removed rather than redrawn in some
-     other form — see docs/DESIGN.md §5. */
+     deliberately a different *kind* of mark from the hue washes below — a wash
+     can never out-shout another wash, and Red-Is-Collision means red has to win
+     on sight. --clash-bg fills the overlapping band only. There are no inset
+     shadows anywhere on this site (DESIGN §5), so no per-bar edge token. */
   --clash: #af3029;
   --clash-bg: #ffe1d5;
 
@@ -113,31 +86,23 @@
   --selection: color-mix(in srgb, var(--ui) 20%, transparent);
 
   /* Course-hue wash strengths, as mix percentages: the block's fill is
-     color-mix(in srgb, var(--dot) var(--wash-course), var(--card)). They are
-     percentages rather than finished colours because --dot is set per block
-     and a custom property resolves its var()s where it is *declared*, not
-     where it is used. Tuned PER THEME: the same 8% that reads as a clear hue
-     over dark paper collapses into one flat gray-beige over warm light paper
-     (study T14), so light lifts the mix until each course is visibly its own
-     colour. Still well under the collision ink, which is a categorically
-     different, louder mark (Red-Is-Collision) — a wash never out-shouts it. */
+     color-mix(in srgb, var(--dot) var(--wash-course), var(--card)). Percentages
+     rather than finished colours because --dot is set per block and a custom
+     property resolves its var()s where it is *declared*. Tuned PER THEME: the
+     8% that reads as a clear hue on dark paper collapses to one flat gray-beige
+     over warm light paper. */
   --wash-course: 18%;
   --wash-course-hover: 26%;
   --wash-course-muted: 9%;
 
-  /* Block ink (REWORK-2026-07-29b D4). The week's bars are PRINTED colour with
-     the code knocked out of them, not a tint of the paper: five 18 % washes on
-     warm paper read as five tones of beige that neither identify a course nor
-     recede behind the collision ink, which is the single thing four design
-     rounds kept failing on.
+  /* Block ink. The week's bars are PRINTED colour with the code knocked out of
+     them, not a tint of the paper: five 18 % washes on warm paper read as five
+     tones of beige that neither identify a course nor recede behind red.
 
      --block-mix is how far the hue is pulled toward --block-base before it
      becomes the fill. On light paper the Flexoki 600s need deepening to carry
-     paper-coloured text (every one of the six clears 5:1 at 14 %); on Flexoki
-     black the 400s are already luminous, so the mix is 0 and the text goes to
-     near-black instead. The percentages live here, not as finished colours,
-     because --dot is set per block and a custom property resolves its var()s
-     where it is declared. */
+     paper-coloured text; on Flexoki black the 400s are already luminous, so the
+     mix is 0 and the text goes near-black instead. */
   --block-mix: 86%;
   --block-base: #100f0f;
   --on-block: #fffcf0;
@@ -145,37 +110,27 @@
      never red, per DR-1's display layer. */
   --block-muted: 26%;
 
-  /* The squared ruling (planning surfaces only — see .np-ruled).
-     --ruling-hour is the heavier every-fourth-cell rule: at --cell = 15
-     minutes that is the hour line a real timetable sheet has, and without it
-     uniform squares read as texture rather than a scale. The week draws it
-     alone now (planner-week.css, on the rail and day columns) — the
-     `.np-ruled--hours` primitive that used to pair the two is deleted (ds-4). */
+  /* The squared ruling (planning surfaces only). --ruling-hour is the heavier
+     every-fourth-cell rule: at --cell = 15 minutes that is the hour line a real
+     timetable sheet has, and without it uniform squares read as texture rather
+     than a scale. The week draws it alone in planner-week.css. */
   --cell: 24px;
   --ruling-line: color-mix(in srgb, var(--border) 55%, transparent);
   --ruling-hour: color-mix(in srgb, var(--border-strong) 90%, transparent);
 
-  /* Type. Sentences in the grotesk; data (times, dates, codes, counts)
-     in the mono — the Data-Is-Mono rule. */
-  /* The "… Fallback" families are not fonts — they are Arial and Courier New
-     with this project's own metrics stamped on them (fonts.css, generated).
-     They sit directly behind the real face so the second or two before it
-     arrives is set in a face of the same line box and the same average width,
-     and the swap changes the shapes without moving anything. They come BEFORE
-     the generic stack, and the generic stack stays: a machine with neither
-     Arial nor Liberation installed never loads the fallback face at all and
-     falls straight through to `system-ui`, exactly as it did before. */
+  /* Type. Sentences in the grotesk; data (times, dates, codes, counts) in the
+     mono — the Data-Is-Mono rule.
+     The "… Fallback" families are Arial and Courier New with this project's own
+     metrics stamped on them (fonts.css, generated). They sit directly behind
+     the real face so the swap changes the shapes without moving anything. The
+     generic stack stays behind them for a machine that has neither. */
   --font-sans:
     "Schibsted Grotesk", "Schibsted Grotesk Fallback", system-ui, "Segoe UI", Arial, sans-serif;
   --font-mono:
     "Spline Sans Mono", "Spline Sans Mono Fallback", ui-monospace, SFMono-Regular, Menlo, monospace;
 
-  /* Seven steps, one per role docs/DESIGN.md §3 names — no step without a
-     job. The scale used to carry a dead 1.35rem rung while 2rem, the size
-     four page titles actually use, had no name at all; the names now follow
-     the ladder, so --text-lg is DESIGN's 1.6rem headline and --text-xl is
-     the page title. (Renamed: old --text-xl → --text-lg, old --text-2xl →
-     --text-xl, old --text-3xl → --text-2xl. The 1.35rem rung is gone.) */
+  /* Seven steps, one per role docs/DESIGN.md §3 names — no step without a job.
+     --text-lg is DESIGN's 1.6rem headline and --text-xl the page title. */
   --text-xs: 0.72rem; /* label — mono kickers, notes, toggles */
   --text-sm: 0.84rem; /* small sentence — hints, control labels */
   --text-base: 1rem; /* body */
@@ -212,11 +167,9 @@
   --gap-8: 32px;
   --gap-12: 48px;
 
-  /* Layout. */
-  /* The data column. 84rem fills a 1440px laptop without stretching the
-     week's blocks into slabs; --measure stays where it is, because prose does
-     not get more readable as it gets wider (DESIGN.md scopes the measure to
-     prose, and base.css applies it to unclassed prose only). */
+  /* Layout. 84rem fills a 1440px laptop without stretching the week's blocks
+     into slabs; --measure stays put, because prose does not get more readable
+     as it gets wider (base.css applies it to unclassed prose only). */
   --maxw: 84rem;
   --measure: 38rem;
   --topbar-h: 64px;
@@ -224,20 +177,17 @@
   --control-h: 36px;
 
   /* THE PLAN PROBE — how many courses the stored plan holds, written onto
-     <html> by Layout.astro's pre-paint script (beside the no-flash theme
-     init, and re-applied on the same `astro:after-swap` for the same reason:
-     swapRootAttributes() wipes every attribute, inline style included).
+     <html> by Layout.astro's pre-paint script (and re-applied on
+     `astro:after-swap`, since swapRootAttributes() wipes every attribute).
 
-     It exists so a surface can hold the space its client-rendered content is
-     ABOUT to need from the first frame, rather than from the moment its
-     module mounts — the gap that made /planlegger/ shift 0.61 and the landing
-     card 0.13 on a phone. Nothing paints from it and nothing reads it as
-     truth: 0 is always the safe answer, and every reservation below is
-     `calc(var(--plan-courses) * …)`, which is exactly zero when the probe
-     could not read the plan (storage disabled, first visit, parse failure).
+     It lets a surface hold the space its client-rendered content is ABOUT to
+     need from the first frame rather than from the moment its module mounts.
+     Nothing paints from it and nothing reads it as truth: 0 is always the safe
+     answer, and every reservation below is `calc(var(--plan-courses) * …)`,
+     which is exactly zero when the probe could not read the plan.
 
-     `--plan-any` is the same fact as 0-or-1, for the reservations that hold a
-     fixed box rather than one row per course. */
+     `--plan-any` is the same fact as 0-or-1, for reservations holding a fixed
+     box rather than one row per course. */
   --plan-courses: 0;
   --plan-any: min(var(--plan-courses, 0), 1);
 
@@ -274,27 +224,22 @@
   --border: #403e3c;
   --border-strong: #575653;
 
-  /* Dark controls lift a whole Flexoki step clear of --card (#1c1b1a), which
-     is where the light theme's tonal step disappears: on black paper #1c1b1a
-     against #100f0f is 1.10:1 and a resting search field is simply not there.
-     Hover then has to go a step further again, or the control would answer
-     with the fill it already has. */
+  /* Dark controls lift a whole Flexoki step clear of --card, which is where the
+     light theme's tonal step disappears: #1c1b1a against #100f0f is 1.10:1 and
+     a resting search field is simply not there. Hover then goes a step
+     further again. */
   --control-bg: #282726;
   --control-hover: #343331;
 
-  /* The same hue shift as light (73° → 99°), lifted for a black ground:
-     7.16:1 on --bg, 6.43:1 on --card, 5.57:1 on --card-nested, and the same
-     figures inverted when it carries near-black text. --ui and --ui-ring need
-     no dark override — they are derived from --fg and --bg, which flip here. */
+  /* The same hue shift as light (73° → 99°), lifted for a black ground. --ui
+     and --ui-ring need no dark override — they derive from --fg and --bg. */
   --verdict: #74ad55;
   --verdict-contrast: #100f0f;
 
-  /* Flexoki red-300, not the light theme's mirror red-400 (#d14d41). Red is
-     the one ink the product cannot afford to whisper, and #d14d41 read 4.42:1
-     against --bg and 3.62:1 against --clash-bg — both under AA for the 13.44px
-     sentence that names which two courses collide (a11y-5). red-300 measures
-     6.30:1 on --bg, 5.66:1 on --card and 5.17:1 on --clash-bg. Still a literal
-     Flexoki swatch (DESIGN §2), and --clash-bg/--clash-edge are unchanged. */
+  /* Flexoki red-300, not the light theme's mirror red-400: red is the one ink
+     the product cannot afford to whisper, and red-400 read 4.42:1 on --bg and
+     3.62:1 on --clash-bg — both under AA for the sentence naming which two
+     courses collide. red-300 measures 6.30 / 5.66 / 5.17. */
   --clash: #e8705f;
   --clash-bg: #3e1715;
 

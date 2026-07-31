@@ -2,18 +2,16 @@
 import programsData from "../../../data/programs.json";
 import Layout from "../../layouts/Layout.astro";
 // The week's geometry and ink live in one stylesheet because two surfaces
-// render it through the same `renderGrid` (/planlegger/ and /emne/[code]/).
-// Only this page's scroll-edge mask and the exam list stay scoped below.
+// render it through the same `renderGrid`. Only this page's exam list stays
+// scoped below.
 import "../../styles/planner-week.css";
 
 const description =
   "Velg studieprogram og kull, se ukeplanen med en gang: forelesninger, kollisjoner, eksamensdatoer og studiepoeng.";
 
 // Trimmed tuples: the picker needs identity plus the field that tells two
-// same-named programmes apart (B6 — MIDT and MTDT are both "Datateknologi",
-// with opposite outcomes), not the full crawled record; this ships to every
-// visitor. Same tuple as the homepage picker (src/pages/index.astro): the two
-// ask the same question and must not disagree about what a row shows.
+// same-named programmes apart, not the full crawled record; this ships to every
+// visitor. Same tuple as the homepage picker — the two ask the same question.
 const programOptions: [code: string, name: string, studyLevel: string, cities: string[]][] =
   programsData.programs
     .map((p): [string, string, string, string[]] => [
@@ -24,10 +22,9 @@ const programOptions: [code: string, name: string, studyLevel: string, cities: s
     ])
     .sort((a, b) => a[1].localeCompare(b[1], "nb"));
 
-// `JSON.stringify` escapes neither "<" nor "/", so an upstream programme name
-// containing "</script" would close this tag and everything after it would be
-// parsed as markup (C5c). < is a legal JSON escape, so the payload stays
-// valid JSON and the parser sees the original character.
+// `JSON.stringify` escapes neither "<" nor "/", so a programme name containing
+// "</script" would close this tag. < is a legal JSON escape, so the payload
+// stays valid JSON and the parser sees the original character.
 const programOptionsJson = JSON.stringify(programOptions).replaceAll("<", "\\u003c");
 ---
 
@@ -227,32 +224,24 @@ const programOptionsJson = JSON.stringify(programOptions).replaceAll("<", "\\u00
 <style>
   /* --- Banner ------------------------------------------------------------ */
 
-  /* Facts only. The one control that changes any of them is the "endre"
-     button in the hint line below the title — the topbar chip that used to
-     own that job is gone from this page (REWORK-2026-07-30b), because it was
-     naming the same plan the title names. */
+  /* Facts only. The one control that changes any of them is the "endre" button
+     in the hint line below the title. */
   .planner-banner {
     margin-bottom: var(--space-4);
   }
 
-  /* The question and its answer on one baseline. The verdict pushes to the
-     far end on a wide screen and drops under the title when there is no room
-     — it is never squeezed against the plan's name. */
-  /* A grid rather than a wrapping flex row, because two of these four things
-     are a PAIR and wrapping cannot be told that.
+  /* The question and its answer on one baseline. The verdict pushes to the far
+     end on a wide screen and drops under the title when there is no room.
 
-     `MTDT · 2026 · Høst 2026` and `Datateknologi – master (5-årig)` are one
-     statement said twice, short then long. On a phone the flex version wrapped
-     the verdict and the Endre button in between them, so the plan's own name
-     was separated from its own code by a green sentence and a button
-     (REWORK-2026-07-30j). Areas keep the pair adjacent at every width and let
-     the other two move around it. */
-  /* Two rows on a phone, not four: the plan's name shares its line with the
-     control that changes it, and the plan's long name shares the next one with
-     the verdict. The four-row stack cost 138 px before a single hour of the
-     week was drawn, and its last row was a 44 px button on a line of its own
-     (mob-A). Nothing is dropped and nothing is collapsed behind a tap — the
-     four facts are still all on screen, said in two lines. */
+     A grid rather than a wrapping flex row, because two of these four things
+     are a PAIR and wrapping cannot be told that: the code line and the long
+     programme name are one statement said twice, and flex wrapped the verdict
+     and the Endre button in between them. Areas keep the pair adjacent at every
+     width.
+
+     Two rows on a phone, not four: the four-row stack cost 138 px before a
+     single hour of the week was drawn. Nothing is dropped and nothing is
+     collapsed behind a tap. */
   .planner-head {
     display: grid;
     grid-template-areas:
@@ -268,10 +257,8 @@ const programOptionsJson = JSON.stringify(programOptions).replaceAll("<", "\\u00
   }
 
   /* Baseline-aligned rather than centred: the hint is 13 px and the verdict
-     18 px, and centring two sizes on one line makes neither sit on the line
-     the title established. Wrapping is allowed — a long programme name simply
-     drops the verdict to its own line, which is still one row fewer than the
-     stack it replaces. */
+     18 px, and centring two sizes on one line makes neither sit on the line the
+     title established. Wrapping is allowed. */
   .planner-meta {
     grid-area: meta;
     display: flex;
@@ -290,8 +277,7 @@ const programOptionsJson = JSON.stringify(programOptions).replaceAll("<", "\\u00
   }
 
   /* Wide enough for all three on the title's line: the code, the control that
-     changes it, and the verdict at the far end. The hint still sits directly
-     under the title, which is the whole point of the areas. */
+     changes it, and the verdict at the far end. */
   @media (min-width: 46rem) {
     .planner-head {
       grid-template-areas:
@@ -303,8 +289,7 @@ const programOptionsJson = JSON.stringify(programOptions).replaceAll("<", "\\u00
     }
 
     /* The box dissolves and its two children become grid children again, each
-       in the area it has always had. It exists to put them on one line where
-       there is only one line to spare. */
+       in the area it has always had. */
     .planner-meta {
       display: contents;
     }
@@ -322,33 +307,23 @@ const programOptionsJson = JSON.stringify(programOptions).replaceAll("<", "\\u00
     display: none;
   }
 
-  /* THE TITLE. `MTFYMA Kull 24 H26` — the plan in the notation a student
-     writes on a timetable, so it is the mono at the page-title step.
-     Data-Is-Mono has always governed times, dates, codes and counts; this just
-     follows it to the top of the scale instead of dropping it there.
+  /* THE TITLE. `MTFYMA Kull 24 H26` — the plan in the notation a student writes
+     on a timetable, so it is the mono at the page-title step. Data-Is-Mono has
+     always governed codes and counts; this follows it to the top of the scale.
 
-     No separators between the three parts, only spaces (2026-07-31, owner's
-     call): in a mono face at display size the facts already read as three, and
-     `MTDT · 2026 · Høst 2026` spent two glyphs and four spaces saying so
-     again. The short forms do the rest — "Kull 24" and "H26" instead of "2026"
-     and "Høst 2026" — which is what pays for the code beside them at 390 px.
+     No separators between the three parts, only spaces: in a mono face at
+     display size the facts already read as three. The short forms are what pays
+     for the code beside them at 390 px.
 
      Slightly under --text-xl because Spline Sans Mono sets wider and taller
-     than Schibsted Grotesk at the same nominal size: 1.75rem mono is the
-     optical match for 2rem grotesk, which is what every other page title on
-     the site is.
+     than Schibsted Grotesk: 1.75rem mono optically matches 2rem grotesk.
 
-     WHICH OF THE TWO IS DECIDED BY THE PROBE, NOT BY A CLASS. The state with
-     no plan to name falls back to the product's own name in the grotesk, and
-     that used to be an `.is-empty` class `renderBanner` added at mount — one
-     frame after the server had already painted the title in the mono. The
-     title changed face and size (27px → 39px at 390px) with the whole page
-     hanging off its baseline, on every load by a visitor without a stored
-     programme. `html[data-plan="program"]` is the same fact known before the
-     first frame (Layout.astro), so the server paints the right one; the
-     grotesk is the DEFAULT here because "no plan" is the only state a static
-     page can honestly assume. `renderBanner` keeps the attribute true for the
-     rest of the visit via `syncPlanProbe`. */
+     WHICH OF THE TWO IS DECIDED BY THE PROBE, NOT BY A CLASS. As a class added
+     at mount, the title changed face and size (27px → 39px at 390px) one frame
+     after the server had painted the other one, with the whole page hanging off
+     its baseline. `html[data-plan="program"]` is the same fact known before the
+     first frame; the grotesk is the DEFAULT because "no plan" is the only state
+     a static page can honestly assume. `syncPlanProbe` keeps it true after. */
   .planner-title {
     font-family: var(--font-sans);
     font-size: var(--text-xl);
@@ -368,19 +343,16 @@ const programOptionsJson = JSON.stringify(programOptions).replaceAll("<", "\\u00
 
   .planner-context-line {
     max-width: none;
-    /* One line, held. `renderBanner` always writes this — a programme's long
-       name, or the semester the empty week is for — so the line is never
-       absent once the page is alive, and reserving it costs nothing that the
-       page does not spend a frame later anyway. */
+    /* One line, held. `renderBanner` always writes this, so the line is never
+       absent once the page is alive. */
     min-height: 1lh;
   }
 
-  /* The title and the control that changes it, as one group — so the verdict
-     still lands at the far end under `space-between` and does not get spaced
-     out between them. */
-  /* A real `.np-btn`: 36px of target, a paper surface, and a mark. It is a
-     paper control rather than an ink fill, so it still does not out-shout the
-     fact beside it — but it no longer hides from the pointer either. */
+  /* The title and the control that changes it as one group, so the verdict
+     still lands at the far end under `space-between`.
+     A real `.np-btn`: 36px of target, a paper surface and a mark — paper rather
+     than an ink fill, so it does not out-shout the fact beside it, but it no
+     longer hides from the pointer either. */
   .planner-edit-plan {
     grid-area: edit;
     flex: none;
@@ -392,17 +364,15 @@ const programOptionsJson = JSON.stringify(programOptions).replaceAll("<", "\\u00
     flex: none;
   }
 
-  /* On the title's own line there is no width to spend on the word: the mark
-     is the same `settings-2` the course rows use, and `renderBanner` already
-     writes the button an aria-label ("Endre studieinfo for MTDT"), so the name
-     it answers to is unchanged — only the ink is. A square --control-h box,
-     which is 44 px on every touch device (tokens.css, `pointer: coarse`). */
+  /* On the title's own line there is no width for the word: the mark is the
+     same `settings-2` the course rows use, and `renderBanner` writes the button
+     an aria-label, so only the ink changes. A square --control-h box, 44 px on
+     every touch device. */
   @media (max-width: 46rem) {
-    /* The row the verdict shares with the hint, held at the taller of the two.
-       The verdict is --text-md against the hint's --text-sm, and it appears,
-       says "henter timeplan …", then vanishes again under the `:has(.is-clean)`
-       rule below — so without this the whole page moved down 4px when it
-       arrived and back up 4px when it turned out to be good news. */
+    /* The row the verdict shares with the hint, held at the taller of the two:
+       the verdict appears, says "henter timeplan …", then vanishes under the
+       `:has(.is-clean)` rule below, so without this the page moved 4px each
+       way. */
     .planner-meta {
       min-height: 1.6rem;
     }
@@ -414,9 +384,8 @@ const programOptionsJson = JSON.stringify(programOptions).replaceAll("<", "\\u00
     }
 
     #planner-edit-plan-label {
-      /* Not `display: none`: the label is this button's visible name on every
-         other width, and a screen reader that ignores aria-label still has to
-         find one. */
+      /* Not `display: none`: the label is this button's visible name at every
+         other width, and a screen reader ignoring aria-label needs one. */
       position: absolute;
       width: 1px;
       height: 1px;
@@ -425,26 +394,21 @@ const programOptionsJson = JSON.stringify(programOptions).replaceAll("<", "\\u00
       white-space: nowrap;
     }
 
-    /* The verdict is not shown here when it is a pass (2026-07-31, owner's
-       call). "ingen kollisjoner" answers a question you only ask when
-       something might be wrong, and on a phone it spent a line of the first
-       screen saying that nothing is. A collision still says so — as does "kan
-       ikke sjekkes", which is not a pass — so the line appears exactly when it
-       has something to report, and keeps its `aria-live` for the moment it
-       starts having something.
+    /* The verdict is not shown when it is a pass: "ingen kollisjoner" answers a
+       question you only ask when something might be wrong, and on a phone it
+       spent a line of the first screen saying nothing is. A collision still
+       says so, as does "kan ikke sjekkes", and the line keeps its `aria-live`.
 
-       Matched through the wrapper with `:has()`, not on the span: the whole
-       line goes, or its flex gap stays behind in the meta row. `.is-clean` is
-       the only class that survives `renderVerdict`'s own `className =` — which
-       is also why this cannot key on `.planner-verdict`. */
+       Matched through the wrapper with `:has()`, not on the span, or the flex
+       gap stays behind. `.is-clean` is the only class that survives
+       `renderVerdict`'s own `className =`. */
     .planner-status:has(.is-clean) {
       display: none;
     }
   }
 
-  /* The unanswered studieretning, pulled out of a muted line. It asks you to
-     do something; it does not say the term works — so it is ink, not the
-     verdict green (REWORK-2026-07-30). */
+  /* The unanswered studieretning. It asks you to do something; it does not say
+     the term works — so it is ink, not the verdict green. */
   :global(.planner-context-direction) {
     color: var(--ui);
   }
@@ -457,15 +421,11 @@ const programOptionsJson = JSON.stringify(programOptions).replaceAll("<", "\\u00
   /* --- Layout ------------------------------------------------------------ */
 
   /* The week takes the page's whole width; Eksamener and Emner share the row
-     under it. This is what transposing the grid bought: the week is ~290 px
-     tall instead of 768, so a side rail is no longer the only way to see the
-     plan and the week at once — and the rail was costing the week a third of
-     its axis (864 px of 1440) while its own column ran out of content four
-     hundred pixels above the fold.
-
-     It also retires the Uke/Emner tabs. They existed because a phone could not
-     scroll past a 768 px week to reach the course list; it can scroll past
-     290 px. */
+     under it. This is what transposing the grid bought: at ~290 px tall a side
+     rail is no longer the only way to see the plan and the week at once, and
+     the rail was costing the week a third of its axis. It also retires the
+     Uke/Emner tabs, which existed because a phone could not scroll past a
+     768 px week. */
   #planner-main {
     display: grid;
     gap: var(--space-7);
@@ -484,9 +444,8 @@ const programOptionsJson = JSON.stringify(programOptions).replaceAll("<", "\\u00
 
   @media (min-width: 60rem) {
     .planner-below {
-      /* Exams first: they are time-ordered, so they rhyme with the week above
-         them. The course list wants a measure rather than a fraction — it only
-         ever holds a code, a name and a credit figure. */
+      /* Exams first: they are time-ordered, so they rhyme with the week above.
+         The course list wants a measure rather than a fraction. */
       grid-template-columns: minmax(0, 1fr) 22rem;
       align-items: start;
       gap: var(--space-8);
@@ -530,9 +489,7 @@ const programOptionsJson = JSON.stringify(programOptions).replaceAll("<", "\\u00
   /* --- Section headers --------------------------------------------------- */
 
   /* A section head is a NAME and its controls, divided by a rule — not four
-     unrelated things on one line. The week's used to carry a mono kicker, the
-     verdict, two view toggles and the øving toggle side by side, with a
-     four-hundred-pixel gap in the middle of it. */
+     unrelated things on one line with a four-hundred-pixel gap in the middle. */
   .planner-section-head {
     display: flex;
     align-items: baseline;
@@ -544,10 +501,9 @@ const programOptionsJson = JSON.stringify(programOptions).replaceAll("<", "\\u00
   }
 
 
-  /* The grotesk at a real size, not 0.72 rem of tracked-out uppercase mono.
-     Four of those competed down the page and none of them was a heading;
-     Data-Is-Mono means the mono is for times, dates, codes and counts, so
-     spending it on section labels was spending the rule's meaning too. */
+  /* The grotesk at a real size, not tracked-out uppercase mono. Data-Is-Mono
+     means the mono is for times, dates, codes and counts, so spending it on
+     section labels spends the rule's meaning too. */
   .planner-section-name {
     font-size: var(--text-md);
     font-weight: var(--weight-medium);
@@ -566,16 +522,12 @@ const programOptionsJson = JSON.stringify(programOptions).replaceAll("<", "\\u00
 
   /* The default ink is set at ZERO specificity on purpose, and that is what
      `:global(:where(…))` buys. Astro scopes this block by appending
-     [data-astro-cid-…], so a plain `.planner-section-sub { color: var(--muted) }`
-     here computed (0,2,0) and outranked `.np-note-clash` (0,1,0): the flagship
-     verdict "1 kollisjon denne uka" printed in the page's quietest gray in BOTH
-     themes while the no-collision state was green — the emphasis inverted
-     exactly where DESIGN's Red-Is-Collision rule says it must not be
-     (a11y-4 / ds-2). `:where()` alone is not enough: the attribute strategy
-     emits `[data-astro-cid-…]:where(.planner-section-sub)`, which is (0,1,0)
-     again and would TIE with the primitive, leaving the verdict's colour to
-     depend on which stylesheet Vite emitted first. `:global()` drops the
-     attribute, so this really is (0,0,0) and every state class below wins. */
+     [data-astro-cid-…], so a plain class selector here computes (0,2,0) and
+     outranks `.np-note-clash` (0,1,0) — the flagship verdict printed in the
+     page's quietest gray while the no-collision state was green, inverting
+     Red-Is-Collision. `:where()` alone is not enough: the attribute strategy
+     emits `[data-astro-cid-…]:where(…)`, which TIES with the primitive and
+     leaves the colour to Vite's emit order. `:global()` drops the attribute. */
   :global(:where(.planner-section-sub, .planner-verdict)) {
     color: var(--muted);
   }
@@ -589,26 +541,17 @@ const programOptionsJson = JSON.stringify(programOptions).replaceAll("<", "\\u00
     display: none;
   }
 
-  /* --- Rutenett ⇄ Liste (REWORK-2026-07-30b) ------------------------------ */
+  /* --- Rutenett ⇄ Liste ------------------------------ */
 
   /* Two words and a rule that slides between them. No box: a box says "press
      me", and this is a place you already are — one of the two is always true,
-     which is exactly what a filled chip cannot say. The rule is also the same
-     mark the section head draws directly underneath, so the control sits IN
-     the structure rather than on top of it.
+     which is exactly what a filled chip cannot say. The rule is also the mark
+     the section head draws underneath, so the control sits IN the structure.
 
-     It replaces two `.np-toggle`s, which were the same height, the same
-     uppercase mono and the same fill as the øving toggle beside them —
-     three identical controls, two completely different behaviours. */
-  /* The negative block margin is what lets the targets be 24px tall without
-     the head growing 15px: the buttons pad out to a real hit area and the
-     container pulls that padding back out of the layout. WCAG 2.5.8 asks for
-     24x24, and a bare word set at --text-sm is 21 (a11y-8). */
-  /* The BUTTONS carry the padding, not this box — a target is only a target
-     where the pointer actually lands, and padding on the container is dead
-     space. The negative margins pull that height back out of the layout, so
-     the head keeps the rhythm it had while each word becomes a 34px target
-     (WCAG 2.5.8 asks 24; a bare word at --text-sm is 21). */
+     The BUTTONS carry the padding, not the container — a target is only a
+     target where the pointer lands. The negative margins pull that height back
+     out of the layout, so the head keeps its rhythm while each word becomes a
+     34px target (WCAG 2.5.8 asks 24; a bare word at --text-sm is 21). */
   .planner-view-tabs {
     position: relative;
     display: flex;
@@ -618,11 +561,9 @@ const programOptionsJson = JSON.stringify(programOptions).replaceAll("<", "\\u00
   }
 
   /* The travelling rule. `--view-x` / `--view-w` are written by
-     `renderViewTabs` from the live button boxes, because "Rutenett" and
-     "Liste" are different widths in every font and at every zoom level — a
-     hard-coded 50 % would be wrong at all of them. It rides the same --dur
-     and --ease as the week's own layer change, so pressing Liste and pressing
-     Øvinger feel like one instrument; reduced motion zeroes both. */
+     `renderViewTabs` from the live button boxes, because the labels are
+     different widths in every font and at every zoom level. It rides the same
+     --dur and --ease as the week's own layer change. */
   .planner-view-tabs::after {
     content: "";
     position: absolute;
@@ -642,9 +583,8 @@ const programOptionsJson = JSON.stringify(programOptions).replaceAll("<", "\\u00
     font-size: var(--text-sm);
     font-weight: var(--weight-normal);
     color: var(--muted);
-    /* 9px above and 4px below: the rule has to stay ~6px under the word, so
-       the target grows mostly upward, into the gap the section head already
-       has. */
+    /* 9px above and 4px below: the rule has to stay ~6px under the word, so the
+       target grows mostly upward, into the gap the head already has. */
     padding: 9px var(--space-1) 4px;
     margin-inline: calc(-1 * var(--space-1));
     border-radius: var(--radius-xs);
@@ -660,9 +600,9 @@ const programOptionsJson = JSON.stringify(programOptions).replaceAll("<", "\\u00
     font-weight: var(--weight-medium);
   }
 
-  /* The layer, not a view: a box you tick. Nothing about it is shaped like
-     the pair beside it, which is the whole point — it ADDS øvinger and labber
-     to the week; it does not choose how the week is drawn. */
+  /* The layer, not a view: a box you tick. Nothing about it is shaped like the
+     pair beside it — it ADDS øvinger and labber; it does not choose how the
+     week is drawn. */
   .planner-others-toggle {
     display: inline-flex;
     align-items: center;
@@ -718,16 +658,13 @@ const programOptionsJson = JSON.stringify(programOptions).replaceAll("<", "\\u00
     gap: var(--gap-2) var(--space-5);
   }
 
-  /* The verdict (U4): PRODUCT §1's primary job answered beside the kicker,
-     in three states and three inks:
-       .is-clean       — accent, the week holds together (Green-Means-Fits)
-       .np-note-clash  — --clash, two things cannot coexist (Red-Is-Collision)
-       neither         — the muted default above: "kan ikke sjekkes — mangler
-                         timeplan for N emner". A gap is not a clash and not a
-                         pass, so it may spend neither colour (DESIGN §2:
-                         fetch errors and empty states are ink, not red).
-     `.is-clean` keeps its `:global()` because it is added from plannerApp, not
-     written in this template; it now merely has to beat :where(), not (0,2,0). */
+  /* The verdict: PRODUCT §1's primary job answered beside the kicker, in three
+     states and three inks —
+       .is-clean       — the week holds together (Green-Means-Fits)
+       .np-note-clash  — two things cannot coexist (Red-Is-Collision)
+       neither         — the muted default: "kan ikke sjekkes". A gap is not a
+                         clash and not a pass, so it may spend neither colour.
+     `.is-clean` keeps its `:global()` because plannerApp adds it. */
   :global(.planner-section-sub.is-clean),
   :global(.planner-verdict.is-clean) {
     color: var(--verdict);
@@ -739,10 +676,9 @@ const programOptionsJson = JSON.stringify(programOptions).replaceAll("<", "\\u00
     transition: color var(--dur-fast) var(--ease);
   }
 
-  /* Green means it fits — exactly a full load, never an overload. "37,5 av
-     30 sp" in the same green as 30 tells the student the opposite of the
-     truth (B9.3); the overload keeps neutral ink and explains itself in
-     .planner-credit-note below. */
+  /* Green means it fits — exactly a full load, never an overload. "37,5 av 30
+     sp" in the same green as 30 tells the student the opposite of the truth;
+     the overload keeps neutral ink and explains itself below. */
   .planner-credit-line.is-full {
     color: var(--verdict);
   }
@@ -754,16 +690,13 @@ const programOptionsJson = JSON.stringify(programOptions).replaceAll("<", "\\u00
 
   /* --- Weekly grid --------------------------------------------------------- */
 
-  /* The week's own geometry and ink are in src/styles/planner-week.css, shared
-     with /emne/[code]/ — and so, since mob-2, is the scroll-edge mask: it used
-     to live here, which is exactly how /emne/[code]/ ended up clipping its
-     Friday column at 360 px with no fade at all. What follows is only what
-     this page adds. */
+  /* The week's own geometry and ink — and the scroll-edge mask — are in
+     src/styles/planner-week.css, shared with /emne/[code]/. What follows is
+     only what this page adds. */
 
   /* --- Empty / fallback week card ---------------------------------------- */
 
-  /* The four empty states (no plan, unpublished, fetch failure, nothing this
-     term) that carry an action. Centered in the (now unruled) week frame so
+  /* The four empty states that carry an action, centered in the week frame so
      the one next step is where the plan would be, not tucked under it. */
   :global(.planner-week-card) {
     display: flex;
@@ -786,9 +719,8 @@ const programOptionsJson = JSON.stringify(programOptions).replaceAll("<", "\\u00
 
   /* --- Exam list ---------------------------------------------------------- */
 
-  /* The dated list and nothing above it: the "5 eksamener over 26 dager"
-     summary and the ruled frame it sat in are gone. The dates already say
-     how many exams there are and how far apart they fall. */
+  /* The dated list and nothing above it: the dates already say how many exams
+     there are and how far apart they fall. */
   :global(.exam-empty) {
     margin: 0 0 var(--space-2);
   }
@@ -797,32 +729,27 @@ const programOptionsJson = JSON.stringify(programOptions).replaceAll("<", "\\u00
     margin-bottom: var(--space-6);
   }
 
-  /* A LEASE, not a layout — the same instrument `/emne/[code]/` uses, for the
-     same reason and with the same honesty clause: it holds the space the dated
-     list is about to need while the bundles are in flight, and `renderGridAndExams`
-     hands it back the moment the list is showing whatever it will finally show,
-     including "Ingen eksamensdatoer" and a failed fetch. Nothing is left
-     holding a hole open under a short answer.
+  /* A LEASE, not a layout — the same instrument `/emne/[code]/` uses, with the
+     same honesty clause: it holds the space the dated list is about to need
+     while the bundles are in flight, and `renderGridAndExams` hands it back the
+     moment the list shows whatever it will finally show, including a failed
+     fetch. Nothing is left holding a hole open under a short answer.
 
-     Sized per PLANNED COURSE rather than per exam, because the number of exams
-     is exactly what we are waiting to find out. Measured 65px per course on the
-     seeded five-course plan (rows plus the connectors hung between them);
-     3.5rem is deliberately under it — a list that runs longer than its
-     reservation nudges the page down, which is the direction that does not
-     snatch content out from under a thumb.
+     Sized per PLANNED COURSE, because the number of exams is exactly what we
+     are waiting to find out. Measured 65px per course; 3.5rem is deliberately
+     under it, so a longer list nudges the page down rather than snatching
+     content out from under a thumb.
 
      On a phone this is the one that matters: `.planner-below` is a single
-     column there, so an exam list arriving pushes the whole Emner section down
-     with it (0.069 of the 0.61 measured). On a wide screen the two are side by
-     side and it pushes nothing. */
+     column there, so an arriving exam list pushes the whole Emner section
+     down. */
   .planner-exam-list[data-reserve] {
     min-height: calc(var(--plan-courses) * 3.5rem);
   }
 
-  /* A narrow column wraps the row — the vurderingsform drops under the code —
-     so the same five exams measure 400px here against 325px wide. Measured,
-     not scaled: this is the width where `.planner-below` is one column and the
-     list is the thing pushing Emner down, so it is the one that has to be right. */
+  /* A narrow column wraps the row, so the same five exams measure 400px here
+     against 325px wide. Measured, not scaled: this is the width where the list
+     is the thing pushing Emner down. */
   @media (max-width: 46rem) {
     .planner-exam-list[data-reserve] {
       min-height: calc(var(--plan-courses) * 4.85rem);
@@ -831,13 +758,12 @@ const programOptionsJson = JSON.stringify(programOptions).replaceAll("<", "\\u00
 
   /* Rendered synchronously from the store at mount, so this bridges paint to
      mount and nothing further; `renderCourseRows` drops it on its first pass.
-     One row per stored course — dropped ones included, they still draw a row —
-     at a little under the 52px they measure. */
+     One row per stored course, dropped ones included, a little under 52px. */
   .planner-course-rows[data-reserve] {
     min-height: calc(var(--plan-courses) * 3rem);
   }
 
-  /* --- The month band (REWORK-2026-07-29c) ------------------------------- */
+  /* --- The month band ------------------------------- */
 
   /* One row per month, one cell per day. It answers "how clustered is this"
      before a date is read, for about 40 px. */
@@ -886,22 +812,19 @@ const programOptionsJson = JSON.stringify(programOptions).replaceAll("<", "\\u00
   }
 
   /* A colliding day keeps BOTH courses' hues (examList.ts sets the split fill
-     inline) and takes a ring instead of a red fill. A flat red square says
-     "something collides" and throws away the fact you would act on — which
-     two. The ring is a different KIND of mark from a fill, which is what lets
-     it out-shout five hues without erasing them (Red-Is-Collision). */
+     inline) and takes a ring instead of a red fill: a flat red square says
+     "something collides" and throws away the fact you would act on. A ring is a
+     different KIND of mark from a fill (Red-Is-Collision). */
   :global(.exam-band-day.is-clash) {
     box-shadow: 0 0 0 1px var(--clash);
   }
 
   /* --- The list: one rule, and it runs along the list -------------------- */
 
-  /* Three gaps used to draw NINE horizontal rules — each connector had a
-     border above, a border below and a bar through the middle. A rule across a
-     list divides it; a gap is not a division between two exams, it is the
-     distance between them, and distance runs along the list. So the only rule
-     left is vertical, the exams are knots on it, and the gaps hang between
-     them. */
+  /* A rule across a list divides it; a gap is not a division between two exams,
+     it is the distance between them, and distance runs along the list. So the
+     only rule left is vertical, the exams are knots on it, and the gaps hang
+     between them. */
   :global(.exam-list) {
     --exam-date-col: 6.5rem;
     --exam-knot: 20px;
@@ -922,11 +845,10 @@ const programOptionsJson = JSON.stringify(programOptions).replaceAll("<", "\\u00
     background: var(--border-strong);
   }
 
-  /* Two columns: the date, then the exam. A dated row has nothing else to say
-     — the countdown that used to need a third one is a segment on the rule now
-     (`awayLine`). Keeping the column "just in case" was not free either: an
-     `auto` track collapses to zero, but its gap does not, and those 16 px were
-     exactly what pushed "Skriftlig skoleeksamen" onto a second line at 390 px. */
+  /* Two columns: the date, then the exam. The countdown that used to need a
+     third is a segment on the rule now. Keeping the column "just in case" was
+     not free: an `auto` track collapses to zero but its gap does not, and those
+     16 px pushed "Skriftlig skoleeksamen" onto a second line at 390 px. */
   :global(.exam-row) {
     display: grid;
     grid-template-columns: var(--exam-date-col) minmax(0, 1fr);
@@ -1004,10 +926,10 @@ const programOptionsJson = JSON.stringify(programOptions).replaceAll("<", "\\u00
     color: var(--faint);
   }
 
-  /* The first segment — today to the next exam. Same rule, same indent as the
-     lesedager connectors below it, so the list reads as one chain of
-     distances; never `is-tight`'s red, because how far off an exam is says
-     nothing about how much room there is to revise. */
+  /* The first segment — today to the next exam. Same rule and indent as the
+     lesedager connectors, so the list reads as one chain of distances; never
+     `is-tight`'s red, because how far off an exam is says nothing about how
+     much room there is to revise. */
   :global(.exam-gap.is-away) {
     color: var(--muted);
   }
@@ -1028,7 +950,7 @@ const programOptionsJson = JSON.stringify(programOptions).replaceAll("<", "\\u00
     padding-inline-start: calc(var(--exam-date-col) + var(--gap-4) + var(--exam-knot));
   }
 
-  /* --- The load strip (REWORK-2026-07-29d) ------------------------------ */
+  /* --- The load strip ------------------------------ */
 
   /* Same shape as the exam band over the exam list: a drawing that answers the
      section's question, then the rows that answer it precisely. */
@@ -1037,10 +959,9 @@ const programOptionsJson = JSON.stringify(programOptions).replaceAll("<", "\\u00
     margin-bottom: var(--space-2);
   }
 
-  /* The track's own height, held while the strip is still empty — otherwise
-     the first segment being drawn shoves every course row down 23px. Keyed on
-     the probe so a page with no plan reserves nothing: there, the strip is
-     genuinely not coming. */
+  /* The track's own height, held while the strip is still empty — otherwise the
+     first segment shoves every course row down 23px. Keyed on the probe so a
+     page with no plan reserves nothing. */
   .planner-load:empty {
     min-height: calc(var(--plan-any) * 15px);
     margin-bottom: calc(var(--plan-any) * var(--space-2));
@@ -1056,8 +977,7 @@ const programOptionsJson = JSON.stringify(programOptions).replaceAll("<", "\\u00
   }
 
   /* Printed ink, exactly like a week bar and an exam-band cell, so one course
-     is one colour in all three places. `flex-grow` is the credits, written
-     inline by `renderCreditStrip`. */
+     is one colour in all three places. `flex-grow` is the credits. */
   :global(.planner-load-seg) {
     flex-basis: 0;
     background: color-mix(in srgb, var(--dot) var(--block-mix), var(--block-base));
@@ -1081,16 +1001,14 @@ const programOptionsJson = JSON.stringify(programOptions).replaceAll("<", "\\u00
     margin-bottom: var(--space-3);
   }
 
-  /* Four columns — chip, name, credits, settings — and NO horizontal rule.
-     Five courses used to draw five borders, dividing up what is one thing:
-     your semester. A vertical rule was tried instead and rejected for saying
-     something untrue: a rule with knots on it encodes *sequence*, and a course
-     list is a set, not a timeline (the exam list is the one with an order).
+  /* Four columns — chip, name, credits, settings — and NO horizontal rule. Five
+     borders divide up what is one thing: your semester. A vertical rule was
+     tried and rejected for saying something untrue: a rule with knots on it
+     encodes *sequence*, and a course list is a set, not a timeline.
 
-     The row itself is inert. It used to be a full-width `<button>`, which gave
-     the whole row a pointer cursor and a hover wash while showing nothing that
-     looked pressable — an affordance the row's appearance never promised. The
-     one target is the settings button at its end. */
+     The row itself is inert. As a full-width `<button>` it had a pointer cursor
+     and a hover wash while showing nothing pressable. The one target is the
+     settings button at its end. */
   :global(.planner-course-row) {
     display: grid;
     grid-template-columns: auto minmax(0, 1fr) auto auto;
@@ -1099,10 +1017,9 @@ const programOptionsJson = JSON.stringify(programOptions).replaceAll("<", "\\u00
     padding: var(--space-2) 0;
   }
 
-  /* The one interactive thing in the row, and it looks it: a real target at
-     the touch size the tokens already define, revealed to full ink on hover.
-     It is quiet at rest because five of them down a rail would out-shout the
-     courses they belong to. */
+  /* The one interactive thing in the row, and it looks it: a real target at the
+     touch size the tokens define, revealed to full ink on hover. Quiet at rest
+     because five of them down a rail would out-shout the courses. */
   :global(.planner-course-open) {
     color: var(--faint);
     flex: none;
@@ -1138,18 +1055,16 @@ const programOptionsJson = JSON.stringify(programOptions).replaceAll("<", "\\u00
   }
 
   /* A dropped course is still a course: the chip keeps its shape and loses its
-     fill, so the row reads as switched off rather than as missing (§0.3). */
-  /* No ring either: the chip loses its fill and its text goes faint, which is
-     what "grayed out" means here. The row still names the course and still
-     says "droppet" beside it. */
+     fill, so the row reads as switched off rather than as missing (§0.3). No
+     ring either — the fill going and the text going faint is what "grayed out"
+     means here. */
   :global(.planner-course-row.is-dropped .planner-course-chip) {
     background: transparent;
     color: var(--faint);
   }
 
-  /* `anywhere` is the floor, not the plan: with the full measure almost every
-     name wraps at a space, but a single 21-character word is still wider than
-     the rail at the narrowest widths it reaches. */
+  /* `anywhere` is the floor, not the plan: almost every name wraps at a space,
+     but a single 21-character word is wider than the rail at its narrowest. */
   :global(.planner-course-name) {
     display: grid;
     gap: 1px;
@@ -1166,8 +1081,7 @@ const programOptionsJson = JSON.stringify(programOptions).replaceAll("<", "\\u00
   }
 
   /* Right-aligned in its own column so the figures stack into something a
-     student can add up by eye — which is the only reason this list quotes
-     credits at all. */
+     student can add up by eye. */
   :global(.planner-course-sp) {
     font-size: var(--text-xs);
     color: var(--faint);
@@ -1175,10 +1089,9 @@ const programOptionsJson = JSON.stringify(programOptions).replaceAll("<", "\\u00
     white-space: nowrap;
   }
 
-  /* The attention mark sits under the name, so the credit column stays a
-     column of figures. Ink, not red — it is an invitation to open the row, and
-     Red-Is-Collision keeps red for two things that cannot coexist. Not green
-     either: "se detaljer" is a thing to do, not a verdict (REWORK-2026-07-30). */
+  /* The attention mark sits under the name, so the credit column stays a column
+     of figures. Ink, not red — it is an invitation to open the row. Not green
+     either: "se detaljer" is a thing to do, not a verdict. */
   :global(.planner-course-flag) {
     font-size: var(--text-xs);
     color: var(--ui);
@@ -1195,20 +1108,18 @@ const programOptionsJson = JSON.stringify(programOptions).replaceAll("<", "\\u00
   }
 
   /* --- Add-course button --------------------------------------------------
-     The inline typeahead is gone (Task 12) — one button opens the dialog
-     addCourse.ts builds itself (its CSS lives in site.css, alongside the
-     studieinfo modal it's modeled on). */
+     One button opens the dialog addCourse.ts builds itself (its CSS lives in
+     site.css, alongside the studieinfo modal it is modeled on). */
 
   .planner-add-course-btn {
     align-self: flex-start;
   }
 
   /* --- "Fra studieplanen" panel -----------------------------------------
-     Design §8: the study plan's choice groups with their VERBATIM prose
-     (DR-5 — never assert "group satisfied"), collapsed by default so it never
-     buries the plan itself. Only shown when a programme is set and the period
-     has choice groups. Rows reuse the add-dialog's code · name · credits +
-     add-affordance pattern, simplified. */
+     The study plan's choice groups with their VERBATIM prose (DR-5 — never
+     assert "group satisfied"), collapsed by default so it never buries the plan
+     itself. Shown only when a programme is set and the period has choice
+     groups. */
   .planner-plan-panel {
     margin-top: var(--space-4);
   }
@@ -1261,7 +1172,7 @@ const programOptionsJson = JSON.stringify(programOptions).replaceAll("<", "\\u00
     justify-self: end;
   }
 
-  /* Only present when the join has a gap to admit (REWORK-2026-07-30e), so it
+  /* Only present when the join has a gap to admit, so it
      is spaced as a note that arrived rather than as a permanent footer. */
   .planner-provenance:not([hidden]) {
     max-width: none;
@@ -1280,11 +1191,10 @@ const programOptionsJson = JSON.stringify(programOptions).replaceAll("<", "\\u00
   import { onPage } from "../../lib/pageLifecycle.ts";
   import semestersData from "../../../data/semesters.json";
 
-  // Must run per page-load, not once per module: under ClientRouter this
-  // module is evaluated only the first time it is fetched, so mounting at
-  // top level left the planner an empty shell after any in-site navigation
-  // back to it ("the plan is gone"). `mountPlannerApp` owns the single store
-  // and mounts the studieinfo modal + block popover itself.
+  // Must run per page-load, not once per module: under ClientRouter this module
+  // is evaluated only the first time it is fetched, so mounting at top level
+  // left the planner an empty shell after any in-site navigation back to it.
+  // `mountPlannerApp` owns the single store and mounts its modals itself.
   onPage((signal) => {
     const optionsEl = document.getElementById("planner-program-options");
     if (!optionsEl) return;

@@ -1,22 +1,18 @@
 /**
- * Ruteark primitives — the .np-* vocabulary. One interaction grammar:
- * flat at rest; hover answers on the surface (paper darkens a step, bare
- * controls take an ink wash) with text lighting to full ink; press
- * dips 1px; focus is the global 2px --ui outline. Interactive controls
- * never carry borders (hairlines are structure).
+ * Ruteark primitives — the .np-* vocabulary. One interaction grammar: flat at
+ * rest; hover answers on the surface (paper darkens a step, bare controls take
+ * an ink wash) with text lighting to full ink; press dips 1px; focus is the
+ * global 2px --ui outline. Interactive controls never carry borders (hairlines
+ * are structure).
  *
- * The press dip lives on the controls themselves, not on an opt-in class:
- * a grammar three of twenty controls remembered to import was not a
- * grammar. `.np-press` stays as the escape hatch for one-off pressables.
+ * The press dip lives on the controls themselves, not on an opt-in class.
+ * `.np-press` stays as the escape hatch for one-off pressables.
  *
- * Two small-text classes, and the split is Data-Is-Mono, not size:
- *   .np-note — a mono *fragment* a student could copy: "uke 38–40", "0 sp",
- *              "dato ikke satt", "kull 2026".
- *   .np-hint — a *sentence* in the grotesk: "Ingen forelesninger funnet i
- *              denne uka." Anything with a verb belongs here.
- * `.np-note-clash` is a sentence too (it has to name both things that
- * collide), so it is set in the grotesk with `.np-data` spans around the
- * day, time and week it quotes.
+ * Two small-text classes, split by Data-Is-Mono, not size:
+ *   .np-note — a mono *fragment* a student could copy: "uke 38–40", "0 sp".
+ *   .np-hint — a *sentence* in the grotesk. Anything with a verb belongs here.
+ * `.np-note-clash` is a sentence too, so grotesk with `.np-data` spans around
+ * the day, time and week it quotes.
  */
 
 /* --- State --------------------------------------------------------- */
@@ -24,23 +20,16 @@
 /* `hidden` is a state, not a hint — but the UA declares it at UA origin, so
  * ANY author `display` beats it whatever the specificity. Most of the
  * vocabulary below declares one (`.np-btn` is `inline-flex`), so
- * `button.hidden = true` hid nothing: the add dialog painted "Legg til" +
- * "Lagt til ✓" + "Fjern" in one row, and a suppressed "Velg fra studieplanen"
- * stayed 160x36 and fully clickable over a plan with no study plan
- * (copy-5 / edit-2 / modals-1 / ux-fail-8 / plan-8 — five reported symptoms,
- * this one cause).
+ * `button.hidden = true` hid nothing: a row painted "Legg til", "Lagt til ✓"
+ * and "Fjern" at once, and a suppressed button stayed 160x36 and clickable.
  *
- * It is `!important` because that is the only form that holds for every
- * primitive *and* every component class composed onto one (site.css and the
- * pages' scoped blocks both load after this file and both set `display`).
- * The alternative was the per-component patch this replaces — site.css
- * carried `.studieinfo-dialog [hidden]` with this exact reasoning written
- * out, while five other call sites went unpatched.
+ * `!important` is the only form that holds for every primitive *and* every
+ * component class composed onto one (site.css and the pages' scoped blocks both
+ * load after this file and both set `display`).
  *
- * Nothing in the repo styles a `[hidden]` element to be visible (the only
- * other `[hidden]` selectors are `:not([hidden])` layout rules, which are
- * unaffected). Something that must stay laid out while hidden wants its own
- * state class, not this attribute. */
+ * Nothing in the repo styles a `[hidden]` element to be visible. Something that
+ * must stay laid out while hidden wants its own state class, not this
+ * attribute. */
 [hidden] {
   /* biome-ignore lint/complexity/noImportantStyles: beating the UA origin is
      the whole point — see the block comment above. Same sanctioned exception
@@ -113,20 +102,17 @@
 }
 
 /* Pressed is a SELECTION, not a verdict, so it fills with ink (18.62:1 under
-   paper text — the accent fill it replaces measured 4.39 and needed its own
-   darker token to clear AA at all). */
+   paper text; the accent fill it replaces measured 4.39). */
 .np-btn[aria-pressed="true"],
 .np-btn.is-active {
   background: var(--ui);
   color: var(--ui-contrast);
 }
 
-/* A fixed --control-h box — so nothing about it shrinks. `flex: none` is the
+/* A fixed --control-h box, so nothing about it shrinks. `flex: none` is the
    load-bearing half: as a direct flex child of .site-topbar the theme toggle
-   collapsed to a 7 px sliver at 360 px and 15 px at 390 px (its glyphs are
-   grid-stacked <svg>s with no min-content of their own), which is not a tap
-   target at all — dark mode was simply unreachable on the commonest phone
-   width (mob-1). */
+   collapsed to a 7 px sliver at 360 px (its glyphs are grid-stacked <svg>s with
+   no min-content of their own), so dark mode was unreachable on a phone. */
 .np-icon-btn {
   display: inline-flex;
   flex: none;
@@ -238,11 +224,10 @@ button.np-tag:hover {
     color var(--dur-fast) var(--ease);
 }
 
-/* Same control, but for a proper name rather than a code. Uppercased tracked
-   mono is a label voice; "Visuell databehandling" set that way is a
-   20-character phrase in 11.5px caps that wraps to two rows and stops being
-   a name. Fills and aria-pressed behaviour are unchanged — only the voice.
-   Do NOT also .toUpperCase() the text: the transform is the CSS's job. */
+/* Same control, but for a proper name rather than a code: uppercased tracked
+   mono is a label voice, and a 20-character phrase set that way wraps to two
+   rows and stops being a name. Do NOT also .toUpperCase() the text — the
+   transform is the CSS's job. */
 .np-toggle--text {
   font-family: var(--font-sans);
   font-size: var(--text-sm);
@@ -262,9 +247,7 @@ button.np-tag:hover {
 
 /* --- Fields -------------------------------------------------------- */
 
-/* The fill is the whole field. It used to carry a 2px inline-start rule as
-   well (an inset shadow, then briefly a painted gradient); both are gone, and
-   nothing replaced them. A field is paper one step off the page with the
+/* The fill is the whole field. A field is paper one step off the page with the
    instrument corner, and that is all. */
 .np-field {
   display: flex;
@@ -285,10 +268,8 @@ button.np-tag:hover {
 /* `align-self: stretch` is a hit-target rule, not a layout one. The field is
    44 px tall on a coarse pointer but `align-items: center` left the input its
    own 21 px line box in the middle, so the top and bottom 11.6 px of a control
-   that LOOKS 44 px tall did nothing on tap — a real tap at y+3 landed on
-   <body> and no keyboard appeared, with nothing on screen to explain why. The
-   field is a bare <div> with no wrapping <label>, so nothing else picked the
-   tap up (mob-7). */
+   that LOOKS 44 px tall did nothing on tap. The field is a bare <div> with no
+   wrapping <label>, so nothing else picked the tap up. */
 .np-field input {
   flex: 1;
   align-self: stretch;
@@ -318,9 +299,8 @@ button.np-tag:hover {
 }
 
 /* Floating list surface for the typeahead comboboxes. On --card, never
-   --card-nested: nested is the *recessed* step, and in dark it is lighter
-   than --card, so a popover built on it inverts its relationship to the
-   page between themes. Override the height with --popover-max. */
+   --card-nested: nested is the *recessed* step and is lighter than --card in
+   dark, so a popover built on it inverts between themes. */
 .np-popover {
   list-style: none;
   max-height: var(--popover-max, 18rem);
@@ -344,25 +324,21 @@ button.np-tag:hover {
   background: var(--card-hover);
 }
 
-/* --- The masthead of a card (REWORK-2026-07-30 "Kvittering") ---------------
+/* --- The masthead of a card ----------------------------------------------
 
    Every floating surface in the planner opens on the same band: what this is,
-   its quiet second line, and the way out of it, full-bleed against the
-   frame's own edge, which is why the frame below clips its corners and every
-   `<dialog>` using this pads its BODY rather than itself.
+   its quiet second line, and the way out, full-bleed against the frame's edge —
+   which is why the frame clips its corners and every `<dialog>` using this pads
+   its BODY rather than itself.
 
    Two grounds, and which one a surface takes says what it is about:
 
-    - `.np-head` is paper one step down with a hairline under it. Structure by
-      tonal step, exactly as Ink-Before-Chrome has it: for a surface whose
-      subject has no colour of its own (the studieinfo modal: a programme is
-      not a course and has no hue).
-    - `.np-head--printed` is the course's own printed fill with the text
-      knocked out of it, the same arithmetic `.planner-block` uses, so a card
-      about a course reads as the bar you pressed. The hue is a FILL here,
-      never text (DESIGN §8), and `--dot` is set per open by the call site.
-      `.np-head--reduced` is the øving/lab strength of the same fill, so a
-      muted bar's card is muted too (DR-1's display layer). */
+    - `.np-head` is paper one step down with a hairline under it, for a subject
+      with no colour of its own (a programme is not a course).
+    - `.np-head--printed` is the course's own printed fill with the text knocked
+      out, the same arithmetic `.planner-block` uses, so a card about a course
+      reads as the bar you pressed. The hue is a FILL here, never text (DESIGN
+      §8). `.np-head--reduced` is the øving/lab strength of the same fill. */
 .np-head {
   display: flex;
   align-items: flex-start;
@@ -408,9 +384,8 @@ button.np-tag:hover {
   color: color-mix(in srgb, currentcolor 74%, transparent);
 }
 
-/* `.np-icon-btn` rests at `--muted` with a `--fg`-mixed wash; on a printed
-   band both are invisible, so inside a head it is knocked out of whatever the
-   band is. */
+/* `.np-icon-btn` rests at `--muted` with a `--fg`-mixed wash; on a printed band
+   both are invisible, so inside a head it is knocked out of the band. */
 .np-head .np-icon-btn {
   flex-shrink: 0;
   color: inherit;
@@ -425,9 +400,8 @@ button.np-tag:hover {
 
    A hairline, then what you can do about what is above it. `--split` pushes a
    pair apart when they are different KINDS of thing: a verb that changes the
-   plan on one side, the way out to another page on the other; two verbs
-   (Lagre/Avbryt) stay together at the start, where the primary one is the
-   first thing under the last field. */
+   plan on one side, the way out to another page on the other. Two verbs stay
+   together at the start. */
 .np-actions {
   display: flex;
   align-items: center;
@@ -466,9 +440,7 @@ button.np-tag:hover {
 /* --- A fact, and the line that qualifies it -------------------------------
 
    The card's replacement for a label column: a room over its building, a
-   parallel over "one of three", credits over where the course came from.
-   `NÅR / ROM / HVA / UKER` spent a third of a 20 rem card naming facts that
-   say what they are. */
+   parallel over "one of three", credits over where the course came from. */
 .np-fact {
   display: grid;
   gap: 1px;
@@ -488,10 +460,10 @@ button.np-tag:hover {
   color: var(--muted);
 }
 
-/* Planning surface: the paper spread with squared ruling and a frame.
-   Ruling appears here and nowhere else (Ruling-Marks-The-Plan rule) — and
-   since f86105b that means the homepage proof panel, not the week; the week's
-   ruling is reduced to a single hour line drawn in planner-week.css. */
+/* Planning surface: the paper spread with squared ruling and a frame. Ruling
+   appears here and nowhere else (Ruling-Marks-The-Plan) — which now means the
+   homepage proof panel, not the week; the week's ruling is a single hour line
+   drawn in planner-week.css. */
 .np-frame {
   background: var(--bg);
   border: 1px solid var(--border-strong);
@@ -499,19 +471,11 @@ button.np-tag:hover {
   overflow: hidden;
 }
 
-/* DELETED: `.np-ruled` and `.np-ruled--hours`, the squared field.
-   `--hours` went first (ds-4) with zero callers. `.np-ruled` itself had one
-   left, the landing page's picture of a plan, and that picture is gone
-   (REWORK-2026-07-30d) because a fake window showing two invented courses is
-   not evidence of anything.
-
-   The week retired the squared ruling in f86105b and hand-rolls the surviving
-   hour line in planner-week.css, anchored to the box whose top edge IS the
-   grid's origin. A contributor reaching for a ruling primitive would have got
-   a 15-minute square field plus a second hour rule tiled from a different
-   origin: the ~22 px misregistration that file documents. One implementation,
-   in the file that owns the surface. The `--cell` token stays, because that
-   file measures with it. */
+/* There is no `.np-ruled` primitive. The week hand-rolls its surviving hour
+   line in planner-week.css, anchored to the box whose top edge IS the grid's
+   origin; a shared 15-minute square field tiled from a different origin was a
+   ~22 px misregistration. One implementation, in the file that owns the
+   surface. The `--cell` token stays, because that file measures with it. */
 
 /* --- Disclosure ---------------------------------------------------- */
 
@@ -553,9 +517,8 @@ details[open] > .np-summary::before {
 }
 
 /* The same disclosure as a plain button, for the places a real <details> will
-   not go — `/emner/`'s not-taught group is a row inside the results table, and
-   a <details> cannot wrap a set of <tr>s. `aria-expanded` is what carries the
-   state there, so it drives the chevron the way `[open]` does above. */
+   not go — `/emner/`'s not-taught group is a set of <tr>s. `aria-expanded`
+   carries the state there and drives the chevron the way `[open]` does. */
 button.np-summary[aria-expanded="true"]::before {
   transform: rotate(135deg);
 }

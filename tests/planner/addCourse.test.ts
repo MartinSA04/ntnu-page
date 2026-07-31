@@ -1,12 +1,9 @@
 /**
- * `addCourseRowControl` — the add-course modal's row logic, extracted from
- * `mountAddCourse` so it is testable without a DOM (this repo has no
- * jsdom/happy-dom). Everything below is driven against a *real* plan store
- * on in-memory storage, so a mis-wired verb (calling `removeCourse` where
- * `dropCourse` belongs) fails here rather than in a browser.
- *
- * The rendering half — one persistent button instead of the old hidden
- * add/added/remove triple (copy-5/a11y-2) — is not covered here; it is DOM.
+ * `addCourseRowControl` — the add-course modal's row logic, extracted so it is
+ * testable without a DOM. Driven against a *real* plan store on in-memory
+ * storage, so a mis-wired verb (calling `removeCourse` where `dropCourse`
+ * belongs) fails here rather than in a browser. The rendering half is DOM and
+ * is not covered here.
  */
 import { beforeEach, describe, expect, it } from "vitest";
 import { addCourseRowControl } from "../../src/components/planner/addCourse.js";
@@ -62,7 +59,7 @@ describe("addCourseRowControl", () => {
     store.addCourse(TDT4109);
     const control = addCourseRowControl(store, TDT4109);
     expect(control.label).toBe("Fjern");
-    // copy-6: DESIGN §7's mandated half of the pair, not "Lagt til ✓".
+    // DESIGN §7's mandated half of the pair, not "Lagt til ✓".
     expect(control.state).toBe("I planen");
     expect(control.stateKind).toBe("added");
 
@@ -70,13 +67,13 @@ describe("addCourseRowControl", () => {
     expect(store.loadPlan().courses).toEqual([]);
   });
 
-  // edit-3/modals-3: the modal called `removeCourse` regardless of source.
+  // /the modal called `removeCourse` regardless of source.
   it("offers 'Dropp' for a programme course, and drops rather than deletes it", () => {
     store.setProgramPlan({ code: "MTDT", name: "Datateknologi", cohort: 2026 }, [TDT4109]);
     const control = addCourseRowControl(store, TDT4109);
     expect(control.label).toBe("Dropp");
     expect(control.state).toBe("fra programmet");
-    // modals-4's CSS half: the tone split needs a hook CSS can select on.
+    // 's CSS half: the tone split needs a hook CSS can select on.
     expect(control.stateKind).toBe("program");
 
     expect(control.run()).toBe("TDT4109 droppet, men fortsatt en del av programmet.");
@@ -85,7 +82,7 @@ describe("addCourseRowControl", () => {
     ]);
   });
 
-  // edit-3/modals-3, the half that made the old bug invisible: a hard delete
+  // /the half that made the old bug invisible: a hard delete
   // left no `dropped` marker, so the next study-plan derive put the course
   // straight back with the credit total restored and no explanation.
   it("survives the next study-plan derive instead of silently reverting", () => {
@@ -107,7 +104,7 @@ describe("addCourseRowControl", () => {
     expect(addCourseRowControl(store, TDT4109).label).toBe("Legg tilbake");
   });
 
-  // modals-4: `hasCourse` reports a dropped course as present, so the row
+  // `hasCourse` reports a dropped course as present, so the row
   // asserted "Lagt til ✓" and its only control was inert.
   it("offers 'Legg tilbake' for a dropped programme course, and restores it", () => {
     store.setProgramPlan({ code: "MTDT", name: "Datateknologi", cohort: 2026 }, [TDT4109]);

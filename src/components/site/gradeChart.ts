@@ -1,40 +1,25 @@
 /**
- * KARAKTERER — the grade-distribution figure on `/emne/[code]/`.
+ * KARAKTERER — the grade-distribution figure on `/emne/[code]/`, from DBH table
+ * 308 via the worker.
  *
- * The worker has served `/api/course/:code/grades` (DBH table 308, cached for
- * a semester) since the API layer was built and nothing had ever rendered it.
+ * **Small multiples, one bar chart per semester.** A 100 %-stacked bar needs
+ * six mutually distinguishable colours for A–F, and the palette validator
+ * rejected every such ramp this design system can build (best adjacent pair
+ * ΔE 6.9 against a 15 floor). Small multiples need exactly ONE colour and stay
+ * comparable through a shared y-scale.
  *
- * **Form: small multiples, one simple bar chart per semester.** The obvious
- * alternative — a 100 %-stacked bar per semester — needs six mutually
- * distinguishable colours for A–F, and the palette validator rejected every
- * such ramp built from this design system: the best adjacent pair came out at
- * ΔE 6.9 for normal vision, well under the 15 floor. Small multiples need
- * exactly ONE colour for the whole figure, so the problem disappears and the
- * charts stay comparable through a shared y-scale instead.
+ * **`--hue-blue`, deliberately not red for F** — Red-Is-Collision reserves red
+ * for coexistence failures. Every bar carries its own percentage, so the figure
+ * needs no y-axis and no legend.
  *
- * **Colour: `--hue-blue`, and deliberately not red for F.** DESIGN.md's
- * Red-Is-Collision reserves red for coexistence failures; a fail rate is not a
- * collision. The token is already theme-aware (#205ea6 / #4385be) and both
- * steps pass the validator's six checks against their own surface.
+ * **The shared scale is per grade scale**: a pass/fail term peaks near 100 % by
+ * construction and flattened every letter chart beside it to a 4–29 px stub.
+ * Semesters under `MIN_CHART_CANDIDATES` neither set the scale nor get bars.
  *
- * Every bar is labelled with its own percentage, so the figure needs no y-axis
- * and no legend: six bars is not a dense series, and the labels are also the
- * table view an unlabelled chart would owe.
- *
- * **What the shared scale is shared across.** One peak per grade scale, not
- * one per figure: a covid-era pass/fail term peaks near 100 % by construction
- * and used to flatten every letter chart beside it to a 4–29 px stub
- * (course-5/cpc-5). Semesters too small to carry a share (under
- * `MIN_CHART_CANDIDATES`) neither set the scale nor get bars — an n=3 term
- * drew the tallest bar on the page for a single candidate's grade.
- *
- * **What is not drawn at all.** DBH files the utsatt/kont sitting as its own
- * (year, semester), so a spring-taught course grows an autumn "semester" of
- * candidates who already failed once — newest, therefore leading the figure,
- * therefore read as this course's current difficulty (pc-2/cpc-6). Those
- * sittings are held out and named in a note. Which seasons are ordinary comes
- * from the scraped exam `occasion` via `isDeferredOccasion`, the same signal
- * (and the same fail-open stance) DR-3 uses on the planner's exam list.
+ * **Not drawn at all**: DBH files the utsatt/kont sitting as its own (year,
+ * semester), so it leads the figure as the newest and reads as current
+ * difficulty. Held out and named in a note, using the same signal and
+ * fail-open stance DR-3 uses on the exam list.
  */
 
 import {
@@ -53,12 +38,11 @@ import { isDeferredOccasion } from "../planner/examList.js";
 import { detailsUrl } from "./courseDetails.js";
 
 /**
- * Ordinary semesters kept at all — three years for a course taught in both
- * terms, six for a one-term one. The cap counts ordinary sittings only, so
+ * Ordinary semesters kept at all. The cap counts ordinary sittings only, so
  * holding the utsatt ones out lengthens the history rather than shortening it.
  */
 const MAX_SEMESTERS = 6;
-/** Charts shown up front; the rest fold into a disclosure (course-4). */
+/** Charts shown up front; the rest fold into a disclosure. */
 const VISIBLE_SEMESTERS = 3;
 /** Chart plot height in px. The bars scale within this. */
 const PLOT_HEIGHT = 96;
@@ -69,9 +53,9 @@ function formatPercent(value: number): string {
 }
 
 /**
- * The caption's right-hand fact. The scale is named where it is not the
- * A–F one a reader assumes, because two bars at "82,5 %" and "20,8 %" are
- * not comparable across scales however alike they look.
+ * The caption's right-hand fact. The scale is named where it is not the A–F one
+ * a reader assumes, because two bars at "82,5 %" and "20,8 %" are not
+ * comparable across scales however alike they look.
  */
 function countLabel(semester: GradeSemester): string {
   const base = `${semester.candidates} kandidater`;
@@ -154,17 +138,14 @@ function appendMasked(figure: HTMLElement, semester: GradeSemester): HTMLElement
 }
 
 /**
- * Which seasons this course holds an **ordinary** exam in, read off the
- * scraped exam list — "Vår 2026" → "Vår". Null when we cannot tell, and then
- * nothing is held out of the figure.
+ * Which seasons this course holds an **ordinary** exam in, read off the scraped
+ * exam list. Null when we cannot tell, and then nothing is held out.
  *
- * Fetched after the grades, not alongside them, and through `detailsUrl` so
- * it is byte-identical to the request `mountCourseDetails` makes: that one is
- * already in flight when the page mounts and the worker sends it
- * `max-age=300`, so by the time DBH answers this second read is a browser
- * cache hit. Issuing it in parallel, or on a differently-shaped URL, would
- * guarantee a duplicate request instead. Any failure is answered with null —
- * DR-3's fail-open rule: a sitting we cannot classify keeps its place.
+ * Fetched after the grades and through `detailsUrl`, so it is byte-identical to
+ * the request `mountCourseDetails` already has in flight; with the worker's
+ * `max-age=300` this second read is a browser cache hit. In parallel, or on a
+ * differently-shaped URL, it would guarantee a duplicate request. Any failure
+ * is answered with null — DR-3's fail-open rule.
  */
 async function fetchOrdinarySeasons(
   code: string,
@@ -191,8 +172,8 @@ async function fetchOrdinarySeasons(
 
 /**
  * Fetches and renders the figure into `#grades-section`. Silent about its own
- * absence: a course DBH has never recorded (new, tiny, or purely externally
- * examined) says so in one line rather than rendering an empty frame.
+ * absence: a course DBH has never recorded says so in one line rather than
+ * rendering an empty frame.
  */
 export async function mountGradeChart(
   code: string,
@@ -218,10 +199,9 @@ export async function mountGradeChart(
 
     if (model.semesters.length === 0) {
       status.textContent = "Ingen karakterstatistikk registrert for dette emnet.";
-      // Hands back the height the placeholder was holding for the figure
-      // (perf-1). This branch KEEPS the status line on screen, so without the
-      // release a course DBH has never recorded would carry 36rem of empty
-      // page under one sentence, permanently — see [code].astro's own note.
+      // Hands back the height the placeholder held for the figure. This branch
+      // KEEPS the status line, so without the release a course DBH never
+      // recorded would carry 36rem of empty page under one sentence.
       status.removeAttribute("data-reserve");
       return;
     }
@@ -231,7 +211,7 @@ export async function mountGradeChart(
       renderSemester(semester, peaks.get(semester.scale) ?? 0);
 
     // Exactly one `.grades-grid`: the older half stacks inside a disclosure so
-    // the figure stops being the tallest thing on a phone (course-4).
+    // the figure stops being the tallest thing on a phone.
     const grid = el("div", "grades-grid");
     for (const semester of model.semesters.slice(0, VISIBLE_SEMESTERS))
       grid.append(chart(semester));
@@ -269,7 +249,7 @@ export async function mountGradeChart(
     if ((err as Error)?.name === "AbortError") return;
     status.textContent = "Fikk ikke hentet karakterstatistikk.";
     // Same lease, same reason: the apology stays visible, so the reservation
-    // under it has to go (perf-1).
+    // under it has to go.
     status.removeAttribute("data-reserve");
   }
 }

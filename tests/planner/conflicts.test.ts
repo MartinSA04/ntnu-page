@@ -225,7 +225,7 @@ describe("findConflicts — lecture-only (DR-1)", () => {
   });
 
   it("does not red BI1001 against TKT4116 — PBL is parallel group work, not a plenary", () => {
-    // conf-2's exact live geometry (2026_VÅR, both courses curled). BI1001
+    // 's exact live geometry (2026_VÅR, both courses curled). BI1001
     // publishes "Problembasert læring" across five mutually exclusive weekly
     // slots; two of them sit exactly on TKT4116's two lectures. While PBL was
     // hand-labeled a lecture this produced 2 conflict groups — a false red for
@@ -351,7 +351,7 @@ describe("findConflicts dedupe", () => {
   });
 
   it("keeps every clashing entry when distinct pairs share one overlap window", () => {
-    // conf-4, with the live geometry that produces it: TDT4109's only 26h
+    // with the live geometry that produces it: TDT4109's only 26h
     // lecture is Fri 12:15–13:00 (uke 34-35,45-46), and SYG1000 publishes
     // three Friday lectures that each cover it. All three intersections are
     // the identical window 12:15–13:00 over uke 34,35,45,46 — so a dedupe key

@@ -20,29 +20,26 @@ interface Props {
 const { course } = Astro.props;
 const catalogYear = catalogData.year;
 
-// C1: the catalog now unions two crawl years. A course missing from the
-// canonical year is a real course that simply is not taught this year — its
-// name, version, exams and timetable all belong to `offeredYears[0]`, and the
-// page has to say so rather than render an empty current-year week.
+// The catalog unions two crawl years. A course missing from the canonical year
+// is a real course that simply is not taught this year — its name, version,
+// exams and timetable all belong to `offeredYears[0]`, and the page has to say
+// so rather than render an empty current-year week.
 const offeredYears: number[] = course.offeredYears ?? [catalogYear];
 const isOffered = offeredYears.includes(catalogYear);
 const sourceYear = isOffered ? catalogYear : (offeredYears[0] ?? catalogYear);
 
 // Only the *catalog's* own semester is a build-time fact — which semester the
-// student is planning is client state, so nothing below the fold names one
-// (astro-1).
+// student is planning is client state, so nothing below the fold names one.
 const semester = semestersData.current;
 
 /**
- * crawler-7: `examOnly` is upstream's answer for the semester the catalog was
- * crawled in, but it is stored as a year-level course property — so /emne/
- * printed a bare "kun eksamen" beside the campus while the page's own week
- * rendered that course's spring lectures a few centimetres below (AAR4215:
- * 3 blocks, ETT1104: 17, all `term: "2026_VÅR"`). Naming the semester the
- * flag speaks for makes the two agree instead of contradicting each other,
- * and the year comes from the catalog the row came from, not the canonical
- * one. Not suppressed once the week resolves: for an exam-only course the
- * other term's teaching is exactly what the qualified badge predicts.
+ * `examOnly` is upstream's answer for the semester the catalog was crawled in,
+ * but it is stored as a year-level course property — so the page printed a bare
+ * "kun eksamen" while its own week rendered that course's spring lectures a few
+ * centimetres below. Naming the semester the flag speaks for makes the two
+ * agree, and the year comes from the catalog the row came from. Not suppressed
+ * once the week resolves: for an exam-only course the other term's teaching is
+ * exactly what the qualified badge predicts.
  */
 const examOnlySeason = semester.name.replace(/^(\d{4})\s+(.+)$/, "$2");
 
@@ -54,13 +51,12 @@ const SEASON_LABELS: Record<string, string> = {
 };
 
 /**
- * course-9: the catalog's exam array is raw upstream order with one row per
- * course *version*, so AE101124 led with 25. november over an assessment on
- * 2. oktober seven weeks earlier, and DRA3007 rendered four byte-identical
- * "eksamensdato ikke fastsatt" rows for two exams. Sorted by date with the
- * dateless last, deduped on the (season, date, continuation) triple — the
- * same rule `renderCreditReductions` already applies to the same upstream
- * per-version duplication.
+ * The catalog's exam array is raw upstream order with one row per course
+ * *version*, so a course led with a November date over an assessment seven
+ * weeks earlier and rendered four byte-identical "dato ikke fastsatt" rows for
+ * two exams. Sorted by date with the dateless last, deduped on the (season,
+ * date, continuation) triple — the same rule `renderCreditReductions` applies
+ * to the same per-version duplication.
  */
 function orderedExams(exams: typeof course.exams): typeof course.exams {
   const seen = new Set<string>();
@@ -131,11 +127,10 @@ const description = `${course.code} ${course.name}: timeplan, eksamen og nøkkel
           <span class="np-hint emne-plan-state" id="emne-plan-state" hidden />
         </>
       ) : (
-        /* crawler-3: a course that is not in this year's catalog has no
-           timetable and no details to fetch for it, so adding it produced a
-           plan row reading "fikk ikke hentet detaljer: Not found". The row in
-           the add dialog declines the same way (addCourse.ts) — this says so
-           instead of offering the dead end. */
+        /* A course that is not in this year's catalog has no timetable and no
+           details to fetch, so adding it produced a plan row reading "fikk ikke
+           hentet detaljer: Not found". The add dialog declines the same way —
+           this says so instead of offering the dead end. */
         <p class="np-hint emne-plan-off">
           Kan ikke legges til i planen — emnet er ikke undervist i {catalogYear}.
         </p>
@@ -228,15 +223,12 @@ const description = `${course.code} ${course.name}: timeplan, eksamen og nøkkel
     color: var(--muted);
     margin-bottom: var(--space-1);
   }
-  /* mob-4: 474 of 5 470 course names carry a 20+ character token
-     ("Reguleringsplanlegging", "Arkitektur- og prosjekteringskunnskap 1"),
-     and at 32 px in a 328 px column one of those overflows the h1 and takes
-     the whole document 18 px wider than a 360 px viewport — every section
-     below then slides sideways under a slightly diagonal swipe. The document
-     is `lang="nb"`, so `hyphens: auto` breaks where Norwegian breaks;
-     `break-word` is the fallback for a token with no break opportunity at
-     all. The size step below is for the same width: 2rem cannot set these
-     names on a phone. */
+  /* 474 of 5 470 course names carry a 20+ character token, and at 32 px in a
+     328 px column one of those overflows the h1 and takes the whole document
+     18 px wider than a 360 px viewport — every section below then slides
+     sideways under a slightly diagonal swipe. The document is `lang="nb"`, so
+     `hyphens: auto` breaks where Norwegian breaks; `break-word` is the fallback
+     for a token with no break opportunity at all. */
   .emne-title {
     margin-bottom: var(--space-2);
     overflow-wrap: break-word;
@@ -281,26 +273,20 @@ const description = `${course.code} ${course.name}: timeplan, eksamen og nøkkel
     margin-bottom: var(--space-3);
   }
 
-  /* perf-1: the three fetched sections each collapsed to a one-line "Henter
-     … …" and then expanded — 844 px → 3 181 px, CLS 0.26 on a warm local
-     worker and 0.61 on a realistic RTT, on the page that takes the most cold
-     traffic. The placeholder holds the space instead, exactly the way
-     `.emne-clash-slot` above already does for the verdict.
+  /* The three fetched sections each collapsed to a one-line "Henter … …" and
+     then expanded — 844 px → 3 181 px, CLS 0.26 warm and 0.61 on a realistic
+     RTT, on the page that takes the most cold traffic. The placeholder holds
+     the space instead.
 
      These bound the shift rather than removing it: the week's height is the
-     course's own teaching span (an 08:15–18:00 course is ~1 000 px, a single
-     Friday lecture ~200 px) and neither is knowable at build time, so the
-     numbers are a middle ground — a taller week still pushes down, a shorter
-     one still pulls up, by the difference rather than by the whole box.
+     course's own teaching span and is not knowable at build time, so the
+     numbers are a middle ground — the page moves by the difference rather than
+     by the whole box.
 
-     `data-reserve` is a lease, not a layout: the reservation lives on the
-     *status* line and the island drops the attribute the moment it lands in
-     a terminal state that keeps that line on screen ("Klarte ikke å hente
-     timeplanen."), so a failure never sits at the top of 24rem of empty
-     page. The success path hides the whole line, which releases it too.
-     That is also what lets Karakterer hold space at all: a course with no
-     statistics keeps its one-line status, and `gradeChart.ts` hands the lease
-     back on both of those branches rather than leaving a permanent hole. */
+     `data-reserve` is a lease, not a layout: the island drops the attribute the
+     moment it reaches a terminal state that keeps the status line on screen, so
+     a failure never sits at the top of 24rem of empty page. The success path
+     hides the line, which releases it too. */
   #timetable-section [data-role="status"][data-reserve] {
     min-height: 24rem;
   }
@@ -308,23 +294,16 @@ const description = `${course.code} ${course.name}: timeplan, eksamen og nøkkel
     min-height: 8rem;
   }
   /* Karakterer's height is the one that is actually predictable: the figure
-     draws exactly `VISIBLE_SEMESTERS` charts of a fixed 96 px plot, so the
-     only variable is how many columns they sit in — which is the same two
-     breakpoints `.grades-grid` above switches on. Measured in Chromium on the
-     real stylesheets with three six-bar charts: the section settles at 657 px
-     one-up, 437 px two-up and 237 px three-up. Each reservation is set a
-     little under its band's measurement, so the residual is a small DOWNWARD
-     nudge rather than the section snapping upward out from under a thumb.
+     draws exactly `VISIBLE_SEMESTERS` charts of a fixed 96 px plot, so the only
+     variable is how many columns they sit in. Measured in Chromium on the real
+     stylesheets: 657 px one-up, 437 px two-up, 237 px three-up, each reserved a
+     little under so the residual nudges DOWN.
 
      The cost, stated plainly: a course DBH has never recorded releases the
-     lease and the page jumps UP by the reservation instead — a shift it does
-     not have today. That is why the numbers were checked against the real
-     population rather than guessed. One DBH query for every NTNU course code
-     in table 308, intersected with data/catalog.json: 4 811 of 5 470 courses
-     (88,0 %) have grade rows, 659 (12,0 %) have none. Expected shift at
-     390 px is 0,88 × 57 px + 0,12 × 556 px ≈ 117 px, against 0,88 × 612 px ≈
-     539 px with no reservation at all. If that ratio ever inverts, delete
-     these three rules — not the release in gradeChart.ts. */
+     lease and the page jumps UP instead. Checked against the real population —
+     4 811 of 5 470 courses (88,0 %) have grade rows — so the expected shift at
+     390 px is ~117 px against ~539 px with no reservation. If that ratio ever
+     inverts, delete these three rules, not the release in gradeChart.ts. */
   #grades-section [data-role="status"][data-reserve] {
     min-height: 36rem;
   }
@@ -367,9 +346,9 @@ const description = `${course.code} ${course.name}: timeplan, eksamen og nøkkel
     padding-top: var(--space-3);
   }
 
-  /* Island content below is built client-side via document.createElement, so
-     Astro's scoped-style attribute never reaches it — every selector that
-     targets island-rendered markup must go through :global(). */
+  /* Island content below is built client-side, so Astro's scoped-style
+     attribute never reaches it — every selector targeting island-rendered
+     markup must go through :global(). */
 
   :global(.timetable-term) {
     margin-bottom: var(--space-3);
@@ -444,18 +423,15 @@ const description = `${course.code} ${course.name}: timeplan, eksamen og nøkkel
   }
 
   /* --- Karakterer ---------------------------------------------------------
-
-     Small multiples: one bar chart per semester, all sharing a y-scale so the
-     six are comparable to each other. ONE hue for every bar (--hue-blue, the
-     token, so it re-steps itself in dark) — the stacked-bar alternative needs
-     six mutually distinguishable colours and the palette validator failed
-     every such ramp this system can build. Red is not used for F: DESIGN.md's
-     Red-Is-Collision reserves it for coexistence failures. */
+     Small multiples sharing a y-scale, ONE hue for every bar (--hue-blue, the
+     token, so it re-steps in dark): the stacked-bar alternative needs six
+     mutually distinguishable colours and the palette validator failed every
+     such ramp this system can build. Red is not used for F — Red-Is-Collision
+     reserves it for coexistence failures. */
 
   /* Explicit column counts, not auto-fit: six semesters under auto-fit landed
-     4 + 2 at this width, and a ragged last row reads as "these two are
-     different" rather than "this is the older half". Three per row splits six
-     evenly and keeps each chart wide enough for six labelled bars. */
+     4 + 2, and a ragged last row reads as "these two are different" rather than
+     "this is the older half". */
   :global(.grades-grid) {
     display: grid;
     grid-template-columns: minmax(0, 1fr);
@@ -472,13 +448,11 @@ const description = `${course.code} ${course.name}: timeplan, eksamen og nøkkel
     }
   }
 
-  /* course-4: the figure was 39 % of the mobile page, so only the newest three
-     semesters are drawn up front and the rest fold into this disclosure
-     (gradeChart.ts). Its list repeats `.grades-grid`'s columns rather than
-     reusing the class — e2e/flows.pw.ts locates `#grades-section .grades-grid`
-     strictly, and a second match would fail the whole test rather than the
-     rule. Without the columns the older charts stack one full-width row each
-     the moment the disclosure opens, which is the shape being fixed. */
+  /* The figure was 39 % of the mobile page, so only the newest three semesters
+     are drawn up front and the rest fold into this disclosure. Its list repeats
+     `.grades-grid`'s columns rather than reusing the class — e2e locates
+     `#grades-section .grades-grid` strictly, and a second match would fail the
+     test rather than the rule. */
   :global(.grades-older) {
     margin-top: var(--space-5);
   }
@@ -593,9 +567,9 @@ const description = `${course.code} ${course.name}: timeplan, eksamen og nøkkel
   import { createPlanStore } from "../../lib/planner/store.ts";
   import semestersData from "../../../data/semesters.json";
 
-  // Per page-load, not per module: ClientRouter evaluates this module once,
-  // so mounting at top level left every course page after the first showing
-  // the FIRST course's data (or nothing at all).
+  // Per page-load, not per module: ClientRouter evaluates this module once, so
+  // mounting at top level left every course page after the first showing the
+  // FIRST course's data.
   onPage((signal) => {
     const root = document.getElementById("emne-islands");
     if (!root) return;
@@ -606,21 +580,16 @@ const description = `${course.code} ${course.name}: timeplan, eksamen og nøkkel
     const isOffered = root.dataset.offered === "true";
 
     // Off-year courses need the catalog year they actually come from, or the
-    // details endpoint 404s and Nøkkeltall renders empty (course-1/cpc-3).
-    //
-    // pc-2: the grade figure reads the SAME payload to learn which seasons
-    // hold an ordinary exam, so both callers take the one year — one URL, one
-    // cache entry, one request. Passing it to only one of them would 404 the
-    // other on the 703 courses carried over from last year's catalog (their
-    // figure would keep drawing utsatt sittings as peer semesters) and, worse,
-    // split what is one payload across two distinct requests.
+    // details endpoint 404s and Nøkkeltall renders empty. The grade figure
+    // reads the SAME payload to learn which seasons hold an ordinary exam, so
+    // both callers take the one year — one URL, one cache entry, one request.
     const detailsYear = isOffered ? null : sourceYear;
     mountCourseDetails(code, detailsYear);
     void mountGradeChart(code, signal, detailsYear);
 
-    // crawler-3: a course the catalog no longer offers gets no add control at
-    // all (addCourse.ts's policy for the same row), so the week, the verdict
-    // and the details below still render — the button is the only part gone.
+    // A course the catalog no longer offers gets no add control at all (the
+    // add dialog's policy for the same row); the week, the verdict and the
+    // details still render.
     const planBtn = document.getElementById("emne-plan-btn") as HTMLButtonElement | null;
     const planState = document.getElementById("emne-plan-state");
     const clashSlot = document.getElementById("emne-clash");
@@ -628,18 +597,14 @@ const description = `${course.code} ${course.name}: timeplan, eksamen og nøkkel
     // fallback for a visitor who has never picked a semester.
     const store = createPlanStore(semestersData.current.id);
     // "Legg til i planen" here changes what /planlegger/ and the landing page
-    // have to reserve on the next soft navigation — which is still this
-    // page-load's CLS.
+    // have to reserve on the next soft navigation — still this page-load's CLS.
     watchPlanProbe(store, signal);
 
     /**
-     * astro-1: the plan the verdict checks is the store's, and the store
-     * follows `np:lastSemester` — so building the week, the labels and the
-     * clash from the build-time `semestersData.current` named and checked a
-     * semester the student is not planning ("Undervises ikke i Høst 2026"
-     * above a spring grid, under a chip reading "Vår 2027"). An id we do not
-     * know (store-7's uppercase case, or a semester dropped from the crawl)
-     * falls back to the canonical one rather than inventing weeks.
+     * The plan the verdict checks is the store's, and the store follows
+     * `np:lastSemester` — so building from the build-time `semestersData.current`
+     * named and checked a semester the student is not planning. An id we do not
+     * know falls back to the canonical one rather than inventing weeks.
      */
     function plannedSemester(): (typeof semestersData.semesters)[number] {
       const id = store.loadPlan().semesterId;
@@ -667,24 +632,19 @@ const description = `${course.code} ${course.name}: timeplan, eksamen og nøkkel
     let timetable = mountWeek();
 
     /**
-     * ds-3: one button, four verbs — the same four the planner's course rail
-     * and the add dialog use, because they act on the same plan. "Fjern fra
-     * planen" on a programme course promised an irreversible delete, called
-     * `removeCourse`, and the next study-plan derive put the course back
-     * undropped: destructive copy over a change that did not stick. A
-     * programme course is dropped and restored (§0.3), never deleted.
+     * One button, four verbs — the same four the planner's course rail and the
+     * add dialog use, because they act on the same plan. "Fjern fra planen" on a
+     * programme course promised an irreversible delete and the next study-plan
+     * derive put the course back undropped: destructive copy over a change that
+     * did not stick. A programme course is dropped and restored (§0.3).
      *
      * `.is-active` rather than `aria-pressed` carries the in-plan fill: with
-     * four states there is nothing to press, the accessible name is the
-     * visible verb, and `hasCourse` is deliberately blind to `dropped`.
+     * four states there is nothing to press, and `hasCourse` is deliberately
+     * blind to `dropped`.
      *
-     * copy-6: the STATE is spelled "I planen" — DESIGN §7's other half of
-     * "Legg til i planen", and the same words /emner/ puts on its toggle and
-     * the add dialog puts in its own state span. The button cannot carry it
-     * here (four verbs, and the verb has to name what pressing does), so the
-     * span does; one state, one spelling, across all four surfaces. The two
-     * programme lines stay sentences rather than being folded into it — they
-     * are why the verb beside them is "Dropp" and not "Fjern".
+     * The STATE is spelled "I planen" — DESIGN §7's other half of "Legg til i
+     * planen", spelled the same way on all four surfaces. The button cannot
+     * carry it here (the verb has to name what pressing does), so the span does.
      */
     function syncPlanBtn(): void {
       if (!planBtn) return;
@@ -723,18 +683,14 @@ const description = `${course.code} ${course.name}: timeplan, eksamen og nøkkel
       };
       // A course the current catalog does not offer has no entries that could
       // legitimately land in this semester's weeks — asserting that with `[]`
-      // beats matching last year's grid against this year's week numbers,
-      // which are the same 34-47 every autumn.
+      // beats matching last year's grid against this year's week numbers.
       //
       // A course that IS offered hands over what the week drew, whichever
-      // semester the student is planning: `planClash` clamps to that
-      // semester's teaching weeks itself, so an autumn-only course planning
-      // spring still resolves to "undervises ikke" — but by intersection, not
-      // by assertion. Withholding the entries whenever the planned year is
-      // not the catalog year (which is every plan for a future semester)
-      // fabricated "Undervises ikke i Vår 2027" for courses that are taught
-      // then, and disagreed with /planlegger/, which checks the same course
-      // against the same entries (`?year=` is a no-op upstream, pd-8).
+      // semester the student is planning: `planClash` clamps to that semester's
+      // teaching weeks itself, so an autumn-only course planning spring still
+      // resolves to "undervises ikke" — by intersection, not by assertion.
+      // Withholding the entries whenever the planned year is not the catalog
+      // year fabricated that verdict for courses that ARE taught then.
       const own = isOffered ? await timetable : [];
       const currentPlan = store.loadPlan();
       const verdict = await planClash(
@@ -750,9 +706,9 @@ const description = `${course.code} ${course.name}: timeplan, eksamen og nøkkel
 
     /**
      * The semester can change while this page is open — another tab's
-     * studieinfo save writes `np:lastSemester` and fires the same plan-change
-     * event. Redraw the week for the new semester rather than leaving a grid
-     * built for the old one under a verdict that names the new one.
+     * studieinfo save writes `np:lastSemester` and fires the same event. Redraw
+     * the week rather than leaving a grid built for the old semester under a
+     * verdict that names the new one.
      */
     function syncSemester(): void {
       const next = plannedSemester();
@@ -768,7 +724,7 @@ const description = `${course.code} ${course.name}: timeplan, eksamen og nøkkel
         if (!entry) store.addCourse({ code, name, version });
         else if (entry.dropped) store.restoreCourse(code);
         // `removeCourse` routes a programme course to `dropCourse` itself
-        // (store-3), so the verb above and the write below cannot drift.
+        //, so the verb above and the write below cannot drift.
         else store.removeCourse(code);
         syncPlanBtn();
       },

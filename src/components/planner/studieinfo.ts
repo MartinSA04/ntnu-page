@@ -1,36 +1,25 @@
 /**
- * Studieinfo modal (REWORK-2026-07-25 design §2) — the product's front door.
+ * Studieinfo modal — the product's front door.
  *
- * One native `<dialog>` that owns *all four* choices the plan hangs off:
- * programme, kull, studieretning and semester. Every edit is staged in a
- * local variable and nothing touches the store until **Lagre**; Avbryt/Esc
- * discard by simply closing (the store never saw the edits). This is the
- * only surface that picks programme/kull/retning/semester — the homepage
- * picker and the planner's inline picker are deleted in later tasks — so it
- * absorbs the old "Bruk som planen min" import semantics from
- * `studyPlan.ts`: obligatory-classified courses replace the plan's
- * `source: "program"` set via `setProgramPlan`, preserving manual adds/drops.
- * A >30 sp prefill is **kept**, not zeroed — CMEDFORSK period 1 legitimately
- * sums to 42,5 sp, and the planner's credit-line note (B9) does the
- * surfacing; clearing it would reproduce the "0 av 30 sp, no rows" bug.
+ * One native `<dialog>` owning *all four* choices the plan hangs off:
+ * programme, kull, studieretning and semester. Every edit is staged locally and
+ * nothing touches the store until **Lagre**; Avbryt/Esc discard by closing.
+ * Obligatory-classified courses replace the plan's `source: "program"` set via
+ * `setProgramPlan`, preserving manual adds/drops. A >30 sp prefill is **kept**,
+ * not zeroed — the planner's credit-line note does the surfacing.
  *
- * **Why two study-plan fetches on a programme pick.** The NTNU plan API
- * returns a document whose `periods` are truncated to how far the *fetched
- * cohort* has progressed: MTDT fetched at 2026 lists only periods 1–2, so its
- * `maxPeriodNumber` is 2 and `relevantCohorts` would offer a single kull. The
- * full programme length lives in an older, graduated cohort's plan (MTDT
- * fetched at 2020 lists periods 1–10). So we fetch the current-year plan (for
- * `name`/existence) *and* an older-cohort plan, and feed `relevantCohorts`
- * whichever reaches further. The per-cohort plan for studieretning + the final
- * classify is fetched on kull-select, exactly as `plannerApp` does, so the
- * committed direction code is valid for that kull.
+ * **Why two study-plan fetches on a programme pick.** The plan API truncates
+ * `periods` to how far the *fetched cohort* has progressed, so a current-year
+ * fetch of MTDT lists periods 1–2 and `relevantCohorts` would offer one kull.
+ * The full programme length lives in an older, graduated cohort's plan. So we
+ * fetch the current-year plan (for name/existence) *and* an older-cohort plan
+ * and feed `relevantCohorts` whichever reaches further. The per-cohort plan for
+ * studieretning + the final classify is fetched on kull-select.
  *
- * **Programmes NTNU publishes no plan for** (MTPROD, MTPETR, BALIT, BFRA — ~17
- * % of the catalogue) must still be savable: the modal is the only programme
- * picker there is, so refusing to close is a hard dead end (modals-2/B8). We
- * offer `fallbackCohorts` chips, record programme + kull with an empty prefill
- * and say plainly that the emner have to be added by hand. The kull is stored
- * because the planner names it, never because anything classifies against it.
+ * **Programmes NTNU publishes no plan for** (~17 % of the catalogue) must still
+ * be savable — this is the only programme picker there is, so refusing to close
+ * is a hard dead end. We offer `fallbackCohorts` chips, record programme + kull
+ * with an empty prefill, and say the emner have to be added by hand.
  */
 import { semesterYear } from "../../lib/planner/schedule.js";
 import type { AddCourseInput, PlanProgram, PlanStore } from "../../lib/planner/store.js";
@@ -57,36 +46,26 @@ export interface StudieinfoHandle {
   open(): void;
 }
 
-/* There is no `OPEN_STUDIEINFO_EVENT` any more, and no `window` listener for
-   it. It existed so a control on another page could open this modal without
-   importing it; the one control that did, Layout's topbar chip, is deleted
-   (2026-07-30, owner's call). Every opener left is on `/planlegger/` and holds
-   the handle this returns, so it calls `open()` directly. `studieinfoEvent.ts`,
-   the leaf module that carried the name for Layout's sake, is deleted with it. */
-
 /** Rows rendered in the programme typeahead at once (matches the planner picker). */
 const MAX_PROGRAM_ROWS = 12;
 
 /**
  * How many cohorts back to look for a *fully-published* plan when the
  * current-year document is period-truncated (see the file header). A cohort
- * this many years back has normally graduated, so its plan carries the whole
- * period range; `findProgramPlan`'s 404 step-back tolerates the odd gap.
+ * this far back has normally graduated, so its plan carries the whole range.
  */
 const FULL_PLAN_LOOKBACK = 6;
 
 /**
- * How many kull chips to offer when there is no study plan to derive them
- * from — six, the length of the longest NTNU programme (medisin). Without a
- * plan there is no `maxPeriodNumber` and therefore no relevance rule; these
- * are simply the start years a student could still be studying under.
+ * How many kull chips to offer when there is no study plan to derive them from
+ * — six, the length of the longest NTNU programme. Without a plan there is no
+ * `maxPeriodNumber` and therefore no relevance rule.
  */
 const FALLBACK_COHORT_YEARS = 6;
 
 /**
- * Said when NTNU publishes no study plan for the programme at all. It has to
- * carry the instruction too: this is the state Lagre used to answer with
- * "Velg kull …" while hiding every kull (modals-2/ux-fail-5).
+ * Said when NTNU publishes no study plan for the programme. It carries the
+ * instruction too: this is the state Lagre used to refuse while hiding kull.
  */
 const PROGRAM_MISSING_HINT =
   "Fant ingen studieplan for dette programmet. Velg kull og lagre, så husker vi programmet ditt. Emnene må du legge til selv.";
@@ -97,10 +76,9 @@ export function publishMonthFor(semesterId: string): string {
 }
 
 /**
- * The kull chips offered for a programme NTNU publishes no study plan for
- * (modals-2). Newest first, mirroring `relevantCohorts`. A **spring** semester
- * belongs to the study year that started the previous autumn (`periodNumberFor`
- * documents the same rule), so its newest plausible kull is one year back.
+ * The kull chips offered for a programme with no study plan. Newest first,
+ * mirroring `relevantCohorts`. A **spring** semester belongs to the study year
+ * that started the previous autumn, so its newest kull is one year back.
  */
 export function fallbackCohorts(semesterId: string): number[] {
   const year = semesterYear(semesterId);
@@ -110,13 +88,10 @@ export function fallbackCohorts(semesterId: string): number[] {
 }
 
 /**
- * The kull-level hint, from what the fetch actually returned rather than from
- * the API's `publishedYears` — that field is the same global publication
- * window for every programme, so it stayed silent when a plan really was
- * missing and fired when one was found (plan-4). `foundYear` is the year
- * `findProgramPlan` resolved at (`null` = no document at all); `periodMissing`
- * is the dead end the modal already computes for the studieretning select and
- * used to throw away (plan-5).
+ * The kull-level hint, from what the fetch actually returned rather than the
+ * API's `publishedYears` — that field is one global publication window for
+ * every programme, so it stayed silent when a plan really was missing.
+ * `foundYear` is where `findProgramPlan` resolved (`null` = no document).
  */
 export function cohortHint(input: {
   cohort: number;
@@ -141,20 +116,16 @@ export function cohortHint(input: {
 }
 
 /**
- * A native `<select>` in the shell that owns its indicator.
+ * A native `<select>` in a shell that owns its indicator.
  *
- * The platform arrow is what this replaces: it renders differently in every
- * engine, sits hard against the control's right edge with nothing answering
- * the text inset on the left, and cannot be made to say whether the picker is
- * open. `appearance: none` in site.css takes it away; this puts Lucide's
- * `chevron-down` back in its place, inset by the same token as the text on the
- * other side, and CSS turns it over while the select is `:open`.
+ * The platform arrow renders differently in every engine, sits hard against the
+ * right edge answering nothing on the left, and cannot say whether the picker
+ * is open. `appearance: none` (site.css) removes it; this puts Lucide's
+ * `chevron-down` in its place, and CSS turns it over while `:open`.
  *
  * The icon is a sibling rather than a background image so it inherits
- * `currentColor` and stays in step with the icon set the rest of the product
- * draws from; `pointer-events: none` keeps it out of the way of the control
- * underneath, which is still an ordinary `<select>` with its native picker,
- * its native keyboard behaviour and its own label association.
+ * `currentColor`; `pointer-events: none` keeps it clear of the control, which
+ * is still an ordinary `<select>` with its native keyboard behaviour.
  */
 function selectShell(select: HTMLSelectElement): HTMLElement {
   const shell = el("div", "studieinfo-select-shell");
@@ -170,10 +141,9 @@ function semesterLabel(semester: SemesterSummary): string {
 }
 
 /**
- * Mounts the studieinfo modal once. Creates a single `<dialog>` appended to
- * `document.body` and returns a handle its callers open it through. `signal`
- * aborts on the next page swap and removes the dialog, so a re-mount (once per
- * `astro:page-load`) never leaves a second one behind.
+ * Mounts the studieinfo modal once: a single `<dialog>` on `document.body`
+ * plus the handle callers open it through. `signal` aborts on the next page
+ * swap and removes the dialog, so a re-mount never leaves a second behind.
  */
 export function mountStudieinfo(deps: StudieinfoDeps, signal: AbortSignal): StudieinfoHandle {
   // Idempotency: a previous mount's dialog may still be in the DOM after a
@@ -199,10 +169,8 @@ export function mountStudieinfo(deps: StudieinfoDeps, signal: AbortSignal): Stud
   let programToken = 0;
   let cohortToken = 0;
   /**
-   * Guards `commit`'s awaited plan fetch: bumped on every open and close, so
-   * an Avbryt/Esc/reopen during the (rare) in-flight classify cancels the
-   * pending store write instead of committing a snapshot the student walked
-   * away from.
+   * Guards `commit`'s awaited plan fetch: bumped on every open and close, so an
+   * Avbryt/Esc/reopen during the in-flight classify cancels the pending write.
    */
   let commitToken = 0;
 
@@ -221,19 +189,15 @@ export function mountStudieinfo(deps: StudieinfoDeps, signal: AbortSignal): Stud
   const dialog = el("dialog", "np-frame studieinfo-dialog") as HTMLDialogElement;
   dialog.id = "studieinfo-dialog";
   dialog.setAttribute("aria-labelledby", "studieinfo-title");
-  // Light dismiss: Esc *and* a backdrop click (owner's call, 2026-07-30).
-  // Unlike the other two modals this one stages its edits, so a backdrop click
-  // discards them — deliberately the same outcome Esc and Avbryt already have,
-  // and the store is never touched before Lagre, so there is nothing to undo.
-  // The keydown handler below still keeps Escape away from the dialog while
-  // the programme listbox is open; a click has no such conflict.
+  // Light dismiss: Esc *and* a backdrop click. Unlike the other two modals this
+  // one stages its edits, so a backdrop click discards them — the same outcome
+  // Esc and Avbryt have. The keydown handler below still keeps Escape away from
+  // the dialog while the programme listbox is open.
   dialog.setAttribute("closedby", "any");
 
-  // The same masthead the session card and the course modal open on
-  // (`.np-head`), in its paper variant: a programme has no hue of its own, so
-  // the band is a tonal step with a hairline under it rather than a printed
-  // fill. It sits outside the scrolling body, so it stays put while a long
-  // programme list moves under it.
+  // The same masthead the session card and course modal open on, in its paper
+  // variant: a programme has no hue of its own. It sits outside the scrolling
+  // body, so it stays put while a long programme list moves under it.
   const head = el("div", "np-head studieinfo-head");
   const ident = el("div", "np-head-ident");
   const title = el("h2", "np-head-title studieinfo-title", "Studieinfo");
@@ -299,10 +263,9 @@ export function mountStudieinfo(deps: StudieinfoDeps, signal: AbortSignal): Stud
   const retningNote = el("p", "np-note studieinfo-note", "");
   retningNote.hidden = true;
   retningSection.append(retningNote);
-  // The way back out of a *nested* choice: once an answer resolves one level,
-  // the select moves on to the next one and the earlier answer is no longer
-  // among its options (plan-1). Only rendered in that case — an ordinary
-  // one-level choice is un-answered by picking "Ikke valgt ennå".
+  // The way back out of a *nested* choice: once an answer resolves one level
+  // the select moves to the next, and the earlier answer is no longer among its
+  // options. Only rendered in that case.
   const retningReset = el(
     "button",
     "np-btn studieinfo-retning-reset",
@@ -346,10 +309,9 @@ export function mountStudieinfo(deps: StudieinfoDeps, signal: AbortSignal): Stud
   const saveBtn = el("button", "np-btn studieinfo-save", "Lagre") as HTMLButtonElement;
   saveBtn.type = "button";
   saveBtn.id = "studieinfo-save";
-  // A refused Lagre writes its reason into the hint; describing the button
-  // with it means the reason is reachable from the control that caused it
-  // (a11y-8). An empty hint contributes no description, so this costs nothing
-  // in the resting state.
+  // A refused Lagre writes its reason into the hint; describing the button with
+  // it makes the reason reachable from the control that caused it. An empty
+  // hint contributes no description.
   saveBtn.setAttribute("aria-describedby", "studieinfo-hint");
   const cancelBtn = el("button", "np-btn studieinfo-cancel", "Avbryt") as HTMLButtonElement;
   cancelBtn.type = "button";
@@ -400,11 +362,9 @@ export function mountStudieinfo(deps: StudieinfoDeps, signal: AbortSignal): Stud
 
     programListbox.replaceChildren();
     if (programMatches.length === 0) {
-      // A `role="listbox"` may only contain options, so the bare <li> this
-      // used to be was dropped from the accessibility tree: the combobox
-      // reported itself expanded with zero children and a mistyped programme
-      // was answered with silence (a11y-8). A disabled option is valid, and
-      // pointing `aria-activedescendant` at it is what makes it spoken.
+      // A `role="listbox"` may only contain options, so a bare <li> is dropped
+      // from the accessibility tree and a mistyped programme is answered with
+      // silence. A disabled option is valid and can be `aria-activedescendant`.
       const empty = el("li", "studieinfo-typeahead-empty np-hint", "Ingen treff.");
       empty.id = "studieinfo-program-option-empty";
       empty.setAttribute("role", "option");
@@ -444,8 +404,7 @@ export function mountStudieinfo(deps: StudieinfoDeps, signal: AbortSignal): Stud
     if (event.key === "Escape") {
       // With no list open, Escape belongs to the dialog. With one open it must
       // dismiss only the list — and a dialog's Escape close is a *close
-      // request*, which `stopPropagation()` does not touch: the old code let
-      // the whole modal go, taking every staged edit with it (modals-7).
+      // request*, which `stopPropagation()` does not touch.
       if (programListbox.hidden) return;
       event.preventDefault();
       closeProgramList();
@@ -478,17 +437,15 @@ export function mountStudieinfo(deps: StudieinfoDeps, signal: AbortSignal): Stud
     stagedCohort = null;
     stagedDirection = null;
     renderProgramField();
-    // The input that had focus is now hidden, which dropped `activeElement` to
-    // <body> (a11y-1). Hand focus to the chip that replaced it: its label names
-    // the programme just picked, and Tab continues into the kull chips.
+    // The input that had focus is now hidden, dropping `activeElement` to
+    // <body>. Hand focus to the chip that replaced it.
     chipHost.querySelector<HTMLButtonElement>(".studieinfo-chip-remove")?.focus();
     void loadProgram(false);
   }
 
   /**
-   * Fetches the two plans a programme pick needs and (re)builds the kull
-   * chips. `keepCohort` re-uses a pre-staged kull when the modal opened on an
-   * existing profile; otherwise the kull area resets.
+   * Fetches the two plans a programme pick needs and rebuilds the kull chips.
+   * `keepCohort` re-uses a pre-staged kull when the modal opened on a profile.
    */
   async function loadProgram(keepCohort: boolean): Promise<void> {
     const program = stagedProgram;
@@ -553,7 +510,7 @@ export function mountStudieinfo(deps: StudieinfoDeps, signal: AbortSignal): Stud
     renderRetning();
     if (programMissing) {
       // Nothing to fetch, classify or gate on — the kull is recorded, not
-      // used, and PROGRAM_MISSING_HINT already says so (modals-2).
+      // used, and PROGRAM_MISSING_HINT already says so.
       return;
     }
 
@@ -619,10 +576,9 @@ export function mountStudieinfo(deps: StudieinfoDeps, signal: AbortSignal): Stud
   }
 
   /**
-   * The kull chips to offer. The study plan's own relevance rule when there is
-   * a plan; the generic start-year window when there is none, or when the plan
-   * has no period for this semester at all — a programme the modal cannot
-   * offer a kull for is a programme it cannot save (modals-2).
+   * The kull chips to offer: the study plan's relevance rule when there is a
+   * plan, the generic start-year window when there is none or the plan has no
+   * period for this semester — a programme with no kull cannot be saved.
    */
   function kullChoices(): number[] {
     const fromPlan = cohortsPlan ? relevantCohorts(cohortsPlan, stagedSemesterId) : [];
@@ -668,12 +624,11 @@ export function mountStudieinfo(deps: StudieinfoDeps, signal: AbortSignal): Stud
       retningSection.hidden = true;
       return;
     }
-    // Resolving *with* the staged answer walks past the levels already
-    // answered, so a nested waypoint (CMED's "Veivalg - Klasse" behind the
-    // city) becomes askable here — the planner can otherwise ask a question
-    // this modal has no way to answer, which loops the student between the two
-    // (plan-1). When every level is answered we fall back to the top-level
-    // question so an existing choice stays changeable, exactly as before.
+    // Resolving *with* the staged answer walks past levels already answered, so
+    // a nested waypoint becomes askable here — otherwise the planner asks a
+    // question this modal cannot answer and the student loops between the two.
+    // When every level is answered we fall back to the top-level question so an
+    // existing choice stays changeable.
     const staged = stagedDirection?.code ?? null;
     const deepest = resolvePeriodFor(
       cohortPlan,
@@ -723,18 +678,13 @@ export function mountStudieinfo(deps: StudieinfoDeps, signal: AbortSignal): Stud
 
   /**
    * The polite live region under the fields. It stays MOUNTED and in the
-   * accessibility tree at all times: a region that is `hidden` (or
-   * `display: none`) at the moment its text lands is not being listened to,
-   * so a refused Lagre announced nothing at all (a11y-8). Unhiding first and
-   * writing second — the previous shape — still enters the tree and mutates
-   * in one task, which several screen readers treat as initial content
-   * rather than an update.
+   * accessibility tree at all times: a region that is `hidden` when its text
+   * lands is not being listened to, so a refused Lagre announced nothing.
+   * Unhiding first and writing second still enters the tree and mutates in one
+   * task, which several screen readers treat as initial content.
    *
-   * The only reason it used to hide was layout: `.studieinfo-body` is a flex
-   * column with `gap: var(--space-4)`, so an empty `<p>` left a permanent gap
-   * above the actions. `.sr-only` (base.css) takes it out of flow instead of
-   * out of the tree, which costs nothing here — while `hintText` is empty
-   * there is nothing to see anyway.
+   * `.sr-only` (base.css) takes it out of flow instead of out of the tree,
+   * which is what the flex `gap` needed.
    */
   function renderHint(): void {
     hint.classList.toggle("sr-only", hintText === "");
@@ -744,7 +694,7 @@ export function mountStudieinfo(deps: StudieinfoDeps, signal: AbortSignal): Stud
   retningSelect.addEventListener("change", () => {
     const code = retningSelect.value;
     stagedDirection = code === "" ? null : (retningOptions.find((d) => d.code === code) ?? null);
-    // Re-render: answering one waypoint can open the next one (plan-1), and
+    // Re-render: answering one waypoint can open the next one, and
     // answering the last one closes the section.
     renderRetning();
   });
@@ -786,25 +736,21 @@ export function mountStudieinfo(deps: StudieinfoDeps, signal: AbortSignal): Stud
     const direction = stagedDirection;
 
     // A staged programme still needs a kull before it can classify a period.
-    // The refusal comes *before* the semester write: a rejected Lagre must
-    // write nothing at all, or an Avbryt afterwards leaves the planner on a
-    // semester the student never got told about (modals-5). Every branch below
-    // this point commits, so a semester-only edit is still never dropped.
+    // The refusal comes *before* the semester write: a rejected Lagre must write
+    // nothing, or an Avbryt afterwards leaves the planner on a semester the
+    // student was never told about.
     if (program && cohort === null) {
       hintText = "Velg kull for å lagre studieprogrammet.";
       renderHint();
-      // The refusal is silent to assistive tech otherwise — focus does not
-      // move and the hint is written into a region nothing was listening to
-      // (a11y-8). Moving focus to the control that answers it is what gets
-      // spoken; the chips are always on screen now, even for a programme with
-      // no study plan (modals-2).
+      // Otherwise the refusal is silent to assistive tech: focus does not move
+      // and the hint goes into a region nothing was listening to. Moving focus
+      // to the control that answers it is what gets spoken.
       kullChips.querySelector<HTMLButtonElement>(".studieinfo-kull-chip")?.focus();
       return;
     }
 
     // Semester commits first, so the programme set re-derives against the
-    // semester the student is actually planning (setProgramPlan reads the
-    // freshly-switched plan).
+    // semester the student is actually planning.
     deps.store.setSemester(semesterId);
 
     if (program && cohort !== null) {
@@ -814,12 +760,10 @@ export function mountStudieinfo(deps: StudieinfoDeps, signal: AbortSignal): Stud
         cohort,
         ...(direction ? { direction } : {}),
       };
-      // Classify against the *kull-specific* plan. If its fetch is still in
-      // flight `cohortPlan` is null; await the (memoised, near-instant) fetch
-      // rather than falling back to a different cohort's curriculum. The
-      // not-found/error fallback to the fuller cohortsPlan is preserved. A
-      // programme with no plan at all skips the round trip: there is nothing
-      // to classify, and the empty prefill is the honest answer (modals-2).
+      // Classify against the *kull-specific* plan. If its fetch is in flight,
+      // await the memoised call rather than falling back to another cohort's
+      // curriculum. A programme with no plan at all skips the round trip: the
+      // empty prefill is the honest answer.
       let plan = cohortPlan;
       if (!plan && !programMissing) {
         const res = await findProgramPlan(program.code, cohort);
@@ -831,9 +775,8 @@ export function mountStudieinfo(deps: StudieinfoDeps, signal: AbortSignal): Stud
       let toAdd: AddCourseInput[] = [];
       if (plan) {
         const resolved = resolvePeriodFor(plan, semesterId, cohort, direction?.code ?? null);
-        // The prefill is kept even when it exceeds a semester (B9): the
-        // planner's credit-line note surfaces it; zeroing it here would leave
-        // a legitimately-heavy programme with no rows and no explanation.
+        // The prefill is kept even when it exceeds a semester (B9): zeroing it
+        // leaves a legitimately-heavy programme with no rows and no reason.
         const obligatory = resolved.courses?.obligatory ?? [];
         toAdd = obligatory.map((c) => ({
           code: c.code,
@@ -846,8 +789,7 @@ export function mountStudieinfo(deps: StudieinfoDeps, signal: AbortSignal): Stud
       deps.store.setProgramPlan(planProgram, toAdd);
     } else if (deps.store.loadPlan().program) {
       // No programme staged but the profile still holds one → the student
-      // cleared it. `removeProgram` drops the program and its programme-sourced
-      // courses while keeping manual adds; the semester change above stands.
+      // cleared it. `removeProgram` keeps manual adds; the semester stands.
       deps.store.removeProgram();
     }
 
@@ -860,8 +802,8 @@ export function mountStudieinfo(deps: StudieinfoDeps, signal: AbortSignal): Stud
       return;
     }
     // Reading order is programme → kull → retning → semester → Lagre, so
-    // opening on the semester select (the fifth of seven controls) left
-    // forward Tab covering only Lagre and Avbryt before it wrapped (a11y-7).
+    // opening on the semester select left forward Tab covering only two
+    // controls before it wrapped.
     const chipRemove = chipHost.querySelector<HTMLButtonElement>(".studieinfo-chip-remove");
     if (chipRemove) chipRemove.focus();
     else semesterSelect.focus();

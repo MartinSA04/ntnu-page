@@ -1,21 +1,14 @@
 /**
- * TAVLA — the week's second view (REWORK-2026-07-29b D2).
+ * TAVLA — the week's second view.
  *
  * A departure board: one row per session, the start time set large in tabular
  * mono, the room the same size in the opposite margin, the course name between
- * them. No geometry at all — nothing here is positioned by its duration, so
- * nothing here gets narrower as the viewport does.
+ * them. No geometry at all, so nothing here narrows as the viewport does —
+ * which is the point: the grid is weakest exactly where this is strongest, at
+ * 390 px, in print, and in a screen reader.
  *
- * That is the whole point. The grid is at its weakest exactly where this is at
- * its strongest: at 390 px, in print, and in a screen reader, where a bar
- * whose meaning is its width says nothing. The two are views of one plan, not
- * two plans — both render from the same `PlanCourseState[]` through the same
- * `applyGroupSelection` narrowing the grid uses, so a parallel picked in one
- * is a parallel shown in the other.
- *
- * What it deliberately does NOT show: duration as form. "til 10:00" is a
- * fact you read, not a shape you see, and a student asking "have I got a gap
- * on Wednesday" is asking the grid, not this.
+ * Both views render from the same `PlanCourseState[]` through the same
+ * `applyGroupSelection`, so a parallel picked in one is shown in the other.
  */
 import { classifyActivity } from "../../lib/planner/activity.js";
 import { findConflicts, groupConflicts, mergeParallelSlots } from "../../lib/planner/conflicts.js";
@@ -41,11 +34,9 @@ export interface BoardRenderResult {
 }
 
 /**
- * One session of the plan's week, after the student's group selection.
- *
- * Exported because Tavla is no longer the only view built from it: the column
- * grid (`columnGrid.ts`) reads the same rows through `collectSessions` below,
- * so there is exactly one answer to "what is in this week" behind both.
+ * One session of the plan's week, after the student's group selection. Exported
+ * because `columnGrid.ts` reads the same rows through `collectSessions`, so
+ * there is exactly one answer to "what is in this week" behind both.
  */
 export interface SessionEntry extends ScheduleEntry {
   hueVar: string;
@@ -61,10 +52,9 @@ export interface SessionEntry extends ScheduleEntry {
   groupPicked: boolean;
   /**
    * The lectures this session overlaps and the minutes they share, `null` when
-   * it overlaps nothing. The row itself only needs to know THAT it
-   * clashes (it carries its own margin rule); the popover a row opens needs to
-   * name the partner, and it is the same card a bar opens, so the facts behind
-   * it cannot be thinner here.
+   * it overlaps nothing. The row only needs to know THAT it clashes; the
+   * popover it opens must name the partner, and it is the same card a bar
+   * opens, so the facts behind it cannot be thinner here.
    */
   clash: { partners: string[]; window: { start: number; end: number } } | null;
 }
@@ -81,23 +71,19 @@ const roomLabel = (rooms: { building: string | null; room: string | null }[]): s
     .join(", ");
 
 /**
- * A room worth setting in the display figure is a real room code — "R1",
- * "EL5", "F1". "Digital undervisning" and "Realfagbygget A" are sentences
- * wearing a room's clothes; blown up to 1.4rem they wrap and knock the row's
- * two numeral columns out of alignment, which is the one thing this view
- * cannot afford.
+ * A room worth setting in the display figure is a real room code. "Digital
+ * undervisning" is a sentence wearing a room's clothes; at 1.4rem it wraps and
+ * knocks the row's two numeral columns out of alignment.
  */
 export function isRoomCode(room: string): boolean {
   return /^[A-ZÆØÅ]{1,4}\d{1,3}[A-ZÆØÅ]?$/.test(room.trim());
 }
 
 /**
- * The sessions this semester's week actually contains, per course, after the
- * student's own group selection — the identical narrowing `renderGrid` does,
- * so the views can never disagree about what is in the week.
- *
- * Exported for `columnGrid.ts`, which needs precisely these rows and must not
- * grow a third copy of this pipeline.
+ * The sessions this semester's week contains, per course, after the student's
+ * group selection — the identical narrowing `renderGrid` does, so the views can
+ * never disagree. Exported for `columnGrid.ts`, which must not grow a third
+ * copy of this pipeline.
  */
 export function collectSessions(
   courses: PlanCourseState[],
@@ -154,15 +140,13 @@ interface ClashSegment {
  * A day's collisions, split into the separate incidents they actually are.
  *
  * Two sessions belong to the same incident when their clash windows overlap —
- * directly, or through a third session that overlaps both (10:15–12:00 against
- * 11:15–13:00 against 12:15–14:00 is one running incident, and three notes
- * would read as three unrelated ones). The sweep is over `clash.window`, which
- * `renderBoard` has already widened across every conflict group a session
- * falls in.
+ * directly or through a third that overlaps both, so a running chain is one
+ * incident rather than three unrelated notes. The sweep is over `clash.window`,
+ * already widened across every conflict group a session falls in.
  *
- * A segment naming one course only is dropped: `mergeParallelSlots` already
- * collapses a course's parallel sections before the engine sees them, so a
- * single-code segment would be a course reported as colliding with itself.
+ * A segment naming one course only is dropped: `mergeParallelSlots` collapses a
+ * course's parallel sections first, so it would be a course colliding with
+ * itself.
  */
 function clashSegments(items: SessionEntry[]): ClashSegment[] {
   const clashing = items
@@ -189,8 +173,8 @@ function clashSegments(items: SessionEntry[]): ClashSegment[] {
 
 /**
  * Renders the board into `host`. Returns how many sessions it listed so the
- * caller can fall back to its own message branch at zero, exactly as it does
- * for the grid.
+ * caller can fall back to its own message branch at zero, as it does for the
+ * grid.
  */
 export function renderBoard(
   host: HTMLElement,
@@ -199,19 +183,16 @@ export function renderBoard(
   showOthers: boolean,
   options: BoardRenderOptions = {},
 ): BoardRenderResult {
-  // The øving/lab layer obeys the SAME toggle here as in the grid, through the
-  // same function. Listing every published lab group because this view has
-  // room for them would make the two views disagree about what the week is —
-  // 57 rows against 7 bars, which is what shipped for exactly one build.
+  // The øving/lab layer obeys the SAME toggle as the grid, through the same
+  // function. Listing every published lab group because this view has room for
+  // them would make the two views disagree about what the week is.
   const entries = visibleLayer(collectSessions(courses, teachingWeeks), showOthers).shown;
 
   // Collision marking runs through the SAME engine as the grid's — lecture ×
-  // lecture only, touching boundaries excluded (conflicts.ts). A second
-  // implementation here is how two surfaces start disagreeing about whether a
-  // week is clean.
-  // `mergeParallelSlots` returns groups, not slots — the representative is the
-  // one the engine should see, or a course publishing eleven identical øvings-
-  // groups would report ten collisions with itself.
+  // lecture only, touching boundaries excluded. A second implementation is how
+  // two surfaces start disagreeing about whether a week is clean.
+  // `mergeParallelSlots` returns groups, not slots, and the representative is
+  // what the engine should see.
   const lectures = mergeParallelSlots(entries.filter((e) => e.isLecture)).map(
     (group) => group.representative,
   );
@@ -284,19 +265,15 @@ export function renderBoard(
     }
 
     // The mark rides on the clashing rows THEMSELVES, not on a wrapper around
-    // the day. It used to be a bracket in the margin of a `<div>` that every
-    // row of the day was appended to, so one 10:15 overlap drew a rule down
-    // the side of Monday's 16:00 øving as well — the marker claimed the day
-    // when it meant two sessions. Adjacent marked rows still join into one
-    // continuous rule (planner-week.css bridges the row hairline), so a pair
-    // reads as a pair without either row being tinted; a filled row reads as
-    // an error state rather than as two things you have to choose between.
+    // the day: bracketing the day drew a rule down the side of unrelated
+    // sessions. Adjacent marked rows still join into one continuous rule
+    // (planner-week.css bridges the hairline), so a pair reads as a pair
+    // without either row being tinted.
     const segments = clashSegments(items);
     const marked = new Set(segments.flatMap((s) => [...s.members]));
-    // Each incident's note sits directly under the last row it applies to,
-    // rather than one note per day at the bottom: a day with two unrelated
-    // overlaps had them concatenated into a single sentence naming four
-    // courses, none of which actually clashed with all the others.
+    // Each incident's note sits under the last row it applies to, rather than
+    // one per day: two unrelated overlaps were concatenated into a sentence
+    // naming four courses, none of which clashed with all the others.
     const noteAfter = new Map<SessionEntry, ClashSegment>();
     for (const segment of segments) {
       const last = items.filter((e) => segment.members.has(e)).at(-1);
@@ -311,8 +288,7 @@ export function renderBoard(
       const segment = noteAfter.get(entry);
       if (!segment) continue;
       // No "Velg én": a student looking at two overlapping sessions does not
-      // need to be told that overlapping sessions are a choice. The fact is
-      // the whole message.
+      // need to be told that overlapping sessions are a choice.
       const note = el(
         "p",
         "planner-board-clash-note np-data",
@@ -324,8 +300,7 @@ export function renderBoard(
   }
 
   // The rhythm the rows strike in at, tightened on a long week so the list
-  // still lands inside the budget (`staggerStep`) — a 40-session list at a flat
-  // 45 ms a row is nearly two seconds of rows appearing.
+  // still lands inside the budget (`staggerStep`).
   board.style.setProperty("--planner-step", `${staggerStep(strike, 45)}ms`);
   host.append(board);
   return { rowCount: entries.length };
@@ -335,17 +310,16 @@ export function renderBoard(
  * The identity a session keeps across a re-render, so `layerMotion` can tell a
  * session that MOVED from one that arrived.
  *
- * Exported for `columnGrid.ts`, whose blocks need exactly this and cannot use
- * the transposed grid's `GridEntry.ordinal` — it is assigned in a pipeline this
- * view does not run. One definition of "the same session", or the two views
+ * Exported for `columnGrid.ts`, whose blocks cannot use the transposed grid's
+ * `GridEntry.ordinal` — one definition of "the same session", or the two views
  * disagree about what travelled.
  *
- * It has to be built from the session itself rather than from its position:
- * revealing the øving layer inserts rows between the lectures, so every index
- * below the first insertion changes while the sessions do not. The occurrence
- * counter covers the one case the facts do not separate — a course publishing
- * two identical parallels at the same hour — and is stable because the layer
- * filter removes rows without reordering them.
+ * Built from the session itself rather than its position: revealing the øving
+ * layer inserts rows between the lectures, so every index below the first
+ * insertion changes while the sessions do not. The occurrence counter covers
+ * the one case the facts do not separate — two identical parallels at the same
+ * hour — and is stable because the layer filter removes rows without
+ * reordering them.
  */
 export function motionKey(entry: SessionEntry, seen: Map<string, number>): string {
   const base = [
@@ -400,9 +374,8 @@ function buildRow(
   );
 
   if (onBlockClick) {
-    // Built by the grid's own `blockDetailFor`, not by a second hand-rolled
-    // literal: the card a row opens IS the card a bar opens, and the last
-    // version of this literal quietly shipped an empty week label.
+    // Built by the grid's own `blockDetailFor`, not a second hand-rolled
+    // literal: the card a row opens IS the card a bar opens.
     row.addEventListener("click", () =>
       onBlockClick(
         blockDetailFor(

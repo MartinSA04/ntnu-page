@@ -1,5 +1,5 @@
 /**
- * astro-2: the 5 470 course pages are only discoverable through /sitemap.xml,
+ * the 5 470 course pages are only discoverable through /sitemap.xml,
  * and /sitemap.xml is only correct if `site` in astro.config.mjs and the
  * `Sitemap:` line in public/robots.txt name the same host. Both are still the
  * placeholder ntnu.martinsundal.no and have to be changed together, which is

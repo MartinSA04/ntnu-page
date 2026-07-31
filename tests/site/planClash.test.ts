@@ -91,7 +91,7 @@ describe("planClash", () => {
     expect(verdict).toEqual({ kind: "off-semester" });
   });
 
-  // course-2 / modals-6: the off-semester notice used to be pre-empted by the
+  // / the off-semester notice used to be pre-empted by the
   // empty-plan short-circuit, so a cold visitor's very first add — the one
   // that most needs it — never got it.
   it("still says off-semester when the plan is empty (cold visitor's first add)", async () => {
@@ -103,13 +103,13 @@ describe("planClash", () => {
     );
   });
 
-  // conf-1: "no entries this semester" and "entries we cannot classify" are
+  // "no entries this semester" and "entries we cannot classify" are
   // different states, and the page used to print "Undervises ikke i Høst 2026"
   // directly above a course's own autumn grid.
   //
   // The fixture is an øving-only autumn course, NOT IIK4100 as originally
   // written: its "Lecture and Lab exercise" title was a valid example of the
-  // "other" bucket when this test was written, but conf-3 later taught the
+  // "other" bucket when this test was written, but later taught the
   // classifier to read joined combined sessions as lectures, so IIK4100 now
   // resolves to a real lecture verdict — a strictly better outcome for that
   // course, and the reason this fixture had to move. A course publishing only
@@ -228,7 +228,7 @@ describe("planClash", () => {
   });
 
   /**
-   * cpc-1. TDT4110's three lecture parallels carry `studyProgramKeys` that
+   *. TDT4110's three lecture parallels carry `studyProgramKeys` that
    * never mention MTDT, so `entriesForProgram` is a documented no-op and only
    * `applyGroupSelection`'s numbered-parallel default (the grid's own rule)
    * narrows them. Parallel 2 sits on top of the plan's TMA4412; the grid draws

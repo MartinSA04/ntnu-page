@@ -1,19 +1,13 @@
 /**
- * Plan state + persistence (PLANNER.md §3, PRODUCT.md §7/§0). Storage and
- * the change-event target are injected so this module works in tests (and
- * any non-DOM context) without touching `window`/`localStorage` at import
- * time.
+ * Plan state + persistence (PLANNER.md §3, PRODUCT.md §7/§0). Storage and the
+ * change-event target are injected so this works in non-DOM contexts.
  *
- * Courses carry `source` (did this come from the programme pre-fill or a
- * manual add?) and, for programme courses only, an optional `dropped` flag —
- * "drop a programme course → grays out, one tap restores, excluded from
- * schedule/credits" (§0.3). Manual adds have no drop state; removing one
- * deletes it outright.
+ * Courses carry `source` (programme pre-fill or manual add) and, for programme
+ * courses only, `dropped` — grays out, one tap restores, excluded from
+ * schedule/credits (§0.3). Removing a manual add deletes it outright.
  *
- * Storage is split three ways instead of one blob: the programme choice is
- * global (it survives a semester switch), while the course list is scoped
- * per semester (a manual add in 26h has no business showing up in 27v) —
- * see `PROFILE_STORAGE_KEY`/`PLANS_STORAGE_KEY`/`LAST_SEMESTER_KEY` below.
+ * Storage is split three ways: the programme choice is global (it survives a
+ * semester switch), the course list is scoped per semester.
  */
 
 export const PROFILE_STORAGE_KEY = "np:profile";
@@ -33,32 +27,25 @@ export interface PlanCourse {
   version: string;
   source: CourseSource;
   /**
-   * Credits as the *study plan* stated them, when the plan is where this
-   * course came from. The live `details().credits` still wins when it
-   * arrives; this is the fallback for the 39 of 1 383 period-1 obligatory
-   * references that are absent from the catalog and would otherwise
-   * under-report the semester's load (B9.1). `null`/absent = unknown.
+   * Credits as the *study plan* stated them. Live `details().credits` wins when
+   * it arrives; this is the fallback for the 39 of 1 383 period-1 obligatory
+   * references absent from the catalog. `null`/absent = unknown.
    */
   credits?: number | null;
   /**
-   * Only meaningful for `source: "program"`. `true` = the student dropped
-   * this programme course: still listed (grayed out, one tap restores),
-   * excluded from the schedule and credit total. Manual adds are never
-   * `dropped` — removing one deletes it outright instead.
+   * Only meaningful for `source: "program"`: the student dropped this course —
+   * still listed, excluded from schedule and credits. Manual adds are never
+   * `dropped`; removing one deletes it.
    */
   dropped?: boolean;
-  /**
-   * Selected group keys (e.g. which forelesningsparallell/øvingsgruppe the
-   * student is in) — Task 3 defines the key shape. Absent = the defaults.
-   */
+  /** Selected group keys (which parallell/øvingsgruppe). Absent = defaults. */
   groups?: string[];
 }
 
 /**
- * The studieretning a student picked at a `Valg av studieretning` waypoint
- * (programPlan.ts). Later-year periods of a sivilingeniør programme carry no
- * top-level courses at all, so this is what turns the study plan from a
- * choice space into a concrete course list.
+ * The studieretning picked at a `Valg av studieretning` waypoint. Later-year
+ * sivilingeniør periods carry no top-level courses, so this is what turns the
+ * study plan from a choice space into a concrete course list.
  */
 export interface PlanDirection {
   code: string;
@@ -102,11 +89,8 @@ function defaultStorage(): StorageLike | undefined {
   try {
     return window.localStorage;
   } catch {
-    // With Chrome's "block all cookies", inside a sandboxed/partitioned embed
-    // or in a webview with DOM storage off, the *property access itself*
-    // throws (SecurityError) — which is why the fallback below never used to
-    // engage and the planner and every course page died to a blank shell with
-    // no message (store-1/sec-2).
+    // With cookies blocked, in a sandboxed embed, or in a webview with DOM
+    // storage off, the *property access itself* throws (SecurityError).
     return undefined;
   }
 }
@@ -117,12 +101,9 @@ function defaultEvents(): EventTargetLike | undefined {
 
 /**
  * Wraps a backing storage so a denied or failing one degrades to an in-memory
- * plan for the session instead of throwing out of `createPlanStore`/`savePlan`.
- * Every write is mirrored into the map, and the backing store is abandoned the
- * first time it throws (SecurityError, QuotaExceededError), so the plan still
- * loads, adds, drops and shares for as long as the tab lives — it just stops
- * surviving a reload. `undefined` (no storage at all — a non-DOM context) is
- * the same path with nothing behind it.
+ * plan for the session instead of throwing. Every write is mirrored into the
+ * map and the backing store is abandoned the first time it throws, so the plan
+ * still loads, adds, drops and shares — it just stops surviving a reload.
  */
 function resilientStorage(backing: StorageLike | undefined): StorageLike {
   const memory = new Map<string, string>();
@@ -163,17 +144,14 @@ const nullEvents: EventTargetLike = {
 };
 
 /**
- * What a course or programme code may look like. Real NTNU codes are short
- * and punctuation-poor: all 5 470 crawled course codes and all 403 programme
- * codes fit this class within 16 characters (`EMNE/HF`, `MSECT+OH` and
- * `MSØK/5` are why `/` and `+` are in it). Studieretning codes run longer —
- * `SIVING-ARBERFARING24` is 20 — hence the separate bound below.
+ * What a course or programme code may look like. All 5 470 course codes and
+ * 403 programme codes fit within 16 characters (`EMNE/HF`, `MSECT+OH`,
+ * `MSØK/5` are why `/` and `+` are here). Studieretning codes run to 20.
  *
- * Untrusted input reaches both: a shared plan hash used to write any text at
- * all into `np:profile` as a programme "code", and the topbar chip and the
- * homepage "Planen din" line then repeated that text on every page, on every
- * visit, with no hash left in the URL (sec-1). The same guard runs on read, so
- * an already-poisoned profile is dropped rather than rendered forever.
+ * Untrusted input reaches both: a shared plan hash could write any text into
+ * `np:profile` as a programme "code", which the topbar chip then repeated on
+ * every page forever. The same guard runs on read, so an already-poisoned
+ * profile is dropped rather than rendered.
  */
 const CODE_PATTERN = /^[A-ZÆØÅ0-9_+/-]{2,16}$/i;
 const DIRECTION_PATTERN = /^[A-ZÆØÅ0-9_+/-]{2,32}$/i;
@@ -185,9 +163,8 @@ function asRecord(value: unknown): Record<string, unknown> | null {
 }
 
 /**
- * Type-guards one course entry out of untrusted JSON, defensively rebuilding
- * it field-by-field and defaulting `version`/`source` when a record is only
- * a bare `{code, name}` (e.g. a hand-edited or partially-written entry).
+ * Type-guards one course out of untrusted JSON, rebuilding it field-by-field
+ * and defaulting `version`/`source` for a bare `{code, name}`.
  */
 function coerceCourse(raw: unknown): PlanCourse | null {
   if (typeof raw !== "object" || raw === null) return null;
@@ -247,19 +224,14 @@ function coerceProfile(raw: unknown): StoredProfile {
 }
 
 /**
- * Enforces the plan's one-entry-per-code invariant: a course is in the plan
- * once or not at all. When the same code appears twice the `source: "program"`
- * entry wins — it is the one carrying the study plan's credits and the
- * Dropp/Legg tilbake semantics — and it inherits the loser's group selection
- * when it has none of its own, so a student's parallel/øving pick survives the
- * merge. Otherwise the first entry wins, as `addCourse` has always done.
+ * Enforces the one-entry-per-code invariant. When a code appears twice the
+ * `source: "program"` entry wins — it carries the study plan's credits and the
+ * Dropp/Legg tilbake semantics — and inherits the loser's group selection when
+ * it has none of its own. Otherwise the first entry wins.
  *
- * Two ordinary clicks used to break this (add a course from its page, then
- * pick your programme): the plan held the course twice, the credit line read
- * "22,5 av 30 sp" for 15 sp, the exam list drew a red same-day collision of
- * the course with itself, and Dropp left the manual twin feeding the week
- * (edit-1/store-6). It is enforced here, on read and on every write, rather
- * than in the callers that kept forgetting it.
+ * Two ordinary clicks break this (add a course from its page, then pick your
+ * programme), so it is enforced here on read and on every write rather than in
+ * the callers that kept forgetting it.
  */
 function dedupeByCode(courses: PlanCourse[]): PlanCourse[] {
   const byCode = new Map<string, PlanCourse>();
@@ -331,11 +303,9 @@ export interface PlanStore {
 
 /**
  * Builds a plan store bound to injected (or default global) storage/events.
- * Reads are always fresh from storage (no in-memory cache) so multiple
- * store instances / tabs stay consistent. Safe to call at module load in a
- * non-DOM context, and safe where DOM storage is denied or full: both
- * degrade to an in-memory plan for the session (`resilientStorage`) plus
- * inert no-op events rather than throwing.
+ * Reads are always fresh from storage so multiple stores/tabs stay consistent.
+ * Safe at module load in a non-DOM context, and where storage is denied or
+ * full: both degrade to an in-memory plan plus no-op events.
  */
 export function createPlanStore(
   defaultSemesterId: string,
@@ -411,12 +381,9 @@ export function createPlanStore(
 
   /**
    * "Fjern fra planen". A manual add is spliced out; a `source: "program"`
-   * course is *dropped* instead — a programme course is never deleted, it
-   * grays out and one tap restores it (§0.3). Hard-deleting one looked like
-   * it worked and was then silently undone: the next study-plan derive
-   * re-added it with no `dropped` flag. The planner and the popover picked
-   * the verb themselves, the three off-planner call sites did not (store-3),
-   * so the store decides it now and they all agree by construction.
+   * course is *dropped* instead — hard-deleting one looked like it worked and
+   * was silently undone by the next study-plan derive. The store decides the
+   * verb so every call site agrees by construction.
    */
   function removeCourse(code: string): PlanState {
     const plan = loadPlan();
@@ -433,9 +400,8 @@ export function createPlanStore(
   }
 
   /**
-   * Marks a programme course dropped (grayed out, excluded from
-   * schedule/credits, still listed). No-op for a manual course or an
-   * absent code — dropping only ever applies to `source: "program"`.
+   * Marks a programme course dropped. No-op for a manual course or an absent
+   * code — dropping only ever applies to `source: "program"`.
    */
   function dropCourse(code: string): PlanState {
     const plan = loadPlan();
@@ -468,18 +434,12 @@ export function createPlanStore(
   }
 
   /**
-   * Replaces the plan's `source: "program"` course set with `courses`,
-   * preserving: (a) the `dropped` flag on any code that persists across the
-   * replacement (re-picking the same programme+kull, or a plan refresh,
-   * must not silently un-drop something the student already removed), (b)
-   * the `groups` selection on any code that persists (a shared link's group
-   * pick, or the student's own parallel/øving choice, must survive a study
-   * plan re-derive — it used to show on first paint and then vanish the
-   * moment `onPlanChange` re-ran this with the same codes), and (c) every
-   * `source: "manual"` course *the programme prefill does not itself contain*
-   * — a code in both is one course, and `dedupeByCode` collapses it onto the
-   * programme entry (edit-1/store-6). Used when the programme/kull selection
-   * changes (or the study plan is (re)fetched).
+   * Replaces the plan's `source: "program"` course set, preserving across the
+   * replacement: (a) `dropped` on any persisting code, so re-picking the same
+   * programme does not un-drop something; (b) `groups` on any persisting code,
+   * so a parallel/øving pick survives a re-derive; (c) every `source: "manual"`
+   * course the prefill does not itself contain — a code in both is one course,
+   * collapsed onto the programme entry by `dedupeByCode`.
    */
   function setProgramPlan(program: PlanProgram, courses: AddCourseInput[]): PlanState {
     const plan = loadPlan();
@@ -511,12 +471,9 @@ export function createPlanStore(
   }
 
   /**
-   * Switches the plan's active semester: the current courses are persisted
-   * under the semester they belong to first, then the target semester's own
-   * stored course list is loaded in their place. Manual adds therefore stay
-   * in the semester they were added to (user mandate 7) — they are never
-   * carried across a switch. The programme profile is global and is
-   * untouched by this.
+   * Switches the active semester: the current courses are persisted under the
+   * semester they belong to first, then the target's own list is loaded. Manual
+   * adds stay in the semester they were added to. The profile is global.
    */
   function setSemester(semesterId: string): PlanState {
     const plan = loadPlan();
@@ -535,14 +492,10 @@ export function createPlanStore(
   }
 
   /**
-   * Clears the programme profile and re-derives: the stored program is
-   * removed and every `source: "program"` course dropped from the active
-   * semester, while manual adds survive. `savePlan` can only ever *write* a
-   * profile — it skips the `np:profile` key when `program` is undefined, so
-   * it cannot clear one — hence the key is reset to an empty record directly
-   * here, then the pruned course list is persisted through the normal save
-   * path (which writes the plans/last-semester keys and dispatches the
-   * change event). Used by the studieinfo modal's "no programme" commit.
+   * Clears the programme profile and re-derives. `savePlan` can only ever
+   * *write* a profile — it skips the key when `program` is undefined — so the
+   * key is reset directly here, then the pruned course list goes through the
+   * normal save path.
    */
   function removeProgram(): PlanState {
     const plan = loadPlan();
@@ -572,9 +525,8 @@ export function createPlanStore(
   }
 
   /**
-   * Subscribes to plan changes: same-tab saves (custom event) and
-   * cross-tab saves (native `storage` event on any of the three plan keys).
-   * Returns an unsubscribe function.
+   * Subscribes to plan changes: same-tab saves (custom event) and cross-tab
+   * saves (native `storage` event on any plan key). Returns an unsubscribe.
    */
   function onPlanChange(cb: (plan: PlanState) => void): () => void {
     const onCustom = (event: Event) => {
@@ -633,12 +585,9 @@ const SEMESTER_ID_PATTERN = /^\d{2}[hv]$/i;
  * Every field in the hash is percent-encoded on write and decoded on read.
  *
  * `encodeURIComponent` leaves `. - _ ~ ! * ' ( )` alone, which is what makes
- * this safe: `.` (field separator) and `-` (dropped-course prefix) keep
- * their grammatical meaning, while `;`, `,`, `+` and every non-ASCII byte
- * become escapes. Without it a direction code like `BSPL26-V-GJØVIK` was
- * written raw, read back percent-encoded by the browser, and never matched
- * its own study plan again — the campus question re-opened on every load and
- * the banner showed a raw machine code (B10.1).
+ * this safe: `.` (field separator) and `-` (dropped prefix) keep their meaning
+ * while `;`, `,`, `+` and every non-ASCII byte become escapes. Without it a
+ * direction code like `BSPL26-V-GJØVIK` never matched its own study plan again.
  */
 function encodeField(value: string): string {
   return encodeURIComponent(value);
@@ -654,14 +603,10 @@ function decodeField(value: string): string {
 }
 
 /**
- * One course token in the hash grammar: `[-|+]code[.version]` followed by
- * zero or more `~<groupKey>` segments. `-` = dropped programme course,
- * `+` = manual add, no prefix = active (non-dropped) programme course. The
- * whole token (prefix + code/version + groups) is encoded/decoded as one
- * unit — `~` and `.` both survive `encodeURIComponent` untouched, which is
- * what makes them safe delimiters here; `+` does not survive (it becomes
- * `%2B`), which only matters for round-tripping through this same parser,
- * never for hand-typing.
+ * One course token: `[-|+]code[.version]` plus zero or more `~<groupKey>`.
+ * `-` = dropped programme course, `+` = manual add, no prefix = active
+ * programme course. `~` and `.` both survive `encodeURIComponent`, which is
+ * what makes them safe delimiters here.
  */
 interface HashToken {
   code: string;
@@ -720,9 +665,8 @@ export interface HashCourse {
 export interface ParsedPlanHash {
   semesterId: string;
   /**
-   * `null` when the hash carries no programme segment (`"-"`). `direction`
-   * is the studieretning code only — its display name is recovered from the
-   * study plan, exactly as the programme's own name is.
+   * `null` when the hash carries no programme segment (`"-"`). `direction` is
+   * the studieretning code only — its name is recovered from the study plan.
    */
   program: { code: string; cohort: number; direction: string | null } | null;
   courses: HashCourse[];
@@ -731,29 +675,21 @@ export interface ParsedPlanHash {
 /**
  * Parse a plan hash into semester id + optional programme + courses.
  *
- * **The grammar** (three `;`-separated segments; every field percent-encoded,
- * see `encodeField`):
+ * **The grammar** (three `;`-separated segments, every field percent-encoded):
  *
  *     #<semesterId>;<programme>;<courses>
  *
- * - `semesterId` — `26h` / `27v`. Must match `/^\d{2}[hv]$/i` or the whole
- *   hash is rejected — that also kills every old `#v2;…` link by
- *   construction, with no separate version check needed. Whether the *site*
- *   can plan the semester is the caller's call (an id we don't ship data for
- *   falls back to the current semester with a note — C4).
- * - `programme` — `-` (none) or `code[.cohort[.direction]]`. `cohort` must be
- *   a plausible 4-digit year or the whole segment is rejected: the grammar
- *   PRODUCT §7 used to document put *courses* in this slot, and feeding that
- *   form to this parser produced `{code: "TDT4100", cohort: 1}`, a 400 from
- *   `?year=1` and a banner reading "TDT4100 · kull 1" (B10.2).
- * - `courses` — comma list of `[-|+]code[.version][~groupKey…]`. `-` =
- *   dropped programme course, `+` = manual add, bare = active programme
- *   course. A version equal to the default is omitted. Malformed course
- *   tokens are dropped rather than failing the whole parse — one bad token
- *   should not cost the student the other five courses.
+ * - `semesterId` — `26h` / `27v`. Must match `/^\d{2}[hv]$/i` or the whole hash
+ *   is rejected, which also kills every old `#v2;…` link by construction.
+ *   Whether the *site* can plan that semester is the caller's call.
+ * - `programme` — `-` (none) or `code[.cohort[.direction]]`. `cohort` must be a
+ *   plausible 4-digit year or the segment is rejected: an older documented
+ *   grammar put *courses* in this slot, which parsed as `cohort: 1`.
+ * - `courses` — comma list of `[-|+]code[.version][~groupKey…]`. A version
+ *   equal to the default is omitted. Malformed tokens are dropped rather than
+ *   failing the whole parse.
  *
- * Returns `null` for an empty/absent hash and for a hash whose semester
- * segment doesn't parse as one.
+ * Returns `null` for an empty hash and for one whose semester does not parse.
  */
 export function parsePlanHash(hash: string): ParsedPlanHash | null {
   const trimmed = hash.replace(/^#/, "").trim();
@@ -762,11 +698,9 @@ export function parsePlanHash(hash: string): ParsedPlanHash | null {
 
   const semesterRaw = (segments[0] ?? "").trim();
   if (!SEMESTER_ID_PATTERN.test(semesterRaw)) return null;
-  // Lower-cased because the pattern above accepts either case while every id
-  // we ship (and every id `formatPlanHash` writes) is lowercase: an
-  // autocapitalised "#26H" parsed fine and then failed the caller's
-  // known-semester lookup, so the link note apologised for not being able to
-  // plan the very semester it was showing (store-7).
+  // Lower-cased: the pattern accepts either case while every id we ship is
+  // lowercase, so an autocapitalised "#26H" parsed and then failed the
+  // caller's known-semester lookup.
   const semesterId = decodeField(semesterRaw).toLowerCase();
 
   const progRaw = (segments[1] ?? "").trim();
@@ -780,8 +714,8 @@ export function parsePlanHash(hash: string): ParsedPlanHash | null {
       program = {
         code,
         cohort,
-        // An unusable direction costs the studieretning answer (the question
-        // re-opens), not the whole programme.
+        // An unusable direction costs the studieretning answer, not the
+        // whole programme.
         direction: direction !== null && DIRECTION_PATTERN.test(direction) ? direction : null,
       };
     }
@@ -793,9 +727,8 @@ export function parsePlanHash(hash: string): ParsedPlanHash | null {
   for (const token of itemsRaw.split(",")) {
     const parsed = parseHashToken(token);
     if (!parsed) continue;
-    // One entry per code, as everywhere else in the store: a link repeating a
-    // code used to render the course twice and double-count its credits.
-    // First token wins, so its `-`/`+` prefix is the one honoured.
+    // One entry per code, as everywhere else in the store. First token wins,
+    // so its `-`/`+` prefix is the one honoured.
     if (seen.has(parsed.code)) continue;
     seen.add(parsed.code);
     const course: HashCourse = {
@@ -811,14 +744,10 @@ export function parsePlanHash(hash: string): ParsedPlanHash | null {
 }
 
 /**
- * Format a plan into its shareable hash form. Example:
- * `"#26h;MTDT.2024.MTDTDS-24;TDT4100,TMA4100.2,-IT2805,%2BPSY1000"`.
- *
- * The programme segment is `code.cohort[.direction]`; the direction part is
- * appended only when one was chosen, so hashes written before studieretning
- * existed still parse (and still format) identically. Every field goes
- * through `encodeField`, which is what makes `BSPL26-V-GJØVIK` survive the
- * round trip (B10.1) — and `parsePlanHash` is its exact inverse.
+ * Format a plan into its shareable hash form, e.g.
+ * `"#26h;MTDT.2024.MTDTDS-24;TDT4100,TMA4100.2,-IT2805,%2BPSY1000"`. The
+ * direction part is appended only when one was chosen, so older hashes still
+ * parse. Exact inverse of `parsePlanHash`.
  */
 export function formatPlanHash(
   plan: Pick<PlanState, "semesterId" | "courses" | "program">,

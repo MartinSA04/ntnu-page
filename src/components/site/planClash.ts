@@ -1,29 +1,22 @@
 /**
- * Plan-aware clash preview for the course page (PRODUCT.md §6 — "the verb,
- * everywhere"; REVIEW U11). `/emne/[code]/` has to answer *does this fit my
- * week* **before** the student commits, so it runs the candidate course and
- * the plan through the same engine `/planlegger/` uses
- * (`lib/planner/conflicts.ts`) rather than growing a second one.
+ * Plan-aware clash preview for the course page (PRODUCT.md §6). `/emne/[code]/`
+ * answers *does this fit my week* before the student commits, through the same
+ * engine `/planlegger/` uses rather than a second one.
  *
- * **One caller, deliberately** (2026-07-30, owner's call): this used to run on
- * `/emner/`'s rows and in the add-course dialog too, lazily per row. Both
- * search surfaces dropped it — searching is not the moment a plan is judged,
- * and a verdict per visible row is a timetable fetch per row per plan course.
- * Everything below is unchanged and still fully tested; don't wire it back
- * into a result list on consistency grounds.
+ * **One caller, deliberately**: this used to run on `/emner/`'s rows and in the
+ * add-course dialog. Both dropped it — searching is not the moment a plan is
+ * judged, and a verdict per visible row is a timetable fetch per row per plan
+ * course. Don't wire it back into a result list on consistency grounds.
  *
- * Lecture×lecture only, per DR-1: an øving overlap is not a hard conflict,
- * and a false red is the one failure mode DR-1 exists to prevent. Entries are
- * clamped to the semester's own teaching weeks first, so a spring-only course
- * never "collides" with an autumn plan.
+ * Lecture×lecture only, per DR-1: an øving overlap is not a hard conflict, and
+ * a false red is the one failure mode DR-1 exists to prevent. Entries are
+ * clamped to the semester's teaching weeks first.
  *
- * DR-1's under-classification bias means "no lecture-classified entry" is a
- * routine outcome (~30 % of taught courses), so it gets its own verdict:
- * `off-semester` means the course has NO entries in these weeks, while
- * `unclassified` means it has entries we could not read an activity kind
- * from. Collapsing the two made `/emne/IIK4100/` assert "undervises ikke i
- * Høst 2026" directly above its own autumn grid — DR-6 wants the honest gap,
- * not a confident falsehood.
+ * DR-1's under-classification bias makes "no lecture-classified entry" routine
+ * (~30 % of taught courses), so it gets its own verdict: `off-semester` means
+ * NO entries in these weeks, `unclassified` means entries we could not read a
+ * kind from. Collapsing the two asserted "undervises ikke i Høst 2026" directly
+ * above the course's own autumn grid.
  */
 import { lecturesOnly } from "../../lib/planner/activity.js";
 import { findConflicts } from "../../lib/planner/conflicts.js";
@@ -79,14 +72,12 @@ interface SemesterEntries {
 }
 
 /**
- * One course's entries inside the semester's teaching weeks, or `null` when
- * its timetable could not be fetched (unknown ≠ empty). `known` lets a caller
- * that already fetched the timetable skip the round trip; pass `[]` to assert
- * "not taught here" without a fetch.
+ * One course's entries inside the semester's teaching weeks, or `null` when the
+ * timetable could not be fetched (unknown ≠ empty). `known` lets a caller that
+ * already fetched skip the round trip; `[]` asserts "not taught here".
  *
  * `inSemester` is measured *before* the group narrowing on purpose: "is this
- * course taught here at all" must not depend on which parallel is selected,
- * or a pick that lies dormant this semester would read as "undervises ikke".
+ * taught here at all" must not depend on which parallel is selected.
  */
 async function semesterEntries(
   course: { code: string; version: string; groups?: string[] },
@@ -114,20 +105,14 @@ function bySlot(a: ClashPartner, b: ClashPartner): number {
 
 /**
  * Diffs one course against the plan's other active courses for `semester`.
- * Never throws — an unreachable timetable is reported as `error`, which the
- * caller renders as a gap rather than as "no collision" (DR-6's honest gap).
+ * Never throws — an unreachable timetable is `error`, which the caller renders
+ * as a gap rather than as "no collision" (DR-6's honest gap).
  *
- * Both sides go through `applyGroupSelection` — the single call the grid
- * makes (`grid.ts`'s `collectEntries`) — so the preview and the week cannot
- * disagree by construction. It carries `entriesForProgram` (the false
- * positive study S7 documented: TMA4400's MTGEORT stream reddening a plan's
- * own MTDT sections) *and* the lecture-parallel defaults. Without the
- * latter, TDT4110's `Forelesningsparallell 2` — tagged for programmes that
- * never mention MTDT, so the programme filter alone is a documented no-op —
- * reds a collision against a plan's TMA4412 that the grid, which draws only
- * parallel 1, never shows. DR-1: a false red is the one failure mode DR-1
- * exists to prevent. Each partner's own pick rides on its
- * `PlanCourse.groups`; the candidate's does too, once it is in the plan.
+ * Both sides go through `applyGroupSelection` — the single call the grid makes
+ * — so the preview and the week cannot disagree by construction. That carries
+ * `entriesForProgram` *and* the lecture-parallel defaults; without the latter a
+ * parallel the grid never draws reds a collision that does not exist, which is
+ * the one failure mode DR-1 exists to prevent.
  */
 export async function planClash(
   course: { code: string; version: string },
@@ -140,8 +125,8 @@ export async function planClash(
   if (year === null) return { kind: "error" };
 
   const others = activeCourses(plan).filter((c) => c.code !== course.code);
-  // The candidate's own group pick, when the plan already holds it (the
-  // /emne/[code]/ case) — the grid would draw it with exactly this selection.
+  // The candidate's own group pick, when the plan already holds it — the grid
+  // would draw it with exactly this selection.
   const ownGroups = plan.courses.find((c) => c.code === course.code)?.groups;
 
   try {
@@ -154,12 +139,11 @@ export async function planClash(
     );
     if (own === null) return { kind: "error" };
     // Off-semester is a fact about the COURSE, so it outranks the empty-plan
-    // shortcut — a cold visitor's very first add is who needs it most
-    // (course-2/modals-6). Costs one memoized fetch on an empty plan.
+    // shortcut — a cold visitor's first add is who needs it most.
     if (own.inSemester.length === 0) return { kind: "off-semester" };
     if (others.length === 0) return { kind: "empty" };
     // Taught here, but nothing reads as a lecture: there is nothing to diff,
-    // and saying so is the honest gap. Never "undervises ikke" (conf-1).
+    // and saying so is the honest gap. Never "undervises ikke".
     if (own.lectures.length === 0) return { kind: "unclassified" };
 
     const otherLists = await Promise.all(
@@ -171,9 +155,8 @@ export async function planClash(
     const otherEntries = otherLists.flatMap((list) => list ?? []);
     if (otherEntries.length === 0) return { kind: "clear" };
 
-    // findConflicts sees the whole set, so drop pairs that are between two
-    // *other* plan courses — those are the planner's business, not this
-    // course's verdict.
+    // findConflicts sees the whole set, so drop pairs between two *other* plan
+    // courses — those are the planner's business, not this course's verdict.
     const partners = new Map<string, ClashPartner>();
     for (const conflict of findConflicts([...own.lectures, ...otherEntries])) {
       const mineIsA = conflict.a.courseCode === course.code;
@@ -219,9 +202,8 @@ export function clashSentence(verdict: ClashVerdict, semester: ClashSemester): s
 }
 
 /**
- * The same verdict as a node. `.np-note-clash` is a *sentence* class (D1), so
- * the figures it quotes — course code, day, time — carry `.np-data` rather
- * than the whole line being set in the mono.
+ * The same verdict as a node. `.np-note-clash` is a *sentence* class, so the
+ * figures it quotes carry `.np-data` rather than the whole line being mono.
  */
 export function clashNode(verdict: ClashVerdict, semester: ClashSemester): HTMLElement {
   const term = semesterLabel(semester.name);

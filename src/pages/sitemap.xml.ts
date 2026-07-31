@@ -9,7 +9,7 @@ import { buildSitemap } from "../lib/sitemap.js";
  * and fills it from the search index in the browser, deliberately (a 5 470-row
  * anchor list would be 440 KB of blocking HTML on the page whose own problem is
  * phone weight). So without this file a crawler entering at `/` reaches three
- * pages and none of the 5 470 the build exists to produce (astro-2).
+ * pages and none of the 5 470 the build exists to produce.
  *
  * Written by hand rather than pulled in via `@astrojs/sitemap`: a prerendered
  * endpoint over the catalog we already import costs one build-time pass and no

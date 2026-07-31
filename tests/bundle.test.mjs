@@ -1,22 +1,14 @@
 /**
  * Contract test over the REAL built client bundle.
  *
- * The planner now imports pure helpers from `ntnu-api` (`parseWeeks`,
- * `toMinutes`, `classifyActivity`, `findConflicts`, `decodeEntities`,
- * `isDeferredOccasion`) instead of keeping its own copies. Those copies
- * existed for a reason PLANNER.md §3 wrote down: `ntnu-api` also contains
- * `HttpClient` and three service clients, and shipping those to the browser
- * would be both dead weight and a surface the client has no business holding.
+ * The planner imports pure helpers from `ntnu-api` rather than keeping copies.
+ * That is only safe while the package stays `sideEffects: false`, every
+ * imported helper stays pure, and nobody writes `import { NTNUClient }` — which
+ * is exactly the kind of claim that quietly stops being true after a refactor
+ * or a bundler upgrade. So it is asserted: if an upstream URL ever appears in a
+ * client chunk, the module graph has pulled in the HTTP layer.
  *
- * The reason no longer applies — the package is `sideEffects: false`, every
- * imported helper is pure, and Rollup drops the rest — but "no longer applies"
- * is exactly the kind of claim that quietly stops being true after a refactor,
- * a bundler upgrade, or one careless `import { NTNUClient }`. So it is
- * asserted rather than assumed: if any upstream URL ever appears in a client
- * chunk, the client module graph has pulled in the HTTP layer.
- *
- * `dist/` is gitignored build output, so this SKIPS on a fresh checkout that
- * has not run `npm run build`, matching `tests/artifacts.test.mjs`.
+ * `dist/` is gitignored build output, so this SKIPS on a fresh checkout.
  */
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";

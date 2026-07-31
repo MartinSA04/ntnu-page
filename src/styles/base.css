@@ -15,15 +15,11 @@
 
 html {
   -webkit-text-size-adjust: 100%;
-  /* Every page on this site is short at first paint and long once its islands
-     land — the catalog grows a 200-row table, the planner grows a week. On a
-     classic-scrollbar desktop that transition takes the scrollbar from absent
-     to present, which narrows the viewport by ~15px and slides the whole
-     centred `.site-content` column sideways mid-load: a layout shift on every
-     page, from the one property that can pre-empt it. Costs nothing where
-     scrollbars are overlays (every phone, and macOS by default), which is
-     also why it does not reproduce in a headless run — measure it in a real
-     desktop Chrome before concluding it does nothing. */
+  /* Every page here is short at first paint and long once its islands land. On
+     a classic-scrollbar desktop that takes the scrollbar from absent to
+     present, narrowing the viewport by ~15px and sliding the centred column
+     sideways mid-load. Costs nothing where scrollbars overlay — which is also
+     why it does not reproduce headless. */
   scrollbar-gutter: stable;
 }
 
@@ -67,35 +63,26 @@ h3 {
 }
 
 /* The reading measure belongs to prose, not to markup. Applied to every
-   <p>/<ul>/<ol> it silently capped the data lists — search results, exam
-   ribbons, credit-reduction tables — at 38rem inside a 72rem column, which
-   is the opposite of what DESIGN §3 asks for ("data surfaces use the full
-   --maxw column"). Anything that carries a class has a designer; only
-   unclassed prose gets the measure, and at zero specificity so it never
-   fights one. */
+   <p>/<ul>/<ol> it capped the data lists at 38rem inside a 72rem column, the
+   opposite of DESIGN §3. Anything with a class has a designer; only unclassed
+   prose gets the measure, at zero specificity so it never fights one. */
 :where(p, ul, ol):not([class]) {
   max-width: var(--measure);
 }
 
-/* Same split, for the UA's 40px list indent. A classed list is a data
-   surface — search results, the exam ribbon, note lists, activity lists —
-   and every one of them turns markers off, so the indent was pure dead
-   gutter: at 360px the rows stepped 40px right of the search field and the
-   counter that produced them, losing 12% of the viewport (mob-8). Unclassed
-   prose lists keep the indent, because they keep their bullets.
-   `:where(...)` around the whole selector (not `:where(ul, ol)[class]`, which
-   the attribute selector would leave at 0,1,0) makes this zero specificity,
-   so a list that genuinely wants a marker just declares its own padding and
-   wins regardless of load order — `.details-activities-list` does exactly
-   that, and keeps its bullets. */
+/* Same split, for the UA's 40px list indent. A classed list is a data surface
+   and every one of them turns markers off, so the indent was dead gutter — at
+   360px the rows stepped 40px right of the field that produced them. Unclassed
+   prose lists keep the indent, because they keep their bullets. `:where(...)`
+   around the whole selector (not `:where(ul, ol)[class]`, which the attribute
+   selector would leave at 0,1,0) makes this zero specificity. */
 :where(ul[class], ol[class]) {
   padding-inline-start: 0;
 }
 
-/* Links are ink and underlined. The underline is not decoration here, it is
-   the whole distinguishing mark: a link no longer differs from its prose by
-   colour, so it has to differ by form (WCAG 1.4.1). That is also the older and
-   better typographic answer than a coloured word. */
+/* Links are ink and underlined. The underline is the whole distinguishing
+   mark: a link no longer differs from its prose by colour, so it has to differ
+   by form (WCAG 1.4.1). */
 a {
   color: var(--ui);
   text-decoration: underline;
@@ -156,13 +143,10 @@ th {
   color: var(--muted);
 }
 
-/* The offset is the whole indicator on a filled control, not a nicety. Since
-   the ring became ink (REWORK-2026-07-30) it is the same colour as every
-   pressed and selected fill, so a focused `.np-toggle` is an ink slab with an
-   ink ring and the paper gap between them is the only thing separating the
-   two. At 2px that read as a seam; 3px reads as a ring. (The green ring had
-   the same collision on green fills — it was just rarer, because fewer
-   controls filled.) */
+/* The offset is the whole indicator on a filled control. The ring is ink, the
+   same colour as every pressed and selected fill, so a focused `.np-toggle` is
+   an ink slab with an ink ring and the paper gap between them is the only thing
+   separating the two: at 2px that read as a seam, at 3px as a ring. */
 :focus-visible {
   outline: 2px solid var(--ui);
   outline-offset: 3px;

@@ -1,19 +1,15 @@
 /**
- * Fetch + shape layer for the planner (PLANNER.md §3). Talks to the same
- * `/api/*` Worker routes the course-detail page uses; per-course failures
- * are captured rather than thrown so the page can render partial plans
- * (PLANNER.md's "one error line per failed course").
+ * Fetch + shape layer for the planner (PLANNER.md §3). Per-course failures are
+ * captured rather than thrown so the page can render partial plans.
  *
- * This layer owns the *honest signal* PRODUCT §1's moat is built on: for every
- * course it says whether the timetable came back **with entries**, came back
- * **empty**, or **failed and why** (`TimetableOutcome`). The three must never
- * collapse into "no blocks drawn" at a consumer — that is how a failed fetch
- * ended up rendered as "ingen kollisjoner". Read `timetableOutcomeOf(bundle)`
- * or `courseFetchState(code)`, never `bundle.timetable?.length` alone.
+ * Owns the *honest signal* PRODUCT §1's moat rests on: for every course it says
+ * whether the timetable came back **with entries**, came back **empty**, or
+ * **failed and why** (`TimetableOutcome`). Never collapse the three into "no
+ * blocks drawn" — read `timetableOutcomeOf(bundle)` or `courseFetchState(code)`,
+ * never `bundle.timetable?.length` alone.
  *
- * Upstream English never reaches the UI from here: every failure is classified
- * into a `FetchFailureReason` and carries a ready Norwegian `message`; the raw
- * string survives as `detail` for the console only.
+ * Upstream English never reaches the UI from here: every failure carries a
+ * ready Norwegian `message`, and the raw string survives as `detail`.
  */
 
 import { decodeEntities } from "ntnu-api";
@@ -55,10 +51,9 @@ export interface CourseDetails {
 }
 
 /**
- * Why a fetch failed, classified so no upstream English ever reaches the
- * Norwegian UI (pd-9/ux-7/ux-fail-6). The worker answers in English
- * (`{"error":"Not found"}`, `"Rate limited"`) and a rejected `fetch` carries
- * the browser's own "Failed to fetch"; both stop here.
+ * Why a fetch failed, classified so no upstream English reaches the Norwegian
+ * UI. The worker answers in English and a rejected `fetch` carries the
+ * browser's own "Failed to fetch"; both stop here.
  */
 export type FetchFailureReason =
   | "not-found" // 404 — the catalog has no such course
@@ -72,8 +67,7 @@ export type FetchFailureReason =
 /**
  * Who we were talking to. Only used to word a failure honestly: a failed
  * download of our *own* build artifact must not be reported as "NTNU svarte
- * ikke" — reporting a download failure as an upstream fact is exactly the
- * dishonesty pd-3 flagged.
+ * ikke".
  */
 export type FetchSource = "ntnu" | "site";
 
@@ -99,9 +93,8 @@ export function failureMessage(reason: FetchFailureReason, source: FetchSource =
 }
 
 /**
- * The only error this module rejects with. `message` is already the Norwegian
- * sentence, so even a consumer that prints `err.message` blindly stays in
- * bokmål; `detail` keeps the raw upstream/browser text for the console.
+ * The only error this module rejects with. `message` is already Norwegian;
+ * `detail` keeps the raw upstream/browser text for the console.
  */
 export class FetchFailureError extends Error {
   readonly reason: FetchFailureReason;
@@ -129,10 +122,9 @@ export interface CourseFetchFailure {
 }
 
 /**
- * What the timetable leg actually produced. `empty` and `failed` are the two
- * states the week must never merge: "NTNU has no teaching registered" and "we
- * do not know" look identical on a grid, and only one of them permits a
- * "ingen kollisjoner" verdict (audit §1).
+ * What the timetable leg produced. `empty` and `failed` are the two states the
+ * week must never merge: they look identical on a grid, and only one permits a
+ * "ingen kollisjoner" verdict.
  */
 export type TimetableOutcome =
   | { kind: "entries"; count: number }
@@ -145,32 +137,28 @@ export type CourseFetchState = TimetableOutcome | { kind: "pending" };
 /** Per-course fetch result: each part captured independently, never thrown. */
 export interface CourseBundle {
   /**
-   * The entries, or `null` when the timetable could not be fetched. `null`
-   * means **unknown**, `[]` means **NTNU has no entries** — read
-   * `timetableOutcomeOf()` rather than deciding from this field alone.
+   * The entries, or `null` when the timetable could not be fetched. `null` =
+   * **unknown**, `[]` = **NTNU has no entries**. Prefer `timetableOutcomeOf()`.
    */
   timetable: TimetableEntry[] | null;
   details: CourseDetails | null;
   /**
    * Set on every bundle `fetchCourseBundle` returns. Optional only because
-   * `courseTimetable.ts` hand-builds a bundle from entries it already has;
-   * `timetableOutcomeOf()` covers that case, so prefer it over `?.`.
+   * `courseTimetable.ts` hand-builds one; prefer `timetableOutcomeOf()`.
    */
   timetableOutcome?: TimetableOutcome;
   /** Every leg that failed, classified. Empty on a healthy fetch. */
   failures?: CourseFetchFailure[];
   /**
    * `failures` pre-rendered as `"timeplan: NTNU svarte ikke"` — the shape the
-   * course rows and the provenance line already consume (they split on the
-   * colon for the part label). Norwegian on both sides of the colon.
+   * course rows and provenance line consume (they split on the colon).
    */
   errors: string[];
 }
 
 /**
- * What `fetchCourseBundle` always hands back: the honest fields are
- * guaranteed. Prefer this type wherever a bundle is known to come from a
- * fetch; `CourseBundle` exists for the hand-built case only.
+ * What `fetchCourseBundle` always hands back, with the honest fields
+ * guaranteed. `CourseBundle` exists for the hand-built case only.
  */
 export interface FetchedCourseBundle extends CourseBundle {
   timetableOutcome: TimetableOutcome;
@@ -178,9 +166,8 @@ export interface FetchedCourseBundle extends CourseBundle {
 }
 
 /**
- * A complete bundle around entries the caller already has (the course page
- * reuses the planner's grid with its own timetable). Keeps hand-built bundles
- * from being the one place the honest fields are missing.
+ * A complete bundle around entries the caller already has, so hand-built
+ * bundles are not the one place the honest fields go missing.
  */
 export function bundleFromEntries(entries: TimetableEntry[]): FetchedCourseBundle {
   return {
@@ -201,8 +188,8 @@ const PART_LABEL: Record<CourseFetchFailure["part"], string> = {
 const bundleMemo = new Map<string, Promise<FetchedCourseBundle>>();
 /**
  * Details are memoized on their own, by code: `/api/course/:code` carries
- * neither year nor version, so keying them with the bundle's composite key
- * re-fetched byte-identical data on every semester switch (pd-8).
+ * neither year nor version, so a composite key re-fetched identical data on
+ * every semester switch.
  */
 const detailsMemo = new Map<string, Promise<CourseDetails>>();
 /** Latest outcome per course code — the by-code half of the honest signal. */
@@ -211,14 +198,13 @@ const fetchStates = new Map<string, CourseFetchState>();
 /** Default course version used when a caller has no real one yet (mirrors store.ts's DEFAULT_VERSION). */
 const DEFAULT_VERSION = "1";
 
-/** Client-side cap on one planner request. Without it a stalled socket hangs the page (pd-4). */
+/** Client-side cap on one planner request. Without it a stalled socket hangs the page. */
 export const FETCH_TIMEOUT_MS = 15_000;
 
 export interface FetchOptions {
   /**
-   * The caller's lifetime signal (`onPage`'s). Combined with the timeout cap.
-   * Note it is shared through the memo: aborting it aborts the fetch for every
-   * caller of that course, which is what a page teardown wants.
+   * The caller's lifetime signal, combined with the timeout cap. Shared through
+   * the memo: aborting it aborts the fetch for every caller of that course.
    */
   signal?: AbortSignal | null;
 }
@@ -233,8 +219,7 @@ function requestSignal(external?: AbortSignal | null): AbortSignal | undefined {
     typeof AbortSignal.timeout === "function" ? AbortSignal.timeout(FETCH_TIMEOUT_MS) : null;
   if (!timeout) return external ?? undefined;
   if (!external) return timeout;
-  // AbortSignal.any is Baseline 2024; without it the caller's signal wins,
-  // which is the safer half to keep.
+  // AbortSignal.any is Baseline 2024; without it the caller's signal wins.
   return typeof AbortSignal.any === "function" ? AbortSignal.any([external, timeout]) : external;
 }
 
@@ -289,16 +274,12 @@ async function fetchJson<T>(
 }
 
 /**
- * Decodes the HTML entities upstream ships inside plain-text fields — real
- * blocks render "Forelesning 1 MTELSYS &#38; MTTK" without this (ux-7).
+ * Decodes the HTML entities upstream ships inside plain-text fields.
  *
- * The decoder is now `ntnu-api`'s, which also applies it inside
- * `parseTimetableEntry` itself — so a freshly-parsed payload arrives decoded
- * and this pass is a no-op on it. It is re-exported and still applied below,
- * which is not redundancy: the worker's KV cache holds entries parsed by the
- * *previous* library version for up to a full TTL after a deploy, and those
- * still carry raw entities. Decoding twice is safe (decoded text contains no
- * entity to decode) and costs one `includes("&")` per field.
+ * `ntnu-api` applies it inside `parseTimetableEntry` too, so a freshly-parsed
+ * payload arrives decoded and this pass is a no-op on it. Still applied because
+ * the worker's KV cache holds entries parsed by the *previous* library version
+ * for up to a full TTL after a deploy. Decoding twice is safe.
  */
 export { decodeEntities };
 
@@ -317,7 +298,7 @@ async function fetchTimetable(
   options?: FetchOptions,
 ): Promise<TimetableEntry[]> {
   // The code stays percent-encoded until the worker's own parseCode decodes
-  // it — 238 catalog codes contain Æ/Ø/Å and used to take a hard 400 (B1).
+  // it — 238 catalog codes contain Æ/Ø/Å and used to take a hard 400.
   const segment = encodeURIComponent(code);
   const url = `/api/course/${segment}/timetable?year=${year}&version=${encodeURIComponent(version)}`;
   const raw = await fetchJson<unknown>(url, "ntnu", options);
@@ -327,7 +308,7 @@ async function fetchTimetable(
   return (raw as TimetableEntry[]).map(decodeEntry);
 }
 
-/** Details, memoized by code alone — the URL carries neither year nor version (pd-8). */
+/** Details, memoized by code alone — the URL carries neither year nor version. */
 function fetchCourseDetails(code: string, options?: FetchOptions): Promise<CourseDetails> {
   const key = codeKey(code);
   const cached = detailsMemo.get(key);
@@ -337,8 +318,8 @@ function fetchCourseDetails(code: string, options?: FetchOptions): Promise<Cours
     "ntnu",
     options,
   ).catch((err: unknown) => {
-    // A failure must not be memoized (pd-5); the in-flight promise still is,
-    // so concurrent callers share the one request.
+    // A failure must not be memoized; the in-flight promise still is, so
+    // concurrent callers share the one request.
     if (detailsMemo.get(key) === promise) detailsMemo.delete(key);
     throw err;
   });
@@ -395,23 +376,17 @@ async function loadBundle(
 
 /**
  * Fetch a course's timetable + details in parallel, memoized per
- * `code:year:version` for the lifetime of the module (page load). Never
- * rejects: each part's failure is recorded in `failures`/`errors`, its field
- * left `null`, and the timetable's fate stated in `timetableOutcome`.
+ * `code:year:version` for the module's lifetime. Never rejects: each part's
+ * failure lands in `failures`/`errors` and the timetable's fate in
+ * `timetableOutcome`.
  *
- * A bundle that carries a failure is **dropped from the memo** as it settles
- * (pd-5): the module outlives every in-site navigation (CLAUDE.md's
- * ClientRouter rule), so memoizing a transient blip made it permanent for the
- * session with only a hard reload to recover. In-flight dedup is unaffected —
- * the promise stays in the map until it resolves.
+ * A bundle carrying a failure is **dropped from the memo** as it settles: the
+ * module outlives every in-site navigation, so memoizing a transient blip made
+ * it permanent for the session. In-flight dedup is unaffected.
  *
- * `version` threads to the timetable call (DR-4, PRODUCT.md §7/§8) — a
- * re-versioned course otherwise shows the wrong grid. It is NOT passed to
- * the details call: `courses.details()` has no `version` option (it scrapes
- * the version-less rendered course page — see `ntnu-api`'s `CoursesClient`),
- * so details are the same regardless of which version's timetable is shown.
- * Defaults to `"1"`, matching `store.ts`'s `DEFAULT_VERSION` and the
- * worker/`ntnu-api`'s own default.
+ * `version` threads to the timetable call (DR-4) but NOT to details:
+ * `courses.details()` has no `version` option, so details are the same
+ * whichever version's timetable is shown.
  */
 export function fetchCourseBundle(
   code: string,
@@ -435,11 +410,10 @@ export function fetchCourseBundle(
 }
 
 /**
- * The honest signal for one bundle, including bundles built by hand rather
- * than fetched (`courseTimetable.ts`) and the semester-narrowed clones
- * plannerApp makes — those keep the *fetch's* outcome, so "fetched 12 entries,
- * none of them in this semester" stays distinguishable from "fetch failed".
- * A `null` bundle is not-yet-loaded.
+ * The honest signal for one bundle, including hand-built ones and the
+ * semester-narrowed clones plannerApp makes — those keep the *fetch's* outcome,
+ * so "fetched 12 entries, none this semester" stays distinct from "fetch
+ * failed". A `null` bundle is not-yet-loaded.
  */
 export function timetableOutcomeOf(bundle: CourseBundle | null | undefined): CourseFetchState {
   if (!bundle) return { kind: "pending" };
@@ -453,10 +427,9 @@ export function timetableOutcomeOf(bundle: CourseBundle | null | undefined): Cou
 }
 
 /**
- * The latest fetch outcome for `code`, or `null` when this page never asked.
- * For surfaces that know a course code but hold no bundle. Keyed by code
- * alone, so a semester switch overwrites it — a bundle in hand is the more
- * precise source (`timetableOutcomeOf`).
+ * The latest fetch outcome for `code`, for surfaces that know a code but hold
+ * no bundle. Keyed by code alone, so a semester switch overwrites it — a bundle
+ * in hand is more precise (`timetableOutcomeOf`).
  */
 export function courseFetchState(code: string): CourseFetchState | null {
   return fetchStates.get(codeKey(code)) ?? null;
@@ -474,13 +447,12 @@ export type PlannerIndexExam = [season: string, date: string | null];
 
 /**
  * Positional tuple — elements 0–3 have never moved; 4 and 5 were appended by
- * the two-year crawl (C1/C2).
+ * the two-year crawl. New fields are only ever appended.
  *
- * `offeredYears` is newest-first and never empty. When it does **not** contain
- * `PlannerIndex.year`, the row's name/version/location/exams all come from the
- * older catalog year: the course is not taught in the canonical year, and its
- * exam dates are last year's. That is exactly what the semester-window filter
- * below has to catch (C3).
+ * `offeredYears` is newest-first and never empty. When it does NOT contain
+ * `PlannerIndex.year` the row's fields all come from the older catalog year:
+ * the course is not taught in the canonical year and its exam dates are last
+ * year's, which the semester-window filter below has to catch.
  */
 export type PlannerIndexCourse = [
   code: string,
@@ -501,14 +473,11 @@ let indexMemo: Promise<PlannerIndex> | null = null;
 /**
  * Fetch `/data/search-index.json` once per page load (module-level memo).
  *
- * A *rejection* is deliberately not memoized (pd-3): the memo used to hold the
- * failed promise for the whole SPA session, so one dropped download left the
- * exam column spinning, the add-course dialog stuck on "Henter emner …", and
- * the provenance line asserting NTNU had published no exam dates — a download
- * failure reported as an upstream fact. Callers may simply call again.
+ * A *rejection* is deliberately not memoized: holding the failed promise for
+ * the whole SPA session left the exam column spinning and the provenance line
+ * asserting NTNU had published no exam dates. Callers may simply call again.
  *
- * Rejects with a `FetchFailureError` whose `source` is `"site"`: this is our
- * own build artifact, so its failure must not be worded as NTNU's.
+ * Rejects with `source: "site"` — our own artifact, not NTNU's.
  */
 export function loadPlannerIndex(): Promise<PlannerIndex> {
   if (indexMemo) return indexMemo;
@@ -529,9 +498,8 @@ export function clearPlannerIndexMemo(): void {
 }
 
 /**
- * The `Semester.season` a `Semester.id` (`"26h"`/`"27v"`) encodes — the same
- * two letters `semesterYear` (schedule.ts) parses, kept separate here since
- * only this module needs the season string. `null` for a malformed id.
+ * The `Semester.season` a `Semester.id` (`"26h"`/`"27v"`) encodes. `null` for a
+ * malformed id.
  */
 export function seasonForSemesterId(semesterId: string): "AUTUMN" | "SPRING" | null {
   const m = /^\d{2}([hv])$/i.exec(semesterId.trim());
@@ -543,8 +511,7 @@ export function seasonForSemesterId(semesterId: string): "AUTUMN" | "SPRING" | n
  * The **academic** year a semester belongs to: autumn `Y` and the following
  * spring `Y+1` are one academic year `Y`. `search-index.json` is built from a
  * single catalog year, so this is exactly which semesters its exam dates can
- * speak for — `26h` and `27v` for the 2026 catalog, and nothing later (C3).
- * `null` for a malformed id.
+ * speak for. `null` for a malformed id.
  */
 export function academicYearOf(semesterId: string): number | null {
   const m = /^(\d{2})([hv])$/i.exec(semesterId.trim());
@@ -554,10 +521,9 @@ export function academicYearOf(semesterId: string): number | null {
 }
 
 /**
- * True when the planner index's catalog year can speak for `semesterId` at
- * all. Outside it the caller must say so ("eksamensdatoer er ikke publisert
- * for Høst 2027") rather than presenting the previous year's dates as this
- * semester's — which is what a season-only match did, a full year early.
+ * True when the planner index's catalog year can speak for `semesterId` at all.
+ * Outside it the caller must say so rather than presenting the previous year's
+ * dates as this semester's — which is what a season-only match did.
  */
 export function indexCoversSemester(index: PlannerIndex | null, semesterId: string): boolean {
   if (!index) return false;
@@ -572,34 +538,20 @@ export interface ExamWindow {
 }
 
 /**
- * Catalog exam inputs for one course, filtered to a semester's season
- * (DR-3, PRODUCT.md §8): the exam ribbon's source of truth is catalog
- * `ExamDate`, not scraped `CourseExam` text — `details().exams` is
- * enrichment-only (popover text), never the ribbon source.
+ * Catalog exam inputs for one course, filtered to a semester (DR-3): the exam
+ * ribbon's source of truth is catalog `ExamDate`, never scraped `CourseExam`
+ * text, which is enrichment-only.
  *
- * Matches by season **and**, when a `window` is supplied, by the semester's
- * own date span. The season match alone is not a year match: an autumn
- * semester's exam window regularly spills into the following
- * January/February (e.g. `26h`'s `examLastDate` is `2027-02-01`), so a
- * same-calendar-year filter would silently drop real exams — but a
- * season-only filter presented Høst 2026's dates as Høst 2027's, a year
- * early and with no staleness marker (C3). The window is `fromDate` …
- * `examFinalDate` straight out of `semesters.json`, which is both wide
- * enough for the January spill and narrow enough to exclude the next
- * year's.
+ * Matches by season **and**, when a `window` is supplied, the semester's own
+ * date span. Season alone is not a year match — an autumn exam window spills
+ * into January/February, so a same-calendar-year filter drops real exams, while
+ * a season-only filter presented Høst 2026's dates as Høst 2027's.
  *
- * `search-index.json` rows are built by `crawler/transform.mjs`'s
- * `toSearchIndex`, which already excludes continuation (kont) exams before
- * this data ever reaches the client. A `null` date is kept (not dropped) so
- * callers can render the "dato ikke satt" bucket (DR-3) instead of silently
- * losing the exam — a dateless exam carries no year to be wrong about.
- *
- * Identical `[season, date]` tuples collapse to one (exams-4). 68 catalog
- * courses repeat a tuple (FI3202 has three `AUTUMN, null`), and the tuple
- * carries nothing that could tell the occasions apart — so they rendered as
- * byte-identical "dato ikke satt" rows and inflated the provenance count.
- * Deduping here rather than in the crawler keeps the raw catalog faithful and
- * fixes both readers (the exam list and `countDatelessExams`) at once.
+ * A `null` date is kept so callers can render the "dato ikke satt" bucket — a
+ * dateless exam carries no year to be wrong about. Identical `[season, date]`
+ * tuples collapse to one: 68 catalog courses repeat a tuple with nothing to
+ * tell the occasions apart. Deduping here keeps the raw catalog faithful and
+ * fixes both readers at once.
  */
 export function examsFromIndex(
   course: Pick<PlannerIndexCourse, 0 | 3>,
@@ -621,9 +573,9 @@ export function examsFromIndex(
 }
 
 /**
- * The predicate `examsFromIndex` and `indexForSemester` share: does this
- * catalog exam belong to `semesterId`? `null` when the semester id itself is
- * unusable, so callers can distinguish "no exams" from "no question".
+ * The predicate `examsFromIndex` and `indexForSemester` share. `null` when the
+ * semester id itself is unusable, so callers can tell "no exams" from "no
+ * question".
  */
 function examBelongsTo(
   semesterId: string,
@@ -643,19 +595,16 @@ function examBelongsTo(
 }
 
 /**
- * A copy of the index whose every row carries only the exams that belong to
- * `semesterId` — season **and** the semester's own `fromDate`…`examFinalDate`
- * window.
+ * A copy of the index whose every row carries only the exams belonging to
+ * `semesterId` — season **and** the semester's own date window.
  *
- * This exists because the exam ribbon reaches into the index itself and so
- * cannot be handed a window per call. Pre-filtering here means the ribbon's
- * season match becomes a no-op rather than a second, weaker filter, and the
- * ribbon has no way to render a date from a semester it was not asked about:
- * selecting "2027 HØST" used to present Høst 2026's dates as 27h's, a year
- * early, with no staleness marker (C3).
+ * Exists because the exam ribbon reaches into the index itself and cannot be
+ * handed a window per call. Pre-filtering makes the ribbon's own season match a
+ * no-op rather than a second, weaker filter, so it has no way to render a date
+ * from a semester it was not asked about.
  *
- * Cheap enough to run per semester (one pass over ~5 500 two-element arrays)
- * but not per render — callers should memoise by `semesterId`.
+ * One pass over ~5 500 rows: cheap per semester, not per render — memoise by
+ * `semesterId`.
  */
 export function indexForSemester(
   index: PlannerIndex,

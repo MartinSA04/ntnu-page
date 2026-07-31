@@ -1,44 +1,29 @@
 /**
- * Programme study-plan → period classification for `/planlegger/` (DR-5,
- * DR-7, PRODUCT.md §0). Fetches `/api/program/:code/plan`, finds the period
- * matching the chosen semester for a cohort, and resolves it into the
- * courses the student actually has plus the one question the data forces.
+ * Programme study-plan → period classification (DR-5, DR-7). Fetches
+ * `/api/program/:code/plan`, finds the period matching the chosen semester for
+ * a cohort, and resolves it into the courses the student has plus the one
+ * question the data forces.
  *
- * The shape of a period changes completely across a degree, and the whole
- * design follows from that (measured on real plans, MTDT + BIT):
- *
- * - **1.–2. år**: 4–5 courses, every one `studyChoice.code === "O"`. A pure
- *   lookup — no question, full prefill.
- * - **3. år bachelor**: a period can carry *zero* `O` courses and a single
- *   group of interchangeable electives (BIT period 5: 8 × `M2A`).
- * - **3.–5. år sivilingeniør**: the period's own `courseGroups` are **empty**
- *   and every course hangs off a `Valg av studieretning` waypoint (MTDT
- *   period 5). Classifying only top-level groups yields nothing at all.
- * - **profesjonsstudier**: the waypoints *nest*, and the courses sit at the
- *   bottom. CMED period 1 is by → klasse (2 levels; both klasse groups carry
- *   the same EXPH0400 + MD4012), BSPL period 3 is by → praksisløp, and
- *   MGLU1-7 period 5 is fag A → masterstudieretning → fag B (3 levels, 441
- *   leaves). Stopping after the first waypoint yields nothing at all here too.
+ * The shape of a period changes completely across a degree, and the design
+ * follows from that: early years are 4–5 all-`O` courses (a pure lookup); a
+ * 3rd-year bachelor period can carry zero `O` courses and one elective group;
+ * later sivilingeniør periods have EMPTY top-level `courseGroups` with every
+ * course behind a `Valg av studieretning` waypoint; and profesjonsstudier NEST
+ * those waypoints up to three levels with the courses at the bottom.
  *
  * So a period resolves in three parts: `obligatory` (prefilled), `choice`
- * (offered, never prefilled — DR-5), and `pendingChoice` (the studieretning
- * question, when it hasn't been answered yet).
+ * (offered, never prefilled — DR-5) and `pendingChoice` (the open question).
  *
  * **The intersection rule.** With no direction chosen we still prefill every
- * course that is `O` in *all* directions — for MTDT period 5 that is TDT4136
- * + TMA4135, obligatory whichever specialization you pick. This keeps §0.1's
- * "programme + kull → your week, instantly" true for later-year students
- * without guessing a direction (the D4/DR-7 sin: a guessed direction would
- * prefill a confidently wrong 30 sp). It is the honest floor — courses the
- * student provably has — and it is never blank when the data has anything.
+ * course that is `O` in *all* directions — the honest floor, never blank when
+ * the data has anything, and it keeps "programme + kull → your week, instantly"
+ * true without guessing a direction (which would prefill a confidently wrong
+ * 30 sp).
  *
- * DR-5: `PlanCourseGroup` carries no min/max/choose-N — the only structured
- * signal is each course's `studyChoice.code`. Validated against real data:
- * `"O"` ("Obligatorisk emne") reliably marks the courses NTNU auto-enrolls
- * the student in; every other code seen in the wild (`VA`, `VB`, `V`, `M`,
- * `M2A`, `MAX1A`) is some flavour of choice. We never assert cardinality;
- * `groupName` carries the group's verbatim title so the UI can quote the
- * place where "velg 2 av 5" is actually written down.
+ * DR-5: the only structured signal is `studyChoice.code`. `"O"` reliably marks
+ * what NTNU auto-enrolls; everything else is some flavour of choice. We never
+ * assert cardinality — `groupName` carries the verbatim title so the UI can
+ * quote where "velg 2 av 5" is written down.
  */
 import type {
   PlanCourseGroup,
@@ -50,14 +35,8 @@ import type {
 import { semesterYear } from "../../lib/planner/schedule.js";
 
 /**
- * The study-plan document shape, straight from `ntnu-api`.
- *
- * These seven interfaces used to be re-declared here, byte-for-byte identical
- * to the library's — unlike `data.ts`'s structural subsets, which are
- * deliberately partial and shaped by what the worker serializes. Copies of a
- * type that is not ours only drift. Type-only imports are erased at build, so
- * the browser bundle is unchanged.
- *
+ * The study-plan document shape, straight from `ntnu-api` — copies of a type
+ * that is not ours only drift. Type-only imports are erased at build.
  * `PlanDirection`'s recursion (waypoints → directions → waypoints) is the
  * upstream document's own; everything below walks it.
  */
@@ -71,10 +50,8 @@ export interface ClassifiedCourse {
   /** Verbatim study-plan group title — never paraphrased (DR-5). */
   groupName: string | null;
   /**
-   * Verbatim study-plan group description prose — never paraphrased or
-   * summarized (DR-5). This is where "velg 2 av 5" is actually written down;
-   * the planner's "Fra studieplanen" panel quotes it unmodified. `null` when
-   * the group carried none.
+   * Verbatim group description prose — never paraphrased (DR-5). This is where
+   * "velg 2 av 5" is written down, and the planner quotes it unmodified.
    */
   groupDescription: string | null;
 }
@@ -103,12 +80,10 @@ export interface PeriodCourses {
   /** The direction whose courses were folded in, when one applied. */
   appliedDirection: DirectionOption | null;
   /**
-   * The period exists in the study plan but names nothing at all: no
-   * obligatory course, no offered course and no question (MPPR 2024 period 1
-   * is literally `{courseGroups: [], waypoints: []}`). Distinguishable from a
-   * missing period (`classifyPeriod` returns `null`) and from an ordinary
-   * period, so the caller can say *why* the week is blank instead of leaving
-   * "0 av 30 sp" standing next to no rows and no explanation.
+   * The period exists but names nothing at all: no obligatory course, no
+   * offered course, no question. Distinguishable from a missing period
+   * (`classifyPeriod` returns `null`) and from an ordinary one, so the caller
+   * can say *why* the week is blank.
    */
   empty: boolean;
 }
@@ -118,8 +93,7 @@ const MAX_STEP_BACK_TRIES = 3;
 async function fetchPlan(code: string, year: number): Promise<StudyPlan | null | "error"> {
   try {
     // The code stays encoded until the worker's own parseCode decodes it —
-    // Æ/Ø/Å and the handful of codes carrying a literal "/" ("MSØK/5") would
-    // otherwise become a 400 or a wrong route (B1).
+    // Æ/Ø/Å and codes carrying a literal "/" would otherwise 400.
     const res = await fetch(`/api/program/${encodeURIComponent(code)}/plan?year=${year}`);
     if (res.status === 404) return null;
     if (!res.ok) return "error";
@@ -147,12 +121,10 @@ async function findProgramPlanUncached(code: string, guessYear: number): Promise
 }
 
 /**
- * Memo keyed `CODE:year`, mirroring `fetchCourseBundle`'s. A study plan is a
- * build-time-stable document that every re-render of the page asks for again:
- * picking a kull used to cost three sequential round trips and every
- * Dropp/Legg tilbake another one (C5d). Errors are evicted after they settle
- * so a transient failure stays retryable; 404-ladder misses are not (they are
- * a property of the data, not of the network).
+ * Memo keyed `CODE:year`. A study plan is a build-time-stable document every
+ * re-render asks for again. Errors are evicted after they settle so a transient
+ * failure stays retryable; 404-ladder misses are not, being a property of the
+ * data rather than the network.
  */
 const planMemo = new Map<string, Promise<FindPlanResult>>();
 
@@ -174,21 +146,17 @@ export function clearProgramPlanMemo(): void {
 }
 
 /**
- * The plan period number for a cohort's semester (PLANNER.md/DR-7). Period 1
- * is the cohort's first autumn and periods count up two per study year:
+ * The plan period number for a cohort's semester (DR-7). Period 1 is the
+ * cohort's first autumn and periods count up two per study year:
  *
  *     kull 2026 → 26h = 1, 27v = 2, 27h = 3, 28v = 4 …
  *
  * A **spring** semester belongs to the study year that started the *previous*
- * autumn, so its year offset is `semYear - 1 - cohort` — not `semYear -
- * cohort`, which overshoots by a full year and would show a first-year
- * student their second year's courses every spring.
+ * autumn, so its year offset is `semYear - 1 - cohort`; `semYear - cohort`
+ * overshoots by a full year every spring.
  *
- * Assumes an autumn intake (DR-7: `startTerm` is nullable and spring intakes
- * break the arithmetic); the caller treats the result as a suggestion and
- * shows nothing when the period turns out not to exist.
- *
- * `null` when the semester id doesn't parse.
+ * Assumes an autumn intake; the caller treats the result as a suggestion.
+ * `null` when the semester id does not parse.
  */
 export function periodNumberFor(semesterId: string, cohort: number): number | null {
   const semYear = semesterYear(semesterId);
@@ -212,13 +180,11 @@ export function maxPeriodNumber(plan: Pick<StudyPlan, "periods">): number | null
 }
 
 /**
- * Descending cohort years, most recent first, whose `periodNumberFor` falls
- * within `[1, maxPeriodNumber]` for `semesterId` — i.e. the cohorts this plan
- * actually has a period for at this point in the calendar. This is the whole
- * relevance rule: a period RANGE test, never whether that period's own
- * `courseGroups` happen to be non-empty (the S4 lockout bug — a
- * direction-gated period like MTDT's has empty top-level groups by design
- * and is exactly as relevant as any other).
+ * Descending cohort years whose `periodNumberFor` falls within
+ * `[1, maxPeriodNumber]` for `semesterId` — the cohorts this plan has a period
+ * for at this point in the calendar. A period RANGE test, never whether that
+ * period's `courseGroups` are non-empty: a direction-gated period has empty
+ * top-level groups by design and is exactly as relevant as any other.
  */
 export function relevantCohorts(plan: Pick<StudyPlan, "periods">, semesterId: string): number[] {
   const max = maxPeriodNumber(plan);
@@ -280,27 +246,22 @@ function collectGroups(
 }
 
 /**
- * How many waypoint levels any walk over a period descends. Real plans reach
- * three (MGLU1-7 period 5: fag A → masterstudieretning → fag B); the ceiling
- * is a fail-safe, not a claim about the data. It is also the recursion guard:
- * `fetchPlan` builds every production value with `JSON.parse`, which cannot
- * produce a cycle, but a hand-built or future value that did would simply
- * bottom out here instead of spinning.
+ * How many waypoint levels any walk descends. Real plans reach three; the
+ * ceiling is a fail-safe. It doubles as the recursion guard — `JSON.parse`
+ * cannot produce a cycle, but a hand-built value that did would bottom out
+ * here instead of spinning.
  */
 const MAX_DIRECTION_DEPTH = 6;
 
 /**
- * Everything a direction offers that isn't already accounted for, into the
+ * Everything a direction offers that is not already accounted for, into the
  * pool. Used only on the gated path: with the question still open the
- * intersection is all we can prefill, so without this the pool is empty
- * exactly when it is the student's only way forward — "Fra studieplanen"
- * disabled, `effectiveScope()` falling back to the whole 5 470-course
- * catalog (U7). Group names stay verbatim (DR-5); `seen` keeps a course that
- * two directions share from being listed twice.
+ * intersection is all we can prefill, so without this the pool is empty exactly
+ * when it is the student's only way forward. Group names stay verbatim (DR-5);
+ * `seen` keeps a course two directions share from being listed twice.
  *
- * Descends into nested waypoints: a direction that carries no courses of its
- * own but whose sub-directions do (CMED's cities, MGLU1-7's fag A) would
- * otherwise contribute nothing to the pool.
+ * Descends into nested waypoints: a direction carrying no courses of its own
+ * but whose sub-directions do would otherwise contribute nothing.
  */
 function collectPool(
   direction: PlanDirection,
@@ -325,11 +286,9 @@ function collectPool(
 }
 
 /**
- * The obligatory courses a direction leaves the student no way out of: its
- * own, plus the ones every branch of its next waypoint agrees on. CMED's city
- * directions carry no courses themselves and both nested Klasse groups carry
- * EXPH0400 + MD4012, so the student provably has those whichever class they
- * end up in — the intersection rule applied one level down.
+ * The obligatory courses a direction leaves no way out of: its own, plus the
+ * ones every branch of its next waypoint agrees on — the intersection rule
+ * applied one level down.
  */
 function effectiveObligatory(
   direction: PlanDirection,
@@ -389,13 +348,13 @@ function containsDirection(direction: PlanDirection, code: string, depth: number
 /**
  * The direction a waypoint resolves to, or `undefined` while it is still a
  * question. A waypoint offering exactly one direction is applied without
- * asking — a question with one answer isn't a question.
+ * asking.
  *
  * The stored answer is matched against this level's own codes first and only
- * then against the levels whose subtree contains it. A profile carries ONE
- * direction code, so the deeper answer (`CMED26-V-T-V-G1`) is the only record
- * of the whole chain that leads to it; without the subtree match, answering a
- * nested question would silently unanswer its parent.
+ * then against levels whose subtree contains it: a profile carries ONE
+ * direction code, so a deep answer is the only record of the chain leading to
+ * it, and without the subtree match answering a nested question would silently
+ * unanswer its parent.
  */
 function pickDirection(
   directions: PlanDirection[],
@@ -419,26 +378,19 @@ function directionOption(direction: PlanDirection): DirectionOption | null {
  * data demands one) the studieretning question.
  *
  * `directionCode` is the student's previously answered studieretning. When it
- * matches one of the waypoint's directions, that direction's groups are
- * folded in as if they were the period's own. When it doesn't (unanswered, or
- * a direction from a different cohort's plan), the cross-direction obligatory
- * intersection is prefilled instead and `pendingChoice` carries the question.
+ * matches one of the waypoint's directions, that direction's groups fold in as
+ * if they were the period's own. When it does not, the cross-direction
+ * obligatory intersection is prefilled instead and `pendingChoice` carries the
+ * question. A waypoint offering exactly one direction is applied without asking.
  *
- * A waypoint offering exactly one direction is applied without asking — a
- * question with one answer isn't a question.
+ * Returns `null` when the period itself does not exist (DR-7 fallback).
  *
- * Returns `null` if the period itself doesn't exist (DR-7 fallback: unpublished
- * cohort or off-by-one period math → caller shows no prefill).
- *
- * **Waypoints nest, and the descent follows them all the way down.** An
- * earlier version stopped after one level on the (false) premise that no
- * crawled programme nested them: CMED period 1 is by → klasse and resolved to
- * literally zero courses once the city was answered, and BSPL period 3 lost
- * the 15 sp praksis half of the semester. The loop below applies each answered
- * level in turn and stops at the first waypoint that is still a question — so
- * a nested question is asked with the same shape as a top-level one, and the
- * intersection rule keeps prefilling only what every remaining branch agrees
- * on. Guessing past an open choice is still never done.
+ * **Waypoints nest, and the descent follows them all the way down.** Stopping
+ * after one level resolved CMED period 1 to literally zero courses and lost
+ * BSPL period 3's 15 sp praksis half. The loop applies each answered level in
+ * turn and stops at the first waypoint that is still a question, so a nested
+ * question is asked with the same shape as a top-level one. Guessing past an
+ * open choice is never done.
  */
 export function classifyPeriod(
   plan: StudyPlan,
@@ -454,10 +406,10 @@ export function classifyPeriod(
 
   collectGroups(period.direction, seen, obligatory, choice);
 
-  // The answered chain: fold in every level the student has already resolved.
-  // `applied` is the outermost of them, `explicit` the one the stored code
-  // names — the caller backfills the stored direction's display name from
-  // `appliedDirection`, so a nested answer must not be rewritten to its parent.
+  // The answered chain: fold in every level already resolved. `applied` is the
+  // outermost, `explicit` the one the stored code names — the caller backfills
+  // the display name from `appliedDirection`, so a nested answer must not be
+  // rewritten to its parent.
   let waypoint = gatingWaypoint(period.direction);
   let applied: PlanDirection | null = null;
   let explicit: PlanDirection | null = null;
@@ -520,11 +472,9 @@ export function prefillCredits(courses: ClassifiedCourse[]): number {
 
 /**
  * A grossly-over-30-sp obligatory prefill is a bug signal — surfaced as a
- * boolean rather than silently truncating, so the caller can guard without
- * inventing a truncation rule the product never asked for. Note the caller
- * must *say so* rather than drop the courses: CMEDFORSK period 1 legitimately
- * sums to 42,5 sp and MJORM to 45, and discarding them silently produced "0
- * av 30 sp" with no rows and no explanation (B9.4).
+ * boolean rather than silently truncated. The caller must *say so* rather than
+ * drop the courses: CMEDFORSK period 1 legitimately sums to 42,5 sp, and
+ * discarding it produced "0 av 30 sp" with no rows and no explanation.
  */
 export function isSuspiciousPrefill(courses: ClassifiedCourse[]): boolean {
   return prefillCredits(courses) > SUSPICIOUS_CREDIT_CEILING;
@@ -543,14 +493,10 @@ export interface ResolvedPeriod {
 /**
  * `semesterId` + cohort → the courses that semester's period resolves to.
  *
- * The one entry point for "what does this programme mean for this semester":
- * the planner calls it on every semester change and on every studieretning
- * answer, and the homepage picker asks the same question before it navigates
- * (B2 — the question is asked in the picker, and the planner must be able to
- * answer it identically or the two surfaces drift). Keeping the period
- * arithmetic and the classification behind one call is what makes that
- * cheap; `periodNumberFor` and `classifyPeriod` stay exported for the tests
- * and for callers that already hold a period number.
+ * The one entry point for "what does this programme mean for this semester",
+ * so the planner and the homepage picker cannot drift. `periodNumberFor` and
+ * `classifyPeriod` stay exported for tests and for callers holding a period
+ * number already.
  */
 export function resolvePeriodFor(
   plan: StudyPlan,

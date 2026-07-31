@@ -35,8 +35,8 @@ import Icon from "./Icon.astro";
     display: grid;
   }
   /* The glyphs render from the <Icon> child, so their classes are outside this
-     component's style scope — reach them with :global() under the scoped button.
-     Both stack in one grid cell; show the icon for the theme you'd switch TO. */
+     component's style scope — reach them with :global(). Both stack in one grid
+     cell; show the icon for the theme you'd switch TO. */
   .theme-toggle :global(.icon) {
     grid-area: 1 / 1;
   }
@@ -62,10 +62,8 @@ import Icon from "./Icon.astro";
     const root = document.documentElement;
 
     // Reflect the current theme on load, after every view-transition restore,
-    // and on a live OS-theme flip — Layout's no-flash script owns the
-    // data-theme apply for all three (this only mirrors it onto the button's
-    // a11y state, off the same `np:themechange` event it already dispatches
-    // for that OS path, so the theme itself is never applied twice here).
+    // and on a live OS-theme flip — Layout's no-flash script owns the apply for
+    // all three, so this only mirrors it onto the button's a11y state.
     const syncPressed = () => {
       const dark = root.getAttribute("data-theme") === "dark";
       toggles.forEach((btn) => btn.setAttribute("aria-pressed", String(dark)));
@@ -83,27 +81,21 @@ import Icon from "./Icon.astro";
         "click",
         () => {
           // The flip is deliberately INSTANT — no view transition, no eased
-          // colours — matching the OS-flip path in CourseLayout's no-flash
-          // script. Both animated forms were tried and reverted:
-          // a universal per-element `transition: color` compounds one full
-          // ease per inheritance hop in WebKit (deep text late-snapped at ~2x
-          // the duration on iOS), and a same-document view transition cannot
-          // present smoothly there either — WebKit gates the snapshot fade's
-          // presentation on the main thread, which the flip's own full-tree
-          // recalc is saturating at that exact moment (verified with
-          // compositor-output capture under a synthetic main-thread block).
+          // colours. Both animated forms were tried and reverted: a universal
+          // per-element `transition: color` compounds one full ease per
+          // inheritance hop in WebKit, and a same-document view transition
+          // cannot present smoothly there either, because WebKit gates the
+          // snapshot fade on the main thread that the flip's own full-tree
+          // recalc is saturating.
           //
-          // The swap itself carries no transition, but the resting controls
-          // (.np-icon-btn/.np-navlink/.np-toggle/.np-btn/.np-summary)
-          // DO hold standing colour/background eases for their
-          // hover feel, so on the flip they would ease alone ~120ms behind the
-          // already-snapped page (tiles visibly lag). Suppress them for exactly
-          // one frame: add .theme-snap to <html> (a base.css rule zeroes every
-          // transition while present, hub included) around the setAttribute,
-          // then drop it after the flip has painted (double rAF — the class
-          // lives ~1 frame, so hover eases stay intact at rest). Cancel and
-          // re-arm the pending removal on a rapid double-toggle rather than
-          // stacking timers.
+          // The swap carries no transition, but the resting controls DO hold
+          // standing colour/background eases for their hover feel, so they
+          // would ease alone ~120ms behind the already-snapped page. Suppress
+          // them for exactly one frame: `.theme-snap` on <html> (a base.css
+          // rule zeroes every transition while present) around the
+          // setAttribute, dropped after the flip has painted (double rAF).
+          // Cancel and re-arm the pending removal on a rapid double-toggle
+          // rather than stacking timers.
           if (snapRaf) cancelAnimationFrame(snapRaf);
           root.classList.add("theme-snap");
           const next =

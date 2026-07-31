@@ -22,7 +22,7 @@ import {
  * where a picker decision becomes a week.
  *
  * They moved from `popover.ts` to `courseSettings.ts` unchanged in
- * REWORK-2026-07-29 (the surface around them became a real modal opened from
+ * (the surface around them became a real modal opened from
  * two places); this file moved with them.
  */
 
@@ -37,7 +37,7 @@ describe("lecturesAreExclusive", () => {
   test("no default key means nothing was narrowed — complementary sessions, not a choice", () => {
     // TMA4400 for MTDT: "Forelesning 1 …", "Forelesning 2 …" and
     // "Plenumsregning" all survive the programme filter as separate session
-    // families, so resolveLectureDefaults narrows nothing (groups-2).
+    // families, so resolveLectureDefaults narrows nothing.
     expect(lecturesAreExclusive([])).toBe(false);
   });
 
@@ -217,7 +217,7 @@ describe("nextSelection — lecture layer", () => {
  * draws the week. TMA4400 as MTDT sees it — "Forelesning 1 …" (tir),
  * "Forelesning 2 …" (tor) and "Plenumsregning" (ons) are three weekly sessions
  * for the same programme cluster, plus the parallels tagged for MTBYGG that
- * the picker still lists but the programme filter drops (groups-2, live data
+ * the picker still lists but the programme filter drops (live data
  * confirmed against /api/course/TMA4400/timetable?year=2026).
  */
 describe("TMA4400 as MTDT — the picker's decision against applyGroupSelection", () => {
@@ -319,7 +319,7 @@ describe("TMA4400 as MTDT — the picker's decision against applyGroupSelection"
       "Mattelab 2",
     ]);
 
-    // …and unticking them again returns the whole default week (groups-6).
+    // …and unticking them again returns the whole default week.
     selection = tick(selection, "forelesning-1-mtbygg-mting", false);
     selection = tick(selection, "forelesning-2-mtbygg", false);
     expect(selection).toEqual([]);

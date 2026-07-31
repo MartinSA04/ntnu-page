@@ -1,29 +1,19 @@
 /**
- * LAYER MOTION — what happens when the øving/lab layer is switched on or off
- * (REWORK-2026-07-29g).
+ * LAYER MOTION — what happens when the øving/lab layer is switched on or off.
  *
- * Uke ⇄ Liste has a motion; "vis øvinger og labber" had none, so the same
- * button felt made on one press and broken on the other. It cannot have the
- * *same* motion, though: replaying the strike-in over the whole week because
- * one toggle moved is the entrance choreography DESIGN §6 forbids, and it
- * would claim that lectures which did not change had changed.
+ * It cannot reuse the view-switch strike-in: replaying it over the whole week
+ * because one toggle moved is the entrance choreography DESIGN §6 forbids, and
+ * it would claim lectures that did not change had changed.
  *
- * So the motion says what actually happened — one layer arrived, or one layer
- * left:
+ * So the motion says what actually happened — one layer arrived, or one left:
  *
  *   - what stays TRAVELS to its new place (it is not redrawn),
  *   - what arrives STRIKES IN, after the space has been made,
  *   - what leaves WIPES OUT first, and the space closes behind it.
  *
- * Nothing crosses. Space opens before anything lands in it; what is leaving is
- * gone before the space closes.
- *
- * The render itself is untouched: `renderGrid`/`renderBoard` still throw the
- * whole subtree away and build a new one. `beginLayerChange` takes a snapshot
- * before that happens and, after it, rewinds the survivors to where they were
- * so CSS can carry them home. That is why this is a wrapper and not a diffing
- * renderer — the renderers stay dumb, and only the one interaction that needs
- * continuity pays for it.
+ * Nothing crosses. The renderers stay dumb — they still throw the subtree away
+ * and rebuild it; `beginLayerChange` snapshots before that and rewinds the
+ * survivors after, so CSS can carry them home.
  */
 import { el } from "./dom.js";
 
@@ -36,25 +26,19 @@ export type SettleLayer = () => void;
 const NOTHING: SettleLayer = () => {};
 
 /**
- * The longest any stagger here may run, end to end.
- *
- * A week can reveal thirty bars, and thirty × 32 ms is a second of them
- * trickling in — which stops reading as one layer landing and starts reading as
- * a slow page load.
+ * The longest any stagger here may run, end to end. Thirty bars × 32 ms stops
+ * reading as one layer landing and starts reading as a slow page load.
  */
 const STAGGER_BUDGET_MS = 620;
 
 /**
- * The step a sequence of `count` things staggers by: its own rhythm, until the
- * sequence is long enough that keeping it would outlast the budget — then the
- * rhythm compresses so everything still lands in time.
+ * The step a sequence of `count` things staggers by: its own rhythm until the
+ * sequence would outlast the budget, then compressed so everything still lands
+ * in time.
  *
- * It replaces a CAP, which is where "Thursday and Friday come in at the same
- * time" came from: capping the INDEX means everything past the ceiling shares
- * one delay, and in a week whose sequence runs day by day that tail is a whole
- * weekday landing on one frame. Squeezing the interval keeps every element's
- * own moment — which is the entire point of a stagger — and bounds the total,
- * which is what the cap was actually for.
+ * It replaces a CAP: capping the INDEX gives everything past the ceiling one
+ * delay, and in a week that runs day by day that tail is a whole weekday
+ * landing on a single frame.
  */
 export function staggerStep(count: number, base: number): number {
   if (count <= 1) return base;
@@ -62,16 +46,12 @@ export function staggerStep(count: number, base: number): number {
 }
 
 /**
- * When the scaffolding comes down. The CSS owns the real timings (`--dur`);
- * this only has to outlast the longest of them — the last staggered arrival,
- * at roughly `0.8 × dur + STAGGER_BUDGET_MS + 1.6 × dur`.
+ * When the scaffolding comes down. CSS owns the real timings (`--dur`); this
+ * only has to outlast the last staggered arrival.
  */
 const CLEANUP_MS = 1100;
 
-/**
- * How long a ghost lives: the last one's staggered wipe, plus a frame or two.
- * Roughly `STAGGER_BUDGET_MS + dur-fast` — see `.planner-motion-ghost`.
- */
+/** How long a ghost lives: the last one's staggered wipe, plus a frame or two. */
 const GHOST_MS = 700;
 
 interface Box {
@@ -82,14 +62,12 @@ interface Box {
 }
 
 /**
- * Scripted motion, so `prefers-reduced-motion` has to be asked directly — the
- * duration tokens zero CSS transitions, and there is no token inside
- * `requestAnimationFrame` (the same reasoning as the conflict note's
- * `scrollIntoView`, A5).
+ * Scripted motion, so `prefers-reduced-motion` is asked directly — the duration
+ * tokens zero CSS transitions, and there is no token inside
+ * `requestAnimationFrame`.
  *
  * The `requestAnimationFrame` guard doubles as the test-shim guard: the unit
- * tests render into a hand-rolled DOM that has no frame callbacks, and a
- * choreography is not what those tests are about.
+ * tests render into a DOM with no frame callbacks.
  */
 function motionAllowed(): boolean {
   if (typeof requestAnimationFrame !== "function") return false;
@@ -107,16 +85,14 @@ function boxIn(node: HTMLElement, origin: { left: number; top: number }): Box {
 }
 
 /**
- * Places the elements that are no longer in the tree back over the week, at
- * the coordinates they held, so they can leave visibly instead of blinking
- * out. They are a picture of what was there: out of the tab order, out of the
- * accessibility tree, out of the way of the pointer.
+ * Places the elements no longer in the tree back over the week, at the
+ * coordinates they held, so they leave visibly instead of blinking out. They
+ * are a picture: out of the tab order, the accessibility tree and the pointer's
+ * way.
  *
  * Coordinates are relative to the week's own box, never the viewport: the
- * margin notes above it can gain a line on the very render this is animating
- * ("EXPH0300 har 9 grupper — velg din" appears exactly when the layer is
- * revealed), which moves the week down the page without moving anything
- * inside it.
+ * margin notes above it can gain a line on the very render being animated,
+ * which moves the week without moving anything inside it.
  */
 function layGhosts(
   host: HTMLElement,
@@ -125,19 +101,15 @@ function layGhosts(
   if (ghosts.length === 0) return null;
   const layer = el("div", "planner-motion-ghosts");
   layer.setAttribute("aria-hidden", "true");
-  // The departure is the arrival played backwards, and that includes the
-  // ORDER: arrivals strike in one after another in reading order, so
-  // departures leave one after another in the REVERSE of it — the last bar to
-  // land is the first to go. Without this they all vanished on the same frame,
-  // which is not a reversed order, it is no order at all.
+  // The departure is the arrival played backwards, ORDER included: the last bar
+  // to land is the first to go. Without this they all vanished on the same
+  // frame, which is not a reversed order but no order at all.
   host.style.setProperty("--planner-departs", String(ghosts.length - 1));
   ghosts.forEach(({ node, box }, i) => {
     node.style.setProperty("--planner-depart", String(ghosts.length - 1 - i));
     // A bar that arrived on the LAST toggle still wears its arrival mark, and
-    // that rule outranks the ghost's: the two bars revealed a moment ago
-    // played the entrance again on their way out — clipped away for the first
-    // 150 ms, then wiped back in, then cut. Take the mark off before the node
-    // is given its exit.
+    // that rule outranks the ghost's — so it played the entrance again on its
+    // way out. Take the mark off before the node is given its exit.
     clearArrival(node);
     node.classList.add("planner-motion-ghost");
     node.setAttribute("aria-hidden", "true");
@@ -153,9 +125,8 @@ function layGhosts(
 }
 
 /**
- * Marks an element as arriving and gives it its place in the stagger. Only
- * bars carry a meaningful order — a ruler tick or a newly needed Saturday row
- * just fades in behind them.
+ * Marks an element as arriving and gives it its place in the stagger. Only bars
+ * carry a meaningful order; a tick or a new Saturday row just fades in.
  */
 function markArrival(node: HTMLElement, index: number): void {
   node.style.setProperty("--planner-arrive", String(index));
@@ -169,13 +140,10 @@ function clearArrival(node: HTMLElement): void {
 }
 
 /**
- * The interval this change's arrivals and departures step by.
- *
- * One property for both, from whichever side is longer: a change is one event,
- * and two rhythms inside it would read as two. It is squeezed rather than
- * capped for the reason `staggerStep` gives — a ceiling makes everything past
- * it land together, which in a sequence that runs day by day is a whole
- * weekday arriving on one frame.
+ * The interval this change's arrivals and departures step by: one property for
+ * both, from whichever side is longer, because a change is one event and two
+ * rhythms inside it would read as two. Squeezed rather than capped, for the
+ * reason `staggerStep` gives.
  */
 function setMotionStep(host: HTMLElement, arrivals: number, departures: number): void {
   host.style.setProperty(
@@ -185,9 +153,9 @@ function setMotionStep(host: HTMLElement, arrivals: number, departures: number):
 }
 
 /**
- * Runs the release-and-sweep half of every choreography here: force the
- * rewound state into layout, turn the transitions on, hand the elements their
- * real values one frame later, and take the scaffolding back down.
+ * The release-and-sweep half of every choreography here: force the rewound
+ * state into layout, turn the transitions on, hand over the real values one
+ * frame later, take the scaffolding down.
  */
 function release(
   host: HTMLElement,
@@ -195,18 +163,15 @@ function release(
   ghosts: HTMLElement | null,
   to: () => void,
 ): void {
-  // Reading a layout property is what commits the rewound values as the
-  // transition's starting point. Without it the browser coalesces both writes
-  // and nothing moves.
+  // Reading a layout property commits the rewound values as the transition's
+  // starting point. Without it the browser coalesces both writes.
   void host.offsetHeight;
   host.classList.add("is-settling");
   if (change === "hide") host.classList.add("is-closing");
   requestAnimationFrame(to);
   // The ghosts go on their own, much shorter clock. They are `.planner-block`
-  // elements sitting inside the week, so anything counting bars — the e2e
-  // suite does, by exactly that selector — counts them too for as long as they
-  // are there. Their job is over when their wipe is; there is no reason to
-  // leave them for the class sweep.
+  // elements inside the week, so anything counting bars — the e2e suite does —
+  // counts them too for as long as they are there.
   if (ghosts) setTimeout(() => ghosts.remove(), GHOST_MS);
   setTimeout(() => {
     host.classList.remove("is-settling", "is-closing");
@@ -222,11 +187,10 @@ function release(
 // --- The week ------------------------------------------------------------
 
 /**
- * The custom properties each kind of element keeps its geometry in. These are
- * the same names `buildGridShell`, `positionBlock` and `syncNowMarker` write,
- * and the stylesheet turns them into `left`, `width`, `top` and `min-height`
- * — which is precisely why rewinding a property animates real layout and the
- * type inside a bar never gets scaled.
+ * The custom properties each kind of element keeps its geometry in — the same
+ * names `buildGridShell`, `positionBlock` and `syncNowMarker` write. The
+ * stylesheet turns them into `left`/`width`/`top`/`min-height`, which is why
+ * rewinding one animates real layout and never scales the type in a bar.
  */
 const BLOCK_PROPS = ["--planner-x", "--planner-w", "--planner-lane"];
 const ZONE_PROPS = ["--planner-x", "--planner-w"];
@@ -234,15 +198,12 @@ const TICK_PROPS = ["--planner-x"];
 /**
  * BOTH of the properties the row's height is computed from.
  *
- * `--planner-bands` arrived with the drop-in strip (REWORK-2026-07-30c) and
- * was never added here, so a row whose height changed only because a strip
- * appeared or left had nothing rewound: the new height was already in place
- * before the transition was switched on, and the row snapped on the first
- * frame while the bars animated around it. That is the whole of "the rows
- * collapse the instant I deselect" (REWORK-2026-07-30h).
+ * `--planner-bands` arrived with the drop-in strip and was not listed here, so
+ * a row whose height changed only because a strip appeared had nothing rewound
+ * and snapped on the first frame while the bars animated around it.
  *
  * Anything else the field's `min-height` learns to read has to be listed here
- * too, or it will snap in exactly the same way and for the same reason.
+ * too, or it snaps the same way.
  */
 const FIELD_PROPS = ["--planner-lanes", "--planner-bands"];
 const NOW_PROPS = ["--planner-x", "--planner-now-top", "--planner-now-height"];
@@ -259,12 +220,9 @@ interface Keyed {
  * Every element in the week whose place can change, under a key that survives
  * the re-render.
  *
- * A bar's key is its DOM id, which is built from `GridEntry.ordinal` — and
- * that ordinal is assigned in `collectEntries`, BEFORE the øving/lab filter
- * runs. That is what makes it stable here: hiding the layer does not renumber
- * the lectures. (Merged parallels do not disturb it either — the merge key
- * separates lectures from everything else, so a lecture's representative is
- * the same entry in both renders.)
+ * A bar's key is its DOM id, built from `GridEntry.ordinal`, which is assigned
+ * in `collectEntries` BEFORE the øving/lab filter runs — so hiding the layer
+ * does not renumber the lectures. Merged parallels do not disturb it either.
  */
 function keyWeek(grid: HTMLElement): Map<string, Keyed> {
   const out = new Map<string, Keyed>();
@@ -355,10 +313,9 @@ function beginWeekChange(frame: HTMLElement, grid: HTMLElement, change: LayerCha
 // --- The columns ---------------------------------------------------------
 
 /**
- * The column grid's geometry properties (`columnGrid.ts`). Time is the vertical
- * axis here, so a session's place is `--planner-y`/`--planner-h` — percentages
- * of the drawn span, exactly as the transposed week's are percentages the other
- * way round — and its share of the column is `--planner-lane`/`--planner-lanes`.
+ * The column grid's geometry properties. Time is the vertical axis here, so a
+ * session's place is `--planner-y`/`--planner-h` and its share of the column is
+ * `--planner-lane`/`--planner-lanes`.
  */
 const COL_BLOCK_PROPS = ["--planner-y", "--planner-h", "--planner-lane", "--planner-lanes"];
 const COL_BAND_PROPS = ["--planner-y", "--planner-h", "--planner-band"];
@@ -366,21 +323,17 @@ const COL_ZONE_PROPS = ["--planner-y", "--planner-h"];
 const COL_HOUR_PROPS = ["--planner-y"];
 const COL_NOW_PROPS = ["--planner-y"];
 /**
- * Everything the COLUMN's own box is computed from: its height (hours × the
- * hour token) and its minimum width (the week's deepest cluster plus the strips
- * it reserves). Revealing the layer usually changes all three at once — a later
- * axis, a deeper day, a new drop-in strip — and a property left out here is a
- * dimension that snaps while everything around it travels.
+ * Everything the COLUMN's own box is computed from: its height and its minimum
+ * width. Revealing the layer usually changes all three at once, and a property
+ * left out here is a dimension that snaps while everything around it travels.
  */
 const COL_GRID_PROPS = ["--planner-hours", "--planner-lanes-max", "--planner-bands-max"];
 
 /**
  * Every element in the column grid whose place can change, under a key that
- * survives the re-render.
- *
- * A session's key is `data-motion-key` — `board.ts`'s `motionKey`, shared so the
- * two views cannot disagree about what "the same session" is. The transposed
- * week keys on `GridEntry.ordinal` instead, which this view has no access to.
+ * survives the re-render. A session's key is `data-motion-key` — `board.ts`'s
+ * `motionKey`, shared so the two views cannot disagree about what "the same
+ * session" is. The transposed week keys on `GridEntry.ordinal` instead.
  */
 function keyColumns(grid: HTMLElement): Map<string, Keyed> {
   const out = new Map<string, Keyed>();
@@ -406,11 +359,9 @@ function keyColumns(grid: HTMLElement): Map<string, Keyed> {
       ghost: false,
     });
 
-  // ONE pass, in document order — which is the order the week is drawn in, so
-  // arrivals stagger the way the view prints: a day's strips, then its
-  // sessions, then the next day. Querying blocks and strips separately walked
-  // every session in the week before the first strip, and the layer landed in
-  // two waves that have nothing to do with the week's own reading order.
+  // ONE pass, in document order — the order the view prints in: a day's strips,
+  // then its sessions, then the next day. Querying blocks and strips separately
+  // made the layer land in two waves unrelated to the week's reading order.
   for (const session of Array.from(
     grid.querySelectorAll<HTMLElement>(".planner-cols-block, .planner-cols-band"),
   ))
@@ -451,10 +402,8 @@ function beginColumnChange(
     for (const [key, { node, props }] of after) {
       const old = before.get(key);
       if (!old) {
-        // Only sessions carry a meaningful order. An hour figure or a newly
-        // needed column is not a thing that arrives, it is room being made, and
-        // letting one take a stagger number pushes the actual arrivals a step
-        // later for nothing.
+        // Only sessions carry a meaningful order. An hour figure is room being
+        // made, and letting it take a stagger number delays real arrivals.
         const session =
           node.classList.contains("planner-cols-block") ||
           node.classList.contains("planner-cols-band");
@@ -511,9 +460,8 @@ function beginListChange(frame: HTMLElement, board: HTMLElement, change: LayerCh
       const box = boxIn(node, origin2);
       const delta = { dx: old.box.left - box.left, dy: old.box.top - box.top };
       deltas.set(node, delta);
-      // A row inside a collision bracket is moved by the bracket already —
-      // its own transform has to carry only the difference, or the two would
-      // compound and it would travel twice as far as it should.
+      // A row inside a collision bracket is moved by the bracket already — its
+      // own transform must carry only the difference, or the two compound.
       const parent = node.parentElement?.closest<HTMLElement>("[data-motion-key]") ?? null;
       const inherited = (parent && deltas.get(parent)) || { dx: 0, dy: 0 };
       const dx = delta.dx - inherited.dx;
@@ -529,18 +477,15 @@ function beginListChange(frame: HTMLElement, board: HTMLElement, change: LayerCh
     const ghosts = layGhosts(next, departing);
     setMotionStep(next, arriving, departing.length);
 
-    // The list's own height, which FLIP cannot carry (REWORK-2026-07-30i).
+    // The list's own height, which FLIP cannot carry.
     //
     // The week animates `min-height` per row, so its total height follows. A
-    // list has no such property: rows are in normal flow, so removing them
-    // makes the container short on the same frame the render lands, and the
-    // exam list and the course list underneath jump before a single row has
-    // moved. `transform` on the survivors cannot fix that — a translated row
-    // occupies its original box as far as layout is concerned.
+    // list's rows are in normal flow, so removing them makes the container short
+    // on the same frame the render lands and everything underneath jumps.
+    // `transform` cannot fix that — a translated row occupies its original box.
     //
     // So the box is pinned to what it was, released to what it is, and handed
-    // back to the stylesheet when the choreography is over. Measured here
-    // rather than declared, because a list's height is its content.
+    // back to the stylesheet when the choreography is over.
     const isTall = next.getBoundingClientRect().height;
     if (Math.round(wasTall) !== Math.round(isTall)) {
       next.style.height = `${wasTall}px`;
@@ -556,19 +501,15 @@ function beginListChange(frame: HTMLElement, board: HTMLElement, change: LayerCh
 // --- Entry point ---------------------------------------------------------
 
 /**
- * Call before the re-render; call the returned function after it.
- *
- * It picks its own mechanism from what is actually in the frame, so the caller
- * does not have to know which view is drawing the week — and gets a no-op for
- * every state (a message, a card, a skeleton) that has no week to move.
+ * Call before the re-render; call the returned function after it. It picks its
+ * own mechanism from what is in the frame, so the caller need not know which
+ * view is drawing — and gets a no-op for every state that has no week to move.
  */
 export function beginLayerChange(frame: HTMLElement, change: LayerChange): SettleLayer {
   if (!motionAllowed()) return NOTHING;
-  // A ghost is a `.planner-block` sitting inside the week, so one left over
-  // from a previous toggle would be snapshotted as a real bar and then either
-  // travel or be ghosted a second time. Pressing the button twice in a second
-  // is not exotic. The newer change supersedes whatever the older one had not
-  // finished sweeping up.
+  // A ghost is a `.planner-block` inside the week, so one left over from a
+  // previous toggle would be snapshotted as a real bar. The newer change
+  // supersedes whatever the older had not finished sweeping up.
   for (const stale of Array.from(frame.querySelectorAll<HTMLElement>(".planner-motion-ghosts")))
     stale.remove();
   const grid = frame.querySelector<HTMLElement>(".planner-grid");

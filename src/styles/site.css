@@ -69,9 +69,8 @@
   margin-left: auto;
 }
 
-/* Narrow phones: the wordmark + two nav links + the studieinfo chip + the
-   toggle must fit 360px without horizontal page scroll — tighten gaps, drop
-   the mono suffix. See the chip/brand block below for the rest of the budget. */
+/* Narrow phones: the wordmark, two nav links and the toggle must fit 360px
+   without horizontal page scroll — tighten gaps, drop the mono suffix. */
 @media (max-width: 480px) {
   .site-topbar {
     gap: var(--gap-1);
@@ -90,15 +89,12 @@
   }
 }
 
-/* DELETED: `.studieinfo-chip`, the topbar's plan chip (2026-07-30, owner's
-   call). It named the programme on the landing page and was one of two ways
-   into the studieinfo modal; the planner's own "Endre" button is the only one
-   now. The phone budget it shared with the wordmark went with it: the topbar's
-   three remaining children fit 320 px without either of them giving. */
+/* There is no topbar plan chip: the planner's own "Endre" button is the only
+   way into the studieinfo modal. The topbar's three remaining children fit
+   320 px without either the wordmark or the toggle giving. */
 
-/* One scale step down (--text-md → --text-base) buys the wordmark ~12 px,
-   which is the difference between "Semesterplan" whole and "Semesterpl…" on
-   a 390 px phone. */
+/* One scale step down buys the wordmark ~12 px, which is the difference
+   between "Semesterplan" whole and "Semesterpl…" on a 390 px phone. */
 @media (max-width: 480px) {
   .site-brand {
     display: block;
@@ -142,8 +138,8 @@
 
 .site-footer a {
   /* Inline in a sentence, so WCAG 2.5.8 exempts it — but it is also the only
-     catalog link on three of four pages, and 18px is not a thumb target on a
-     phone. Padded to 24 and pulled back out of the line box (a11y-8). */
+     catalog link on three of four pages, and 18px is not a thumb target.
+     Padded to 24 and pulled back out of the line box. */
   display: inline-flex;
   align-items: center;
   min-height: 24px;
@@ -159,35 +155,30 @@
   color: var(--faint);
 }
 
-/* --- Studieinfo modal (REWORK §2) ------------------------------------------
-   The product's front door: one native <dialog> on .np-frame bones. Every
-   edit is staged and only Lagre commits, so the modal never renders plan
-   state itself — it just collects programme/kull/retning/semester. */
+/* --- Studieinfo modal ------------------------------------------------------
+   The product's front door: one native <dialog> on .np-frame bones. Every edit
+   is staged and only Lagre commits, so the modal never renders plan state
+   itself. */
 .studieinfo-dialog {
   width: min(34rem, calc(100vw - 2rem));
   max-width: calc(100vw - 2rem);
   max-height: min(84vh, 48rem);
-  /* Pinned near the top, NOT centred (`margin: auto`, which is what this
-     replaces — base.css's `* { margin: 0 }` beats the UA rule, so the margin
-     has to be stated either way).
+  /* Pinned near the top, NOT centred (`margin: auto`, which base.css's
+     `* { margin: 0 }` beats, so it has to be stated either way).
 
      This dialog grows as it is used: picking a programme adds the kull chips,
-     picking a kull can add a studieretning select and a hint under it. Centred,
-     every one of those made the whole card jump upward while the student was
-     reading it, and the control they were about to press moved out from under
-     the pointer. A fixed top offset holds the masthead and the programme field
-     still and lets the card grow downward instead. `margin-block-end: auto`
-     absorbs the slack against the UA's `inset: 0`. */
+     picking a kull can add a select and a hint. Centred, every one of those
+     jumped the whole card upward while the student was reading it, and the
+     control they were about to press moved out from under the pointer. */
   margin: min(8vh, 4rem) auto auto;
   padding: 0;
   color: var(--fg);
 }
 
-/* MUST stay qualified on [open], same trap the other two dialogs document: an
-   author `display` beats the UA's `dialog:not([open]) { display: none }`
-   whatever the specificity, so an unqualified rule here would park the modal
-   on screen from first paint. The column is what lets the head stay while the
-   body scrolls. */
+/* MUST stay qualified on [open], the same trap the other two dialogs document:
+   an author `display` beats the UA's `dialog:not([open]) { display: none }`
+   whatever the specificity, so an unqualified rule parks the modal on screen
+   from first paint. The column lets the head stay while the body scrolls. */
 .studieinfo-dialog[open] {
   display: flex;
   flex-direction: column;
@@ -197,16 +188,14 @@
   background: color-mix(in srgb, var(--fg) 45%, transparent);
 }
 
-/* The sections below set an explicit `display`, which used to beat the UA
-   `[hidden] { display: none }` and needed a `.studieinfo-dialog [hidden]`
-   patch here. primitives.css now enforces `[hidden]` for the whole site, so
-   the patch is gone — every toggled section in this dialog (chip vs. search
-   field, an unanswered studieretning, the reset button) hides through that
+/* The sections below set an explicit `display`, which used to need a
+   `.studieinfo-dialog [hidden]` patch here. primitives.css now enforces
+   `[hidden]` for the whole site, so every toggled section hides through that
    one rule. */
 
-/* The body sets its own, roomier padding than `.np-head`'s default, so the
-   head has to follow it: a title starting 8px left of every field under it
-   reads as a mistake, not as a masthead. */
+/* The body sets its own, roomier padding than `.np-head`'s default, so the head
+   has to follow it: a title starting 8px left of every field under it reads as
+   a mistake. */
 .studieinfo-head {
   padding-inline-start: var(--space-5);
 }
@@ -223,9 +212,8 @@
   overflow-y: auto;
 }
 
-/* The one head in the system whose title is a page-level <h2> rather than a
-   course code, so it keeps the headline step (`.np-head-title` sets the card
-   step; site.css loads after primitives.css, so this wins). */
+/* The one head whose title is a page-level <h2> rather than a course code, so
+   it keeps the headline step (site.css loads after primitives.css). */
 .studieinfo-title {
   font-family: var(--font-sans);
   font-size: var(--text-lg);
@@ -323,17 +311,15 @@
   max-width: none;
 }
 
-/* Native selects on the field grammar: the control fill, no border, no edge
-   rule, focus is the global ink outline — and this product's own indicator
-   rather than the platform arrow, which renders differently in every engine,
-   sits hard against the right edge with nothing answering the text inset on
-   the left, and cannot say whether the picker is open.
+/* Native selects on the field grammar: the control fill, no border, focus is
+   the global ink outline — and this product's own indicator rather than the
+   platform arrow, which renders differently in every engine and cannot say
+   whether the picker is open.
 
-   `--select-inset` is the single number the two sides are measured from, so
-   they cannot drift: the text starts one inset in from the leading edge, and
-   the chevron ends one inset in from the trailing one. The end padding is
-   `2 × inset + 1em` — one inset of clear air past the chevron, the chevron
-   itself, and one more between it and the longest option's last glyph. */
+   `--select-inset` is the single number both sides are measured from, so they
+   cannot drift: the text starts one inset in from the leading edge, the chevron
+   ends one inset in from the trailing one. The end padding is
+   `2 × inset + 1em`. */
 .studieinfo-select-shell {
   --select-inset: var(--space-3);
   position: relative;
@@ -355,9 +341,8 @@
 
 /* Optically centred on the control, not on the text box: `top: 50%` plus a
    half-height pull is stable whatever `--control-h` the pointer type resolves
-   to (44px under `pointer: coarse`). `pointer-events: none` keeps the mark out
-   of the way of the select underneath, which is still an ordinary <select>
-   with its native picker and keyboard behaviour. */
+   to. `pointer-events: none` keeps the mark clear of the select underneath,
+   which is still an ordinary <select> with its native keyboard behaviour. */
 .studieinfo-select-icon {
   position: absolute;
   inset-inline-end: var(--select-inset);
@@ -370,10 +355,9 @@
   transition: transform var(--dur-fast) var(--ease);
 }
 
-/* Open is the same mark turned over — a chevron-up drawn separately would
-   drift in stroke and optical centre, and the rotation is what reads as one
-   control changing state. Engines without `:open` on <select> simply leave the
-   chevron down; nothing else about the control depends on it. */
+/* Open is the same mark turned over — a chevron-up drawn separately would drift
+   in stroke and optical centre. Engines without `:open` on <select> simply
+   leave the chevron down. */
 .studieinfo-select:open + .studieinfo-select-icon {
   transform: rotate(180deg);
 }
@@ -392,16 +376,15 @@
 }
 
 /* Both actions are verbs about the same staged edit, so they stay together at
-   the start (`.np-actions` without `--split`, which is for a verb and a way
-   out to another page). */
+   the start (`--split` is for a verb and a way out to another page). */
 .studieinfo-actions {
   gap: var(--gap-2);
 }
 
-/* Lagre is the primary — an ink fill in both rest and hover (the shared
-   .np-btn hover would wash it back to a neutral control). Saving a plan is an
-   action, not a verdict on one, so it takes --ui like every other committed
-   state. Hover lifts rather than darkens, because ink cannot go darker. */
+/* Lagre is the primary — an ink fill in rest and hover (the shared .np-btn
+   hover would wash it back to a neutral control). Saving a plan is an action,
+   not a verdict on one, so it takes --ui. Hover lifts rather than darkens,
+   because ink cannot go darker. */
 .studieinfo-save {
   background: var(--ui);
   color: var(--ui-contrast);
@@ -412,32 +395,28 @@
   color: var(--ui-contrast);
 }
 
-/* --- Add-course dialog (Task 12) ---------------------------------------
-   A native <dialog> on the same .np-frame bones as the studieinfo modal:
-   built once in addCourse.ts, appended to <body>. Unlike studieinfo there
-   is nothing staged — every add/remove writes straight to the store, and
-   the dialog stays open so several courses can be added in one visit. */
+/* --- Add-course dialog ---------------------------------------------------
+   A native <dialog> on the same .np-frame bones as the studieinfo modal, built
+   once in addCourse.ts. Nothing is staged — every add/remove writes straight to
+   the store, and the dialog stays open for several adds. */
 .add-course-dialog {
   width: min(30rem, calc(100vw - 2rem));
   max-width: calc(100vw - 2rem);
   max-height: min(84vh, 44rem);
   /* Pinned near the top rather than centred. A centred search dialog is one
-     whose search field moves every time the result list changes length: empty
-     query → one status line, "tma" → twelve rows, "tma41" → three, and the
-     card re-centred on each keystroke, so the caret travelled up and down the
-     screen while the student was still typing into it. With the top edge fixed
-     the field and the masthead never move and the results grow downward under
-     them — which is also the only stable option here, since reserving
-     twelve rows of height would leave a mostly-empty box at rest. */
+     whose search field moves every time the result list changes length, so the
+     caret travelled up and down the screen while the student was still typing.
+     With the top edge fixed the results grow downward — also the only stable
+     option, since reserving twelve rows would leave a mostly-empty box at
+     rest. */
   margin: min(8vh, 4rem) auto auto;
   padding: 0;
   color: var(--fg);
 }
 
 /* MUST stay qualified on [open], the same trap the other dialogs document: an
-   author `display` beats the UA's `dialog:not([open]) { display: none }`
-   whatever the specificity. The column is what lets the head stay while the
-   results scroll. */
+   author `display` beats the UA's `dialog:not([open]) { display: none }`. The
+   column lets the head stay while the results scroll. */
 .add-course-dialog[open] {
   display: flex;
   flex-direction: column;
@@ -464,9 +443,8 @@
   overflow-y: auto;
 }
 
-/* The one title in the system that is a page-level <h2> rather than a course
-   code, alongside studieinfo's: it keeps the headline step (`.np-head-title`
-   sets the card step, and site.css loads after primitives.css). */
+/* The one title that is a page-level <h2> rather than a course code, alongside
+   studieinfo's: it keeps the headline step. */
 .add-course-title {
   font-family: var(--font-sans);
   font-size: var(--text-lg);
@@ -484,13 +462,10 @@
   flex-direction: column;
 }
 
-/* `nowrap`, since the clash/credits note that used to force a line break of
-   its own is gone (see addCourse.ts's header). Wrapping now would only ever
-   be triggered by a long course name, and dropping the verb onto its own line
-   for "Prosedyre- og objektorientert programmering" made that one row twice
-   the height of its neighbours in a twelve-row window. The name wraps inside
-   its own space instead — `.add-course-row-head` shrinks, the button does
-   not. */
+/* `nowrap`: dropping the verb onto its own line for a long course name made
+   that row twice the height of its neighbours in a twelve-row window. The name
+   wraps inside its own space instead — `.add-course-row-head` shrinks, the
+   button does not. */
 .add-course-row {
   display: flex;
   flex-wrap: nowrap;
@@ -529,47 +504,41 @@
 }
 
 /* "I planen" is membership, not a judgement — it says where a course is, not
-   whether the term works. It reads as full ink against the muted rows around
-   it (REWORK-2026-07-30). */
+   whether the term works. Full ink against the muted rows around it. */
 .add-course-added {
   color: var(--ui);
   font-weight: var(--weight-medium);
 }
 
-/* The list's last row would otherwise stack its own hairline on top of the
-   footer's, two rules a few pixels apart. The footer's is the one that means
-   something: the list ends here, and this is what you can do about it. */
+/* The list's last row would otherwise stack its hairline on the footer's, two
+   rules a few pixels apart. The footer's is the one that means something. */
 .add-course-row:last-child {
   border-bottom: 0;
 }
 
-/* --- Course settings (REWORK-2026-07-29 D1) ----------------------------
-   The one surface a planned course is configured on, opened from a course
-   row in the Emner list and from any block in the week or day view.
+/* --- Course settings ---------------------------------------------------
+   The one surface a planned course is configured on, opened from a course row
+   and from any block in the week.
 
-   A real modal, unlike the anchored popover it replaces: centered by the UA,
-   so the grid re-rendering underneath a group pick can no longer knock it out
-   of position, and Esc/backdrop/focus-return are native. That is why there is
-   no inline top/left here and no bottom-sheet branch — the same centered card
-   works at every width, it just gets narrower. */
+   A real modal, unlike the anchored popover it replaces: centered by the UA, so
+   a re-render underneath cannot knock it out of position, and
+   Esc/backdrop/focus-return are native. Hence no inline top/left and no
+   bottom-sheet branch. */
 .course-settings {
   margin: auto;
   width: min(26rem, calc(100vw - 2 * var(--space-4)));
   max-width: calc(100vw - 2 * var(--space-4));
   max-height: min(80vh, 40rem);
   /* No padding and no scrolling here: the head is a full-bleed printed strip
-     trimmed by `.np-frame`'s own corners, and the body under it is what
-     scrolls, so the masthead stays put while a long group list moves. */
+     trimmed by `.np-frame`'s corners, and the body under it is what scrolls. */
   padding: 0;
   color: var(--fg);
   box-shadow: var(--shadow-lg);
 }
 
-/* MUST stay qualified on [open]. The UA stylesheet hides a closed dialog with
-   `dialog:not([open]) { display: none }`, but an author `display` declaration
-   beats a UA one regardless of specificity — so an unqualified `display: flex`
-   here would pin the card on screen permanently, which is exactly how the
-   popover this replaces once read as impossible to close. */
+/* MUST stay qualified on [open]: an author `display` beats the UA's
+   `dialog:not([open]) { display: none }` regardless of specificity, so an
+   unqualified rule pins the card on screen permanently. */
 .course-settings[open] {
   display: flex;
   flex-direction: column;
@@ -610,11 +579,10 @@
   gap: var(--space-1);
 }
 
-/* The one editing control PRODUCT names, and the only interactive rows on the
-   page that used to ignore --control-h: 20.8 px tall with a 13x13 px native
-   input, a 24.8 px pitch between "Mattelab 1" and "Mattelab 2" on a touch
-   screen where every other control is 44 (mob-6). The token already carries
-   the touch value, so no media query is needed. */
+/* The one editing control PRODUCT names, and the only interactive rows that
+   used to ignore --control-h: 20.8 px tall with a 13x13 px native input, on a
+   touch screen where every other control is 44. The token already carries the
+   touch value, so no media query is needed. */
 .course-settings-group-row {
   display: flex;
   align-items: center;
@@ -641,21 +609,19 @@
   border-top: 1px solid var(--border);
 }
 
-/* --- Session popover (REWORK-2026-07-29f, retypeset 2026-07-30) ---------
+/* --- Session popover ---------------------------------------------------
    What a bar in the week says when you click it: the facts the bar could not
-   fit, anchored to the bar. A READ surface: the course editor is one verb
-   away, but it is no longer what a click on a session opens.
+   fit, anchored to the bar. A READ surface — the course editor is one verb
+   away, but it is not what a click on a session opens.
 
-   Non-modal (`show()`, not `showModal()`), so the week stays visible behind
-   it and clicking another bar re-targets the same card. Desktop pins it under
-   the anchor via inline top/left from blockPopover.ts; below 60rem it becomes
-   a bottom sheet, because a floating card that size either clips against an
-   edge or covers the whole viewport.
+   Non-modal (`show()`), so the week stays visible and clicking another bar
+   re-targets the same card. Desktop pins it under the anchor via inline
+   top/left from blockPopover.ts; below 60rem it becomes a bottom sheet, because
+   a floating card that size either clips against an edge or covers the
+   viewport.
 
-   The label column is gone. `NÅR / ROM / HVA / UKER` spent a third of the
-   width naming facts that say what they are; the card is typeset instead:
-   printed head, the clock as the one large figure, each remaining fact its own
-   line with its own quiet second line (see blockPopover.ts's header). */
+   No label column: the card is typeset instead — printed head, the clock as the
+   one large figure, each remaining fact its own line. */
 .block-popover {
   position: fixed;
   z-index: 40;
@@ -671,10 +637,8 @@
   box-shadow: var(--shadow-lg);
 }
 
-/* MUST stay qualified on [open]: the UA hides a closed dialog with
-   `dialog:not([open]) { display: none }`, and an author `display` beats a UA
-   one regardless of specificity — an unqualified `display: grid` here would
-   park an empty card on screen from first paint. */
+/* MUST stay qualified on [open]: an author `display` beats the UA's
+   `dialog:not([open]) { display: none }` regardless of specificity. */
 .block-popover[open] {
   display: block;
 }
@@ -692,9 +656,8 @@
 }
 
 /* The head, its ident block, its knocked-out close button and the fact blocks
-   below are `.np-head*` / `.np-fact*` (primitives.css), the same masthead the
-   course and studieinfo modals open on. What stays here is what is this card's
-   alone. */
+   are `.np-head*` / `.np-fact*` (primitives.css). What stays here is what is
+   this card's alone. */
 .block-popover-code {
   letter-spacing: var(--tracking);
 }
@@ -705,9 +668,8 @@
   padding: var(--space-4);
 }
 
-/* The clock is the largest thing in the card: of everything here it is the one
-   fact a student copies into a calendar, and the axis above the bar only
-   labels whole hours. */
+/* The clock is the largest thing in the card: it is the one fact a student
+   copies into a calendar, and the axis above the bar labels whole hours only. */
 .block-popover-when {
   display: grid;
   gap: var(--space-1);
@@ -739,13 +701,12 @@
   margin-top: var(--space-1);
 }
 
-/* --- Inline icon marks (REWORK-2026-07-30d) ------------------------------ */
+/* --- Inline icon marks ------------------------------ */
 
-/* Every one of these replaced a character standing in for a mark: "×" on a
-   close button, "→" on a link out. A glyph inherits the text font's weight and
-   metrics, sits on the baseline instead of centred, and renders differently in
-   every fallback face; an SVG does none of that. Sized here rather than at
-   each call site so one rule governs the set. */
+/* Every one of these replaced a character standing in for a mark. A glyph
+   inherits the text font's weight and metrics, sits on the baseline instead of
+   centred, and renders differently in every fallback face; an SVG does none of
+   that. Sized here so one rule governs the set. */
 .np-icon-btn svg {
   width: 17px;
   height: 17px;

@@ -7,27 +7,22 @@ const description = "Søk i NTNUs emnekatalog etter emnekode, emnenavn eller stu
 /**
  * THE PARTS OF THIS PAGE THAT ARE ALREADY KNOWN AT BUILD TIME.
  *
- * The scale line, the city chips and the resting status sentence were all
- * built in JS from `/data/search-index.json`, which meant the page painted
- * without them and grew them ~1.4s later: the facet row went from 22px to
- * 66px, the scale line added a whole line to the masthead and pushed the
- * search field 34px down with it, and everything below moved. 0.019 CLS on a
- * cold mobile load, 0.148 with a plan, 0.426 on a `?q=` link — on a phone.
+ * The scale line, the city chips and the resting status sentence were built in
+ * JS from `/data/search-index.json`, so the page painted without them and grew
+ * them ~1.4s later — 0.426 CLS on a `?q=` link, on a phone.
  *
- * None of it needed to wait. `search-index.json` is generated from this same
- * catalog by the same crawl, so the count, the year and the set of cities are
- * facts this file can simply print; the index is still fetched for the search
- * itself. `renderFacets` re-renders the chips over these on mount, which is
- * free precisely because they are identical — if these two ever disagree the
- * chips will visibly re-flow, and that is the signal that the crawler has
+ * None of it needed to wait: the index is generated from this same catalog by
+ * the same crawl, so the count, the year and the set of cities are facts this
+ * file can print. `renderFacets` re-renders the chips over these on mount,
+ * which is free precisely because they are identical — if the two ever
+ * disagree the chips visibly re-flow, which is the signal that the crawler has
  * started deriving the index from something else.
  */
 const catalogYear = catalogData.year;
 const catalogSize = catalogData.courses.length.toLocaleString("nb-NO");
 
-// The same split `cities()` in the client script does, over the same strings:
-// the catalog's `location` is a comma-joined combination ("Gjøvik, Trondheim"),
-// and a chip is one city.
+// The same split `cities()` in the client script does: the catalog's
+// `location` is a comma-joined combination, and a chip is one city.
 const cityFacets = [
   ...new Set(
     catalogData.courses.flatMap((course) =>
@@ -73,9 +68,9 @@ const cityFacets = [
       <span class="emner-facet-label">Sted</span>
       <div class="emner-chips" id="emner-facets" role="group" aria-label="Filtrer på studiested">
         {
-          /* Inert until `renderFacets` rebinds them a moment later — but drawn
-             from the first frame, which is the whole point: four chips
-             appearing at mount moved every row of the register 44px down. */
+          /* Inert until `renderFacets` rebinds them — but drawn from the first
+             frame, which is the point: four chips appearing at mount moved
+             every row of the register 44px down. */
           cityFacets.map((city) => (
             <button type="button" class="np-toggle np-toggle--text" aria-pressed="false">
               {city}
@@ -98,10 +93,9 @@ const cityFacets = [
       ></span
     ><span class="emner-status-loading">Henter emner …</span></p>
 
-  <!-- D6/§3: a result list is a data surface, so it takes the full --maxw
-       column rather than the prose measure. It is a real <table> because it is
-       real tabular data: five fields per course, and a screen reader gets the
-       column header with each cell instead of a run-on line. -->
+  <!-- A result list is a data surface, so it takes the full --maxw column
+       rather than the prose measure. A real <table> because it is real tabular
+       data: a screen reader gets the column header with each cell. -->
   <table class="emner-table" id="emner-table" hidden>
     <caption class="emner-caption np-kicker" id="emner-caption"></caption>
     <thead>
@@ -138,8 +132,8 @@ const cityFacets = [
     margin-bottom: var(--space-2);
   }
   /* The title and the scale of the thing it names, on one line: "how many
-     courses, from which catalog year" is the first question a search page has
-     to answer and it used to be answerable only by emptying the field. */
+     courses, from which catalog year" used to be answerable only by emptying
+     the field. */
   .emner-masthead {
     display: flex;
     align-items: baseline;
@@ -155,11 +149,10 @@ const cityFacets = [
     margin-bottom: var(--space-4);
   }
   /* The field stays `type="search"` — that is what makes it a `searchbox` to a
-     screen reader rather than a plain textbox — but Chrome's clear glyph comes
-     with it, drawn in the browser's own accent blue against a palette that
-     owns no such colour. Suppress the glyph, keep the role. (The add dialog's
-     field is `type="text"` for an unrelated reason no stylesheet can fix:
-     Chrome's search input eats the first Escape.) */
+     screen reader — but Chrome's clear glyph comes with it, drawn in the
+     browser's own accent blue. Suppress the glyph, keep the role. (The add
+     dialog's field is `type="text"` for an unrelated reason no stylesheet can
+     fix: Chrome's search input eats the first Escape.) */
   .emner-search input::-webkit-search-cancel-button {
     -webkit-appearance: none;
     appearance: none;
@@ -172,18 +165,14 @@ const cityFacets = [
     margin-bottom: var(--space-5);
   }
 
-  /* The subject row's place, for a `?q=` load — and it has to be reserved
-     ABOVE the city chips, because that is where the row arrives. `min-height`
-     was tried first and is the wrong instrument: it holds the block's total
-     height, so the container stopped growing but the city row and its label
-     still slid 44px down inside it as the subject row was inserted over them.
-     Padding puts the empty space where the content will be, so the chips are
-     printed at their final y from the first frame and simply stay there.
+  /* The subject row's place, for a `?q=` load — reserved ABOVE the city chips,
+     because that is where the row arrives. `min-height` is the wrong
+     instrument: it holds the block's total height, so the container stopped
+     growing but the city row still slid 44px down inside it. Padding puts the
+     empty space where the content will be.
 
-     One chip row, not two: eight chips wrap to two rows on a phone and one on a
-     laptop, and a query narrow enough to yield fewer than the two it takes to
-     be a filter at all collapses this instead. Under-reserving means the common
-     case nudges down by the second row rather than snapping up by the block. */
+     One chip row, not two: under-reserving means the common case nudges down
+     by the second row rather than snapping up by the block. */
   :global(html[data-query]) .emner-facets[data-reserve] {
     padding-top: 2.75rem;
   }
@@ -203,9 +192,9 @@ const cityFacets = [
     flex-wrap: wrap;
     gap: var(--space-2);
   }
-  /* The hit count riding on a subject chip. It is a figure, so it is mono —
-     and it is `aria-hidden` because the chip's own `aria-label` already says
-     "TMA, 30 treff" as a sentence rather than as two glued fragments. */
+  /* The hit count riding on a subject chip: a figure, so mono — and
+     `aria-hidden`, because the chip's own `aria-label` already says "TMA, 30
+     treff" as a sentence. */
   :global(.emner-chip-count) {
     color: var(--faint);
   }
@@ -236,13 +225,11 @@ const cityFacets = [
     margin-bottom: var(--space-4);
   }
 
-  /* Which resting line this load is actually resting on. The invitation is
-     dropped when a plan is already on screen — the plan table below says where
-     an add goes better than a sentence can — and the whole resting line is
-     dropped for a `?q=` load, which is not resting at all. Both are decided by
-     Layout.astro's pre-paint probe, so the server prints all three fragments
-     and the first frame shows the right ones; `render()` then writes the same
-     string it would have written anyway, over identical geometry. */
+  /* Which resting line this load rests on. The invitation is dropped when a
+     plan is on screen, and the whole resting line for a `?q=` load, which is
+     not resting at all. Both are decided by Layout.astro's pre-paint probe, so
+     the server prints all three fragments and the first frame shows the right
+     ones. */
   .emner-status-loading {
     display: none;
   }
@@ -260,11 +247,9 @@ const cityFacets = [
   }
 
   /* --- The register ---------------------------------------------------
-     Fixed columns are the whole point. The list used to be a flex row whose
-     add button was a SIBLING of the link holding the metadata, so a row
-     without a button (a course with no offering this year) let its metadata
-     run 430px further right than the row above it — nothing columned up and
-     the eye had to hunt every line. */
+     Fixed columns are the point. As a flex row whose add button was a SIBLING
+     of the metadata link, a row without a button let its metadata run 430px
+     further right than the row above it. */
   .emner-table {
     width: 100%;
     border-collapse: collapse;
@@ -306,10 +291,9 @@ const cityFacets = [
   :global(.emner-cell-code) {
     white-space: nowrap;
   }
-  /* Prefix and number set apart by a hair. A column of codes then shows its
-     own families — TMA, MGLU, IMAG — which is exactly what the subject chips
-     above filter on. Not a separator character: the code a student copies is
-     "TMA4110", and a real space or hyphen would ride along on the copy. */
+  /* Prefix and number set apart by a hair, so a column of codes shows its own
+     families — which is what the subject chips filter on. Not a separator
+     character: the code a student copies is "TMA4110". */
   :global(.emner-code) {
     font-size: var(--text-sm);
   }
@@ -345,9 +329,8 @@ const cityFacets = [
   /* --- The not-taught group -------------------------------------------
      703 of 5 470 catalog rows exist only because the crawl unions two years.
      They are real courses with real pages, so they are not dropped — but
-     interleaved they were indistinguishable from addable ones, and on
-     "matematikk" they took six of the first twelve rows. They fold instead,
-     under a count that says what is in there. */
+     interleaved they were indistinguishable from addable ones. They fold
+     instead, under a count that says what is in there. */
   :global(.emner-fold-row td) {
     padding: var(--space-3) 0 var(--space-2);
   }
@@ -374,9 +357,9 @@ const cityFacets = [
   }
 
   /* --- Narrow ---------------------------------------------------------
-     A5/A3: at 390px five columns cannot hold. The row becomes a block: code
-     and name on the first line, the data under it, the verb last — the same
-     order the wide table reads in, so nothing has to be relearned. */
+     At 390px five columns cannot hold. The row becomes a block: code and name
+     first, the data under it, the verb last — the same order the wide table
+     reads in. */
   @media (max-width: 46rem) {
     .emner-facets {
       grid-template-columns: 1fr;
@@ -443,17 +426,15 @@ const cityFacets = [
 
   const RESULT_CAP = 200;
   /**
-   * The not-taught group is capped far lower than the live list. It is an
-   * archive drawer, not a result set — "matematikk" puts 12 in it, and a
-   * query broad enough to put 200 in there is a query to narrow, not to
-   * scroll.
+   * The not-taught group is capped far lower than the live list: it is an
+   * archive drawer, not a result set, and a query broad enough to put 200 in
+   * there is a query to narrow.
    */
   const STALE_CAP = 50;
   /**
    * How long typing has to stop before the live region and the URL are
-   * written. `render()` rebuilds every row on every keystroke, so without it
-   * typing "matematikk" wrote ten counts into the live region, nine of them
-   * for prefixes nobody searched (search-8, astro-6).
+   * written. `render()` rebuilds every row per keystroke, so without it typing
+   * "matematikk" wrote ten counts into the live region.
    */
   const SETTLE_MS = 350;
   const SEASON_LABELS: Record<string, string> = {
@@ -473,12 +454,10 @@ const cityFacets = [
   }
 
   /**
-   * The exam column: the earliest date if the catalog has one, else the
-   * seasons it has without dates, else nothing.
-   *
-   * A date, not "eksamen høst" — "høst" is what the index happens to store,
-   * while "18. nov" is the thing a student is actually planning around, and
-   * the exam list on `/planlegger/` already speaks in these same short dates.
+   * The exam column: the earliest date if the catalog has one, else the seasons
+   * it has without dates, else nothing. A date, not "eksamen høst" — "18. nov"
+   * is what a student plans around, and `/planlegger/`'s exam list already
+   * speaks in these same short dates.
    */
   function examCell(exams: [string, string | null][]): string {
     if (exams.length === 0) return "";
@@ -515,19 +494,16 @@ const cityFacets = [
     const activeCities = new Set<string>();
     /**
      * Selected subject chips. Unlike the cities these are derived from the
-     * *current result set* (there are 360 prefixes in the catalog, which is a
-     * wall, but the six that survive "matematikk" are a filter), so a
-     * selection that the next query cannot honour is pruned rather than left
-     * silently filtering everything to nothing.
+     * *current result set*, so a selection the next query cannot honour is
+     * pruned rather than left silently filtering everything to nothing.
      */
     const activeSubjects = new Set<string>();
     /** Whether the not-taught group is expanded; survives re-renders. */
     let staleOpen = false;
     /**
-     * The add controls of the rows currently on screen. A plan change updates
-     * them in place instead of re-running `render()`: rebuilding the list
-     * removed the very button the student had just pressed, which threw
-     * keyboard focus back to `<body>` on every add (A5).
+     * The add controls of the rows on screen. A plan change updates them in
+     * place instead of re-running `render()`: rebuilding the list removed the
+     * button the student had just pressed and threw focus back to `<body>`.
      */
     const rows: { sync: () => void }[] = [];
 
@@ -539,10 +515,8 @@ const cityFacets = [
     }
     /**
      * Defers work until typing stops. Two things wait on it: the `aria-live`
-     * count — typing "matematikk" wrote ten counts into `#emner-status`, nine
-     * of them for prefixes nobody searched (search-8) — and the `?q=`
-     * writeback, which would otherwise rewrite the history entry per
-     * keystroke. The result list itself stays synchronous.
+     * count, and the `?q=` writeback, which would otherwise rewrite the history
+     * entry per keystroke. The result list itself stays synchronous.
      */
     function afterTyping(fn: () => void): void {
       cancelSettle();
@@ -561,15 +535,14 @@ const cityFacets = [
     }
 
     /**
-     * Keeps `?q=` in step with the field. Back from a course page used to
-     * restore an empty catalog, and a page that arrived with `?q=` kept
-     * advertising the old query in the address bar (search-4, astro-6); the
-     * read side at the bottom of this setup already handled the rest.
+     * Keeps `?q=` in step with the field: Back from a course page used to
+     * restore an empty catalog, and a page arriving with `?q=` kept advertising
+     * the old query.
      *
      * `history.state` is carried through, never replaced with `null`: Astro's
      * ClientRouter seeds every entry with `{index, scrollX, scrollY}` and its
-     * popstate handler returns early on a null state, so nulling it here would
-     * kill Back onto this page (app-1, CLAUDE.md's ClientRouter rule).
+     * popstate handler returns early on a null state, so nulling it would kill
+     * Back onto this page.
      */
     function syncQuery(raw: string): void {
       const target = raw === "" ? location.pathname : `?q=${encodeURIComponent(raw)}`;
@@ -577,11 +550,10 @@ const cityFacets = [
     }
 
     /**
-     * DESIGN §7's pair, both halves. The accessible name starts with the
-     * visible label so voice control matches what the student can read — the
-     * old button said "Lagt til" and answered to "Fjern TDT4100 fra planen",
-     * which is a WCAG 2.5.3 failure as well as a fourth spelling of one state
-     * (copy-6).
+     * DESIGN §7's pair, both halves. The accessible name starts with the visible
+     * label so voice control matches what the student can read — a button
+     * reading "Lagt til" that answered to "Fjern TDT4100 fra planen" is a WCAG
+     * 2.5.3 failure as well as a fourth spelling of one state.
      */
     function setAddState(button: HTMLButtonElement, code: string): void {
       const inPlan = store.hasCourse(code);
@@ -650,10 +622,10 @@ const cityFacets = [
 
       row.append(codeCell, nameCell, whereCell, examCellEl, actionCell);
 
-      // C1/crawler-3: a course the catalog year has no offering for
-      // contributes zero blocks to this semester's week, and adding one used
-      // to leave the planner showing a raw English "Not found". It keeps its
-      // page and its row; what it does not get is a verb.
+      // A course the catalog year has no offering for contributes zero blocks
+      // to this semester's week, and adding one left the planner showing a raw
+      // English "Not found". It keeps its page and its row; what it does not
+      // get is a verb.
       if (stale) {
         const lastYear = offeredYears[0];
         const note = document.createElement("span");
@@ -714,11 +686,10 @@ const cityFacets = [
     }
 
     /**
-     * The resting page. It used to be a caption over 600px of blank paper —
-     * the one state a student sees before typing anything said nothing about
-     * their own term. It now shows the plan they are searching *into*, in the
-     * exact format the results will arrive in, so the register is already
-     * legible by the time the first query lands.
+     * The resting page. It used to be a caption over 600px of blank paper — the
+     * one state a student sees before typing said nothing about their own term.
+     * It now shows the plan they are searching *into*, in the exact format the
+     * results will arrive in.
      */
     function renderPlanState(): boolean {
       if (!index || !tableEl) return false;
@@ -739,10 +710,9 @@ const cityFacets = [
 
     function renderSubjectFacets(ranked: CatalogRow[]): void {
       if (!subjectsEl || !subjectFacetEl) return;
-      // Whatever this pass decides, the row is now settled — hand back the
-      // space a `?q=` load was holding for it, including (and especially) when
-      // the answer is "no chips": a reservation left standing over an absent
-      // row is a permanent hole rather than a bridge.
+      // Whatever this pass decides, the row is settled — hand back the space a
+      // `?q=` load was holding, especially when the answer is "no chips": a
+      // reservation left standing over an absent row is a permanent hole.
       delete facetRowEl?.dataset.reserve;
       const facets = prefixFacets(ranked);
       // One chip filters nothing — it is the whole result set wearing a
@@ -782,27 +752,24 @@ const cityFacets = [
       if (!statusEl || !resultsEl || !searchInput || !tableEl) return;
       if (!index) return;
       // The register is about to be whatever it is: the space held for it since
-      // first paint has done its job and stops being held, in the same frame
-      // the rows land.
+      // first paint stops being held, in the same frame the rows land.
       delete resultsHoldEl?.dataset.reserve;
       const raw = searchInput.value.trim();
       const scoped = scopedCourses();
 
       resetTable();
 
-      // §3: no 5 470-row dump on an empty query — the page is a search mode,
-      // not a browsable catalog. The chips still have to answer something,
-      // though: the city filter used to live *below* this return, so a chip
-      // latched `aria-pressed` and changed nothing on the page (astro-4).
+      // No 5 470-row dump on an empty query — the page is a search mode, not a
+      // browsable catalog. The chips still have to answer something: the city
+      // filter used to live *below* this return, so a chip latched
+      // `aria-pressed` and changed nothing.
       if (raw === "") {
         renderSubjectFacets([]);
         const where = activeCities.size > 0 ? ` i ${[...activeCities].join(", ")}` : "";
         const noun = scoped.length === 1 ? "emne" : "emner";
         const planned = renderPlanState();
-        // With a plan on screen the invitation is enough on its own. With no
-        // plan this is the whole page, so it also says where an add goes —
-        // the resting catalog used to be one caption over 600 px of paper,
-        // and nothing on it connected the search to the week it feeds.
+        // With a plan on screen the invitation is enough. With no plan this is
+        // the whole page, so it also says where an add goes.
         const size = scoped.length.toLocaleString("nb-NO");
         setStatus(
           planned
@@ -815,8 +782,8 @@ const cityFacets = [
       }
 
       // Ranked, then capped — the other way round the cap was a blind cut
-      // through catalog order, and "teknologi" dropped 42 rows of which 39
-      // were Trondheim (search-1/astro-5).
+      // through catalog order, and "teknologi" dropped 42 rows of which 39 were
+      // Trondheim.
       const ranked = searchCatalog(scoped, raw);
       // Computed on the whole hit set, *before* the subject narrowing, so the
       // counts on the chips do not change the moment one is pressed.
@@ -892,10 +859,9 @@ const cityFacets = [
     }
 
     /**
-     * U15: the raw catalog strings are combinations ("Gjøvik, Trondheim"),
-     * so one chip per string filtered with `includes` *excluded* courses
-     * taught in more cities than the chip named. Facets are cities, and
-     * selecting several means OR.
+     * The raw catalog strings are combinations ("Gjøvik, Trondheim"), so one
+     * chip per string filtered with `includes` *excluded* courses taught in
+     * more cities than the chip named. Facets are cities, and several means OR.
      */
     function renderFacets(): void {
       if (!facetsEl || !index) return;
@@ -922,17 +888,15 @@ const cityFacets = [
 
     /**
      * Fetches the index. On failure the page keeps a way back: an explicit
-     * "prøv igjen" action, plus a retry on the next keystroke — the previous
-     * version left `index` undefined for the rest of the session.
+     * "prøv igjen" action plus a retry on the next keystroke.
      */
     async function loadIndex(announce = false): Promise<void> {
       if (index || loading || !statusEl) return;
       loading = true;
-      // Only the retry announces. On the first load the server has already
-      // printed the right resting line for this URL (see `.emner-status-*`),
-      // and writing "Henter emner …" over it would collapse a two-line
-      // sentence to one and then grow it back when the fetch lands — two
-      // layout shifts to say something the page was already saying.
+      // Only the retry announces. On the first load the server has printed the
+      // right resting line for this URL, and writing "Henter emner …" over it
+      // would collapse a two-line sentence and grow it back — two shifts to say
+      // what the page was already saying.
       if (announce) setStatus("Henter emner …", "hint");
       try {
         const res = await fetch("/data/search-index.json");
@@ -941,8 +905,7 @@ const cityFacets = [
       } catch {
         // Both reservations are bridges to the first honest answer, and "the
         // catalog did not load" is one. Neither `render` nor
-        // `renderSubjectFacets` runs on this path, so they are released here or
-        // never.
+        // `renderSubjectFacets` runs on this path, so it is released here.
         delete resultsHoldEl?.dataset.reserve;
         delete facetRowEl?.dataset.reserve;
         setStatus("Klarte ikke å hente emnene.", "hint");

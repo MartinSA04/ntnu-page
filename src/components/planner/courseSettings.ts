@@ -1,43 +1,25 @@
 /**
- * Course settings — the ONE surface a planned course is configured on
- * (REWORK-2026-07-29 D1). Replaces `popover.ts`, which could only be reached
- * by clicking a rendered block: a course whose sessions were swallowed by a
- * pile, or which had no timetable at all, had no way to reach its own group
- * picker.
+ * Course settings — the ONE surface a planned course is configured on. Two
+ * callers hand it the same context: a course row in the Emner list, and a
+ * block in the week/day grid.
  *
- * Two callers open it and they hand it the same context: a course row in the
- * Emner list, and a block in the week/day grid.
+ * A real modal (`showModal()`), so Esc, backdrop dismissal (`closedby="any"`)
+ * and focus return to the invoker are native behaviour, and the grid
+ * re-rendering underneath cannot knock it out of position.
  *
- * It is a real modal (`showModal()`), not the old anchored card. That is the
- * whole reason this file is shorter than the one it replaces: Esc, backdrop
- * dismissal (`closedby="any"`) and focus return to the invoker are all
- * native `<dialog>` behaviour, and a centered dialog cannot be knocked out of
- * position by the grid re-rendering underneath it — so `popover.ts`'s
- * hand-wired Escape/outside-pointerdown listeners, its flip-above-when-no-room
- * arithmetic and its `refreshInvoker` anchor re-resolution are all dropped
- * rather than ported.
+ * `setCourseGroups` writes on every edit, so the grid behind the backdrop is
+ * already correct when the modal closes; `renderContent` is a full idempotent
+ * rebuild driven by the local `selection`.
  *
- * `setCourseGroups` still writes on every edit, so the grid behind the
- * backdrop is already correct when the modal closes; `renderContent` is a
- * full idempotent rebuild driven by the local `selection`, called again
- * after every edit, exactly as before.
- *
- * The group-picker rules themselves are unchanged and moved verbatim from
- * `popover.ts` — `lecturesAreExclusive` and `nextSelection` are re-exported
- * from here now, and `tests/planner/popover.test.ts` moved with them. Those
- * rules have twice deleted real teaching from a student's week (audit
- * week-1, groups-2), so they stay pure and stay tested.
+ * `lecturesAreExclusive` and `nextSelection` have twice deleted real teaching
+ * from a student's week, so they stay pure and stay tested.
  */
 import type { GroupOption } from "../../lib/planner/groups.js";
 import type { CourseSource, PlanStore } from "../../lib/planner/store.js";
 import { el, formatCreditNumber, icon } from "./dom.js";
 
-/**
- * What the caller hands the modal. Everything the old
- * `BlockPopoverContext["course"]` carried, plus the facts the course row used
- * to print inline (D2 moved them here) — and no `kind: "info"` variant: a
- * pile no longer opens this surface at all, it focuses its day (D5).
- */
+/** What the caller hands the modal. A pile does not open this surface — it
+ *  focuses its day. */
 export interface CourseSettingsContext {
   code: string;
   /** The course's proper name. */
@@ -51,34 +33,28 @@ export interface CourseSettingsContext {
   selected: string[];
   /**
    * `resolveLectureDefaults(...).keys` — the lecture group(s) the week draws
-   * before the student picks. Its LENGTH also decides radios vs checkboxes,
-   * see `lecturesAreExclusive`.
+   * before the student picks. Its LENGTH decides radios vs checkboxes.
    */
   defaults: string[];
   /**
    * `resolveLectureDefaults(...).resolved`: `false` when `defaults` is one
-   * provisional pick per ambiguous session family rather than the student's
-   * own parallel, in which case no option is labelled "(din parallell)"
-   * (groups-5).
+   * provisional pick per ambiguous family, in which case no option may be
+   * labelled "(din parallell)".
    */
   resolved?: boolean;
   /**
-   * The lecture group keys the week is drawing right now — read off
-   * `applyGroupSelection`'s own output, NOT off `defaults`. The two differ
-   * exactly where it matters: `defaults` is empty both for a course that
-   * narrows nothing because every option is already on screen (TMA4401) and
-   * for one that narrows nothing because its session families are all
-   * singletons while other programmes' parallels sit unused (TMA4400). Only
-   * the first has nothing to pick. See `pickableGroups`.
+   * The lecture keys the week is drawing right now — read off
+   * `applyGroupSelection`'s output, NOT off `defaults`. `defaults` is empty
+   * both for a course whose every option is already on screen and for one
+   * whose other parallels are another programme's; only the first has nothing
+   * to pick. See `pickableGroups`.
    */
   drawnLectures: string[];
   source: CourseSource;
   dropped: boolean;
   /**
-   * Status fragments the course row used to concatenate into a run-on meta
-   * line — "undervises ikke i valgt semester", "ikke undervist i 2026 · sist
-   * undervist 2024", "fikk ikke hentet timeplanen". Rendered as one note per
-   * entry.
+   * Status fragments the course row used to run together — "undervises ikke i
+   * valgt semester", "fikk ikke hentet timeplanen". One note per entry.
    */
   notes: string[];
   /** Shown when a bundle fetch failed, so the retry is reachable from here. */
@@ -93,14 +69,12 @@ export interface CourseSettingsHandle {
 }
 
 /**
- * The fact block under the head: the figure this course is measured in, and
- * the line under it that qualifies it: the same shape the session card sets a
- * clock and its weekday in, rather than the mono run-on ("7,5 sp · fra
- * programmet · droppet") this replaces.
+ * The fact block under the head: the figure the course is measured in and the
+ * line that qualifies it — the same shape the session card sets a clock in.
  *
- * With no credits to state (DR-6 null-holes them) `figure` stays null and the
- * provenance takes the block on its own, as a sentence fragment in the
- * grotesk, never promoted into the mono the figure is set in (Data-Is-Mono).
+ * With no credits to state `figure` stays null and the provenance takes the
+ * block on its own, as a grotesk sentence fragment, never promoted into the
+ * mono the figure is set in (Data-Is-Mono).
  */
 export function courseFacts(ctx: {
   credits: number | null;
@@ -118,21 +92,16 @@ export function courseFacts(ctx: {
 }
 
 /**
- * Are this course's lecture options alternatives to each other?
- *
- * `defaults` is `resolveLectureDefaults(...).keys` (groups.ts), and its length
- * answers the question outright:
- *  - exactly one key — the lecture layer was narrowed to one group, either by
- *    the programme's own section or as one family of numbered parallels, so
- *    every other option is an alternative to it: a radio, and picking one
- *    replaces the layer.
+ * Are this course's lecture options alternatives to each other? `defaults`
+ * (`resolveLectureDefaults(...).keys`) answers it by length:
+ *  - one key — the layer was narrowed to one group, so every other option is
+ *    an alternative: a radio, and picking one replaces the layer.
  *  - no keys — nothing was narrowed. The listed groups are complementary
- *    weekly sessions (TMA4400's "Forelesning 1 …" + "Forelesning 2 …" +
- *    "Plenumsregning" for one cluster) or other programmes' sections; calling
- *    those alternatives is what deleted two thirds of a course (groups-2).
- *  - several keys — one provisional pick per session family. A single radio
- *    group cannot express "one from each family" either.
- * The last two cases are additive checkboxes: an allow-list, exactly what
+ *    weekly sessions or other programmes' sections; calling those alternatives
+ *    is what deleted two thirds of a course.
+ *  - several keys — one provisional pick per session family, which a single
+ *    radio group cannot express either.
+ * The last two are additive checkboxes: an allow-list, exactly what
  * `applyGroupSelection` does with an explicit pick.
  */
 export function lecturesAreExclusive(defaults: string[]): boolean {
@@ -140,19 +109,15 @@ export function lecturesAreExclusive(defaults: string[]): boolean {
 }
 
 /**
- * The selection to store after the student toggles one option — the whole
- * write path, kept pure so the half that has twice deleted real teaching from
- * the week (audit week-1, groups-2) is unit-testable without a DOM.
+ * The selection to store after the student toggles one option — the whole write
+ * path, kept pure so the half that has twice deleted real teaching from the
+ * week is unit-testable without a DOM.
  *
- * `layerKeys` holds the keys of the layer being edited (lecture, or øving/lab);
- * the other layer's picks carry through untouched, because groups.ts applies a
- * selection per activity kind. `shown` is what that layer draws right now (its
- * explicit picks, else its defaults): an additive edit starts from what the
- * student can see, so ticking a second option adds to the first instead of
- * silently replacing it. `exclusive` is the radio case — the pick is the whole
- * layer. Emptying a layer returns it to the default: `applyGroupSelection`
- * treats "no pick for this kind" as "apply the programme default", which is
- * the way back out of a wrong pick (groups-6).
+ * `layerKeys` holds the keys of the layer being edited; the other layer's picks
+ * carry through untouched, because groups.ts applies a selection per activity
+ * kind. `shown` is what that layer draws right now, so an additive edit starts
+ * from what the student can see. `exclusive` is the radio case. Emptying a
+ * layer returns it to the default — the way back out of a wrong pick.
  */
 export function nextSelection(args: {
   selection: string[];
@@ -170,28 +135,21 @@ export function nextSelection(args: {
 }
 
 /**
- * Which options are worth offering. A control the student cannot use to make
- * a different choice is noise: one lecture parallel does not need a radio to
- * select it, and one øving group does not need a checkbox. The two kinds are
- * counted SEPARATELY — a course with a single parallel and two øving groups
- * would otherwise draw a lone dead radio above the useful checkboxes.
+ * Which options are worth offering. A control that cannot make a different
+ * choice is noise. The two kinds are counted SEPARATELY, or a course with one
+ * parallel and two øving groups draws a lone dead radio above the checkboxes.
  *
- * `drawn` is the lecture group keys the week is drawing right now, and it is
- * the second half of the lecture gate: **a lecture layer whose every option is
- * already on screen is not a choice, however many options that is.** TMA4401
- * publishes "Forelesning" and "Plenumsregning" — two complementary weekly
- * sessions, both classified as lectures, both drawn — and the count-only gate
- * offered them as two checkboxes, inviting the student to untick teaching they
- * attend. Counting is not enough to tell that apart from TMA4400, which also
- * narrows nothing (three singleton session families → no defaults) but lists
- * eight parallels the week is NOT drawing, one of which an MTDT student may
- * legitimately want; that capability is documented in groups.ts and ticked by
- * e2e/flows.pw.ts, so the gate cannot be `defaults.length > 0`. What separates
- * them is whether anything is left to switch TO.
+ * `drawn` is the second half of the lecture gate: **a lecture layer whose every
+ * option is already on screen is not a choice, however many options that is.**
+ * TMA4401's two complementary lecture-classified sessions were offered as
+ * checkboxes, inviting the student to untick teaching they attend. Counting
+ * alone cannot tell that from TMA4400, which also narrows nothing but lists
+ * eight parallels the week is NOT drawing, one of which a student may
+ * legitimately want — so the gate cannot be `defaults.length > 0`.
  *
- * The øving/lab layer is deliberately not held to the same test: its default
- * IS "every group of your programme", so `drawn` covers all of them and the
- * rule would delete every øving picker on the site. Its count gate stands.
+ * The øving/lab layer is deliberately not held to this test: its default IS
+ * "every group of your programme", so `drawn` covers all of them and the rule
+ * would delete every øving picker on the site.
  */
 export function pickableGroups(
   groups: GroupOption[],
@@ -211,8 +169,7 @@ export function pickableGroups(
 
 /**
  * Mounts the modal once. Idempotent against a stale dialog left by a previous
- * mount (same guard as studieinfo.ts/addCourse.ts) and self-removes on
- * `signal` abort (a page swap under ClientRouter).
+ * mount, and self-removes on `signal` abort (a page swap under ClientRouter).
  */
 export function mountCourseSettings(store: PlanStore, signal: AbortSignal): CourseSettingsHandle {
   document.getElementById("planner-course-settings")?.remove();
@@ -221,8 +178,8 @@ export function mountCourseSettings(store: PlanStore, signal: AbortSignal): Cour
   dialog.id = "planner-course-settings";
   dialog.setAttribute("aria-labelledby", "course-settings-title");
   // Light dismiss: Esc *and* a backdrop click. Every edit here is written to
-  // the store as it is made, so there is nothing staged for a stray click to
-  // throw away — the × stays for touch, where neither gesture exists.
+  // the store as it is made, so a stray click throws nothing away — the ×
+  // stays for touch, where neither gesture exists.
   dialog.setAttribute("closedby", "any");
   document.body.append(dialog);
 
@@ -240,19 +197,15 @@ export function mountCourseSettings(store: PlanStore, signal: AbortSignal): Cour
   /**
    * Where focus goes on close.
    *
-   * `showModal()` returns focus to the invoker for free — but ONLY while the
-   * invoker is still in the document, and Dropp/Fjern is precisely the case
-   * where it is not: the grid re-renders without that block, and `focus()` on a
-   * detached node is a silent no-op that leaves focus on `<body>`, so the next
-   * Tab restarts at the skip link (audit a11y-3, which the popover fixed by
-   * hand and which came straight back when this became a modal — e2e caught it).
+   * `showModal()` returns focus to the invoker for free — but ONLY while it is
+   * still in the document, and Dropp/Fjern is exactly when it is not: `focus()`
+   * on a detached node is a silent no-op that leaves focus on `<body>`, so the
+   * next Tab restarts at the skip link.
    *
-   * The course's own settings BUTTON in the Emner list is the honest landing
-   * place: that row still shows the course, and the button reopens this dialog,
-   * so the undo is one keystroke away. The button, not the row — the row is
-   * inert now and `focus()` on it would be the same silent no-op this exists to
-   * avoid. The week frame is the last resort for a manual course whose row is
-   * gone too.
+   * The course's settings BUTTON in the Emner list is the honest landing place
+   * — that row still shows the course and the button reopens this dialog. The
+   * button, not the row: the row is inert and would be the same no-op. The week
+   * frame is the last resort when the row is gone too.
    */
   function restoreFocus(): void {
     if (invoker?.isConnected) return; // the browser's own restore is correct
@@ -268,8 +221,7 @@ export function mountCourseSettings(store: PlanStore, signal: AbortSignal): Cour
     }
     const frame = document.getElementById("planner-grid-frame");
     if (!frame) return;
-    // The frame is a plain <div>; it has to be programmatically focusable
-    // before it can catch anything.
+    // The frame is a plain <div>; it must be programmatically focusable first.
     frame.tabIndex = -1;
     frame.focus();
   }
@@ -286,10 +238,9 @@ export function mountCourseSettings(store: PlanStore, signal: AbortSignal): Cour
   }
 
   /**
-   * Applies a new explicit selection: store first (the grid behind the
-   * backdrop updates live), then this dialog's own display. `focusKey`
-   * re-focuses the input for that group key after the rebuild, so toggling
-   * with the keyboard doesn't drop focus back to the document.
+   * Applies a new explicit selection: store first (the grid behind the backdrop
+   * updates live), then this dialog. `focusKey` re-focuses that group's input
+   * after the rebuild, so keyboard toggling does not drop focus.
    */
   function setSelection(next: string[], focusKey?: string): void {
     if (!current) return;
@@ -319,8 +270,7 @@ export function mountCourseSettings(store: PlanStore, signal: AbortSignal): Cour
   /**
    * Øving/lab checkbox toggle. It seeds from the øving/lab picks alone and
    * never touches the lecture layer: `applyGroupSelection` applies a selection
-   * per activity kind, so a selection naming only øving keys leaves the
-   * lectures on their default (audit week-1/groups-1).
+   * per activity kind, so this leaves the lectures on their default.
    */
   function toggleOther(ctx: CourseSettingsContext, key: string, checked: boolean): void {
     const lectureKeys = lectureKeysOf(ctx);
@@ -341,24 +291,20 @@ export function mountCourseSettings(store: PlanStore, signal: AbortSignal): Cour
   // --- Content -------------------------------------------------------------
 
   /**
-   * One control per option — in `ctx.groups`'s own order (lecture-kind first,
-   * then label), minus whichever kind has nothing to choose between
-   * (`pickableGroups`). Øving/lab options are always checkboxes; the lecture
-   * layer gets radios only when its options really are alternatives
-   * (`lecturesAreExclusive`) and additive checkboxes otherwise, because a
-   * radio group is a promise that picking one turns the others off — true for
-   * TDT4110's three parallels, false and destructive for TMA4400's three
-   * weekly sessions (groups-2).
+   * One control per option — in `ctx.groups`'s own order, minus whichever kind
+   * has nothing to choose between (`pickableGroups`). Øving/lab options are
+   * always checkboxes; the lecture layer gets radios only when its options
+   * really are alternatives (`lecturesAreExclusive`), because a radio group
+   * promises that picking one turns the others off — true for three parallels,
+   * false and destructive for three complementary weekly sessions.
    *
-   * An option that came from `ctx.defaults` is labelled "(din parallell)"
-   * regardless of what is currently picked, so the student's assigned default
-   * stays identifiable after they switch away from it; the label is dropped
-   * when the caller says the default was only a guess (`resolved: false`),
-   * since naming a provisional pick "din parallell" is a lie (groups-5).
+   * An option from `ctx.defaults` is labelled "(din parallell)" whatever is
+   * picked, so the assigned default stays identifiable — dropped when the
+   * caller says the default was only a guess (`resolved: false`).
    *
-   * "Nullstill gruppevalg" calls `setSelection([])`, which `applyGroupSelection`
-   * reads as "no explicit pick, apply the programme default" — the only way
-   * back from a radio, which the student cannot untick (groups-6).
+   * "Nullstill gruppevalg" calls `setSelection([])`, which reads as "apply the
+   * programme default" — the only way back from a radio, which cannot be
+   * unticked.
    */
   function renderGroupsSection(ctx: CourseSettingsContext): HTMLElement {
     const { lectures, others } = pickableGroups(ctx.groups, ctx.drawnLectures);
@@ -412,8 +358,7 @@ export function mountCourseSettings(store: PlanStore, signal: AbortSignal): Cour
       reset.addEventListener("click", () => {
         setSelection([]);
         // The reset renders only while there is something to reset, so it has
-        // just removed itself from under the pointer/caret — hand focus to the
-        // list it belongs to rather than dropping it on <body>.
+        // just removed itself from under the pointer — hand focus to the list.
         dialog.querySelector<HTMLInputElement>(".course-settings-group-row input")?.focus();
       });
       actions.append(reset);
@@ -425,9 +370,8 @@ export function mountCourseSettings(store: PlanStore, signal: AbortSignal): Cour
 
   /**
    * Dropp/Legg tilbake mirrors PRODUCT.md §0.3's verbs; a manual add's is
-   * "Fjern fra planen". This is the ONLY remove control now — D3 relaxed
-   * §0.3's "one tap to restore" to two taps, so the course row no longer
-   * carries one of its own.
+   * "Fjern fra planen". This is the ONLY remove control — the course row
+   * carries none of its own.
    */
   function renderActions(ctx: CourseSettingsContext): HTMLElement {
     const row = el("div", "np-actions np-actions--split course-settings-actions");
@@ -444,9 +388,9 @@ export function mountCourseSettings(store: PlanStore, signal: AbortSignal): Cour
       } else {
         store.removeCourse(ctx.code);
       }
-      // A removed course has no settings left to edit, and a dropped one has
-      // no blocks in the week — either way this dialog is now about something
-      // that is not on screen.
+      // A removed course has no settings left to edit and a dropped one has no
+      // blocks in the week — either way this dialog is about something that is
+      // no longer on screen.
       close();
     });
     row.append(action);
@@ -470,10 +414,9 @@ export function mountCourseSettings(store: PlanStore, signal: AbortSignal): Cour
 
   /**
    * The same masthead the session card opens on (`.np-head--printed`): the
-   * course's own printed fill with its code knocked out of it, its name on the
-   * quiet line under it. A student reaches this modal FROM that card, and the
-   * two used to share nothing but a hue dot, so the editor read as a different
-   * object about a different course.
+   * course's printed fill with its code knocked out, its name on the quiet line
+   * under it. A student reaches this modal FROM that card, and sharing only a
+   * hue dot made the editor read as a different object.
    */
   function renderHead(ctx: CourseSettingsContext): HTMLElement {
     const head = el("div", "np-head np-head--printed course-settings-head");
@@ -493,8 +436,7 @@ export function mountCourseSettings(store: PlanStore, signal: AbortSignal): Cour
 
     const body = el("div", "course-settings-body");
 
-    // The figure the course is measured in, and the line that qualifies it:
-    // the card's fact block, not the mono run-on this replaces.
+    // The figure the course is measured in, and the line that qualifies it.
     const { figure, provenance } = courseFacts(ctx);
     const facts = el("div", "np-fact course-settings-facts");
     if (figure) {
@@ -505,8 +447,7 @@ export function mountCourseSettings(store: PlanStore, signal: AbortSignal): Cour
     }
     body.append(facts);
 
-    // The status sentences the course row used to concatenate into one
-    // run-on meta line (D2) — one line each, in `.np-hint` because they are
+    // The status sentences, one line each, in `.np-hint` because they are
     // sentences with verbs, not mono fragments (DESIGN §3).
     for (const note of ctx.notes) {
       body.append(el("p", "np-hint course-settings-note", note));

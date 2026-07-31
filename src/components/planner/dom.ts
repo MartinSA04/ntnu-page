@@ -18,13 +18,12 @@ export function el<K extends keyof HTMLElementTagNameMap>(
  * Lucide icons (https://lucide.dev — ISC), inline.
  *
  * `Icon.astro` owns the set, but an Astro component cannot be reached from a
- * module that builds its DOM at runtime, so the handful of marks the runtime
- * surfaces need live here. Keep the two in step if the set changes.
+ * module that builds DOM at runtime, so the marks the runtime surfaces need
+ * live here. Keep the two in step.
  *
- * Every one of these replaced a character standing in for a mark — "×" for a
- * close button, "→" for a link. A glyph is not an icon: it inherits the text
- * font's weight and metrics, sits on the baseline rather than centred, and
- * renders differently in every fallback face (REWORK-2026-07-30d).
+ * Each replaced a character standing in for a mark. A glyph is not an icon: it
+ * inherits the text font's weight and metrics, sits on the baseline rather than
+ * centred, and renders differently in every fallback face.
  */
 type IconShape = readonly [tag: "path" | "circle", attrs: Record<string, string>];
 
@@ -49,8 +48,7 @@ const ICONS = {
   /**
    * `chevron-down` — a control that opens something under itself. The open
    * state is the same mark turned 180°, not a second glyph: two chevrons drawn
-   * separately drift in stroke and optical centre, and a rotation is what the
-   * eye reads as "this one control changed state".
+   * separately drift in stroke and optical centre.
    */
   chevronDown: [["path", { d: "m6 9 6 6 6-6" }]],
 } as const satisfies Record<string, readonly IconShape[]>;
@@ -91,8 +89,7 @@ export function dot(hueVar: string): HTMLSpanElement {
 
 /**
  * A credit figure on its own: "7,5", "30", "0". Comma decimals, one decimal
- * place — the single formatter every credit number goes through, so "7.5"
- * can never appear eight lines above "7,5 sp" again (D3).
+ * place — the single formatter every credit number goes through.
  */
 export function formatCreditNumber(value: number): string {
   const rounded = Math.round(value * 10) / 10;
@@ -161,10 +158,9 @@ export function weekLabel(weeks: number[]): string {
 /**
  * Case/diacritic-insensitive fold (Æ/Ø/Å -> a/o/a), matches /emner/'s search.
  *
- * The pre-map is not decoration. NFD decomposes Å (A + combining ring) but Æ
- * and Ø are *atomic* letters with no combining form, so the mark strip alone
- * left `fold("Økonomi") === "økonomi"` and typing "okonomi" found nothing —
- * on a site with 238 Ø/Æ course codes and Ø-initial programme names (C4).
+ * The pre-map is not decoration: NFD decomposes Å but Æ and Ø are *atomic*
+ * letters with no combining form, so a mark strip alone left `fold("Økonomi")`
+ * unchanged and typing "okonomi" found nothing — on a site with 238 Ø/Æ codes.
  */
 export function fold(value: string): string {
   return value

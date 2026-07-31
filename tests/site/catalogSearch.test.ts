@@ -22,7 +22,7 @@ describe("fold", () => {
     expect(fold("Maskinlæring")).toBe("maskinlaring");
   });
 
-  // search-5: the pre-fix fold only went one way, so a non-Norwegian keyboard
+  // the pre-fix fold only went one way, so a non-Norwegian keyboard
   // could not reach a Norwegian title at all.
   it("folds the ae/oe/aa digraphs the same way, so both spellings meet", () => {
     expect(fold("maskinlaering")).toBe(fold("maskinlæring"));

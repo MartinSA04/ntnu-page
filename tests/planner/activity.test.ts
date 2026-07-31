@@ -31,7 +31,7 @@ describe("classifyActivity — real-data validation set", () => {
     ["1 Teorimodul", "FORM", "Formidling"],
     ["Teorimodul", "FORM", "Formidling"],
     ["Regneverksted", "FORM", "Formidling"],
-    // Slash-joined combined sessions (REVIEW.md B7b): the student is in the
+    // Slash-joined combined sessions: the student is in the
     // room either way, so a clash against one of these is a real clash. Every
     // one of these is a title observed in live data.
     ["Forelesning/Øving", "DISAM", "Dialog- og samarbeidsbasert undervisning"],
@@ -46,7 +46,7 @@ describe("classifyActivity — real-data validation set", () => {
     ["Forelesning/Seminar", "DISAM", "Dialog- og samarbeidsbasert undervisning"],
     // Same combination written the other way round — same session.
     ["Fellesøving / forelesning", "DISAM", "Dialog- og samarbeidsbasert undervisning"],
-    // conf-3: four titles that emptied whole courses' lecture layer. All four
+    // four titles that emptied whole courses' lecture layer. All four
     // are verbatim from the live API — the dropped-e misspelling (LKRO001E
     // 2026_HØST, IT3708 2026_VÅR), and the English combined sessions joined by
     // " and " instead of "/" (IIK4100 2026_HØST, note the trailing space) or
@@ -127,7 +127,7 @@ describe("classifyActivity — real-data validation set", () => {
     // PBL, in each of the three spellings live data shows. This row used to be
     // hand-labeled a lecture ("the health faculties' PBL plenary") — BI1001
     // publishes it across five mutually exclusive weekly slots, so it is
-    // parallel group work and the label was the source of a false red (conf-2).
+    // parallel group work and the label was the source of a false red.
     ["Problembasert læring", "DISAM", "Dialog- og samarbeidsbasert undervisning"],
     ["PBL-gruppe 1", "GR", "Gruppe"],
     ["PBL-fasilitering IAB", "DISAM", "Dialog- og samarbeidsbasert undervisning"],
@@ -174,7 +174,7 @@ describe("classifyActivity — real-data validation set", () => {
     ["Lab/Ekskursjon", "FERD", "Ferdighetstrening"],
     ["Lecture and Lab and Frokost", "FORM", "Formidling"],
     // "Tutorial" on its own is øving by another name, not a lecture — it only
-    // rides along inside a combined session (conf-3).
+    // rides along inside a combined session.
     ["Tutorial", "DISAM", "Dialog- og samarbeidsbasert undervisning"],
     ["Tutorial/Lab", "FERD", "Ferdighetstrening"],
     // Other modules of a modular course are not the lecture module.

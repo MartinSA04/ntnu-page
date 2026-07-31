@@ -80,7 +80,7 @@ describe("termNote (U14 — one view, honest about which season it is)", () => {
   });
 });
 
-// course-3: `?year=2026` answers with the whole catalog year — EXPH0300's 84
+// `?year=2026` answers with the whole catalog year — EXPH0300's 84
 // entries are 51 spring + 33 autumn — and layout.ts clusters on time alone, so
 // the union drew an Ålesund spring lecture beside a Trondheim autumn lecture as
 // a simultaneous pair.
@@ -117,7 +117,7 @@ describe("entriesForSemester (one semester's week, not the year's)", () => {
   });
 });
 
-// ux-7: the module fetches around data.ts, so the planner's entity decode
+// the module fetches around data.ts, so the planner's entity decode
 // never reached this surface — TMA4400's real block label rendered
 // "Forelesning 1 MTELSYS &#38; MTTK" on /emne/TMA4400/.
 describe("decodeEntry", () => {

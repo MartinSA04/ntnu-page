@@ -9,10 +9,10 @@ import { describe, expect, it } from "vitest";
  * courses collide, i.e. the single most consequential string the tool
  * produces — and light `--accent-contrast` on `--accent` measured 4.39:1 on
  * every accent-filled control including the Studieinfo primary
- * (audit a11y-5 / a11y-6). Both are 13.44px/400–500 text, so WCAG AA's 4.5:1
+ * (audit /). Both are 13.44px/400–500 text, so WCAG AA's 4.5:1
  * applies, not the 3:1 large-text exception.
  *
- * `--accent` is gone (REWORK-2026-07-30). It became `--verdict`, which is
+ * `--accent` is gone. It became `--verdict`, which is
  * greener AND darker precisely so that one token can be both the text and the
  * fill — the pair of tokens the old accent needed (`-ink` at 7.63:1 to be
  * readable, `-strong` at 6.03:1 to be fillable) existed only because green-600
@@ -100,7 +100,7 @@ describe.each(["light", "dark"] as const)("contrast: %s theme", (theme) => {
 
   /* Ink fills. Every filled control is --ui now (.np-btn[aria-pressed],
      .np-toggle[aria-pressed], .studieinfo-save, .skip-link), which is the
-     change that made the a11y-6 compromise unnecessary rather than merely
+     change that made the compromise unnecessary rather than merely
      compliant: --fg on --bg is the highest-contrast pair the palette has. */
   it("--ui-contrast on --ui clears AA", () => {
     expect(contrast(hex(theme, "--ui-contrast"), hex(theme, "--ui"))).toBeGreaterThanOrEqual(AA);

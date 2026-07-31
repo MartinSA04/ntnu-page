@@ -1,22 +1,17 @@
 /**
  * NÅ — the landing page's answer to the only question a returning student has
- * on a Tuesday at 11:05: **which room** (REWORK-2026-07-29b D3).
+ * on a Tuesday at 11:05: **which room**.
  *
- * What used to be here was a sentence — "Planen din: MTDT · 5 emner → gå til
- * planleggeren" — which is a description of the plan, not an answer from it.
- * This renders the session that is running (or the next one today, or the next
- * one this week) with the room set as display type, because the room is the
- * fact you are walking somewhere to find out and everything else on the card
- * is context for it.
+ * It renders the session that is running (or the next one today, or the next
+ * one this week) with the room set as display type, because the room is what
+ * you are walking somewhere to find out.
  *
- * It degrades in a straight line, and every step is a real state rather than a
- * spinner: no plan → nothing at all (the page keeps its own empty invitation);
- * a plan whose timetables have not landed → the course count, as before;
- * a plan with nothing left this week → "ingenting mer denne uka".
+ * It degrades in a straight line, every step a real state rather than a
+ * spinner: no plan → nothing at all; timetables not landed → the course count;
+ * nothing left this week → "ingenting mer denne uka".
  *
  * The clock is read ONCE per render and passed down, so the "nå" band, the
- * countdown and the ordering of the list cannot disagree with each other by a
- * few milliseconds across a slow render.
+ * countdown and the ordering cannot disagree by a few milliseconds.
  */
 import { classifyActivity } from "../../lib/planner/activity.js";
 import { fetchCourseBundle } from "../../lib/planner/data.js";
@@ -30,24 +25,18 @@ export interface NowSession {
   courseName: string;
   activity: string;
   /**
-   * The room to SET as the display figure — the first one only.
-   *
-   * A lab publishes four ("A3-138, A4-100, A3-100, A3-125"), and the joined
-   * string blown up to 7rem is four lines of noise where a student wanted one
-   * word. The rest are not lost: `roomsExtra` carries the count for the line
-   * underneath, which is where "+3 rom" belongs.
+   * The room to SET as the display figure — the first one only. A lab publishes
+   * four, and the joined string at 7rem is four lines of noise. `roomsExtra`
+   * carries the count for the line underneath.
    */
   room: string;
   /** Rooms beyond the first, for the sub-line. 0 for the ordinary case. */
   roomsExtra: number;
   /**
    * An all-day drop-in window (a lab open 08:00–18:00), not an appointment.
-   *
-   * The week grid already draws these as a band behind the day rather than as
-   * a block in it, and this card owes them the same distinction: "NÅ · 474 min
-   * igjen" over an open lab is a countdown to nothing, and it hides the
-   * lecture that actually starts in twenty minutes. They stay in the list —
-   * they are real — but they never become the answer.
+   * "NÅ · 474 min igjen" over an open lab is a countdown to nothing, and it
+   * hides the lecture starting in twenty minutes. They stay in the list — they
+   * are real — but they never become the answer.
    */
   allDay: boolean;
   dayNumber: number;
@@ -81,8 +70,7 @@ const toMinutes = (time: string): number => {
 /**
  * Where "now" falls on the same week-minute axis the sessions use. Sunday is
  * `getDay() === 0` in JS and day 7 in NTNU's data, so it is mapped rather than
- * used raw — otherwise a Sunday evening would read as before Monday morning
- * and offer the student a lecture that has already happened.
+ * used raw — a Sunday evening would otherwise read as before Monday morning.
  */
 export function weekMinutes(at: Date): number {
   const jsDay = at.getDay();
@@ -127,11 +115,9 @@ const roomNames = (rooms: { building: string | null; room: string | null }[]): s
  * Fetches the plan's timetables and flattens them to this semester's week.
  *
  * Only the ACTIVE courses, and only through `applyGroupSelection` — the same
- * narrowing the planner's two views use, so the landing page can never offer a
- * parallel the week itself does not draw. A course whose fetch fails is simply
- * absent: the landing page is not the surface that explains why (the planner
- * is), and a half-loaded card is better than an error on a page whose job is
- * to get you to the planner.
+ * narrowing the planner's views use, so this page can never offer a parallel
+ * the week does not draw. A course whose fetch fails is simply absent: the
+ * planner is the surface that explains why.
  */
 export async function loadWeekSessions(
   plan: PlanState,

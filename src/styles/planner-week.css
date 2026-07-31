@@ -1,70 +1,52 @@
 /* UKEPLAN — geometry and ink for the weekly spread rendered by
    `src/components/planner/grid.ts`.
 
-   This is a stylesheet rather than a page's scoped block because TWO surfaces
-   now render the same week with the same renderer: `/planlegger/` (the plan)
-   and `/emne/[code]/` (one course's week, REVIEW U10). An Astro page's
-   `:global()` rules ship only with that page, so a second copy in the second
-   page is how the two drift apart — and did: the page copy grew the np-tag
-   and .planner-block-code rules while this one kept an older cluster gap.
+   A stylesheet rather than a page's scoped block because TWO surfaces render
+   the same week with the same renderer: `/planlegger/` and `/emne/[code]/`. An
+   Astro page's `:global()` rules ship only with that page, so a second copy is
+   how the two drift apart.
 
-   Geometry contract with grid.ts (REWORK-2026-07-29b D1): `.planner-grid` is a
-   stack of day ROWS, each `[spine | field]`, with an hour ruler above them.
-   Time runs horizontally, so a bar's `left` and `width` are percentages of the
-   day's visible span and its `top` is its lane. The ruler's ticks use the same
-   percentages, which is what keeps a figure over its own minute at every width
-   — there is no second place where a time becomes a position.
+   Geometry contract with grid.ts: `.planner-grid` is a stack of day ROWS, each
+   `[spine | field]`, with an hour ruler above. Time runs horizontally, so a
+   bar's `left`/`width` are percentages of the day's visible span and its `top`
+   is its lane. The ruler's ticks use the same percentages — there is no second
+   place where a time becomes a position.
 
-   What is NOT here: the exam list. That belongs to /planlegger/ alone and
-   stays in its scoped block. The scroll-edge mask used to be scoped there
-   too — and that is precisely how /emne/[code]/ came to clip its Friday
-   column at 360 px with no fade, no hint and no scroll offset while
-   /planlegger/ faded correctly (mob-2). It lives here now, so the two
-   surfaces cannot disagree about it again, and BOTH halves are live: the
-   planner sets [data-scroll] from `syncGridScroll` (plannerApp.ts) and the
-   course page from `syncScroll` (courseTimetable.ts), each on its own frame,
-   each also writing the fade depths the mask reads (`setScrollFade`). */
+   What is NOT here: the exam list, which belongs to /planlegger/ alone. The
+   scroll-edge mask IS here, so the two surfaces cannot disagree about it, and
+   both halves are live: the planner sets [data-scroll] from `syncGridScroll`
+   and the course page from `syncScroll`, each also writing the fade depths the
+   mask reads (`setScrollFade`). */
 
-/* No .np-frame, and no .np-ruled: the week is not a spreadsheet. It used to
-   be a bordered, rounded box tiled with a 1px line every 15 minutes in BOTH
-   axes plus a heavier one per hour — a field of ~600 squares behind five
-   columns of blocks. What a student reads a time off is the hour, so the
-   hour is the only line left (below), drawn on this element directly.
+/* No .np-frame, and no .np-ruled: the week is not a spreadsheet. The hour is
+   what a student reads a time off, so the hour is the only line, drawn on this
+   element directly.
 
-   That also retires the old `.np-frame.planner-grid-frame` qualification.
-   It existed because np-frame's `overflow: hidden` would otherwise beat a
-   bare `.planner-grid-frame` on whichever order Vite emitted the two
-   stylesheets in, silently killing the week's sideways scroll (A4). With
-   np-frame off the element there is no competing declaration left, so the
-   selector is unqualified now — do NOT re-add np-frame here without
-   restoring the qualification with it. */
+   The old `.np-frame.planner-grid-frame` qualification existed because
+   np-frame's `overflow: hidden` would otherwise beat a bare
+   `.planner-grid-frame` on whichever order Vite emitted the sheets in,
+   silently killing the week's sideways scroll. Do NOT re-add np-frame here
+   without restoring the qualification with it. */
 .planner-grid-frame {
-  /* KOLONNER's hour rail, declared on the SCROLL CONTAINER rather than on
-     `.planner-cols` where the rest of that view's tokens live: the frame needs
-     it for `scroll-padding-inline-start` (a scrolled column has to come to rest
-     beside the rail, not under it) and a parent cannot read a child's custom
-     property. `.planner-cols` inherits it, so the width law and the snap offset
-     are still one number. Overridden for phones with the rest of the view's
-     tokens at the bottom of this file. */
+  /* KOLONNER's hour rail, on the SCROLL CONTAINER rather than `.planner-cols`:
+     the frame needs it for `scroll-padding-inline-start` (a scrolled column
+     must come to rest beside the rail, not under it) and a parent cannot read a
+     child's custom property. `.planner-cols` inherits it. */
   --planner-rail: 2.5rem;
-  /* RADER's day spine, on the frame for the same reason the rail is: the mask
-     below has to know how wide the column that stays put is, and a parent
-     cannot read a child's custom property. `.planner-grid` inherits it. */
+  /* RADER's day spine, on the frame for the same reason: the mask below has to
+     know how wide the column that stays put is. */
   --planner-spine: clamp(5.5rem, 11vw, 9.5rem);
-  /* RADER's row metrics live here for that same reason a third time: the
-     reservation below has to compute the height of a week that does not exist
-     yet, and the week is a child. `.planner-grid` inherits all four. */
+  /* RADER's row metrics, here for that reason a third time: the reservation
+     below computes the height of a week that does not exist yet. */
   --planner-lane-h: 34px;
   --planner-bar-h: 28px;
   --planner-band-h: 18px;
-  /* The space above the first bar and below the last thing in the row. It is
-     a token because the row's height and every child's offset are computed
-     from it, and they have to agree or the row is not centred (see the field's
-     min-height below). */
+  /* The space above the first bar and below the last thing in the row. A token
+     because the row's height and every child's offset are computed from it, and
+     they have to agree or the row is not centred. */
   --planner-row-pad: 8px;
-  /* KOLONNER's two, here rather than on `.planner-cols`, for the third time
-     for the same reason: the frame reserves that view's height before that
-     view exists. */
+  /* KOLONNER's two, here for the same reason: the frame reserves that view's
+     height before that view exists. */
   --planner-hour-h: 4.5rem;
   --planner-cols-head-font: clamp(0.85rem, 1.6vw, 1.15rem);
   --planner-frame-pad-block: var(--cell);
@@ -73,92 +55,46 @@
   overflow-x: auto;
   overflow-y: hidden;
   /* THE WEEK'S PLACE, HELD FROM FIRST PAINT.
-     ---------------------------------------
-     `renderSkeleton` (grid.ts) exists so the week does not reflow when the
-     bundles land, and it does that job exactly: measured on the seeded MTDT
-     plan, the frame is 233px as a skeleton and 233px settled at 390px (295 and
-     295 at 1440). What it cannot do is hold the space between FIRST PAINT and
-     its own mount — the frame is empty in the HTML, so the page painted a
-     zero-height week and then grew one. That single step was 0.52 of
-     /planlegger/'s 0.61 CLS on a phone: the largest layout shift on the site,
-     and it moved the exam list and the course list with it.
+     `renderSkeleton` (grid.ts) stops the loading→data reflow; it cannot hold
+     the space between FIRST PAINT and its own mount, and that step alone was
+     0.52 of /planlegger/'s 0.61 CLS on a phone.
 
-     So the frame reserves what the skeleton will resolve to, in the same
-     tokens the skeleton is built from: the ruler, then five weekdays of one
-     lane each, then its own block padding. `SKELETON_DAYS` (5) and the ruler's
-     22px are the two numbers duplicated from grid.ts — if either changes there,
-     this is the other end of the contract.
+     So the frame reserves what the skeleton resolves to, in the tokens the
+     skeleton is built from. `SKELETON_DAYS` (5) and the ruler's 22px are
+     duplicated from grid.ts — this is the other end of that contract.
 
-     Deliberately a few pixels UNDER the measured settle (290 vs 295, 228 vs
-     233): the row's real height is `max(spine, field)` and the spine wins by a
-     hair on a one-lane row, and the same convention `/emne/[code]/`'s
-     reservations already state applies here — the residual should be a small
-     DOWNWARD nudge rather than the week snapping upward out from under a
-     thumb.
+     Deliberately a few px UNDER the measured settle: the residual should be a
+     small DOWNWARD nudge rather than the week snapping upward from under a
+     thumb. Re-measure before changing any number here.
 
-     This is RADER's height, and RADER's only. It is the right one for every
-     frame that can only ever draw RADER — which outside /planlegger/ means
-     /emne/[code]/, and that is this rule's whole audience there. The planner's
-     own frame overrides it per view below, because the other two views are not
-     this shape at all. */
+     This is RADER's height and RADER's only — right for every frame that can
+     only draw RADER, which outside /planlegger/ means /emne/[code]/. The
+     planner's own frame overrides it per view below. */
   --planner-box-rader: calc(22px + 5 * (var(--planner-bar-h) + 2 * var(--planner-row-pad)));
   min-height: calc(2 * var(--planner-frame-pad-block) + var(--planner-box-rader));
 }
 
-/* --- The other two views' heights (2026-07-31) ----------------------------
+/* --- The other two views' heights ----------------------------------------
  *
- * The reservation above models the RADER skeleton, and RADER is the only shape
- * it models. In KOLONNER and TAVLE the same frame draws something with entirely
- * different geometry, so a planner opened in either held a week's worth of
- * space for the wrong one: 0.14 CLS in Liste and 0.08 in Kolonner on a first
- * load, against 0.03 in Rader. Measured, for the seeded five-course plan:
+ * The reservation above models RADER only. Reserving it for KOLONNER and TAVLE
+ * cost 0.14 CLS in Liste and 0.08 in Kolonner on a first load. Measured,
+ * five-course plan (mobile/desktop): rader 233/295, kolonner 487/651, tavle
+ * 907/877.
  *
- *     view       mobile   desktop
- *     rader        233      295
- *     kolonner     487      651
- *     tavle        907      877
+ * Only the planner's own frame gets these — by id — because /emne/[code]/
+ * builds its own `.planner-grid-frame` and always renders RADER into it.
  *
- * Only the planner's own frame gets these — `#planner-grid-frame`, by id —
- * because /emne/[code]/ builds a `.planner-grid-frame` of its own and always
- * renders RADER into it. A remembered box for Liste must not reach it.
+ * The height comes from `--planner-box` (what this browser last measured for
+ * THIS view at THIS width, handed back before first paint by Layout.astro's
+ * probe) and falls back to the formulas below. Kolonner's is exact arithmetic;
+ * Tavle's cannot be — its height is a session count — so it is a line fitted
+ * through five plans of 1–5 courses (±100px).
  *
- * WHERE THE NUMBER COMES FROM, in preference order:
- *
- * 1. `--planner-box`: the height this browser last measured for THIS view at
- *    THIS width, filed by `saveWeekBox` and handed back before first paint by
- *    Layout.astro's probe. Evidence beats a model, and it is nearly always
- *    there for these two views — you cannot be in Kolonner or Liste without
- *    having pressed the tab that put you there, so a load in either is by
- *    construction a return visit.
- * 2. The formulas below: the first load after a view switch, and any load at a
- *    width the remembered box was not measured at (the probe discards it rather
- *    than trusting a height from another layout).
- *
- * KOLONNER is exact arithmetic — the day header, then the drawn hours at the
- * hour token. Only `--planner-hours` is unknowable before the data lands, and 8
- * is both the fallback the view itself uses and what every plan of three or
- * more courses measured; a smaller plan draws fewer hours and collapses the
- * difference.
- *
- * TAVLE cannot be arithmetic: its height is a session count, and nothing before
- * the fetch knows that. The fallback is the line fitted through five plans of
- * 1–5 courses (±100px, worst at 3) — which is exactly why the remembered box
- * exists and why it is preferred over it.
- *
- * ALL OF IT IS A LEASE (`data-reserve`), and that is not decoration. Every
- * number above is an estimate of a week that has not been drawn yet, and the
- * moment one HAS been drawn the estimate is worthless — worse than worthless,
- * because it goes on holding space the real content does not need.
- * `--planner-box` is ONE variable, carrying the height of the view the page
- * LOADED in, so pressing Rader after loading in Liste left the frame holding
- * Liste's 829px around Rader's 247px: six hundred pixels of white paper between
- * the week and the exam list, for the rest of the visit. The same trap without
- * a view switch — a one-course plan in Kolonner draws three hours where the
- * formula reserves eight.
- *
- * So `renderGridAndExams` hands the lease back the moment a real week is on
- * screen, and `setWeekView` hands it back on the way out of a view: a view
- * switch is a keypress, and a keypress does not need its result reserved.
+ * ALL OF IT IS A LEASE (`data-reserve`). `--planner-box` is ONE variable
+ * holding the height of the view the page LOADED in, so pressing Rader after
+ * loading in Liste left 600px of white paper above the exam list for the rest
+ * of the visit. `renderGridAndExams` releases it on the first drawn week and
+ * `setWeekView` on the way out of a view.
  */
 #planner-grid-frame[data-reserve] {
   min-height: calc(
@@ -170,12 +106,7 @@
 
 /* Released: the frame is exactly what it holds, in whichever view. Stated
    rather than merely absent, because the unqualified `.planner-grid-frame` rule
-   at the top of this file would otherwise keep RADER's 242px floor under a view
-   that drew less than that — a Kolonner week of two hours, or a one-day board.
-   Defence in depth rather than a live bug: the shortest Kolonner week the real
-   catalog produces is a three-hour one at 243px, which clears the floor by a
-   single pixel. `e2e/cls.pw.ts` does NOT cover this rule for that reason; it
-   covers the lease release in `settleWeekBox`, which is what actually failed. */
+   above would otherwise keep RADER's floor under a view that drew less. */
 #planner-grid-frame:not([data-reserve]) {
   min-height: 0;
 }
@@ -199,13 +130,9 @@ html[data-view="tavle"] #planner-grid-frame[data-reserve] {
   );
 }
 
-/* An apology is not a week, but it stands where one would: with the frame now
-   holding the week's height from first paint, a message left at the top of it
-   would read as a caption on a large empty box. The four empty states and the
-   `renderWeekCard` cards centre in the space instead — which is what
-   `.planner-week-card`'s own note ("the one next step is where the plan would
-   be, not tucked under it") already asks for, in the axis it could not reach
-   while the frame collapsed to its content. */
+/* An apology is not a week, but it stands where one would: with the frame
+   holding the week's height from first paint, a message left at the top would
+   read as a caption on a large empty box. */
 .planner-grid-frame:has(.planner-grid-empty),
 .planner-grid-frame:has(.planner-week-card) {
   display: grid;
@@ -222,29 +149,22 @@ html[data-view="tavle"] #planner-grid-frame[data-reserve] {
   --planner-pin: var(--planner-rail);
 }
 
-/* A4: at ≤360 px the week is narrower than its content and the frame's edge
-   closes right after ONS — no fade, no scrollbar, and the page itself does not
-   scroll, so the clip reads as an edge and a student can conclude they have no
-   Thursday lecture. The mask is what says "there is more". Nothing else does:
-   the sentence that used to sit above the week explaining how to drag is gone
-   (2026-07-31, owner's call — the readers are students, and a fading edge is
-   the whole instruction).
+/* At ≤360 px the week is narrower than its content and the frame's edge closes
+   right after ONS — no fade, no scrollbar, and the page itself does not scroll,
+   so the clip reads as an edge and a student can conclude they have no Thursday
+   lecture. The mask is what says "there is more"; nothing else does.
 
-   EVERY cut edge fades, in both grid views, and three things make that
-   survivable where earlier attempts were not:
+   EVERY cut edge fades, in both grid views. Three things make that survivable:
 
-   1. The fade begins AFTER the column that stays put (`--planner-pin`): the
+   1. The fade begins AFTER the column that stays put (`--planner-pin`) — the
       day spine in RADER, the hour rail in KOLONNER. A ramp from x=0 washed out
       the one column deliberately still on screen.
-   2. Each end's depth GROWS with the drag — `--planner-fade-start` and
-      `--planner-fade-end` are written by `setScrollFade` from the actual
-      scroll offset, so an edge fades in over the first 16 px of movement
-      rather than appearing whole the instant a finger lands. 16 px, not 40:
-      the ramp is a signal, and it was eating a tenth of the phone's week.
+   2. Each end's depth GROWS with the drag (`setScrollFade` writes them from the
+      real scroll offset), so an edge fades in over 16 px of movement rather
+      than appearing whole the instant a finger lands.
    3. The bottom strip is excluded, because a mask on a scroll container greys
-      out its scrollbar too — the one part of the frame that is not the week
-      and the plainest statement that the week scrolls. `--planner-scrollbar`
-      is that strip's height, and 0 wherever scrollbars are overlays. */
+      out its scrollbar — the plainest statement that the week scrolls.
+      `--planner-scrollbar` is that strip's height, 0 where scrollbars overlay. */
 .planner-grid-frame[data-scroll] {
   mask-image:
     linear-gradient(
@@ -270,54 +190,40 @@ html[data-view="tavle"] #planner-grid-frame[data-reserve] {
   margin: 0;
 }
 
-/* --- The week: days as rows, time as the axis (REWORK-2026-07-29b D1) ----- */
+/* --- The week: days as rows, time as the axis ----- */
 
 /* `--planner-span` is the visible day's length in minutes, written by
    `buildGridShell`. Every bar's `left`/`width` and every hour tick is a
-   percentage of it, so a time becomes a position in exactly one place and the
-   ruler cannot drift off the bars at any width. */
+   percentage of it, so a time becomes a position in exactly one place. */
 .planner-grid {
-  /* `--planner-spine` and the four row metrics are inherited from the frame,
-     which needs them to reserve this week's height before this week exists —
-     see `.planner-grid-frame`. */
+  /* `--planner-spine` and the row metrics are inherited from the frame, which
+     needs them to reserve this week's height before this week exists. */
   position: relative;
   /* Eight hours across needs room to stay legible: below this the frame
-     scrolls sideways rather than squeezing a lecture into 40 px. The old
-     34rem/21rem pair sized five COLUMNS; this sizes one axis. */
+     scrolls sideways rather than squeezing a lecture into 40 px. */
   min-width: 40rem;
   padding-inline-end: 16px;
 }
 
-/* Below 40rem the axis simply scrolls. Course codes stay whole — which is the
-   trade the transposition buys and the vertical grid could not: there, nothing
-   scrolled and every code broke instead (grid-3).
-
-   Five days and eight hours do not fit a phone at a legible hour, and the
-   attempt to make them (mob-E, reverted 2026-07-31) is instructive: 40 px an
-   hour fits the screen exactly and then has to print half the labels outside
-   their own bars to stay readable, which is not a week any more. The axis
-   scrolls. What the phone gets instead is a spine that stays put while it does
-   (see `.planner-grid-spine`) and a frame that spends nothing on inline
-   padding — the page's own gutter is what keeps the week off the glass. */
+/* Below 40rem the axis simply scrolls, and course codes stay whole — the trade
+   the transposition buys. Five days and eight hours do not fit a phone at a
+   legible hour; 40 px an hour fits and then has to print half the labels
+   outside their own bars, which is not a week any more. What the phone gets
+   instead is a spine that stays put while it scrolls and a frame that spends
+   nothing on inline padding — the page's gutter keeps the week off the glass. */
 @media (max-width: 40rem) {
   .planner-grid {
     min-width: 32rem;
   }
 
-  /* 48 px of a 358 px screen went on the frame's own inline padding, inside a
-     content column that already has the page's gutter on both sides. The
-     vertical pad stays: it is the space between the week and the controls
-     above it. */
-  /* Both of these live on the FRAME, not on the week inside it: the scroll
-     mask reads them (`--planner-pin`) and a parent cannot read a child's
-     custom property.
+  /* 48 px of a 358 px screen went on the frame's inline padding, inside a
+     column that already has the page's gutter on both sides. The vertical pad
+     stays: it is the space between the week and the controls above it.
 
-     Three letters wide, because that is what the spine prints here — the 20 px
-     the abbreviation saves goes to the field inside the same 32rem, so the
-     axis gets a wider hour rather than the week a shorter drag. The rail is
-     the same trade in KOLONNER: "08" and 6 px of air, no more. */
-  /* The row metrics move with the frame's padding, because the reservation is
-     computed from both — see the `min-height` at the top of this file. */
+     The spine/rail live on the FRAME, not on the week inside it: the scroll
+     mask reads them (`--planner-pin`) and a parent cannot read a child's custom
+     property. The row metrics move with the frame's padding, because the
+     reservation is computed from both. */
   .planner-grid-frame {
     --planner-frame-pad-block: var(--space-2);
     padding: var(--planner-frame-pad-block) 0;
@@ -330,8 +236,7 @@ html[data-view="tavle"] #planner-grid-frame[data-reserve] {
     --planner-hour-h: 3.5rem;
   }
 
-  /* TAVLE's rows wrap harder in a narrow column, so its line has a different
-     slope here — fitted through the same five plans at 390px. */
+  /* TAVLE's rows wrap harder in a narrow column, so a different slope here. */
   html[data-view="tavle"] #planner-grid-frame[data-reserve] {
     min-height: calc(
       2 *
@@ -341,8 +246,8 @@ html[data-view="tavle"] #planner-grid-frame[data-reserve] {
   }
 
   .planner-grid-spine-long {
-    /* Visually hidden, NOT removed — see `buildGridShell`: the full weekday
-       stays in the accessibility tree, only the ink is three letters. */
+    /* Visually hidden, NOT removed — the full weekday stays in the
+       accessibility tree, only the ink is three letters. */
     position: absolute;
     width: 1px;
     height: 1px;
@@ -368,9 +273,8 @@ html[data-view="tavle"] #planner-grid-frame[data-reserve] {
   grid-template-columns: var(--planner-spine) minmax(0, 1fr);
 }
 
-/* The ruler's own spine cell. It holds nothing, but it has to be there and be
-   sticky like the rows' spines, or the hour figures slide out from under the
-   day names while the week is dragged. */
+/* The ruler's own spine cell. It holds nothing, but it has to be sticky like
+   the rows' spines, or the hour figures slide out from under the day names. */
 .planner-grid-ruler::before {
   content: "";
   grid-column: 1;
@@ -386,13 +290,9 @@ html[data-view="tavle"] #planner-grid-frame[data-reserve] {
   height: 22px;
 }
 
-/* The figure sits ON its tick rather than floating above the field: the tick
-   is what ties a number to a position, and without it the hour labels are a
-   row of digits that happen to be near the right place. */
-/* Zero-width on purpose: the tick IS a position, and its figure hangs off it.
-   With a box of its own the last tick — at 100 % of the axis — added its own
-   width to the week's scrollable extent, which put a 14 px sideways drag on a
-   phone that otherwise fitted exactly. */
+/* The figure sits ON its tick — the tick is what ties a number to a position.
+   Zero-width on purpose: with a box of its own the last tick, at 100 % of the
+   axis, added its own width to the week's scrollable extent. */
 .planner-grid-tick {
   position: absolute;
   left: var(--planner-x);
@@ -414,9 +314,8 @@ html[data-view="tavle"] #planner-grid-frame[data-reserve] {
   background: var(--ruling-line);
 }
 
-/* Centred on its own mark, and clamped at the two ends of the axis: the first
-   figure would otherwise put half of "08" under the sticky spine and the last
-   would hang past the frame's edge. */
+/* Centred on its mark, clamped at the two ends: the first figure would put
+   half of "08" under the sticky spine, the last would hang past the frame. */
 .planner-grid-tick-figure {
   display: block;
   width: max-content;
@@ -443,16 +342,13 @@ html[data-view="tavle"] #planner-grid-frame[data-reserve] {
   border-bottom: 1px solid var(--border);
 }
 
-/* The spine — the week's typographic event, and load-bearing: at display size
-   with today at full ink and the rest of the week receding, it is how a
-   student finds their row without reading it. A weekday is a word, so it is
-   the grotesk; Data-Is-Mono governs times and codes, not names. */
-/* Sticky, because the week is the one surface here that scrolls sideways and
-   the spine is what says which row you are reading. Dragged to the right edge
-   at 390 px, "mandag" measured x = −162: the gesture the page asks for was the
-   gesture that removed the labels (mob-E). It rides above the bars (they are
-   absolutely positioned at the field's own level) and below the pointer
-   readout, and it needs the paper under it or they would show through. */
+/* The spine — load-bearing: with today at full ink and the rest receding, it is
+   how a student finds their row without reading it. A weekday is a word, so it
+   is the grotesk; Data-Is-Mono governs times and codes, not names.
+
+   Sticky, because the week is the one surface that scrolls sideways and the
+   spine says which row you are reading. It rides above the bars and below the
+   pointer readout, and needs the paper under it or they show through. */
 .planner-grid-spine {
   position: sticky;
   inset-inline-start: 0;
@@ -460,8 +356,7 @@ html[data-view="tavle"] #planner-grid-frame[data-reserve] {
   background: var(--bg);
   display: flex;
   align-items: center;
-  /* Same pad as the field's, so a one-lane row is as tall as its content and
-     not 23 px taller because the weekday is set at 1.7 rem. */
+  /* Same pad as the field's, so a one-lane row is as tall as its content. */
   padding: var(--planner-row-pad) var(--gap-4) var(--planner-row-pad) 0;
   font-size: clamp(1.05rem, 2.6vw, 1.7rem);
   font-weight: var(--weight-bold);
@@ -474,34 +369,22 @@ html[data-view="tavle"] #planner-grid-frame[data-reserve] {
   color: var(--fg);
 }
 
-/* The hour ruling, turned 90° with the axis. It is still the only ruling the
-   week has (DESIGN §4) — it just runs the way time now runs. */
+/* The hour ruling, turned 90° with the axis. Still the only ruling the week
+   has (DESIGN §4). */
 .planner-grid-field {
   position: relative;
   /* Lanes stack from the top; a drop-in band gets its own strip under them
-     (`--planner-bands`, written by `renderGrid`) so the two can never
-     overlap. That reservation is the whole fix for a band whose label used to
-     sit behind a lecture.
+     (`--planner-bands`, written by `renderGrid`) so the two can never overlap.
 
-     The height is the CONTENT plus one pad at each end, and the content is
-     `lanes × stride` minus the trailing lane gap — because `--planner-lane-h`
-     is a stride (bar + gap), so N lanes occupy N strides *less one gap*. That
-     subtraction is what was missing: a one-lane row measured 34 + 12 = 46 px
-     around a 28 px bar sitting 6 px down, which left 6 above and 12 below.
-     Every row in the week was off-centre by 3 px, and a two-lane row by the
-     same amount again (REWORK-2026-07-30f).
-
-     The pad lives in this arithmetic rather than in `padding`, because every
-     child is absolutely positioned and reads the same token for its own
-     offset. Two places computing the same space is how they drift. */
-  /* What the row actually contains, top of the first bar to bottom of the last
-     thing. `--planner-lane-h` is a STRIDE (bar + gap), so N lanes occupy N
-     strides less one trailing gap — that subtraction is what was missing.
+     What the row contains, top of the first bar to bottom of the last thing.
+     `--planner-lane-h` is a STRIDE (bar + gap), so N lanes occupy N strides
+     less one trailing gap — without that subtraction every row was off-centre.
 
      The children centre against this rather than being offset from the top,
      because the row's real height is `max(spine, field)` and the spine wins on
-     a one-lane row: a 28 px bar sat 8 px down a 51 px row with 15 px under it.
-     Padding cannot fix that; only measuring from the middle can. */
+     a one-lane row. Padding cannot fix that; only measuring from the middle
+     can — which is also why the pad lives in this arithmetic and not in
+     `padding`: every child is absolutely positioned and reads the same token. */
   --planner-content-h: calc(
     var(--planner-lanes, 1) *
     var(--planner-lane-h) -
@@ -524,9 +407,8 @@ html[data-view="tavle"] #planner-grid-frame[data-reserve] {
 
 /* --- A bar --------------------------------------------------------------- */
 
-/* Printed colour with the code knocked out of it (D4). The 18 % wash this
-   replaces gave five mid-tones that neither identified a course nor receded
-   behind the collision ink. */
+/* Printed colour with the code knocked out of it. The 18 % wash this replaces
+   gave mid-tones that neither identified a course nor receded behind red. */
 .planner-block {
   position: absolute;
   left: var(--planner-x);
@@ -558,29 +440,23 @@ html[data-view="tavle"] #planner-grid-frame[data-reserve] {
 }
 
 /* DR-1's display layer reads quieter with less ink, never with red: an
-   øving/lab keeps its hue at a fraction of the fill and takes the page's own
-   ink for its text. */
+   øving/lab keeps its hue at a fraction of the fill. */
 .planner-block.is-muted {
   background: color-mix(in srgb, var(--dot) var(--block-muted), var(--card));
   color: var(--fg);
 }
 
-/* A drop-in window is not a session you attend at a time — TDT4120's
-   øvingsveiledning is 08:15–14:00 every weekday — so it may not take a lane
-   and push every real session down a row. It used to be a full-height
-   backdrop at 50 % opacity instead, drawn BEHIND the bars: on any day with a
-   lecture in the same hours its own label sat under that lecture and could
-   not be read at all, and what was left looked like a grey slab rather than
-   a course (REWORK-2026-07-30c).
+/* A drop-in window is not a session you attend at a time — 08:15–14:00 every
+   weekday — so it may not take a lane and push every real session down a row.
+   As a full-height backdrop behind the bars its own label sat under whatever
+   lecture shared those hours and could not be read at all.
 
-   So it is a strip along the bottom of the row now, in its own reserved band
-   — subordinate by size and position rather than by being hidden, and at full
-   opacity, because nothing is drawn on top of it any more. */
-/* The strips are stacked from the bottom of the content block upward, in the
-   height the row already reserved for them (`--planner-bands` is their count):
-   the last one sits on the bottom edge, the one before it a strip higher. They
-   used to share a single offset, so a Monday with two open windows drew one
-   over the other and the week was a course short. */
+   So it is a strip along the bottom of the row, in its own reserved band, at
+   full opacity because nothing is drawn on top of it.
+
+   Strips stack from the bottom of the content block upward, in the height the
+   row reserved (`--planner-bands` is their count): sharing one offset drew a
+   day's two open windows on top of each other and the week lost a course. */
 .planner-block.is-band {
   z-index: 0;
   top: calc(
@@ -602,8 +478,8 @@ html[data-view="tavle"] #planner-grid-frame[data-reserve] {
 }
 
 /* Where to go. Never shrinks, never ellipsizes: `fitBlockLabels` either leaves
-   it whole or takes it off the bar. A room is four characters and an ellipsis
-   is one — cutting `KJL2` to `KJL…` spends the same ink to say less. */
+   it whole or takes it off the bar — `KJL2` cut to `KJL…` says less for the
+   same ink. */
 .planner-block-room {
   flex: none;
   font-size: var(--text-xs);
@@ -620,9 +496,8 @@ html[data-view="tavle"] #planner-grid-frame[data-reserve] {
   color: color-mix(in srgb, var(--on-block) 72%, transparent);
 }
 
-/* No separator between them: the two facts are in different inks, and the gap
-   is the space between them (2026-07-31, owner's call). The dot that used to
-   sit here is also the reason they were one string in the first place. */
+/* No separator: the two facts are in different inks, and the gap between them
+   is the separation. */
 
 .planner-block.is-muted .planner-block-room,
 .planner-block.is-muted .planner-block-what {
@@ -643,9 +518,9 @@ html[data-view="tavle"] #planner-grid-frame[data-reserve] {
 /* --- The collision ------------------------------------------------------- */
 
 /* One zone per day, cut through every lane across exactly the overlapping
-   minutes — the only element in the week that crosses lanes, which is what a
-   collision is. Red-Is-Collision: a different KIND of mark from a hue fill, so
-   it wins on sight without competing with five saturated bars. */
+   minutes — the only element that crosses lanes, which is what a collision is.
+   Red-Is-Collision: a different KIND of mark from a hue fill, so it wins on
+   sight without competing with five saturated bars. */
 .planner-clash-zone {
   position: absolute;
   left: var(--planner-x);
@@ -658,12 +533,11 @@ html[data-view="tavle"] #planner-grid-frame[data-reserve] {
   z-index: 0;
 }
 
-/* --- The time readout (REWORK-2026-07-29e) -------------------------------- */
+/* --- The time readout -------------------------------- */
 
-/* The ruler labels whole hours, and a bar no longer prints its own start time
-   — that trade is what bought the bar its width. So the axis needs somewhere
-   to be read to the minute: a hairline that follows the pointer, with the
-   time under it. Mouse only (see `wirePointer`). */
+/* The ruler labels whole hours and a bar prints no start time — that trade is
+   what bought the bar its width — so the axis needs somewhere to be read to the
+   minute. Mouse only (see `wirePointer`). */
 .planner-grid-pointer {
   position: absolute;
   top: 22px;
@@ -694,25 +568,19 @@ html[data-view="tavle"] #planner-grid-frame[data-reserve] {
   white-space: nowrap;
 }
 
-/* NÅLEN — the moment (REWORK-2026-07-30f).
+/* NÅLEN — the moment.
  *
- * A 2 px ink line across today's row with a solid head sitting on the row's
- * top border. The head is the load-bearing half: the line still has to cross a
- * course bar, and 2 px of ink laid over a saturated printed fill reads as a
- * scratch rather than as a mark. Nothing else in the week ever sits on that
- * border, so the head cannot be mistaken for something drawn on a course.
+ * A 2 px ink line across today's row with a solid head on the row's top border.
+ * The head is the load-bearing half: 2 px of ink over a saturated printed fill
+ * reads as a scratch. Nothing else sits on that border, so the head cannot be
+ * mistaken for something drawn on a course.
  *
- * Two things it deliberately no longer does:
- *
- *  - **It is not on the other days.** It used to draw a 32 % hairline down the
- *    whole week, on the reasoning that the hour is the same hour on every row.
- *    But that made it a 1 px line among 1 px hour rules — the same KIND of
- *    mark as the ruling it crossed — so on any day that was not today it was
- *    simply invisible. The ruler already labels the hours.
- *  - **It is not a clock.** No time rides on it. The ruler carries the
- *    figures and the pointer readout carries the minute, and outside the drawn
- *    hours the mark is hidden rather than pinned to an edge: a week clamped to
- *    its own sessions has no honest place to put 21:10.
+ *  - **Not on the other days.** A 32 % hairline down the whole week is the same
+ *    KIND of mark as the 1 px hour rules it crosses, so off today it was simply
+ *    invisible. The ruler already labels the hours.
+ *  - **Not a clock.** No time rides on it, and outside the drawn hours it hides
+ *    rather than pinning to an edge: a week clamped to its own sessions has no
+ *    honest place to put 21:10.
  */
 .planner-grid-now {
   position: absolute;
@@ -725,10 +593,9 @@ html[data-view="tavle"] #planner-grid-frame[data-reserve] {
   margin-left: -1px;
   background: var(--ui);
   pointer-events: none;
-  /* Above the bars, BELOW the pinned spine (z-index 3): the marker travels
-     with the axis, so once the week is dragged past it, it has to disappear
-     behind the day names like everything else does. At 4 it drew a black line
-     straight through FREDAG. */
+  /* Above the bars, BELOW the pinned spine (z-index 3): the marker travels with
+     the axis, so once the week is dragged past it, it must disappear behind the
+     day names like everything else. */
   z-index: 2;
 }
 
@@ -736,11 +603,9 @@ html[data-view="tavle"] #planner-grid-frame[data-reserve] {
   display: none;
 }
 
-/* The head, sitting on the row's top border rather than straddling it: the
-   1 px it used to hang above the row is 1 px outside the day spine's own box,
-   so once the week is dragged past "now" a 10 px sliver of the head stayed
-   drawn over the border line while the rest of the mark went behind the
-   spine. */
+/* The head sits ON the row's top border rather than straddling it: 1 px above
+   the row is 1 px outside the spine's own box, which left a sliver of the head
+   drawn over the border while the rest went behind the spine. */
 .planner-grid-now::before {
   content: "";
   position: absolute;
@@ -763,9 +628,8 @@ html[data-view="tavle"] #planner-grid-frame[data-reserve] {
 /* --- The strike-in (D4) --------------------------------------------------- */
 
 /* Plays once, on a view switch only — `renderGrid` adds `is-striking` when the
-   caller passes `animate`, and the caller only passes it for that. Reduced
-   motion zeroes --dur globally, and the fill-mode is `backwards`, so at 0 s
-   the bars are simply present. */
+   caller passes `animate`. Reduced motion zeroes --dur globally and the fill
+   mode is `backwards`, so at 0 s the bars are simply present. */
 @keyframes planner-strike {
   from {
     clip-path: inset(0 100% 0 0);
@@ -781,23 +645,17 @@ html[data-view="tavle"] #planner-grid-frame[data-reserve] {
   animation-delay: calc(var(--planner-strike, 0) * var(--planner-step, 55ms));
 }
 
-/* --- The layer change (REWORK-2026-07-29g) -------------------------------- */
+/* --- The layer change -------------------------------- */
 
-/* «Vis øvinger og labber» is not a new week — it is one layer arriving or
-   leaving — so it may not replay the strike-in above. What was already there
-   TRAVELS instead, and only the layer itself is drawn.
+/* «Vis øvinger og labber» is one layer arriving or leaving, not a new week, so
+   it may not replay the strike-in. What was already there TRAVELS.
 
    These are the only transitions in the project on layout properties, which
    DESIGN §6 otherwise rules out. The reason is the bar: its width IS its
-   duration, and a transform-based FLIP would have to reach that width with
-   `scaleX`, which squashes the course code inside it for the length of the
-   move. Animating `left`/`width`/`top` keeps the type crisp and lets the day
-   rules glide with their rows instead of snapping. It is bounded to the ~50
-   elements of one week, on an explicit toggle, and `layerMotion.ts` skips the
-   whole choreography under `prefers-reduced-motion`.
-
-   `--planner-x`/`-w`/`-lane`/`-lanes`/`-hours` are what the script rewinds;
-   everything below is the CSS those properties already feed. */
+   duration, and a transform-based FLIP would reach that width with `scaleX`,
+   squashing the course code for the length of the move. It is bounded to one
+   week's ~50 elements, on an explicit toggle, and `layerMotion.ts` skips the
+   choreography under `prefers-reduced-motion`. */
 .planner-grid.is-settling .planner-block,
 .planner-grid.is-settling .planner-clash-zone,
 .planner-grid.is-settling .planner-grid-tick,
@@ -822,10 +680,8 @@ html[data-view="tavle"] #planner-grid-frame[data-reserve] {
 }
 
 /* Closing up waits for what is leaving to be GONE — all of it, not just the
-   first one. `--planner-departs` is the last departure's stagger index
-   (`layerMotion.ts`), so this reads "after the last wipe finishes". Opening
-   does not wait for anything: the space has to exist before a bar can land in
-   it, which is why the reveal has no equivalent delay. */
+   first (`--planner-departs` is the last departure's stagger index). Opening
+   waits for nothing: the space has to exist before a bar can land in it. */
 .planner-grid.is-settling.is-closing .planner-block,
 .planner-grid.is-settling.is-closing .planner-clash-zone,
 .planner-grid.is-settling.is-closing .planner-grid-tick,
@@ -838,9 +694,8 @@ html[data-view="tavle"] #planner-grid-frame[data-reserve] {
   );
 }
 
-/* The arriving layer, struck in with the view switch's own wipe — after the
-   room for it has been made. A ruler tick or a newly needed Saturday row is
-   not a session and gets the quieter fade. */
+/* The arriving layer, struck in after the room for it has been made. A ruler
+   tick or a newly needed Saturday row is not a session and gets a fade. */
 @keyframes planner-arrive {
   from {
     opacity: 0;
@@ -877,8 +732,7 @@ html[data-view="tavle"] #planner-grid-frame[data-reserve] {
 }
 
 /* What left, put back where it was so it can leave visibly — the strike-in run
-   backwards, ending clipped away. `forwards` holds that last frame until the
-   script sweeps the layer up. */
+   backwards. `forwards` holds that last frame until the script sweeps up. */
 .planner-motion-ghosts {
   position: absolute;
   inset: 0;
@@ -887,12 +741,10 @@ html[data-view="tavle"] #planner-grid-frame[data-reserve] {
   z-index: 5;
 }
 
-/* Qualified to match the `.is-arriving` rules above rather than sit under
-   them: a bar revealed on the previous toggle still carries `is-arriving`
-   when it becomes a ghost, and at (0,1,0) this lost to it — the departing bar
-   played the ENTRANCE on its way out. `layerMotion.ts` strips the mark now;
-   this is the half that makes the collision impossible rather than merely
-   avoided. */
+/* Qualified to match the `.is-arriving` rules above rather than sit under them:
+   a bar revealed on the previous toggle still carries `is-arriving` when it
+   becomes a ghost, and at (0,1,0) this lost to it — the departing bar played
+   the ENTRANCE on its way out. */
 .planner-cols .planner-motion-ghost {
   position: absolute;
   margin: 0;
@@ -906,9 +758,8 @@ html[data-view="tavle"] #planner-grid-frame[data-reserve] {
   position: absolute;
   margin: 0;
   animation: planner-strike var(--dur-fast) var(--ease) reverse forwards;
-  /* The same 32 ms step the arrivals use, counted backwards: the last bar to
-     strike in is the first to wipe out. They used to leave on a single frame,
-     which is not the reverse of an order, it is the absence of one. */
+  /* The same step the arrivals use, counted backwards: the last bar to strike
+     in is the first to wipe out. */
   animation-delay: calc(var(--planner-depart, 0) * var(--planner-motion-step, 32ms));
 }
 
@@ -930,23 +781,20 @@ html[data-view="tavle"] #planner-grid-frame[data-reserve] {
 
 /* `.np-summary` is borrowed for its mechanics — the caret, the hidden marker,
    the --control-h target — and then un-shouted: the primitive is uppercase
-   tracked mono, and this summary is a sentence ("1 merknad · kollisjonssjekken
-   er ufullstendig"). D10 draws that exact line, and Data-Is-Mono keeps the mono
-   for the count, which carries `.np-data` from `foldNotes`.
+   tracked mono and this summary is a sentence. Data-Is-Mono keeps the mono for
+   the count, which carries `.np-data` from `foldNotes`.
 
-   Qualified by the parent on purpose. A bare `.planner-notes-summary` ties with
-   `.np-summary` at (0,1,0) and the winner is then whichever stylesheet Vite
-   happens to emit last — which it did, and the line printed in 11.5 px tracked
-   uppercase mono. The same trap `.planner-section-sub` documents in
-   /planlegger/'s scoped block. */
+   Qualified by the parent on purpose: a bare `.planner-notes-summary` ties with
+   `.np-summary` at (0,1,0) and the winner is then whichever sheet Vite emits
+   last. */
 .planner-notes-fold > .planner-notes-summary {
   font-family: var(--font-sans);
   font-size: var(--text-sm);
   font-weight: var(--weight-normal);
   text-transform: none;
   letter-spacing: normal;
-  /* The primitive's 36/44 px target is the whole line's height, and a note
-     line is not a button in a toolbar — it sits in the prose under the week. */
+  /* The primitive's 36/44 px target is the whole line's height, and a note line
+     is not a button in a toolbar — it sits in the prose under the week. */
   min-height: 0;
   padding-block: var(--space-2);
   color: var(--muted);
@@ -969,9 +817,8 @@ html[data-view="tavle"] #planner-grid-frame[data-reserve] {
   gap: var(--space-1);
 }
 
-/* The notes themselves, once opened: the same spacing they had when they were
-   the host's own children, so opening the fold restores exactly the old block
-   rather than a denser copy of it. */
+/* The notes once opened: the same spacing they had as the host's own children,
+   so opening the fold restores the old block rather than a denser copy. */
 .planner-notes-fold[open] > .planner-grid-note:first-of-type,
 .planner-notes-fold[open] > .planner-notes-list:first-of-type {
   margin-top: var(--space-1);
@@ -986,9 +833,9 @@ html[data-view="tavle"] #planner-grid-frame[data-reserve] {
   text-decoration: underline;
   text-decoration-color: color-mix(in srgb, var(--clash) 40%, transparent);
   text-underline-offset: 2px;
-  /* A margin note is a sentence, but it is also the only route to the picker
-     that answers it — so it is a real target, not an inline link. 21px of
-     line box plus this clears WCAG 2.5.8's 24 without moving the note (a11y-8). */
+  /* A margin note is a sentence, but also the only route to the picker that
+     answers it — a real target. 21px of line box plus this clears WCAG 2.5.8's
+     24 without moving the note. */
   padding-block: 3px;
   margin-block: -3px;
 }
@@ -997,9 +844,8 @@ html[data-view="tavle"] #planner-grid-frame[data-reserve] {
   text-decoration-color: currentColor;
 }
 
-/* The "velg din gruppe" notes: same affordance as a conflict note, but they
-   are an invitation rather than a warning, so they carry neither the clash
-   ink nor its underline colour. */
+/* The "velg din gruppe" notes: same affordance as a conflict note, but an
+   invitation rather than a warning, so neither the clash ink nor its rule. */
 .planner-note-groups {
   display: inline-flex;
   align-items: center;
@@ -1007,64 +853,44 @@ html[data-view="tavle"] #planner-grid-frame[data-reserve] {
   text-decoration-color: color-mix(in srgb, var(--ui) 45%, transparent);
 }
 
-/* --- KOLONNER — the week as a timetable (REWORK-2026-07-30h) -------------- */
+/* --- KOLONNER — the week as a timetable -------------- */
 
-/* Days across, time down: the shape every student already owns. Geometry
-   contract with `columnGrid.ts` — the module writes only what CSS cannot know
-   (`--planner-hours`, `--planner-lanes-max`, `--planner-bands-max`, and each
-   block's own percentages); everything below is arithmetic the browser does.
+/* Days across, time down. Geometry contract with `columnGrid.ts` — the module
+   writes only what CSS cannot know (`--planner-hours`, `--planner-lanes-max`,
+   `--planner-bands-max`, each block's percentages); the rest is arithmetic the
+   browser does.
 
-   THE WIDTH LAW — the day grows, the code never shrinks, and the week is
-   dealt out in WHOLE DAYS:
+   THE WIDTH LAW — the day grows, the code never shrinks, and the week is dealt
+   out in WHOLE DAYS:
 
      dager som får plass = maks(1, min(ukedager, gulv(plass / dagminimum)))
      dagbredde           = maks(dagminimum, plass / dager som får plass)
 
-   `dagminimum` is what the week's deepest cluster needs to keep a course code
-   whole; `plass` is the scrollport minus the hour rail. The count is floored,
-   so the days always divide the visible width exactly: either every day is on
-   screen, or the ones that are are whole and the rest are wholly off-frame and
-   scrolled to. There is never a strip of Friday hanging past the edge — which
-   is a forgotten `overflow`, not a decision, and reads like one.
+   `dagminimum` is what the deepest cluster needs to keep a course code whole;
+   `plass` is the scrollport minus the rail. FLOORING the count is what keeps a
+   strip of Friday from hanging past the frame edge, so a narrower window makes
+   the remaining days WIDER.
 
-   The naive `repeat(5, minmax(var(--planner-daymin), 1fr))` this replaces got
-   the two ends right and the middle wrong: `1fr` shares fairly while all five
-   fit, the minimum keeps the code whole once they do not, but between them the
-   grid overflows by whatever it happens to overflow by, and the frame clips
-   mid-column. The floor is the missing third: when the week no longer fits it
-   drops a WHOLE day and hands that day's width back to the ones that stayed.
-   So a slightly narrower window makes the remaining days WIDER, not thinner.
+   `@supports` gates the whole thing: a custom property the browser cannot
+   compute makes `grid-template-columns` invalid at computed-value time, which
+   resolves to `none` rather than to the declaration below it. So the minmax
+   fallback stays a real template and is overridden, never merely shadowed.
 
-   It is still arithmetic the browser does, before paint, with no resize
-   listener and no measuring pass — `round()` and container query units are
-   what make the floor expressible in CSS at all. `@supports` gates the whole
-   thing: substituting a custom property a browser cannot compute would make
-   `grid-template-columns` invalid at computed-value time, and that resolves to
-   `none` (every column auto, the week in one stack) rather than to the
-   declaration below it. So the minmax law stays as the fallback template and
-   is overridden, never merely shadowed by a token.
-
-   The repeat() count is written out rather than `var(--planner-days)` on
-   purpose — the week is five days or six, so two literal templates cost
-   nothing and owe nothing to how a browser parses a custom property inside
-   repeat(). `--planner-days` carries the same count as a plain number for the
-   clamp above, where a var() is unremarkable. */
+   The repeat() count is written out rather than `var(--planner-days)`: five
+   days or six, so two literal templates owe nothing to how a browser parses a
+   custom property inside repeat(). */
 .planner-cols {
   --planner-days: 5;
   /* The floor a lane may never go under: seven characters of Spline Sans Mono
-     at --text-xs (~49 px for "TDT4120") plus the block's own padding and the
-     air that keeps it from reading as a label pressed against a wall. This is
-     the number the whole view is built on — lower it and the code breaks,
-     which is the regression the transposition was done to escape. */
+     at --text-xs (~49 px) plus the block's padding and air. Lower it and the
+     code breaks, which is the regression this view exists to escape. */
   --planner-lane-min: 4.25rem;
   --planner-lane-gap: 3px;
-  /* `--planner-hour-h` (height is duration here — 4.5rem/hour puts a 45-minute
-     session at ~54px and a dobbelttime at ~126) and `--planner-cols-head-font`
-     are declared on the FRAME, not here, for the same reason the rail and the
-     spine are: the frame reserves this view's height before this view exists,
-     and a parent cannot read a child's custom property. */
-  /* Wide enough for one line of --text-xs standing on its side, plus the air
-     that keeps it off both edges. The strip carries its own name now. */
+  /* `--planner-hour-h` (height is duration here) and `--planner-cols-head-font`
+     are declared on the FRAME for the same reason the rail and spine are: the
+     frame reserves this view's height before this view exists.
+
+     The band is wide enough for one line of --text-xs on its side, plus air. */
   --planner-band-w: 1.6rem;
   --planner-band-gap: 2px;
   --planner-band-space: calc(
@@ -1080,12 +906,10 @@ html[data-view="tavle"] #planner-grid-frame[data-reserve] {
   );
   display: grid;
   grid-template-columns: var(--planner-rail) repeat(5, minmax(var(--planner-daymin), 1fr));
-  /* So the grid BOX grows with its tracks instead of letting them overflow a
-     frame-wide box — without it the columns spill past their own background. */
+  /* So the grid BOX grows with its tracks instead of letting them overflow. */
   min-width: min-content;
   /* The ghosts of a departing layer are hung back over this box at the
-     coordinates they held (`.planner-motion-ghosts`), so it has to be the
-     positioned ancestor they measure against. */
+     coordinates they held, so it must be their positioned ancestor. */
   position: relative;
 }
 
@@ -1096,26 +920,20 @@ html[data-view="tavle"] #planner-grid-frame[data-reserve] {
 
 /* The floor, and the two things the frame owes it (see THE WIDTH LAW above).
    Gated together because they are one mechanism: without the container the
-   `cqw` in the law has nothing to measure, and without the law the frame would
-   give up its padding for nothing. */
+   `cqw` has nothing to measure. */
 @supports (width: calc(round(down, 100cqw / 1rem, 1) * 1px)) {
   .planner-grid-frame:has(.planner-cols) {
-    /* What `100cqw` below is a percentage OF. Scoped to the column view with
-       `:has()` so the transposed week — and /emne/[code]/, which only ever
-       renders that one — takes no containment it has no use for. */
+    /* What `100cqw` below is a percentage OF. Scoped with `:has()` so the
+       transposed week takes no containment it has no use for. */
     container-type: inline-size;
-    /* The frame clips at its PADDING box, so its own 24 px of inline padding is
-       scrollable, visible day space that the content box the law measures does
-       not know about: at rest 24 px of the first day off-frame paints in the
-       right padding, and once you have scrolled, the sticky rail covers 24 px
-       of the day behind it instead. That is the sliver the law exists to
-       abolish, arriving by the back door — so for this view the scrollport IS
-       the content box. The block padding stays; it is air, not geometry, and
-       the week lines up with the page's own left rule without it. */
+    /* The frame clips at its PADDING box, so its inline padding is scrollable,
+       visible day space the content box the law measures does not know about —
+       the very sliver the law exists to abolish, arriving by the back door. For
+       this view the scrollport IS the content box. The block padding stays; it
+       is air, not geometry. */
     padding-inline: 0;
     /* Dragging lands on whole days too, or the law would hold only until the
-       first swipe. The days divide the scrollport exactly, so every snap
-       position is reachable and the last one is exactly `maxScroll`. */
+       first swipe. The days divide the scrollport exactly. */
     scroll-snap-type: x mandatory;
     /* A column comes to rest beside the pinned rail, not under it. */
     scroll-padding-inline-start: var(--planner-rail);
@@ -1130,17 +948,14 @@ html[data-view="tavle"] #planner-grid-frame[data-reserve] {
       )
     );
     /* `max()`, not `clamp()`: below one day's minimum there is nothing left to
-       quantise, and the code still may not be cut — the day simply outgrows the
-       frame and the student scrolls within it. */
+       quantise and the code still may not be cut — the day outgrows the frame. */
     --planner-day: max(
       var(--planner-daymin),
       calc((100cqw - var(--planner-rail)) / var(--planner-fit))
     );
-    /* A definite track, not `minmax(daymin, day)`: a grid only grows tracks
-       toward their maximum out of FREE space, and there is none here — the box
-       is `min-content` wide the moment the week overflows, which is exactly
-       when the quantisation matters. Under minmax every track would sit at
-       `daymin` and the week would go back to ending mid-column. */
+    /* A definite track, not `minmax(daymin, day)`: a grid only grows tracks out
+       of FREE space, and there is none — the box is `min-content` wide the
+       moment the week overflows, which is when the quantisation matters. */
     grid-template-columns: var(--planner-rail) repeat(5, var(--planner-day));
   }
 
@@ -1148,16 +963,14 @@ html[data-view="tavle"] #planner-grid-frame[data-reserve] {
     grid-template-columns: var(--planner-rail) repeat(6, var(--planner-day));
   }
 
-  /* The column body, not its header: the two share a track, so one snap point
-     per day is the whole set. */
+  /* The column body, not its header: the two share a track. */
   .planner-cols-day {
     scroll-snap-align: start;
   }
 }
 
-/* The rail stays put while the week scrolls under it: a timetable you have
-   scrolled sideways off its own clock is two facts short of being a
-   timetable. The corner above it travels with it for the same reason. */
+/* The rail stays put while the week scrolls under it: a timetable scrolled off
+   its own clock is two facts short of being a timetable. */
 .planner-cols-rail,
 .planner-cols-corner {
   position: sticky;
@@ -1165,9 +978,7 @@ html[data-view="tavle"] #planner-grid-frame[data-reserve] {
   z-index: 3;
   background: var(--bg);
   /* The frame clips at its PADDING box, so a column scrolled under the rail
-     keeps showing in the frame's own 24 px of padding, beside it. The slab
-     paints that gap in paper — cheaper and steadier than teaching the frame to
-     drop its padding for one view. */
+     keeps showing beside it. The slab paints that gap in paper. */
   box-shadow: calc(-1 * var(--cell)) 0 0 var(--bg);
 }
 
@@ -1185,9 +996,8 @@ html[data-view="tavle"] #planner-grid-frame[data-reserve] {
   color: var(--muted);
 }
 
-/* The weekday is still the week's typographic event — it just moved from the
-   row's spine to the head of its own column when the axes swapped. It is a
-   word, so it is the grotesk; Data-Is-Mono governs times and codes. */
+/* The weekday is still the week's typographic event — it moved from the row's
+   spine to the head of its own column when the axes swapped. */
 .planner-cols-day-header {
   padding: 0 6px var(--space-2);
   font-size: var(--planner-cols-head-font);
@@ -1223,16 +1033,15 @@ html[data-view="tavle"] #planner-grid-frame[data-reserve] {
 }
 
 /* Lanes get the column minus the space the drop-in strips reserve — on EVERY
-   day, whether that day has a strip or not, because unequal lane widths across
-   the week is the comparison this view exists to protect. */
+   day, because unequal lane widths is the comparison this view protects. */
 .planner-cols-lanes {
   position: absolute;
   inset: 0;
   left: var(--planner-band-space);
 }
 
-/* A block: printed colour with the code knocked out of it (D4), divided by its
-   own cluster rather than by the day's worst moment. */
+/* A block: printed colour with the code knocked out, divided by its own
+   cluster rather than by the day's worst moment. */
 .planner-cols-block {
   --planner-lane-w: calc(
     (100% - (var(--planner-lanes, 1) - 1) * var(--planner-lane-gap)) /
@@ -1294,11 +1103,9 @@ html[data-view="tavle"] #planner-grid-frame[data-reserve] {
   color: var(--muted);
 }
 
-/* One zone per incident, cut across every lane in the column — the only
-   element here that crosses lanes, which is exactly what a collision is. It is
-   drawn OVER the blocks, not behind them: two colliding lectures fill the
-   column between them, so a zone behind them would be invisible, and 16 % red
-   under a border is a mark rather than a tint on saturated ink. */
+/* One zone per incident, cut across every lane in the column. Drawn OVER the
+   blocks, not behind them: two colliding lectures fill the column between them,
+   so a zone behind would be invisible. */
 .planner-cols-clash {
   position: absolute;
   left: 0;
@@ -1311,16 +1118,12 @@ html[data-view="tavle"] #planner-grid-frame[data-reserve] {
   z-index: 2;
 }
 
-/* A drop-in window is not a session you attend at a time, so it may not take a
-   lane and squeeze the sessions that are. It is a strip along the column's
-   edge, in its own reserved width — subordinate by size and position rather
-   than by being hidden.
+/* A drop-in window may not take a lane and squeeze the sessions that do. It is
+   a strip along the column's edge, in its own reserved width.
 
-   It STANDS UP: the type turns 90° with the strip and reads down it. The strip
-   was 8 px of colour and nothing else, which is not a subordinate label but an
-   anonymous one — five slivers down the week naming nothing, answering nothing
-   and opening nothing. A window is five hours by definition, so the axis this
-   label runs along is the one it can never be short of.
+   It STANDS UP: the type turns 90° and reads down it. As 8 px of colour it was
+   an anonymous sliver naming nothing and opening nothing. A window is five
+   hours by definition, so this is the one axis the label cannot run short of.
 
    `--block-muted`, not a 55 % wash: it is the øving layer, and DR-1's display
    layer reads quieter with less ink everywhere else in the product. */
@@ -1330,8 +1133,7 @@ html[data-view="tavle"] #planner-grid-frame[data-reserve] {
   height: var(--planner-h);
   width: var(--planner-band-w);
   /* Against the column's own opening border, not its far edge: a strip on the
-     right sits against the next day's border and reads as that day's. Under
-     the weekday name it is unambiguously this day's. */
+     right sits against the next day's border and reads as that day's. */
   left: calc(var(--planner-band, 0) * (var(--planner-band-w) + var(--planner-band-gap)));
   display: flex;
   align-items: center;
@@ -1340,9 +1142,9 @@ html[data-view="tavle"] #planner-grid-frame[data-reserve] {
   overflow: hidden;
   border: 0;
   border-radius: 0;
-  /* Top-to-bottom, glyphs turned with it — a spine label, the way a book's is.
-     `sideways-rl` would keep the letters upright and stack them one per line,
-     which is the character-per-line break this whole view exists to avoid. */
+  /* Top-to-bottom, glyphs turned with it. `sideways-rl` keeps the letters
+     upright and stacks them one per line — the break this view exists to
+     avoid. */
   writing-mode: vertical-rl;
   background: color-mix(in srgb, var(--dot) var(--block-muted), var(--card));
   color: var(--fg);
@@ -1365,9 +1167,8 @@ html[data-view="tavle"] #planner-grid-frame[data-reserve] {
   color: var(--muted);
 }
 
-/* NÅLEN, turned with the axis: a 2 px rule across today's column with a head
-   on its left edge. Same reasoning as the transposed one — today only, hidden
-   outside the drawn hours, and no clock rides on it. */
+/* NÅLEN, turned with the axis. Same reasoning as the transposed one — today
+   only, hidden outside the drawn hours, and no clock rides on it. */
 .planner-cols-now {
   position: absolute;
   left: 0;
@@ -1405,8 +1206,7 @@ html[data-view="tavle"] #planner-grid-frame[data-reserve] {
   }
 }
 
-/* Strips included, and in their own place in the order: left out of this rule
-   they simply appeared, fully formed, while everything around them printed. */
+/* Strips included, and in their own place in the order. */
 .planner-cols.is-striking .planner-cols-block,
 .planner-cols.is-striking .planner-cols-band,
 .planner-cols.is-striking .planner-cols-clash {
@@ -1414,16 +1214,14 @@ html[data-view="tavle"] #planner-grid-frame[data-reserve] {
   animation-delay: calc(var(--planner-strike, 0) * var(--planner-step, 45ms));
 }
 
-/* --- The layer change, turned with the axis (REWORK-2026-07-29g) ---------- */
+/* --- The layer change, turned with the axis ---------- */
 
-/* «Vis øvinger og labber» is one layer arriving or leaving, not a new week, so
-   it may not replay the strike-in: what stays TRAVELS, what arrives strikes in
-   after the room for it exists, what leaves wipes out first. `layerMotion.ts`
-   rewinds the properties; these are the transitions those properties feed.
+/* One layer arriving or leaving, not a new week: what stays TRAVELS, what
+   arrives strikes in after the room for it exists, what leaves wipes out first.
+   `layerMotion.ts` rewinds the properties; these are the transitions.
 
-   Same exception to DESIGN §6 as the transposed week's, for the same reason: a
-   block's height IS its duration, so a transform-based FLIP would squash the
-   type inside it for the length of the move. */
+   Same exception to DESIGN §6 as the transposed week's: a block's height IS its
+   duration, so a transform-based FLIP would squash the type inside it. */
 .planner-cols.is-settling .planner-cols-block,
 .planner-cols.is-settling .planner-cols-band,
 .planner-cols.is-settling .planner-cols-clash,
@@ -1438,19 +1236,17 @@ html[data-view="tavle"] #planner-grid-frame[data-reserve] {
 }
 
 /* The columns themselves: their height is `--planner-hours` × the hour token,
-   so revealing a layer that runs to 18:00 lengthens every column — and the day
-   would otherwise snap to its new length while the blocks inside it travelled.
-   `grid-template-columns` is here too, so a week that grows a lane widens
-   instead of jumping; where a browser will not interpolate the tracks it simply
-   lands on the new width with everything else. */
+   so revealing a layer that runs to 18:00 lengthens every column and the day
+   would otherwise snap while the blocks inside it travelled.
+   `grid-template-columns` is here too, so a week that grows a lane widens. */
 .planner-cols.is-settling .planner-cols-day,
 .planner-cols.is-settling .planner-cols-rail {
   transition: height var(--dur) var(--ease);
 }
 
 /* The lane box travels too: its inset IS the width the strips reserve, so a
-   day that gains its first drop-in window would otherwise shove every lecture
-   in the week sideways on one frame while they were all mid-travel. */
+   day gaining its first drop-in window would shove every lecture sideways on
+   one frame while they were all mid-travel. */
 .planner-cols.is-settling .planner-cols-lanes {
   transition: left var(--dur) var(--ease);
 }
@@ -1459,8 +1255,7 @@ html[data-view="tavle"] #planner-grid-frame[data-reserve] {
   transition: grid-template-columns var(--dur) var(--ease);
 }
 
-/* Closing up waits for what is leaving to be GONE — all of it, not just the
-   first one (`--planner-departs` is the last departure's stagger index). */
+/* Closing up waits for the LAST departure, not the first. */
 .planner-cols.is-settling.is-closing .planner-cols-block,
 .planner-cols.is-settling.is-closing .planner-cols-band,
 .planner-cols.is-settling.is-closing .planner-cols-clash,
@@ -1477,32 +1272,24 @@ html[data-view="tavle"] #planner-grid-frame[data-reserve] {
   );
 }
 
-/* The rail and the hour give way on a phone. `--planner-lane-min` does NOT:
-   it is the course code, the one measurement in this view that is not a taste,
-   and a phone is exactly where shaving it starts cutting codes. The week
-   scrolls instead — that is the trade this view makes everywhere. */
-@media (max-width: 40rem) {
-  /* `--planner-rail` is set with the other frame-level tokens at the top of
-     this file's phone block — on the FRAME, because setting it on
-     `.planner-cols` would win on that element and leave the frame's own
-     `scroll-padding` reading the desktop figure, so a snapped column would
-     come to rest under the rail. */
-  /* `--planner-hour-h` moves with the other frame-level tokens at the top of
-     this file's phone block — the reservation is computed from it. */
-}
+/* The rail and the hour give way on a phone. `--planner-lane-min` does NOT: it
+   is the course code, the one measurement here that is not a taste, and a phone
+   is exactly where shaving it starts cutting codes. The week scrolls instead.
 
-/* --- TAVLA — the list view (REWORK-2026-07-29b D2) ------------------------ */
+   `--planner-rail` and `--planner-hour-h` are set with the other frame-level
+   tokens in this file's phone block above — on the FRAME, because setting the
+   rail on `.planner-cols` would leave the frame's own `scroll-padding` reading
+   the desktop figure and a snapped column would come to rest under it. */
+
+/* --- TAVLA — the list view ------------------------ */
 
 /* A departure board. Nothing here is positioned by its duration, so nothing
-   here narrows with the viewport — which is exactly why it exists beside the
-   grid rather than instead of it. */
+   narrows with the viewport — which is why it exists beside the grid. */
 .planner-board {
-  /* Positioned so a departing row can be hung back over the list at the
-     coordinates it held (`.planner-motion-ghosts`). */
+  /* Positioned so a departing row can be hung back over the list. */
   position: relative;
   max-width: 52rem;
-  /* Centred: the list is much narrower than the week above it, and left-
-     aligned it read as if it had come loose from the section. */
+  /* Centred: left-aligned the narrow list read as loose from the section. */
   margin-inline: auto;
   padding-inline-start: 18px;
 }
@@ -1616,9 +1403,8 @@ button.planner-board-row:hover {
   white-space: nowrap;
 }
 
-/* "Digital undervisning" is a sentence wearing a room's clothes: at the
-   display size it wraps and knocks the two numeral columns out of alignment,
-   which is the one thing this view cannot afford. */
+/* "Digital undervisning" is a sentence wearing a room's clothes: at display
+   size it wraps and knocks the two numeral columns out of alignment. */
 .planner-board-room.is-long {
   font-size: var(--text-sm);
   font-weight: var(--weight-normal);
@@ -1629,17 +1415,13 @@ button.planner-board-row:hover {
 }
 
 /* The collision is a rule in the margin beside the departures it applies to —
-   not a filled row, which reads as an error state rather than as two things
-   you have to choose between.
+   not a filled row, which reads as an error rather than as two things to choose
+   between.
 
-   It sits on the clashing ROWS, never on a wrapper around the day: the earlier
-   shape bracketed every row the day contained, so one 10:15 overlap drew the
-   rule past an unrelated 16:00 øving and the mark claimed the whole day. Two
-   marked rows next to each other still read as one bracket — `bottom: -1px`
-   bridges `.planner-board-row`'s hairline so the segments meet — while a
-   marked row with a clean one under it simply stops. The -18px lands inside
-   `.planner-board`'s own `padding-inline-start`, so nothing is clipped and no
-   row shifts. */
+   It sits on the clashing ROWS, never on a wrapper around the day: bracketing
+   the whole day drew the rule past unrelated sessions. `bottom: -1px` bridges
+   the row hairline so adjacent marks meet; -18px lands inside
+   `.planner-board`'s own padding, so nothing is clipped. */
 .planner-board-row.is-clashing {
   position: relative;
 }
@@ -1673,14 +1455,12 @@ button.planner-board-row:hover {
 }
 
 /* The list is flow layout with no geometry in properties, so its half of the
-   layer change is a plain FLIP: `layerMotion.ts` writes the difference into
-   `transform` and lets it go. Translation only — a row does not change size
-   between the two states, so there is nothing here to squash and the transform
-   restriction in DESIGN §6 holds. `background` stays in the list or the row
-   loses its hover for the length of the move. */
-/* The list box itself travels too — see `beginListChange`. Without it the
-   container is short on the frame the render lands and everything under the
-   week jumps before a row has moved. */
+   layer change is a plain FLIP. Translation only — a row does not change size
+   between states, so DESIGN §6's transform restriction holds. `background`
+   stays or the row loses its hover for the length of the move.
+
+   The list box travels too (`beginListChange`): without it the container is
+   short on the frame the render lands and everything under the week jumps. */
 .planner-board.is-settling {
   overflow: hidden;
   transition: height var(--dur) var(--ease);
@@ -1700,8 +1480,7 @@ button.planner-board-row:hover {
     background var(--dur-fast) var(--ease);
 }
 
-/* Same wait as the week's: the list closes up after the last row has wiped
-   out, not after the first (`--planner-departs`, layerMotion.ts). */
+/* Same wait as the week's: the list closes up after the LAST row wipes out. */
 .planner-board.is-settling.is-closing [data-motion-key] {
   transition-delay: calc(
     var(--planner-departs, 0) *
@@ -1715,9 +1494,8 @@ button.planner-board-row:hover {
     padding-inline-start: 14px;
   }
 
-  /* The room KEEPS the right column on a phone. Dropping it under the name was
-     tried and it buried the one fact you are looking at the list for on the way
-     out of the door; the course name gives up the width instead. */
+  /* The room KEEPS the right column on a phone: dropping it under the name
+     buried the one fact you read the list for. The name gives up the width. */
   .planner-board-row {
     grid-template-columns: 3.9rem minmax(0, 1fr) auto;
     gap: 0 var(--gap-3);

@@ -3,12 +3,10 @@ import semestersData from "../../data/semesters.json";
 import Layout from "../layouts/Layout.astro";
 
 /**
- * 404 recovery. Both search forms are gone (Task 13) — the course-search one
- * quoted the attempted path segment straight into a `value` attribute, which
- * is exactly the bug study S9 found (`value="404"` funneling every 404 into
- * `/?q=404` → "Ingen treff."). Deleting the forms kills that bug class
- * outright rather than patching the one stray value: the two honest ways
- * back are the homepage and the planner itself.
+ * 404 recovery. Both search forms are gone: the course-search one quoted the
+ * attempted path segment straight into a `value` attribute, funneling every 404
+ * into `/?q=404` → "Ingen treff.". Deleting the forms kills that bug class
+ * outright — the two honest ways back are the homepage and the planner.
  */
 const MONTH_ABBR = [
   "jan",

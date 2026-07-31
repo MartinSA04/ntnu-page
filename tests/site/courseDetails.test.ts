@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { detailsUrl } from "../../src/components/site/courseDetails.js";
 
-// course-1/cpc-3: `/api/course/TMA4100` 404s (the course is not in the 2026
+// /`/api/course/TMA4100` 404s (the course is not in the 2026
 // catalog), `/api/course/TMA4100?year=2025` returns the full payload — 703 of
 // 5 470 course pages depended on the year the page already computed.
 describe("detailsUrl", () => {

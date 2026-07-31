@@ -1,11 +1,9 @@
 /**
- * Pure route handlers for `/api/*`, taking their dependencies as a plain
- * object (ntnu-mcp pattern) so tests inject a fixture-backed `NTNUClient`
- * and a bare `TieredCache` without touching module-level singletons.
+ * Pure route handlers for `/api/*`, taking their dependencies as a plain object
+ * so tests inject a fixture-backed `NTNUClient` and a bare `TieredCache`.
  *
- * No Workers-only ambient types are referenced here (see `server.ts`), so
- * this file type-checks cleanly under both `worker/tsconfig.json`
- * (workers-types) and `tsconfig.test.json` (node types).
+ * No Workers-only ambient types are referenced here (see `server.ts`), so this
+ * file type-checks under both `worker/tsconfig.json` and `tsconfig.test.json`.
  */
 import type { NTNUClient } from "ntnu-api";
 import { NotFoundError, NTNUAPIError, RateLimitError } from "ntnu-api";
@@ -22,9 +20,8 @@ export interface RouteDeps {
   cache: TieredCache;
   /**
    * Spends one unit of this client's upstream budget, called only when a
-   * request has missed the cache and is about to go to NTNU (sec-5). Absent =
-   * unthrottled, which is what `server.ts` passes when it has no client to
-   * bucket on.
+   * request has missed the cache and is about to go to NTNU. Absent =
+   * unthrottled, which is what `server.ts` passes with no client to bucket on.
    */
   throttle?: () => RateLimitDecision;
 }
@@ -33,28 +30,23 @@ const COURSE_CODE_RE = /^[A-ZÆØÅ0-9_-]{2,16}$/i;
 
 /**
  * Programme codes need two characters course codes never carry: a literal `/`
- * (`EMNE/HF`, `EMNE/SU`, `MSØK/5`) and a `+` (`MSECT+OH`). Those are exactly
- * the 4 of 403 codes in `data/programs.json` that the shared course grammar
- * rejected — all four are offered by the planner's own typeahead, and MSØK/5
- * has a real 9-period plan upstream, so every one of them 400'd from our own
- * validator while the UI blamed NTNU (worker-1 / crawler-1 / plan-7).
+ * (`EMNE/HF`, `MSØK/5`) and a `+` (`MSECT+OH`). Those are exactly the 4 of 403
+ * codes the shared course grammar rejected — all four offered by the planner's
+ * own typeahead, so every one 400'd from our own validator.
  *
- * Kept as a separate constant rather than widening `COURSE_CODE_RE`: no course
- * code contains either character, and a course route should keep saying so.
- * `.` stays excluded in both, so no path-traversal shape can form, and both
- * downstream uses escape the value again (`courses.details` via
- * `encodeURIComponent`, `programs.studyPlan` via `URLSearchParams`).
+ * Kept separate rather than widening `COURSE_CODE_RE`: no course code contains
+ * either character, and a course route should keep saying so. `.` stays
+ * excluded in both, so no path-traversal shape can form, and both downstream
+ * uses escape the value again.
  */
 const PROGRAM_CODE_RE = /^[A-ZÆØÅ0-9_+/-]{2,16}$/i;
 
 const YEAR_RE = /^\d{4}$/;
 
 /**
- * Optional `?version=`. Real values are single characters today (`1`, `2`,
- * `3`, `A`, `B`, `C` — all six in `data/catalog.json`), so this is a loose
- * bound, not a whitelist: it exists only to keep an arbitrarily long query
- * value out of the cache key (KV caps keys at 512 bytes) — see sec-5, where
- * the version dimension is hygiene and the throttle is the actual fix.
+ * Optional `?version=`. Real values are single characters today, so this is a
+ * loose bound rather than a whitelist: it exists to keep an arbitrarily long
+ * query value out of the cache key (KV caps keys at 512 bytes).
  */
 const VERSION_RE = /^[A-Za-z0-9-]{1,8}$/;
 
@@ -62,35 +54,27 @@ const VERSION_RE = /^[A-Za-z0-9-]{1,8}$/;
 const MISSING = "missing";
 
 /**
- * TTL for a negative cache entry. A `null` from `ntnu-api` is overloaded: it
- * is also what an empty 200 from NTNU's Liferay resource produces
- * (`http.js` returns null for a 204 or a blank body), so caching a miss for
- * the full positive TTL turned one transient blank response into up to 24 h of
- * "this cohort has no plan" — which `findProgramPlanUncached` then papers over
- * by silently stepping back a year (worker-3). Ten minutes keeps the
- * "no refetch storm for a genuinely unknown code" property while capping the
- * blast radius of a blip.
+ * TTL for a negative cache entry. A `null` from `ntnu-api` is overloaded — it
+ * is also what an empty 200 from NTNU's Liferay resource produces — so caching
+ * a miss for the full positive TTL turned one transient blank response into up
+ * to 24 h of "this cohort has no plan", which `findProgramPlanUncached` then
+ * papers over by stepping back a year. Ten minutes keeps the no-refetch-storm
+ * property while capping the blast radius of a blip.
  */
 const MISS_CACHE_TTL_MS = 10 * 60 * 1000;
 
 /**
- * Defense-in-depth response headers, on every route including the static
- * assets (sec-3 — the site sent none at all).
+ * Defense-in-depth response headers, on every route including static assets.
  *
- * `script-src` deliberately keeps `'unsafe-inline'`: the build ships exactly
- * one executable inline block (Layout's no-flash theme init, which also
- * re-applies `data-theme` on `astro:after-swap`). Pinning it with its
- * `'sha256-…'` is the stronger form, but the hash is only valid for one exact
- * rendering of that block — any edit or reformat of `Layout.astro` would
- * silently reintroduce the theme flash — and it cannot be computed or verified
- * without a build, so it is left as a documented upgrade rather than shipped
- * unverified. Everything else is tight: no external origin may supply script,
- * style, font, image or connection, nothing may frame us, and `base-uri`/
- * `object-src` are closed outright.
+ * `script-src` deliberately keeps `'unsafe-inline'`: the build ships exactly one
+ * executable inline block (Layout's no-flash theme init). Pinning it with a
+ * `'sha256-…'` is stronger, but the hash is valid for one exact rendering — any
+ * reformat of `Layout.astro` would silently reintroduce the theme flash — and
+ * it cannot be computed without a build, so it is left as a documented upgrade
+ * rather than shipped unverified. Everything else is tight.
  *
  * `style-src` needs `'unsafe-inline'` for Astro's scoped `<style>` blocks and
- * the build's `style="…"` attributes; `img-src` needs `data:` for the
- * generated favicon.
+ * `style="…"` attributes; `img-src` needs `data:` for the generated favicon.
  */
 const SECURITY_HEADERS: Readonly<Record<string, string>> = {
   "Content-Security-Policy": [
@@ -112,8 +96,7 @@ const SECURITY_HEADERS: Readonly<Record<string, string>> = {
 
 /**
  * Returns `response` with `SECURITY_HEADERS` applied. Used by `server.ts` for
- * the `ASSETS` branch, whose responses this module never builds; the JSON
- * helpers below set the same headers directly.
+ * the `ASSETS` branch; the JSON helpers below set the same headers directly.
  */
 export function withSecurityHeaders(response: Response): Response {
   const out = new Response(response.body, response);
@@ -122,9 +105,9 @@ export function withSecurityHeaders(response: Response): Response {
 }
 
 /**
- * `Cache-Control` for a response we are willing to have cached for `ttlMs`, or
- * `no-store` when `ttlMs` is absent. `max-age` stays at or below 300 s so a
- * browser re-checks often while the edge holds the full TTL.
+ * `Cache-Control` for a response we will have cached for `ttlMs`, or
+ * `no-store` when absent. `max-age` stays at or below 300 s so a browser
+ * re-checks often while the edge holds the full TTL.
  */
 function cacheControl(ttlMs?: number): string {
   if (ttlMs === undefined) return "no-store";
@@ -145,10 +128,9 @@ function json(data: unknown, status: number, ttlMs?: number): Response {
 }
 
 /**
- * Error envelope. `ttlMs` is set only where the worker is serving an answer it
- * has itself cached (the `MISSING` sentinel), so the edge and the browser may
- * hold it for as long as we do rather than re-asking on every page load
- * (perf-5). 400/429/502 stay `no-store`.
+ * Error envelope. `ttlMs` is set only where the worker serves an answer it has
+ * itself cached (the `MISSING` sentinel), so the edge and the browser may hold
+ * it as long as we do. 400/429/502 stay `no-store`.
  */
 function errorJson(
   message: string,
@@ -171,7 +153,7 @@ export function notFoundJson(): Response {
   return errorJson("Not found", 404);
 }
 
-/** 405 for a non-GET/HEAD method on `/api` (worker-7); the surface is read-only. */
+/** 405 for a non-GET/HEAD method on `/api`; the surface is read-only. */
 export function methodNotAllowed(): Response {
   return errorJson("Method not allowed", 405, { headers: { Allow: "GET, HEAD" } });
 }
@@ -184,23 +166,18 @@ export function rateLimited(retryAfterSeconds: number): Response {
 }
 
 /**
- * Decodes, validates and uppercases a course/program code, or returns `null`
- * on failure. `re` is the grammar for the surface being addressed —
- * `COURSE_CODE_RE` or the wider `PROGRAM_CODE_RE`.
+ * Decodes, validates and uppercases a course/program code, or returns `null`.
+ * `re` is the grammar for the surface being addressed.
  *
- * The decode is the load-bearing step: handlers are called with a raw
- * `URL.pathname` segment, which the WHATWG URL spec keeps percent-encoded, so
- * `BØA1100` arrives as `B%C3%98A1100` and the deliberate Æ/Ø/Å allow-list
- * never sees the characters it exists for — 58 programmes (every Å-prefixed
- * årsstudium, MTIØT, BØA…) and 238 courses used to hard-400. It is equally
- * load-bearing for the programme grammar: a `/` can only ever reach a single
- * path segment as `%2F`, so `MSØK/5` is unreachable without the decode. A `+`
- * is a literal plus in a path segment (the `+`-means-space rule is
- * form-encoding, i.e. query strings, only), so `MSECT+OH` and `MSECT%2BOH`
- * both decode to the same code.
+ * The decode is the load-bearing step: handlers get a raw `URL.pathname`
+ * segment, which the WHATWG URL spec keeps percent-encoded, so `BØA1100`
+ * arrives as `B%C3%98A1100` and the Æ/Ø/Å allow-list never sees the characters
+ * it exists for — 58 programmes and 238 courses hard-400 without it. Equally
+ * load-bearing for the programme grammar: a `/` can only reach a path segment
+ * as `%2F`. A `+` is a literal plus in a path segment (the `+`-means-space rule
+ * is form-encoding only), so `MSECT+OH` and `MSECT%2BOH` decode alike.
  *
- * A malformed escape (`%zz`) throws `URIError`, which is a 400 like any other
- * unparseable code.
+ * A malformed escape throws `URIError`, which is a 400 like any other.
  */
 function parseCode(raw: string, re: RegExp): string | null {
   let decoded: string;
@@ -220,16 +197,13 @@ function parseYear(raw: string | null): number | null {
 }
 
 /**
- * Maps upstream errors per SPEC; non-`NTNUAPIError` bugs propagate to the
- * caller (500).
+ * Maps upstream errors per SPEC; non-`NTNUAPIError` bugs propagate (500).
  *
- * The 502 body is a fixed token, never `err.message`: `ntnu-api` builds that
- * message as `${method} ${url} -> ${status}` with the full internal Liferay
- * portlet URL and every query param, and the planner used to render those ~250
- * English characters verbatim into a Norwegian course row (sec-4 / worker-2).
- * The detail stays in Workers Logs (observability is on in `wrangler.jsonc`).
- * "Upstream error" is never shown either — `src/lib/planner/data.ts` keys on
- * the *status*, so a 502 renders as "NTNU svarte ikke".
+ * The 502 body is a fixed token, never `err.message`: `ntnu-api` builds that as
+ * `${method} ${url} -> ${status}` with the full internal Liferay portlet URL,
+ * and the planner used to render ~250 English characters into a Norwegian
+ * course row. The detail stays in Workers Logs. `src/lib/planner/data.ts` keys
+ * on the *status*, so a 502 renders as "NTNU svarte ikke".
  */
 function mapUpstreamError(err: unknown): Response {
   if (err instanceof NotFoundError) {
@@ -253,9 +227,9 @@ export interface RateLimitDecision {
 
 /**
  * Spends one unit of upstream budget, or returns the 429 to send instead.
- * Called at the point of no return — after the cache has already missed — so
- * the budget meters *our egress to NTNU*, not our own cached answers. A
- * warm-cache client is never throttled no matter how fast it asks.
+ * Called at the point of no return — after the cache has missed — so the budget
+ * meters *our egress to NTNU*, not our own cached answers. A warm-cache client
+ * is never throttled however fast it asks.
  */
 function upstreamGate(deps: RouteDeps): Response | null {
   const decision = deps.throttle?.();
@@ -267,16 +241,13 @@ function upstreamGate(deps: RouteDeps): Response | null {
  * Per-isolate token bucket, one bucket per client.
  *
  * `/api/*` is an unauthenticated proxy in front of a third party this project
- * has committed to treating politely, and it had no throttle of any kind: a
- * `curl` loop over random course codes produced an unbounded stream of
- * uncacheable requests to www.ntnu.no, all from this worker's egress (sec-5).
- * A bucket is the smallest thing that bounds that without adding a retry layer
- * or a dependency.
+ * treats politely, and it had no throttle: a `curl` loop over random course
+ * codes produced an unbounded stream of uncacheable requests to www.ntnu.no
+ * from this worker's egress.
  *
  * Bounded like `TTLCache`: the map is module-level, so a long-lived isolate
  * seeing many client IPs must evict rather than grow. Full buckets are dropped
- * on eviction, which is safe — a client whose bucket is gone starts full,
- * exactly as a first-time client does.
+ * on eviction, which is safe — a client whose bucket is gone starts full.
  */
 export class RateLimiter {
   private readonly buckets = new Map<string, { tokens: number; updatedAt: number }>();
@@ -371,11 +342,10 @@ export async function handleCourseGrades(deps: RouteDeps, code: string): Promise
 }
 
 /**
- * Validates an optional `?version=` query param. Empty/absent → `undefined`
- * (let `ntnu-api` apply its own default); otherwise it must look like a course
- * version (`VERSION_RE`) — `false` signals a 400. The value reaches both the
- * cache key and the upstream call, so an unbounded string here is an unbounded
- * cache key.
+ * Validates an optional `?version=`. Empty/absent → `undefined` (let `ntnu-api`
+ * apply its own default); otherwise it must match `VERSION_RE`, and `false`
+ * signals a 400. The value reaches the cache key, so an unbounded string here
+ * is an unbounded cache key.
  */
 function parseVersion(raw: string | null): string | undefined | false {
   if (raw === null) return undefined;

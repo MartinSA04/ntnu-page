@@ -1,14 +1,11 @@
 /**
  * Course-details island for `/emne/[code]/`: one fetch of `/api/course/:code`
- * feeding three places on the reordered page (REVIEW U10/U13):
- *   - the 9 key facts, below the week;
- *   - every prose section, collapsed into the page's one "Mer om emnet"
- *     disclosure — the encyclopedia stays available, it stops being the page;
- *   - the scraped exam enrichment (form/duration/aid code), which now hangs
- *     under the *catalog* exam headline instead of standing beside it as a
- *     peer section. DR-3 makes the catalog the authority and the scrape the
- *     enrichment; two peer exam blocks invited exactly the confusion the rule
- *     prevents.
+ * feeding three places on the page — the 9 key facts below the week, every
+ * prose section collapsed into the one "Mer om emnet" disclosure, and the
+ * scraped exam enrichment (form/duration/aid code), which hangs UNDER the
+ * catalog exam headline rather than beside it: DR-3 makes the catalog the
+ * authority and the scrape the enrichment, and two peer exam blocks invited
+ * exactly the confusion that rule prevents.
  */
 import { formatCreditNumber } from "../planner/dom.js";
 
@@ -127,15 +124,12 @@ function renderExamDetails(exams: CourseExam[]): HTMLElement | null {
 
 /**
  * Studiepoengreduksjon as a three-column table — emne · reduksjon · gjelder
- * fra. It was a bullet list of run-together sentences ("TDT4102 — 3,7 sp
- * (Høst 2008)"), which put the three values a student compares across rows
- * into one string, and TDT4100 renders eleven of them.
+ * fra. As a bullet list it put the three values a student compares across rows
+ * into one string, eleven times for TDT4100.
  *
  * De-duplicated on the whole (code, reduction, fromTerm) triple: upstream
- * carries one row per course *version*, so TDT4100 shipped the identical
- * "SIF8005 — 7,5 sp" three times with nothing to tell the copies apart. Rows
- * that differ in any field are kept — a course whose reduction changed with a
- * later term is two real facts, not a duplicate.
+ * carries one row per course *version*. Rows differing in any field are kept —
+ * a reduction that changed with a later term is two real facts.
  */
 function renderCreditReductions(reductions: CreditReduction[]): HTMLElement | null {
   if (reductions.length === 0) return null;
@@ -167,8 +161,8 @@ function renderCreditReductions(reductions: CreditReduction[]): HTMLElement | nu
   for (const r of rows) {
     const tr = el("tr");
     const code = el("td", "np-data", r.courseCode);
-    // An em dash, not "?" and not an empty cell: the catalog genuinely does
-    // not date the older reductions, and a blank cell reads as a render bug.
+    // An em dash, not "?" and not an empty cell: the catalog genuinely does not
+    // date the older reductions, and a blank cell reads as a render bug.
     tr.append(code, el("td", "np-data", r.reduction ?? ""), el("td", undefined, r.fromTerm ?? ""));
     tbody.append(tr);
   }
@@ -180,15 +174,14 @@ function renderCreditReductions(reductions: CreditReduction[]): HTMLElement | nu
 /**
  * The details endpoint for one course, optionally pinned to a catalog year.
  *
- * C1/course-1: 703 of 5 470 catalog courses are carried over from last year's
- * crawl, and `/api/course/TMA4100` (no year) 404s for every one of them while
- * `?year=2025` returns the full payload — so those pages rendered an empty
- * Nøkkeltall, no exam enrichment and no "Mer om emnet". The page already
- * computes that source year for the timetable island; this passes it on.
+ * 703 of 5 470 catalog courses are carried over from last year's crawl, and a
+ * bare `/api/course/TMA4100` 404s for every one while `?year=2025` returns the
+ * full payload. The page already computes that source year for the timetable
+ * island; this passes it on.
  *
- * `year` is omitted for a course offered in the canonical year: the worker
- * keys its cache on `["details", code, year]`, so a bare call and a
- * `?year=<canonical>` call are two cache entries for one payload.
+ * `year` is omitted for a course offered in the canonical year: the worker keys
+ * its cache on `["details", code, year]`, so a bare call and a
+ * `?year=<canonical>` call would be two entries for one payload.
  */
 export function detailsUrl(code: string, year?: number | null): string {
   const path = `/api/course/${encodeURIComponent(code)}`;
@@ -204,7 +197,7 @@ export async function mountCourseDetails(code: string, year?: number | null): Pr
   if (!section || !status || !body || !proseHost || !code) return;
 
   // Both terminal states below keep this line on screen, so they hand back
-  // the height it was holding for the facts grid (perf-1).
+  // the height it was holding for the facts grid.
   const release = () => status.removeAttribute("data-reserve");
 
   try {

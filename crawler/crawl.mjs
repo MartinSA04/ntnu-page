@@ -36,11 +36,10 @@ const PUBLIC_DATA_DIR = path.join(ROOT, "public", "data");
 const REQUEST_GAP_MS = 500;
 
 /**
- * Catalog years to crawl, counting back from the canonical year. Two, because
- * a course NTNU stops offering vanishes from the catalog immediately: 703 of
- * 2025's courses (TMA4100 among them) are absent from 2026 while the API
- * still serves their grades and timetables, and study plans still reference
- * them. See `mergeCatalogs`.
+ * Catalog years to crawl, counting back from the canonical year. Two, because a
+ * course NTNU stops offering vanishes from the catalog immediately while the
+ * API still serves its grades and timetables and study plans still reference
+ * it. See `mergeCatalogs`.
  */
 const CATALOG_YEARS = 2;
 

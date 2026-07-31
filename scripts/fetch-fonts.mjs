@@ -1,25 +1,19 @@
-// Vendor the two brand fonts (Schibsted Grotesk, Spline Sans Mono) from
-// Google Fonts so the site carries no third-party request. Re-run to refresh:
-// `node scripts/fetch-fonts.mjs`. Every unicode-range Google ships is kept
-// (browsers only download the ranges a page uses), and the generated
-// fonts.css + woff2 files are committed; Vite fingerprints the url()s at
-// build time.
+// Vendor the two brand fonts (Schibsted Grotesk, Spline Sans Mono) from Google
+// Fonts so the site carries no third-party request. Re-run to refresh:
+// `node scripts/fetch-fonts.mjs`. The generated fonts.css + woff2 files are
+// committed; Vite fingerprints the url()s at build time.
 //
-// Both families are shipped by Google as *variable* fonts: one file per
-// (family, subset) carrying the whole wght axis. Asking the css2 API for
-// discrete weights (`wght@400;500;700`) therefore yields three @font-face
-// rules pointing at the same byte-identical file — which is what this repo
-// used to vendor: twelve rules, four files, and a reviewer's reasonable
-// conclusion that all medium/bold was synthesised. It is not; a single-value
-// `font-weight` descriptor instances the axis at that weight. But it is
-// twelve rules doing four rules' work, so we ask for the axis range instead
-// and get the honest shape: four faces, `font-weight: <min> <max>`.
+// Both families ship as *variable* fonts: one file per (family, subset)
+// carrying the whole wght axis. Asking css2 for discrete weights therefore
+// yields several @font-face rules pointing at one byte-identical file — twelve
+// rules doing four rules' work, and a reviewer's reasonable conclusion that all
+// medium/bold is synthesised. We ask for the axis range instead: four faces,
+// `font-weight: <min> <max>`.
 //
-// Two assertions below keep that guarantee from rotting: every file must
-// carry an `fvar` table (a static instance smuggled in here would silently
-// become fake bold at every weight but one), and the four files must hash
-// differently (a family/subset collapsing to one file means the subsetting
-// broke).
+// Two assertions below keep that from rotting: every file must carry an `fvar`
+// table (a static instance smuggled in here becomes fake bold at every weight
+// but one), and the four files must hash differently (a collapse means the
+// subsetting broke).
 import { createHash } from "node:crypto";
 import { mkdir, rm, writeFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
@@ -35,8 +29,7 @@ const EXPECTED_FACES = 4;
 
 // `swap` over `optional`/`block`: text must never be invisible, and the two
 // latin faces are preloaded from Layout.astro, so the swap window is the
-// preload's round trip rather than a full render-blocking wait. The value is
-// rewritten here rather than inherited from Google so it stays ours.
+// preload's round trip. Rewritten here rather than inherited from Google.
 const FONT_DISPLAY = "swap";
 
 // A modern browser UA makes Google serve woff2 with subset comments.
@@ -45,33 +38,29 @@ const UA =
 
 // --- The metric-matched fallbacks --------------------------------------
 //
-// `font-display: swap` means the page is first painted in a system face and
-// then repainted in ours, and the two set to different widths and different
-// line boxes — so the swap RELAID the page. Measured on a 1.6 Mbit link it
-// landed at ~875ms: the landing page's subcopy moved 45px and the topbar's nav
-// moved 14px sideways, on every page and every visitor whose cache is cold.
+// `font-display: swap` repaints the page in our face after first painting it in
+// a system one, and the two set to different widths and line boxes — so the
+// swap RELAID the page. Measured on a 1.6 Mbit link at ~875ms: the subcopy
+// moved 45px and the nav 14px sideways, on every page with a cold cache.
 //
 // A fallback face standing in for each family fixes that without giving up
-// `swap` (and without `optional`, which would have the first visit go entirely
-// unbranded). The overrides make a line of Arial occupy exactly the line box a
-// line of Schibsted Grotesk will occupy, so when the real face arrives nothing
-// moves — only the shapes change.
+// `swap` (and without `optional`, which would leave the first visit unbranded).
+// The overrides make a line of Arial occupy exactly the line box a line of
+// Schibsted Grotesk will, so the swap changes shapes without moving anything.
 //
 // `ascent`/`descent`/`lineGap` are read out of the vendored file below, so a
-// refresh cannot leave them stale. `sizeAdjust` cannot be: it is the ratio of
-// the two faces' average advance width, and OS/2's own `xAvgCharWidth` is not
-// comparable across them (it means the old weighted-lowercase average in Arial
-// and the modern all-glyph mean in these two — 1.32 against a real 1.04). So it
-// is MEASURED, in a browser, over a sample of the copy this site actually sets:
+// refresh cannot leave them stale. `sizeAdjust` cannot be — it is the ratio of
+// the two faces' average advance width, and OS/2's `xAvgCharWidth` is not
+// comparable across them (1.32 against a real 1.04). So it is MEASURED in a
+// browser over a sample of this site's own copy:
 //
 //   const w = (text, family) => { const c = document.createElement("canvas")
 //     .getContext("2d"); c.font = `200px ${family}`;
 //     return c.measureText(text).width; };
 //   w(sample, '"Schibsted Grotesk"') / w(sample, "Arial")
 //
-// Re-derive it the same way if a refresh changes the design of either face.
-// Being a little off is survivable — a few pixels of reflow instead of forty —
-// but being absent is not.
+// Re-derive it the same way if a refresh changes either face. Being a little
+// off is survivable — a few pixels instead of forty — being absent is not.
 const FALLBACKS = [
   {
     family: "Schibsted Grotesk",
@@ -85,8 +74,7 @@ const FALLBACKS = [
     family: "Spline Sans Mono",
     locals: ["Courier New", "Liberation Mono"],
     // 0.9998 measured — the two set at almost exactly the same advance. Kept
-    // verbatim rather than rounded to 1: it is a measurement, and the next
-    // refresh's will not be.
+    // verbatim rather than rounded to 1: it is a measurement.
     sizeAdjust: 0.9998,
   },
 ];
@@ -97,8 +85,8 @@ const pct = (ratio) => `${(ratio * 100).toFixed(2)}%`;
 /**
  * The fallback face for one family. The three overrides are divided by
  * `size-adjust` because that descriptor scales the face's metrics as well as
- * its outlines — the ratio has to come back out of them, or the line box ends
- * up adjusted twice.
+ * its outlines — the ratio has to come back out, or the line box is adjusted
+ * twice.
  */
 function fallbackFace({ family, locals, sizeAdjust }, metrics) {
   const { unitsPerEm, ascent, descent, lineGap } = metrics;

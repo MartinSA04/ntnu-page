@@ -12,17 +12,14 @@ import "../styles/primitives.css";
 import "../styles/site.css";
 
 /**
- * Site shell: sticky topbar (wordmark, nav, the theme toggle), a centered
- * content column (reading measure by default, the `--maxw` data column when
- * `wide`), and a footer carrying provenance. Ruteark's colour lives in
- * tokens.css: no inline colour vars here (see docs/SPEC.md "Design-system
- * usage").
+ * Site shell: sticky topbar (wordmark, nav, theme toggle), a centered content
+ * column (reading measure by default, the `--maxw` data column when `wide`),
+ * and a footer carrying provenance. Ruteark's colour lives in tokens.css: no
+ * inline colour vars here.
  *
- * The topbar carries no plan state and no way into the studieinfo modal. It
- * used to end in a `#studieinfo-chip` on the landing page, naming the
- * programme and linking to `/planlegger/?studieinfo`; that is deleted
- * (2026-07-30, owner's call). The planner's own "Endre" button is the single
- * entrance to the modal now, and the planner's title says whose plan it is.
+ * The topbar carries no plan state and no way into the studieinfo modal. The
+ * planner's own "Endre" button is the single entrance, and the planner's title
+ * says whose plan it is.
  */
 interface Props {
   title: string;
@@ -46,11 +43,9 @@ const WEEK_BOX_TOLERANCE = 32;
 // same semester's course list.
 const DEFAULT_SEMESTER_ID = semestersData.current?.id ?? "";
 
-// Two destinations now (rework Task 11): the plan and the catalog search
-// behind it. Kept as a list of sections (not a bare href prefix) so a future
-// addition can't reintroduce the aria-current substring bug (`/emne/` is not
-// a prefix of `/emner/`, which orphaned the highest-traffic page from its
-// own nav).
+// Kept as a list of sections (not a bare href prefix) so a future addition
+// cannot reintroduce the aria-current substring bug — `/emne/` is not a prefix
+// of `/emner/`, which orphaned the highest-traffic page from its own nav.
 const NAV = [
   { href: "/planlegger/", label: "Planlegger", sections: ["/planlegger/"] },
   { href: "/emner/", label: "Emner", sections: ["/emner/", "/emne/"] },
@@ -112,15 +107,13 @@ const crawlDate = formatCrawlDate(semestersData.crawledAt);
       }}
     >
       // No-flash theme init — reads the stored choice, falls back to the OS
-      // preference, and sets data-theme on <html> before first paint.
+      // preference, sets data-theme on <html> before first paint.
       //
-      // It carries a second passenger now: the PLAN PROBE (tokens.css,
+      // It carries a second passenger: the PLAN PROBE (tokens.css,
       // `--plan-courses`). Same mechanism, same reason — something only
-      // localStorage knows, needed before the first frame is painted, and
-      // wiped by every view-transition swap. The plan's *contents* are still
-      // read by the store in module code; all this reports is how much space
-      // the page is about to need, so the week and the landing card can hold
-      // it from paint rather than from mount.
+      // localStorage knows, needed before the first frame, and wiped by every
+      // view-transition swap. All it reports is how much space the page is
+      // about to need.
       (function () {
         function isDark() {
           try {
@@ -138,8 +131,7 @@ const crawlDate = formatCrawlDate(semestersData.crawledAt);
           else document.documentElement.removeAttribute("data-theme");
         }
         // Deliberately forgiving: every failure path lands on "no plan", which
-        // reserves nothing and leaves the page exactly as it behaved before
-        // the probe existed. A wrong reservation is worse than none.
+        // reserves nothing. A wrong reservation is worse than none.
         function applyPlan() {
           var root = document.documentElement;
           var count = 0;
@@ -157,40 +149,31 @@ const crawlDate = formatCrawlDate(semestersData.crawledAt);
             count = 0;
             program = false;
           }
-          // Two separate facts: the COUNT sizes the reservations, and whether
-          // a programme is stored decides which face the planner's title is
-          // set in — a plan named `MTFYMA Kull 24 H26` is the mono at 1.75rem
-          // and the product's own name is the grotesk at 2rem, and swapping
-          // between them at mount moved the whole page 12px.
+          // Two separate facts: the COUNT sizes the reservations, and whether a
+          // programme is stored decides which face the planner's title is set
+          // in — swapping between them at mount moved the whole page 12px.
           root.style.setProperty("--plan-courses", String(count));
           if (program) root.setAttribute("data-plan", "program");
           else if (count > 0) root.setAttribute("data-plan", "courses");
           else root.removeAttribute("data-plan");
-          // Whether this load carries a search query. A static build cannot
-          // see `?q=`, so the one surface that changes its resting state for it
-          // (/emner/, whose status line says "Henter emner …" instead of the
-          // invitation) needs the fact before first paint or it paints the
-          // wrong line and swaps it a second later.
+          // Whether this load carries a search query. A static build cannot see
+          // `?q=`, so /emner/ — whose status line changes for it — needs the
+          // fact before first paint or it paints the wrong line and swaps it.
           if (/(^|&)q=[^&]/.test(location.search.slice(1)))
             root.setAttribute("data-query", "");
           else root.removeAttribute("data-query");
           applyWeekBox(root);
         }
         // Which way the planner draws its week, and how tall that came out last
-        // time. The three views have three completely different geometries —
-        // Rader is five day rows, Kolonner is eight hours tall, Liste is as long
-        // as the week has sessions — so one reserved height cannot serve all
-        // three, and reserving Rader's for Liste left 0.14 of shift on a first
-        // load (planner-week.css has the measurements).
+        // time. The three views have three different geometries, so one reserved
+        // height cannot serve all three (planner-week.css has the measurements).
         //
         // The remembered height is preferred over any formula because it is
-        // evidence rather than a model, and it is nearly always available: you
-        // can only be in Kolonner or Liste because you pressed the tab that put
-        // you there, so a load in either is by construction a return visit. It
-        // is stored WITH the width it was measured at and discarded outside a
-        // small tolerance — a phone turned on its side, or a window dragged
-        // wider, changes how the list wraps and how many days fit, and a height
-        // measured at another width is not evidence about this one.
+        // evidence rather than a model, and it is nearly always available: a
+        // load in Kolonner or Liste is by construction a return visit. It is
+        // stored WITH the width it was measured at and discarded outside a small
+        // tolerance — a height measured at another width is not evidence about
+        // this one.
         function applyWeekBox(root) {
           var view = "uke";
           var box = null;
@@ -217,19 +200,16 @@ const crawlDate = formatCrawlDate(semestersData.crawledAt);
         applyTheme();
         applyPlan();
         // ClientRouter's swapRootAttributes() removes EVERY attribute from
-        // <html> and restores only the ones the server rendered — and
-        // data-theme is set here on the client, so it is wiped on every
-        // navigation and the page snaps back to light. This script does not
-        // re-execute on a swap (head elements are re-appended, not re-run),
-        // so re-apply from a listener on `document`, which survives swaps.
-        // astro:after-swap fires before the new page paints: no flash.
+        // <html> and restores only the ones the server rendered — and data-theme
+        // is set here on the client, so it is wiped on every navigation. This
+        // script does not re-execute on a swap (head elements are re-appended,
+        // not re-run), so re-apply from a listener on `document`, which survives
+        // swaps. astro:after-swap fires before the new page paints: no flash.
         //
-        // The plan probe rides the same listener for the same reason, and it
-        // matters more here than on a cold load: a soft navigation does NOT
-        // reset CLS, so the shift the next page would open with lands in the
-        // score of the page-load the visitor started on. Re-read rather than
-        // re-apply a cached value — the plan may have changed on the page we
-        // are leaving.
+        // The plan probe rides the same listener, and it matters more here: a
+        // soft navigation does NOT reset CLS, so the next page's shift lands in
+        // the score of the page-load the visitor started on. Re-read rather than
+        // re-apply a cached value — the plan may have changed.
         document.addEventListener("astro:after-swap", function () {
           applyTheme();
           applyPlan();
