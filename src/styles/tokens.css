@@ -157,8 +157,18 @@
 
   /* Type. Sentences in the grotesk; data (times, dates, codes, counts)
      in the mono — the Data-Is-Mono rule. */
-  --font-sans: "Schibsted Grotesk", system-ui, "Segoe UI", Arial, sans-serif;
-  --font-mono: "Spline Sans Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  /* The "… Fallback" families are not fonts — they are Arial and Courier New
+     with this project's own metrics stamped on them (fonts.css, generated).
+     They sit directly behind the real face so the second or two before it
+     arrives is set in a face of the same line box and the same average width,
+     and the swap changes the shapes without moving anything. They come BEFORE
+     the generic stack, and the generic stack stays: a machine with neither
+     Arial nor Liberation installed never loads the fallback face at all and
+     falls straight through to `system-ui`, exactly as it did before. */
+  --font-sans:
+    "Schibsted Grotesk", "Schibsted Grotesk Fallback", system-ui, "Segoe UI", Arial, sans-serif;
+  --font-mono:
+    "Spline Sans Mono", "Spline Sans Mono Fallback", ui-monospace, SFMono-Regular, Menlo, monospace;
 
   /* Seven steps, one per role docs/DESIGN.md §3 names — no step without a
      job. The scale used to carry a dead 1.35rem rung while 2rem, the size
@@ -212,6 +222,24 @@
   --topbar-h: 64px;
   --gutter: clamp(16px, 4vw, 32px);
   --control-h: 36px;
+
+  /* THE PLAN PROBE — how many courses the stored plan holds, written onto
+     <html> by Layout.astro's pre-paint script (beside the no-flash theme
+     init, and re-applied on the same `astro:after-swap` for the same reason:
+     swapRootAttributes() wipes every attribute, inline style included).
+
+     It exists so a surface can hold the space its client-rendered content is
+     ABOUT to need from the first frame, rather than from the moment its
+     module mounts — the gap that made /planlegger/ shift 0.61 and the landing
+     card 0.13 on a phone. Nothing paints from it and nothing reads it as
+     truth: 0 is always the safe answer, and every reservation below is
+     `calc(var(--plan-courses) * …)`, which is exactly zero when the probe
+     could not read the plan (storage disabled, first visit, parse failure).
+
+     `--plan-any` is the same fact as 0-or-1, for the reservations that hold a
+     fixed box rather than one row per course. */
+  --plan-courses: 0;
+  --plan-any: min(var(--plan-courses, 0), 1);
 
   /* Geometry: instrument corners, not book corners. */
   --radius-xs: 2px;

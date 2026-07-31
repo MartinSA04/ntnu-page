@@ -16,6 +16,19 @@ const seasonWord = isAutumn ? "høsten" : "våren";
       already knows your week should not open by explaining what it is
       (REWORK-2026-07-29b D3). `hidden` until the plan says otherwise, so a
       first-time visitor never sees an empty frame. */}
+  {/* The card's place, held from first paint for a visitor whose stored plan
+      says one is coming (Layout.astro's probe). `#home-now` itself stays
+      `hidden` — it is genuinely not there yet, and a screen reader should not
+      be walked through an empty card — so the space is held beside it rather
+      than inside it. `now.ts` collapses this the moment it knows, in either
+      direction.
+
+      Why it is worth the machinery: the card is 253px and it is INSERTED ABOVE
+      the pitch, so a returning student's landing page used to move its own
+      first paragraph from y=96 to y=395 about a second in. That was 0.133 CLS
+      on a phone, on the page every visit starts at, and it hit exactly the
+      people who come back most. */}
+  <div class="home-now-hold" id="home-now-hold" aria-hidden="true"></div>
   <section class="home-now" id="home-now" aria-labelledby="home-now-label" hidden>
     <a class="home-now-link" href="/planlegger/" id="home-now-link">
       <span class="np-kicker home-now-label" id="home-now-label"></span>
@@ -60,6 +73,26 @@ const seasonWord = isAutumn ? "høsten" : "våren";
 
   .home-now {
     margin-bottom: var(--space-7);
+  }
+
+  /* The reservation. 15rem against a card that measures 253px at 390px and
+     281px at 1440 — under both, per the house rule that the residual should
+     nudge down rather than snatch upward. `--plan-any` is 0 for a first-time
+     visitor, so the pitch-only page is untouched.
+
+     The honest cost, stated the way `/emne/[code]/`'s grades reservation
+     states its own: a student with courses whose week has nothing left to
+     report (`verdict.kind === "empty"`) gets an upward collapse of this box
+     that they did not have before. That is the rarer branch of a card that
+     exists precisely because most plans do have a next lecture — and `now.ts`
+     releases the hold on that branch too, so it is one shift rather than a
+     permanent hole. */
+  .home-now-hold {
+    min-height: calc(var(--plan-any) * 15rem);
+  }
+
+  .home-now-hold.is-released {
+    min-height: 0;
   }
 
   /* The whole card is the door to the planner — one target, no button
@@ -171,14 +204,28 @@ const seasonWord = isAutumn ? "høsten" : "våren";
 
   /* Once the page has an answer it stops introducing itself: the pitch drops
      to a footnote rather than disappearing, because the CTA is still the way
-     to a plan you want to change. */
-  .home-pitch.is-secondary .home-title {
+     to a plan you want to change.
+
+     The second selector in each pair is the same demotion PREDICTED — while
+     the hold above is still holding and the probe says a plan exists, the
+     pitch is already the footnote it is about to become. Without it the
+     reservation would only fix half the shift: the card arriving moved the
+     pitch down 299px *and* shrank it from 264px to 78px in the same frame, and
+     holding the card's space alone would still leave the pitch collapsing
+     under it. The prediction is retracted with the hold — a plan whose week
+     has nothing to report releases `is-released`, this stops matching, and the
+     full pitch comes back rather than a headline sized for a card that never
+     came. */
+  .home-pitch.is-secondary .home-title,
+  :global(html[data-plan]) .home-now-hold:not(.is-released) ~ .home-pitch .home-title {
     font-size: var(--text-md);
     font-weight: var(--weight-medium);
   }
 
   .home-pitch.is-secondary .home-kicker,
-  .home-pitch.is-secondary .home-subcopy {
+  .home-pitch.is-secondary .home-subcopy,
+  :global(html[data-plan]) .home-now-hold:not(.is-released) ~ .home-pitch .home-kicker,
+  :global(html[data-plan]) .home-now-hold:not(.is-released) ~ .home-pitch .home-subcopy {
     display: none;
   }
 
@@ -196,6 +243,7 @@ const seasonWord = isAutumn ? "høsten" : "våren";
 
 <script>
   import { onPage } from "../lib/pageLifecycle.ts";
+  import { watchPlanProbe } from "../lib/planProbe.ts";
   import { createPlanStore } from "../lib/planner/store.ts";
   import { loadWeekSessions, nowVerdict, weekMinutes } from "../components/site/now.ts";
   import semestersData from "../../data/semesters.json";
@@ -208,11 +256,23 @@ const seasonWord = isAutumn ? "høsten" : "våren";
   // very first visit.
   onPage((signal) => {
     const store = createPlanStore(defaultSemesterId);
+    // Keeps `--plan-courses` true for the rest of the visit — a soft
+    // navigation does not reset CLS, so the next page's reservations are still
+    // this page-load's problem.
+    watchPlanProbe(store, signal);
 
     // --- Nå (REWORK-2026-07-29b D3) ---------------------------------------
 
     const nowEl = document.getElementById("home-now") as HTMLElement | null;
     if (!nowEl) return;
+    const holdEl = document.getElementById("home-now-hold");
+    /**
+     * Hands back the space the probe reserved for the card. Called on every
+     * terminal state, the card's and the absence of one alike: the reservation
+     * is a bridge from first paint to the first honest answer, and the moment
+     * there is one it has no further business holding anything.
+     */
+    const releaseHold = (): void => holdEl?.classList.add("is-released");
     const el = (id: string) => document.getElementById(id) as HTMLElement | null;
     const semester =
       semestersData.semesters.find((s) => s.id === store.loadPlan().semesterId) ??
@@ -242,9 +302,19 @@ const seasonWord = isAutumn ? "høsten" : "våren";
       if (plan.courses.filter((c) => !c.dropped).length === 0) {
         sessions = null;
         if (nowEl) nowEl.hidden = true;
+        releaseHold();
         return;
       }
-      const loaded = await loadWeekSessions(plan, semester.id, semester.teachingWeeks ?? []);
+      let loaded: Awaited<ReturnType<typeof loadWeekSessions>>;
+      try {
+        loaded = await loadWeekSessions(plan, semester.id, semester.teachingWeeks ?? []);
+      } catch {
+        // A dead fetch is a terminal state too. Without this the reserved space
+        // above would be held open for the life of the page by the one branch
+        // that never reaches `paintNow`.
+        releaseHold();
+        return;
+      }
       if (mine !== token || signal.aborted || !nowEl) return;
       sessions = loaded;
       paintNow();
@@ -260,9 +330,11 @@ const seasonWord = isAutumn ? "høsten" : "våren";
       // nothing here rather than showing an empty card.
       if (verdict.kind === "empty") {
         nowEl.hidden = true;
+        releaseHold();
         return;
       }
       nowEl.hidden = false;
+      releaseHold();
 
       const pitch = el("home-pitch");
       const label = el("home-now-label");

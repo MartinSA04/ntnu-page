@@ -1,14 +1,50 @@
 ---
+import catalogData from "../../../data/catalog.json";
 import Layout from "../../layouts/Layout.astro";
 
 const description = "Søk i NTNUs emnekatalog etter emnekode, emnenavn eller studiested.";
+
+/**
+ * THE PARTS OF THIS PAGE THAT ARE ALREADY KNOWN AT BUILD TIME.
+ *
+ * The scale line, the city chips and the resting status sentence were all
+ * built in JS from `/data/search-index.json`, which meant the page painted
+ * without them and grew them ~1.4s later: the facet row went from 22px to
+ * 66px, the scale line added a whole line to the masthead and pushed the
+ * search field 34px down with it, and everything below moved. 0.019 CLS on a
+ * cold mobile load, 0.148 with a plan, 0.426 on a `?q=` link — on a phone.
+ *
+ * None of it needed to wait. `search-index.json` is generated from this same
+ * catalog by the same crawl, so the count, the year and the set of cities are
+ * facts this file can simply print; the index is still fetched for the search
+ * itself. `renderFacets` re-renders the chips over these on mount, which is
+ * free precisely because they are identical — if these two ever disagree the
+ * chips will visibly re-flow, and that is the signal that the crawler has
+ * started deriving the index from something else.
+ */
+const catalogYear = catalogData.year;
+const catalogSize = catalogData.courses.length.toLocaleString("nb-NO");
+
+// The same split `cities()` in the client script does, over the same strings:
+// the catalog's `location` is a comma-joined combination ("Gjøvik, Trondheim"),
+// and a chip is one city.
+const cityFacets = [
+  ...new Set(
+    catalogData.courses.flatMap((course) =>
+      (course.location ?? "")
+        .split(",")
+        .map((city) => city.trim())
+        .filter((city) => city !== ""),
+    ),
+  ),
+].sort((a, b) => a.localeCompare(b, "nb"));
 ---
 
 <Layout title="Emner · Semesterplan" description={description} wide>
   <p class="np-kicker emner-kicker">Emner</p>
   <div class="emner-masthead">
     <h1 class="emner-title">Emnekatalog</h1>
-    <p class="np-note emner-scale" id="emner-scale"></p>
+    <p class="np-note emner-scale" id="emner-scale">{catalogSize} emner · katalog {catalogYear}</p>
   </div>
 
   <div class="np-field emner-search">
@@ -21,7 +57,13 @@ const description = "Søk i NTNUs emnekatalog etter emnekode, emnenavn eller stu
     />
   </div>
 
-  <div class="emner-facets">
+  {/* `data-reserve`: a load that arrives with `?q=` will almost always grow a
+      subject row here, and it grows it ABOVE the city chips — which, now that
+      those are printed by the server, is a row of real content being shoved
+      down rather than empty space being filled. Held for the query case only,
+      and handed back by `renderSubjectFacets` the instant it knows how many
+      chips there really are. */}
+  <div class="emner-facets" id="emner-facet-row" data-reserve>
     <div class="emner-facet" id="emner-facet-subject" hidden>
       <span class="emner-facet-label">Fag</span>
       <div class="emner-chips" id="emner-subjects" role="group" aria-label="Filtrer på fagkode">
@@ -30,11 +72,31 @@ const description = "Søk i NTNUs emnekatalog etter emnekode, emnenavn eller stu
     <div class="emner-facet">
       <span class="emner-facet-label">Sted</span>
       <div class="emner-chips" id="emner-facets" role="group" aria-label="Filtrer på studiested">
+        {
+          /* Inert until `renderFacets` rebinds them a moment later — but drawn
+             from the first frame, which is the whole point: four chips
+             appearing at mount moved every row of the register 44px down. */
+          cityFacets.map((city) => (
+            <button type="button" class="np-toggle np-toggle--text" aria-pressed="false">
+              {city}
+            </button>
+          ))
+        }
       </div>
     </div>
   </div>
 
-  <p class="emner-status np-hint" id="emner-status" aria-live="polite">Henter emner …</p>
+  {/* Both halves of the resting state, printed, with the probe choosing which
+      one is true for this load (see the scoped rules below). It used to be a
+      bare "Henter emner …" that every load replaced with a two-line sentence.
+      With JS off, a `?q=` link still reads "Henter emner …" — unchanged — and
+      every other load now reads something true instead. */}
+  <p class="emner-status np-hint" id="emner-status" aria-live="polite"><span
+      class="emner-status-resting"
+      >Skriv for å søke i {catalogSize} emner.<span class="emner-status-invite">
+        Det du legger til, havner i planleggeren.</span
+      ></span
+    ><span class="emner-status-loading">Henter emner …</span></p>
 
   <!-- D6/§3: a result list is a data surface, so it takes the full --maxw
        column rather than the prose measure. It is a real <table> because it is
@@ -53,6 +115,22 @@ const description = "Søk i NTNUs emnekatalog etter emnekode, emnenavn eller stu
     </thead>
     <tbody id="emner-results"></tbody>
   </table>
+
+  {/* The register's own place. Not for the register's sake — a table arriving
+      is new content, and new content does not shift anything by itself — but
+      for the FOOTER's: at first paint this page is short enough that the footer
+      sits inside the viewport, and every row the search adds pushes it down
+      past the fold. That one element moving was the whole of what was left of
+      `/emner/`'s shift (0.14 on a `?q=` link, 0.06 on a resting page with a
+      plan), and it goes away if the page is as tall as it is about to be before
+      the rows land.
+
+      Two sizes, because there are two things knowable before the fetch: a plan
+      gives an EXACT row count (the resting register IS the plan), and a `?q=`
+      link gives none at all — 12rem there is a floor, enough to carry the
+      footer off the fold, not a guess at the result set. Released by `render()`,
+      the first moment either is a fact. */}
+  <div class="emner-results-hold" id="emner-results-hold" aria-hidden="true" data-reserve></div>
 </Layout>
 
 <style>
@@ -93,6 +171,22 @@ const description = "Søk i NTNUs emnekatalog etter emnekode, emnenavn eller stu
     gap: var(--space-2) var(--space-4);
     margin-bottom: var(--space-5);
   }
+
+  /* The subject row's place, for a `?q=` load — and it has to be reserved
+     ABOVE the city chips, because that is where the row arrives. `min-height`
+     was tried first and is the wrong instrument: it holds the block's total
+     height, so the container stopped growing but the city row and its label
+     still slid 44px down inside it as the subject row was inserted over them.
+     Padding puts the empty space where the content will be, so the chips are
+     printed at their final y from the first frame and simply stay there.
+
+     One chip row, not two: eight chips wrap to two rows on a phone and one on a
+     laptop, and a query narrow enough to yield fewer than the two it takes to
+     be a filter at all collapses this instead. Under-reserving means the common
+     case nudges down by the second row rather than snapping up by the block. */
+  :global(html[data-query]) .emner-facets[data-reserve] {
+    padding-top: 2.75rem;
+  }
   .emner-facet {
     display: contents;
   }
@@ -121,8 +215,48 @@ const description = "Søk i NTNUs emnekatalog etter emnekode, emnenavn eller stu
   .emner-retry {
     margin-left: var(--space-3);
   }
+
+  /* See the note on `#emner-results-hold` in the template. One caption plus one
+     row per planned course, at a little under the row's real height. */
+  .emner-results-hold[data-reserve] {
+    min-height: calc(var(--plan-any) * 2rem + var(--plan-courses) * 2.5rem);
+  }
+
+  :global(html[data-query]) .emner-results-hold[data-reserve] {
+    min-height: 60vh;
+  }
+
+  @media (max-width: 46rem) {
+    /* A row is a four-line block here, not a table row. */
+    .emner-results-hold[data-reserve] {
+      min-height: calc(var(--plan-any) * 2rem + var(--plan-courses) * 5.5rem);
+    }
+  }
   .emner-status {
     margin-bottom: var(--space-4);
+  }
+
+  /* Which resting line this load is actually resting on. The invitation is
+     dropped when a plan is already on screen — the plan table below says where
+     an add goes better than a sentence can — and the whole resting line is
+     dropped for a `?q=` load, which is not resting at all. Both are decided by
+     Layout.astro's pre-paint probe, so the server prints all three fragments
+     and the first frame shows the right ones; `render()` then writes the same
+     string it would have written anyway, over identical geometry. */
+  .emner-status-loading {
+    display: none;
+  }
+
+  :global(html[data-query]) .emner-status-resting {
+    display: none;
+  }
+
+  :global(html[data-query]) .emner-status-loading {
+    display: inline;
+  }
+
+  :global(html[data-plan]) .emner-status-invite {
+    display: none;
   }
 
   /* --- The register ---------------------------------------------------
@@ -248,6 +382,11 @@ const description = "Søk i NTNUs emnekatalog etter emnekode, emnenavn eller stu
       grid-template-columns: 1fr;
       gap: var(--space-1) 0;
     }
+
+    /* One column here, so the label and its chips are two rows of their own. */
+    :global(html[data-query]) .emner-facets[data-reserve] {
+      padding-top: 3.75rem;
+    }
     .emner-table thead {
       display: none;
     }
@@ -292,6 +431,7 @@ const description = "Søk i NTNUs emnekatalog etter emnekode, emnenavn eller stu
   } from "../../components/site/catalogSearch";
   import { formatShortDate } from "../../components/planner/dom.ts";
   import { onPage } from "../../lib/pageLifecycle.ts";
+  import { watchPlanProbe } from "../../lib/planProbe.ts";
   import { activeCourses, createPlanStore } from "../../lib/planner/store.ts";
   import semestersData from "../../../data/semesters.json";
 
@@ -358,12 +498,17 @@ const description = "Søk i NTNUs emnekatalog etter emnekode, emnenavn eller stu
     const facetsEl = document.getElementById("emner-facets") as HTMLDivElement | null;
     const subjectsEl = document.getElementById("emner-subjects") as HTMLDivElement | null;
     const subjectFacetEl = document.getElementById("emner-facet-subject") as HTMLDivElement | null;
+    const facetRowEl = document.getElementById("emner-facet-row") as HTMLDivElement | null;
+    const resultsHoldEl = document.getElementById("emner-results-hold") as HTMLDivElement | null;
     const scaleEl = document.getElementById("emner-scale") as HTMLParagraphElement | null;
     const searchInput = document.getElementById("emner-search") as HTMLInputElement | null;
     if (!statusEl || !tableEl || !captionEl || !resultsEl || !facetsEl || !searchInput) return;
     if (!subjectsEl || !subjectFacetEl || !scaleEl) return;
 
     const store = createPlanStore(semestersData.current.id);
+    // An add from this page changes what the next page has to reserve, and a
+    // soft navigation carries this page-load's CLS with it.
+    watchPlanProbe(store, signal);
 
     let index: SearchIndex | null = null;
     let loading = false;
@@ -594,6 +739,11 @@ const description = "Søk i NTNUs emnekatalog etter emnekode, emnenavn eller stu
 
     function renderSubjectFacets(ranked: CatalogRow[]): void {
       if (!subjectsEl || !subjectFacetEl) return;
+      // Whatever this pass decides, the row is now settled — hand back the
+      // space a `?q=` load was holding for it, including (and especially) when
+      // the answer is "no chips": a reservation left standing over an absent
+      // row is a permanent hole rather than a bridge.
+      delete facetRowEl?.dataset.reserve;
       const facets = prefixFacets(ranked);
       // One chip filters nothing — it is the whole result set wearing a
       // button. Two is the smallest number that can narrow anything.
@@ -631,6 +781,10 @@ const description = "Søk i NTNUs emnekatalog etter emnekode, emnenavn eller stu
     function render(): void {
       if (!statusEl || !resultsEl || !searchInput || !tableEl) return;
       if (!index) return;
+      // The register is about to be whatever it is: the space held for it since
+      // first paint has done its job and stops being held, in the same frame
+      // the rows land.
+      delete resultsHoldEl?.dataset.reserve;
       const raw = searchInput.value.trim();
       const scoped = scopedCourses();
 
@@ -771,22 +925,33 @@ const description = "Søk i NTNUs emnekatalog etter emnekode, emnenavn eller stu
      * "prøv igjen" action, plus a retry on the next keystroke — the previous
      * version left `index` undefined for the rest of the session.
      */
-    async function loadIndex(): Promise<void> {
+    async function loadIndex(announce = false): Promise<void> {
       if (index || loading || !statusEl) return;
       loading = true;
-      setStatus("Henter emner …", "hint");
+      // Only the retry announces. On the first load the server has already
+      // printed the right resting line for this URL (see `.emner-status-*`),
+      // and writing "Henter emner …" over it would collapse a two-line
+      // sentence to one and then grow it back when the fetch lands — two
+      // layout shifts to say something the page was already saying.
+      if (announce) setStatus("Henter emner …", "hint");
       try {
         const res = await fetch("/data/search-index.json");
         if (!res.ok) throw new Error(`${res.status}`);
         index = (await res.json()) as SearchIndex;
       } catch {
+        // Both reservations are bridges to the first honest answer, and "the
+        // catalog did not load" is one. Neither `render` nor
+        // `renderSubjectFacets` runs on this path, so they are released here or
+        // never.
+        delete resultsHoldEl?.dataset.reserve;
+        delete facetRowEl?.dataset.reserve;
         setStatus("Klarte ikke å hente emnene.", "hint");
         const retry = document.createElement("button");
         retry.type = "button";
         retry.className = "np-btn emner-retry";
         retry.textContent = "prøv igjen";
         retry.addEventListener("click", () => {
-          loadIndex();
+          loadIndex(true);
         });
         statusEl.append(retry);
         return;
@@ -804,7 +969,9 @@ const description = "Søk i NTNUs emnekatalog etter emnekode, emnenavn eller stu
       "input",
       () => {
         if (!index) {
-          loadIndex();
+          // Typing is the one moment "Henter emner …" is worth a shift: the
+          // student has asked for something the page cannot answer yet.
+          loadIndex(true);
           return;
         }
         render();

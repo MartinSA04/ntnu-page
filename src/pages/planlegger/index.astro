@@ -53,6 +53,10 @@ const programOptionsJson = JSON.stringify(programOptions).replaceAll("<", "\\u00
           two go back to their own grid areas — the verdict at the far end of
           the title's line, the hint under the pair. */}
       <div class="planner-meta">
+        {/* Always filled by `renderBanner` — the programme's long name, or the
+            semester the empty week is for — so the one line it will occupy is
+            held from first paint rather than appearing at mount and pushing
+            the whole page down 21px. */}
         <p class="np-hint planner-context-line" id="planner-context-line"></p>
         <p class="planner-status" id="planner-status">
           <span class="planner-verdict" id="planner-grid-status" aria-live="polite"></span>
@@ -161,7 +165,10 @@ const programOptionsJson = JSON.stringify(programOptions).replaceAll("<", "\\u00
           </button>
         </div>
       </div>
-      <div class="planner-grid-frame" id="planner-grid-frame"></div>
+      {/* `data-reserve`: the week's height, held from first paint until a real
+          week is drawn into it — a LEASE, like the exam list's and the course
+          page's, not a permanent floor. See planner-week.css. */}
+      <div class="planner-grid-frame" id="planner-grid-frame" data-reserve></div>
       <div class="planner-grid-notes" id="planner-grid-notes"></div>
     </section>
 
@@ -171,7 +178,7 @@ const programOptionsJson = JSON.stringify(programOptions).replaceAll("<", "\\u00
           <h2 class="planner-section-name" id="planner-exam-heading">Eksamener</h2>
           <p class="planner-section-sub" id="planner-exam-status" aria-live="polite"></p>
         </div>
-        <div class="planner-exam-list" id="planner-exam-list-host"></div>
+        <div class="planner-exam-list" id="planner-exam-list-host" data-reserve></div>
       </section>
 
       <section class="planner-courses" id="planner-region-courses" aria-labelledby="planner-courses-heading">
@@ -181,13 +188,19 @@ const programOptionsJson = JSON.stringify(programOptions).replaceAll("<", "\\u00
 
         {/* The load, drawn: 30 sp as a track, each course a segment in its own
             hue. Same shape as the exam band over the exam list. */}
-        <div class="planner-load" id="planner-credit-strip" aria-hidden="true" hidden></div>
+        {/* Not `hidden`: an empty strip has to keep occupying its 15px, or the
+            course rows under it move down when the first segment is drawn.
+            CLAUDE.md's own rule — something that must stay laid out while it
+            shows nothing wants a state, not the attribute — and the state here
+            is simply "no children". The reservation is the probe's
+            (tokens.css), so a plan-less page still spends nothing on it. */}
+        <div class="planner-load" id="planner-credit-strip" aria-hidden="true"></div>
         <p class="planner-load-foot">
           <span class="np-data planner-credit-line" id="planner-credit-line">0 av 30 sp</span>
         </p>
         <p class="np-hint planner-credit-note" id="planner-credit-note" hidden></p>
 
-        <div class="planner-course-rows" id="planner-course-rows"></div>
+        <div class="planner-course-rows" id="planner-course-rows" data-reserve></div>
 
         <p class="planner-gap-line" id="planner-gap-line" hidden>
           <span class="np-note" id="planner-gap-text"></span>
@@ -323,27 +336,43 @@ const programOptionsJson = JSON.stringify(programOptions).replaceAll("<", "\\u00
      Slightly under --text-xl because Spline Sans Mono sets wider and taller
      than Schibsted Grotesk at the same nominal size: 1.75rem mono is the
      optical match for 2rem grotesk, which is what every other page title on
-     the site is. `is-empty` swaps back to the grotesk for the one state that
-     has no plan to name (see `renderBanner`). */
+     the site is.
+
+     WHICH OF THE TWO IS DECIDED BY THE PROBE, NOT BY A CLASS. The state with
+     no plan to name falls back to the product's own name in the grotesk, and
+     that used to be an `.is-empty` class `renderBanner` added at mount — one
+     frame after the server had already painted the title in the mono. The
+     title changed face and size (27px → 39px at 390px) with the whole page
+     hanging off its baseline, on every load by a visitor without a stored
+     programme. `html[data-plan="program"]` is the same fact known before the
+     first frame (Layout.astro), so the server paints the right one; the
+     grotesk is the DEFAULT here because "no plan" is the only state a static
+     page can honestly assume. `renderBanner` keeps the attribute true for the
+     rest of the visit via `syncPlanProbe`. */
   .planner-title {
+    font-family: var(--font-sans);
+    font-size: var(--text-xl);
+    letter-spacing: -0.015em;
+    line-height: var(--leading-tight);
+  }
+
+  :global(html[data-plan="program"]) .planner-title {
     font-family: var(--font-mono);
     font-size: clamp(1.4rem, 4.4vw, 1.75rem);
     letter-spacing: -0.02em;
-    line-height: var(--leading-tight);
   }
 
   :global(.planner-title-part) {
     white-space: nowrap;
   }
 
-  .planner-title.is-empty {
-    font-family: var(--font-sans);
-    font-size: var(--text-xl);
-    letter-spacing: -0.015em;
-  }
-
   .planner-context-line {
     max-width: none;
+    /* One line, held. `renderBanner` always writes this — a programme's long
+       name, or the semester the empty week is for — so the line is never
+       absent once the page is alive, and reserving it costs nothing that the
+       page does not spend a frame later anyway. */
+    min-height: 1lh;
   }
 
   /* The title and the control that changes it, as one group — so the verdict
@@ -369,6 +398,15 @@ const programOptionsJson = JSON.stringify(programOptions).replaceAll("<", "\\u00
      it answers to is unchanged — only the ink is. A square --control-h box,
      which is 44 px on every touch device (tokens.css, `pointer: coarse`). */
   @media (max-width: 46rem) {
+    /* The row the verdict shares with the hint, held at the taller of the two.
+       The verdict is --text-md against the hint's --text-sm, and it appears,
+       says "henter timeplan …", then vanishes again under the `:has(.is-clean)`
+       rule below — so without this the whole page moved down 4px when it
+       arrived and back up 4px when it turned out to be good news. */
+    .planner-meta {
+      min-height: 1.6rem;
+    }
+
     .planner-edit-plan {
       justify-content: center;
       width: var(--control-h);
@@ -759,6 +797,46 @@ const programOptionsJson = JSON.stringify(programOptions).replaceAll("<", "\\u00
     margin-bottom: var(--space-6);
   }
 
+  /* A LEASE, not a layout — the same instrument `/emne/[code]/` uses, for the
+     same reason and with the same honesty clause: it holds the space the dated
+     list is about to need while the bundles are in flight, and `renderGridAndExams`
+     hands it back the moment the list is showing whatever it will finally show,
+     including "Ingen eksamensdatoer" and a failed fetch. Nothing is left
+     holding a hole open under a short answer.
+
+     Sized per PLANNED COURSE rather than per exam, because the number of exams
+     is exactly what we are waiting to find out. Measured 65px per course on the
+     seeded five-course plan (rows plus the connectors hung between them);
+     3.5rem is deliberately under it — a list that runs longer than its
+     reservation nudges the page down, which is the direction that does not
+     snatch content out from under a thumb.
+
+     On a phone this is the one that matters: `.planner-below` is a single
+     column there, so an exam list arriving pushes the whole Emner section down
+     with it (0.069 of the 0.61 measured). On a wide screen the two are side by
+     side and it pushes nothing. */
+  .planner-exam-list[data-reserve] {
+    min-height: calc(var(--plan-courses) * 3.5rem);
+  }
+
+  /* A narrow column wraps the row — the vurderingsform drops under the code —
+     so the same five exams measure 400px here against 325px wide. Measured,
+     not scaled: this is the width where `.planner-below` is one column and the
+     list is the thing pushing Emner down, so it is the one that has to be right. */
+  @media (max-width: 46rem) {
+    .planner-exam-list[data-reserve] {
+      min-height: calc(var(--plan-courses) * 4.85rem);
+    }
+  }
+
+  /* Rendered synchronously from the store at mount, so this bridges paint to
+     mount and nothing further; `renderCourseRows` drops it on its first pass.
+     One row per stored course — dropped ones included, they still draw a row —
+     at a little under the 52px they measure. */
+  .planner-course-rows[data-reserve] {
+    min-height: calc(var(--plan-courses) * 3rem);
+  }
+
   /* --- The month band (REWORK-2026-07-29c) ------------------------------- */
 
   /* One row per month, one cell per day. It answers "how clustered is this"
@@ -954,9 +1032,18 @@ const programOptionsJson = JSON.stringify(programOptions).replaceAll("<", "\\u00
 
   /* Same shape as the exam band over the exam list: a drawing that answers the
      section's question, then the rows that answer it precisely. */
-  .planner-load:not([hidden]) {
+  .planner-load {
     display: block;
     margin-bottom: var(--space-2);
+  }
+
+  /* The track's own height, held while the strip is still empty — otherwise
+     the first segment being drawn shoves every course row down 23px. Keyed on
+     the probe so a page with no plan reserves nothing: there, the strip is
+     genuinely not coming. */
+  .planner-load:empty {
+    min-height: calc(var(--plan-any) * 15px);
+    margin-bottom: calc(var(--plan-any) * var(--space-2));
   }
 
   :global(.planner-load-track) {

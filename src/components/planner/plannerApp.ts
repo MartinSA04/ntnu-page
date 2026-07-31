@@ -57,6 +57,7 @@ import {
   type PlanStore,
   parsePlanHash,
 } from "../../lib/planner/store.js";
+import { syncPlanProbe } from "../../lib/planProbe.js";
 import { type AddCourseDeps, type AddCourseHandle, mountAddCourse } from "./addCourse.js";
 import { mountBlockPopover, type SessionChoice } from "./blockPopover.js";
 import { renderBoard } from "./board.js";
@@ -168,6 +169,59 @@ function saveWeekView(view: WeekView): void {
     localStorage.setItem(WEEK_VIEW_KEY, view);
   } catch {
     // A student who cannot persist the choice still gets to make it.
+  }
+  // The reservation for the NEXT load reads this off `<html>`, and a soft
+  // navigation away and back would otherwise arrive holding the old view's
+  // height (planner-week.css, `#planner-grid-frame`).
+  const root = document.documentElement;
+  root.setAttribute("data-view", view);
+  // `--planner-box` is the height of the view we are LEAVING, and the frame is
+  // about to draw a different one. Belt to `settleWeekBox`'s braces: that
+  // releases the lease on the first drawn week, but a student who switches view
+  // while the bundles are still in flight would otherwise reserve Liste's
+  // height around Rader's week until they landed.
+  root.style.removeProperty("--planner-box");
+}
+
+const WEEK_BOX_KEY = "np:weekBox";
+
+/**
+ * How tall this browser's week actually came out, per view, with the width it
+ * was measured at: `{ "tavle": [390, 891] }`.
+ *
+ * The three views have three unrelated geometries — Rader is five day rows,
+ * Kolonner is the drawn hours at 4.5rem each, Liste is as long as the week has
+ * sessions — so the frame cannot reserve one height for all of them, and
+ * reserving Rader's for Liste is what left 0.14 CLS on a first load in Liste.
+ * Kolonner can be computed; Liste cannot, because its height is a session count
+ * and nothing before the fetch knows that.
+ *
+ * So the page measures itself and remembers, and Layout.astro's pre-paint probe
+ * hands the number back as `--planner-box` before the next first frame. That
+ * this works at all rests on one fact: a load in Kolonner or Liste is by
+ * construction a return visit, because the only way into either is the tab that
+ * put you there.
+ *
+ * The width rides along because it is what makes the height meaningful — a list
+ * measured in a 390px column wraps differently at 1440 — and the probe throws
+ * the entry away rather than trusting it outside a small tolerance.
+ */
+function saveWeekBox(view: WeekView, width: number, height: number): void {
+  if (!(height > 0)) return;
+  try {
+    const raw: unknown = JSON.parse(localStorage.getItem(WEEK_BOX_KEY) ?? "{}");
+    const boxes: Record<string, [number, number]> =
+      raw !== null && typeof raw === "object" ? (raw as Record<string, [number, number]>) : {};
+    const previous = boxes[view];
+    const next: [number, number] = [Math.round(width), Math.round(height)];
+    // Nothing to write on the overwhelming majority of renders — the week is
+    // re-rendered on every plan edit, group pick and layer toggle.
+    if (previous && previous[0] === next[0] && previous[1] === next[1]) return;
+    boxes[view] = next;
+    localStorage.setItem(WEEK_BOX_KEY, JSON.stringify(boxes));
+  } catch {
+    // Same as the view above: a student who cannot persist it still gets the
+    // page, just without the reservation on the next load.
   }
 }
 
@@ -797,9 +851,17 @@ export async function mountPlannerApp(
     const program = plan.program;
     const semester = currentSemester();
 
+    // The title's FACE is CSS's, keyed on the plan probe (see the scoped block
+    // in /planlegger/'s template): the grotesk when there is no plan to name,
+    // the mono when there is. It used to be an `.is-empty` class added here,
+    // which is one frame too late — the server had already painted the title
+    // in the other face and the whole page hung off the difference. Writing
+    // the probe here keeps the attribute true for every later change, and this
+    // is the one function that runs on all of them.
+    syncPlanProbe(plan);
+
     const title = elements.title;
     title.replaceChildren();
-    title.classList.toggle("is-empty", !program);
     if (program) {
       // `MTFYMA Kull 24 H26` — the plan as a student writes it on a timetable,
       // in three unbreakable parts separated by a space and nothing else. The
@@ -921,8 +983,10 @@ export async function mountPlannerApp(
     const counted = orderedActiveStates().filter(
       (state) => !isOffSemester(state) && (creditsOf(state) ?? 0) > 0,
     );
+    // Emptied, never hidden: `[hidden]` would take the track's 15px out of the
+    // flow and every course row under it would move when the first segment is
+    // drawn. `.planner-load:empty` holds that height instead.
     elements.creditStrip.replaceChildren();
-    elements.creditStrip.hidden = counted.length === 0;
     if (counted.length === 0) return;
 
     const track = el("div", "planner-load-track");
@@ -1428,6 +1492,10 @@ export async function mountPlannerApp(
    * drop now happens inside a modal that closes onto its own invoker.
    */
   function renderCourseRows(): void {
+    // The rows come straight out of the store, so this pass is the end of the
+    // gap the reservation was bridging (paint → mount). Handing the lease back
+    // here means a one-course plan never sits at the top of five rows of air.
+    delete elements.courseRows.dataset.reserve;
     elements.courseRows.replaceChildren();
     if (plan.courses.length === 0) {
       elements.courseRows.append(el("p", "np-hint", "Ingen emner i planen ennå."));
@@ -2100,8 +2168,58 @@ export async function mountPlannerApp(
 
     renderVerdict(gridResult, anyLoading);
     renderExamVerdict(examResult, examLoading);
+    // The exam list's lease, handed back the moment the list stops waiting —
+    // whichever of the three branches above answered, including the two that
+    // answer with one sentence. Held any longer and a "Fikk ikke hentet
+    // eksamensdatoene." would sit at the top of five courses' worth of
+    // reserved air (the failure mode `/emne/[code]/`'s own lease documents).
+    if (!examLoading) delete elements.examList.dataset.reserve;
     syncGridScroll();
     if (gridResult?.state === "grid") scrollToToday();
+    if (!anyLoading) settleWeekBox();
+  }
+
+  /**
+   * Ends the frame's reservation, and files what the week actually measured for
+   * the next load to reserve from (`saveWeekBox`).
+   *
+   * The lease is the important half. Every number the frame reserves from is an
+   * estimate of a week that has not been drawn; once one HAS been drawn the
+   * estimate has no further claim on the page, and leaving it standing is how
+   * loading in Liste and then pressing Rader left 600px of white paper above the
+   * exam list for the rest of the visit.
+   *
+   * Three states are deliberately neither released nor remembered: a skeleton,
+   * an apology and an onboarding card are all shorter than the week they stand
+   * in for, so releasing on one would collapse the frame a moment before the
+   * real week fills it, and remembering one would under-reserve the next load
+   * into exactly the shift this exists to remove. A week mid-`is-settling` is
+   * not evidence either — its height is being transitioned, so measuring it
+   * files a frame of an animation.
+   */
+  function settleWeekBox(): void {
+    const inner = elements.gridFrame.firstElementChild as HTMLElement | null;
+    if (!inner) return;
+    if (
+      inner.classList.contains("is-skeleton") ||
+      inner.classList.contains("is-settling") ||
+      inner.classList.contains("planner-grid-empty") ||
+      inner.classList.contains("planner-week-card")
+    ) {
+      return;
+    }
+    // Synchronously, in the frame the week landed in: the content is at least
+    // as tall as the reservation in every case except the ones this releases
+    // ON PURPOSE (a Kolonner week of three drawn hours under an eight-hour
+    // reservation), and those should collapse now rather than a paint later.
+    delete elements.gridFrame.dataset.reserve;
+    // The measurement waits for layout, and only counts if this is still the
+    // element that was drawn: a plan edit landing in the same frame would
+    // otherwise have its height filed under the render that preceded it.
+    requestAnimationFrame(() => {
+      if (!inner.isConnected) return;
+      saveWeekBox(weekView, window.innerWidth, inner.getBoundingClientRect().height);
+    });
   }
 
   // --- Provenance line -----------------------------------------------------

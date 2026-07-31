@@ -15,6 +15,16 @@
 
 html {
   -webkit-text-size-adjust: 100%;
+  /* Every page on this site is short at first paint and long once its islands
+     land — the catalog grows a 200-row table, the planner grows a week. On a
+     classic-scrollbar desktop that transition takes the scrollbar from absent
+     to present, which narrows the viewport by ~15px and slides the whole
+     centred `.site-content` column sideways mid-load: a layout shift on every
+     page, from the one property that can pre-empt it. Costs nothing where
+     scrollbars are overlays (every phone, and macOS by default), which is
+     also why it does not reproduce in a headless run — measure it in a real
+     desktop Chrome before concluding it does nothing. */
+  scrollbar-gutter: stable;
 }
 
 body {

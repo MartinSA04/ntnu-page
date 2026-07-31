@@ -21,6 +21,14 @@
   regression the variable-font switch exists to prevent. Only the two
   `latin` faces are preloaded in `Layout.astro` (Norwegian æ/ø/å live in
   `latin`; `latin-ext` never loads for our own copy).
+  fonts.css also carries two **metric-matched fallback faces** (`… Fallback`,
+  `src: local(…)`, never a `url()`) sitting behind the real face in
+  `--font-sans`/`--font-mono`: they are Arial and Courier New wearing these
+  faces' own ascent/descent, so `font-display: swap` changes the shapes
+  without relaying the page. `ascent-override` etc. are computed from the
+  vendored bytes (`woff2Metrics`), `size-adjust` is a browser-measured width
+  ratio pinned in the script — `tests/fonts.test.ts` fails if they drift
+  apart. Removing them costs a reflow on every page at ~875ms on a slow link.
 - Two non-obvious fixes a reasonable person would undo — don't.
   (a) `primitives.css`'s `[hidden] { display: none !important }` (with its
   `biome-ignore`): the UA rule lives at UA origin, so **any** author
@@ -82,6 +90,54 @@
   the package is `sideEffects: false`, every such helper is pure, and
   `tests/bundle.test.mjs` fails if an upstream URL ever reaches a client
   chunk (i.e. if the HTTP layer stops being tree-shaken out).
+- **Layout-shift reservations (load-bearing, and invisible when they work):**
+  every page here paints a static shell and grows its islands a second later,
+  which is the shape that produces CLS by default — /planlegger/ scored 0.61
+  on a phone and a four-page visit accumulated 0.98, because a ClientRouter
+  swap does **not** reset the metric. Three mechanisms hold that down and all
+  three look like dead code to a reader who does not know why:
+  (a) the **plan probe** — `Layout.astro`'s pre-paint inline script (beside
+  the no-flash theme init, re-applied on the same `astro:after-swap` because
+  `swapRootAttributes()` wipes attributes *and* inline style) writes
+  `--plan-courses` and `data-plan` onto `<html>` from localStorage;
+  `src/lib/planProbe.ts` keeps them true for the rest of the visit. Every
+  reservation is `calc(var(--plan-courses) * …)`, so a failed read reserves
+  exactly nothing. `data-plan="program"` is also what picks the planner
+  title's *face* — that was an `.is-empty` class added at mount, one frame
+  after the server had painted the other face.
+  (b) `.planner-grid-frame`'s `min-height` (`planner-week.css`) — the week's
+  height, held from first paint. `renderSkeleton` already stops the
+  loading→data reflow; this is the paint→mount half, and it was 0.52 of the
+  0.61 on its own. It duplicates `SKELETON_DAYS` and the ruler's 22px from
+  `grid.ts`; the row metrics live on the *frame* so it can compute a week that
+  does not exist yet. **The three views have three unrelated geometries** and
+  that base rule is RADER's alone (which is all `/emne/[code]/` can draw) —
+  Kolonner is the drawn hours × `--planner-hour-h`, Liste is a session count.
+  Reserving Rader's for Liste is worse than reserving nothing (0.14 CLS), so
+  `#planner-grid-frame` overrides per `html[data-view]`, by **id**, so a
+  remembered Liste height can never reach the course page's frame. Liste has
+  no formula, so `saveWeekBox`/`--planner-box` remembers the height per view
+  *and per width* and the probe hands it back before paint — sound because a
+  load in Kolonner or Liste is by construction a return visit, and discarded
+  outside a 32px width tolerance rather than trusting another layout's number.
+  All of it is a **lease**: `--planner-box` is one variable holding the height
+  of the view the page LOADED in, so a reservation that never ends kept Liste's
+  829px around Rader's 247px week the moment the student pressed the other tab
+  (600px of white paper above the exam list, for the rest of the visit).
+  `settleWeekBox` releases on the first drawn week and `setWeekView` on the way
+  out of a view. A gate for this needs a **one-course** plan — a full plan draws
+  a week taller than every reservation, so slack is zero whether or not the
+  lease is ever released, and the first version of that test passed with both
+  halves of the fix disabled.
+  (c) **leases** — `data-reserve` attributes that JS deletes on reaching a
+  terminal state, the idiom `/emne/[code].astro` already documents. Deleting
+  one is not optional: a reservation left standing over a short answer is a
+  permanent hole, which is why the failure and empty branches release them too.
+  Reservations are deliberately a few px UNDER their measured settle, so the
+  residual nudges down rather than snatching content upward. `e2e/cls.pw.ts`
+  gates all of it with per-surface budgets — verified to fail when (b) is
+  removed. Re-measure before changing any number; do not "tidy" a
+  `min-height` you cannot see doing anything.
 - **ClientRouter rule (load-bearing):** hoisted page/component scripts run
   ONCE per module — they do NOT re-execute after a view-transition swap. Every
   page's setup must go through `onPage(setup)` (`src/lib/pageLifecycle.ts`),

@@ -51,10 +51,165 @@
      below has to know how wide the column that stays put is, and a parent
      cannot read a child's custom property. `.planner-grid` inherits it. */
   --planner-spine: clamp(5.5rem, 11vw, 9.5rem);
-  padding: var(--cell);
+  /* RADER's row metrics live here for that same reason a third time: the
+     reservation below has to compute the height of a week that does not exist
+     yet, and the week is a child. `.planner-grid` inherits all four. */
+  --planner-lane-h: 34px;
+  --planner-bar-h: 28px;
+  --planner-band-h: 18px;
+  /* The space above the first bar and below the last thing in the row. It is
+     a token because the row's height and every child's offset are computed
+     from it, and they have to agree or the row is not centred (see the field's
+     min-height below). */
+  --planner-row-pad: 8px;
+  /* KOLONNER's two, here rather than on `.planner-cols`, for the third time
+     for the same reason: the frame reserves that view's height before that
+     view exists. */
+  --planner-hour-h: 4.5rem;
+  --planner-cols-head-font: clamp(0.85rem, 1.6vw, 1.15rem);
+  --planner-frame-pad-block: var(--cell);
+  padding: var(--planner-frame-pad-block) var(--cell);
   margin-bottom: var(--space-2);
   overflow-x: auto;
   overflow-y: hidden;
+  /* THE WEEK'S PLACE, HELD FROM FIRST PAINT.
+     ---------------------------------------
+     `renderSkeleton` (grid.ts) exists so the week does not reflow when the
+     bundles land, and it does that job exactly: measured on the seeded MTDT
+     plan, the frame is 233px as a skeleton and 233px settled at 390px (295 and
+     295 at 1440). What it cannot do is hold the space between FIRST PAINT and
+     its own mount — the frame is empty in the HTML, so the page painted a
+     zero-height week and then grew one. That single step was 0.52 of
+     /planlegger/'s 0.61 CLS on a phone: the largest layout shift on the site,
+     and it moved the exam list and the course list with it.
+
+     So the frame reserves what the skeleton will resolve to, in the same
+     tokens the skeleton is built from: the ruler, then five weekdays of one
+     lane each, then its own block padding. `SKELETON_DAYS` (5) and the ruler's
+     22px are the two numbers duplicated from grid.ts — if either changes there,
+     this is the other end of the contract.
+
+     Deliberately a few pixels UNDER the measured settle (290 vs 295, 228 vs
+     233): the row's real height is `max(spine, field)` and the spine wins by a
+     hair on a one-lane row, and the same convention `/emne/[code]/`'s
+     reservations already state applies here — the residual should be a small
+     DOWNWARD nudge rather than the week snapping upward out from under a
+     thumb.
+
+     This is RADER's height, and RADER's only. It is the right one for every
+     frame that can only ever draw RADER — which outside /planlegger/ means
+     /emne/[code]/, and that is this rule's whole audience there. The planner's
+     own frame overrides it per view below, because the other two views are not
+     this shape at all. */
+  --planner-box-rader: calc(22px + 5 * (var(--planner-bar-h) + 2 * var(--planner-row-pad)));
+  min-height: calc(2 * var(--planner-frame-pad-block) + var(--planner-box-rader));
+}
+
+/* --- The other two views' heights (2026-07-31) ----------------------------
+ *
+ * The reservation above models the RADER skeleton, and RADER is the only shape
+ * it models. In KOLONNER and TAVLE the same frame draws something with entirely
+ * different geometry, so a planner opened in either held a week's worth of
+ * space for the wrong one: 0.14 CLS in Liste and 0.08 in Kolonner on a first
+ * load, against 0.03 in Rader. Measured, for the seeded five-course plan:
+ *
+ *     view       mobile   desktop
+ *     rader        233      295
+ *     kolonner     487      651
+ *     tavle        907      877
+ *
+ * Only the planner's own frame gets these — `#planner-grid-frame`, by id —
+ * because /emne/[code]/ builds a `.planner-grid-frame` of its own and always
+ * renders RADER into it. A remembered box for Liste must not reach it.
+ *
+ * WHERE THE NUMBER COMES FROM, in preference order:
+ *
+ * 1. `--planner-box`: the height this browser last measured for THIS view at
+ *    THIS width, filed by `saveWeekBox` and handed back before first paint by
+ *    Layout.astro's probe. Evidence beats a model, and it is nearly always
+ *    there for these two views — you cannot be in Kolonner or Liste without
+ *    having pressed the tab that put you there, so a load in either is by
+ *    construction a return visit.
+ * 2. The formulas below: the first load after a view switch, and any load at a
+ *    width the remembered box was not measured at (the probe discards it rather
+ *    than trusting a height from another layout).
+ *
+ * KOLONNER is exact arithmetic — the day header, then the drawn hours at the
+ * hour token. Only `--planner-hours` is unknowable before the data lands, and 8
+ * is both the fallback the view itself uses and what every plan of three or
+ * more courses measured; a smaller plan draws fewer hours and collapses the
+ * difference.
+ *
+ * TAVLE cannot be arithmetic: its height is a session count, and nothing before
+ * the fetch knows that. The fallback is the line fitted through five plans of
+ * 1–5 courses (±100px, worst at 3) — which is exactly why the remembered box
+ * exists and why it is preferred over it.
+ *
+ * ALL OF IT IS A LEASE (`data-reserve`), and that is not decoration. Every
+ * number above is an estimate of a week that has not been drawn yet, and the
+ * moment one HAS been drawn the estimate is worthless — worse than worthless,
+ * because it goes on holding space the real content does not need.
+ * `--planner-box` is ONE variable, carrying the height of the view the page
+ * LOADED in, so pressing Rader after loading in Liste left the frame holding
+ * Liste's 829px around Rader's 247px: six hundred pixels of white paper between
+ * the week and the exam list, for the rest of the visit. The same trap without
+ * a view switch — a one-course plan in Kolonner draws three hours where the
+ * formula reserves eight.
+ *
+ * So `renderGridAndExams` hands the lease back the moment a real week is on
+ * screen, and `setWeekView` hands it back on the way out of a view: a view
+ * switch is a keypress, and a keypress does not need its result reserved.
+ */
+#planner-grid-frame[data-reserve] {
+  min-height: calc(
+    2 *
+    var(--planner-frame-pad-block) +
+    var(--planner-box, var(--planner-box-rader))
+  );
+}
+
+/* Released: the frame is exactly what it holds, in whichever view. Stated
+   rather than merely absent, because the unqualified `.planner-grid-frame` rule
+   at the top of this file would otherwise keep RADER's 242px floor under a view
+   that drew less than that — a Kolonner week of two hours, or a one-day board.
+   Defence in depth rather than a live bug: the shortest Kolonner week the real
+   catalog produces is a three-hour one at 243px, which clears the floor by a
+   single pixel. `e2e/cls.pw.ts` does NOT cover this rule for that reason; it
+   covers the lease release in `settleWeekBox`, which is what actually failed. */
+#planner-grid-frame:not([data-reserve]) {
+  min-height: 0;
+}
+
+html[data-view="kolonner"] #planner-grid-frame[data-reserve] {
+  min-height: calc(
+    2 *
+    var(--planner-frame-pad-block) +
+    var(
+      --planner-box,
+      calc(var(--planner-cols-head-font) + var(--space-2) + 1px + 8 * var(--planner-hour-h))
+    )
+  );
+}
+
+html[data-view="tavle"] #planner-grid-frame[data-reserve] {
+  min-height: calc(
+    2 *
+    var(--planner-frame-pad-block) +
+    var(--planner-box, calc(30.5rem + var(--plan-courses) * 4rem))
+  );
+}
+
+/* An apology is not a week, but it stands where one would: with the frame now
+   holding the week's height from first paint, a message left at the top of it
+   would read as a caption on a large empty box. The four empty states and the
+   `renderWeekCard` cards centre in the space instead — which is what
+   `.planner-week-card`'s own note ("the one next step is where the plan would
+   be, not tucked under it") already asks for, in the axis it could not reach
+   while the frame collapsed to its content. */
+.planner-grid-frame:has(.planner-grid-empty),
+.planner-grid-frame:has(.planner-week-card) {
+  display: grid;
+  align-content: center;
 }
 
 /* How far into the frame the column that does NOT scroll reaches — the day
@@ -122,15 +277,9 @@
    percentage of it, so a time becomes a position in exactly one place and the
    ruler cannot drift off the bars at any width. */
 .planner-grid {
-  /* `--planner-spine` is inherited from the frame — see `.planner-grid-frame`. */
-  --planner-lane-h: 34px;
-  --planner-bar-h: 28px;
-  --planner-band-h: 18px;
-  /* The space above the first bar and below the last thing in the row. It is
-     a token because the row's height and every child's offset are computed
-     from it, and they have to agree or the row is not centred (see the field's
-     min-height below). */
-  --planner-row-pad: 8px;
+  /* `--planner-spine` and the four row metrics are inherited from the frame,
+     which needs them to reserve this week's height before this week exists —
+     see `.planner-grid-frame`. */
   position: relative;
   /* Eight hours across needs room to stay legible: below this the frame
      scrolls sideways rather than squeezing a lecture into 40 px. The old
@@ -153,10 +302,6 @@
 @media (max-width: 40rem) {
   .planner-grid {
     min-width: 32rem;
-    --planner-lane-h: 30px;
-    --planner-bar-h: 26px;
-    --planner-band-h: 17px;
-    --planner-row-pad: 6px;
   }
 
   /* 48 px of a 358 px screen went on the frame's own inline padding, inside a
@@ -171,10 +316,28 @@
      the abbreviation saves goes to the field inside the same 32rem, so the
      axis gets a wider hour rather than the week a shorter drag. The rail is
      the same trade in KOLONNER: "08" and 6 px of air, no more. */
+  /* The row metrics move with the frame's padding, because the reservation is
+     computed from both — see the `min-height` at the top of this file. */
   .planner-grid-frame {
-    padding: var(--space-2) 0;
+    --planner-frame-pad-block: var(--space-2);
+    padding: var(--planner-frame-pad-block) 0;
     --planner-spine: 3rem;
     --planner-rail: 1.9rem;
+    --planner-lane-h: 30px;
+    --planner-bar-h: 26px;
+    --planner-band-h: 17px;
+    --planner-row-pad: 6px;
+    --planner-hour-h: 3.5rem;
+  }
+
+  /* TAVLE's rows wrap harder in a narrow column, so its line has a different
+     slope here — fitted through the same five plans at 390px. */
+  html[data-view="tavle"] #planner-grid-frame[data-reserve] {
+    min-height: calc(
+      2 *
+      var(--planner-frame-pad-block) +
+      var(--planner-box, calc(26.5rem + var(--plan-courses) * 5.5rem))
+    );
   }
 
   .planner-grid-spine-long {
@@ -895,9 +1058,11 @@
      which is the regression the transposition was done to escape. */
   --planner-lane-min: 4.25rem;
   --planner-lane-gap: 3px;
-  /* Height is duration here. 4.5rem/hour puts a 45-minute session at ~54 px —
-     the code and the room — and a dobbelttime at ~126 px. */
-  --planner-hour-h: 4.5rem;
+  /* `--planner-hour-h` (height is duration here — 4.5rem/hour puts a 45-minute
+     session at ~54px and a dobbelttime at ~126) and `--planner-cols-head-font`
+     are declared on the FRAME, not here, for the same reason the rail and the
+     spine are: the frame reserves this view's height before this view exists,
+     and a parent cannot read a child's custom property. */
   /* Wide enough for one line of --text-xs standing on its side, plus the air
      that keeps it off both edges. The strip carries its own name now. */
   --planner-band-w: 1.6rem;
@@ -1025,7 +1190,7 @@
    word, so it is the grotesk; Data-Is-Mono governs times and codes. */
 .planner-cols-day-header {
   padding: 0 6px var(--space-2);
-  font-size: clamp(0.85rem, 1.6vw, 1.15rem);
+  font-size: var(--planner-cols-head-font);
   font-weight: var(--weight-bold);
   line-height: 1;
   letter-spacing: -0.03em;
@@ -1322,9 +1487,8 @@
      `.planner-cols` would win on that element and leave the frame's own
      `scroll-padding` reading the desktop figure, so a snapped column would
      come to rest under the rail. */
-  .planner-cols {
-    --planner-hour-h: 3.5rem;
-  }
+  /* `--planner-hour-h` moves with the other frame-level tokens at the top of
+     this file's phone block — the reservation is computed from it. */
 }
 
 /* --- TAVLA — the list view (REWORK-2026-07-29b D2) ------------------------ */

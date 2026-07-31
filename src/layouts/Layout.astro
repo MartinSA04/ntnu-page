@@ -32,6 +32,19 @@ interface Props {
 const { title, description, wide = false } = Astro.props;
 
 const THEME_KEY = "np:theme";
+const PLANS_KEY = "np:plans";
+const PROFILE_KEY = "np:profile";
+const LAST_SEMESTER_KEY = "np:lastSemester";
+// The planner's remembered view and the height its frame last measured in it —
+// see `WEEK_VIEW_KEY`/`WEEK_BOX_KEY` in components/planner/plannerApp.ts.
+const WEEK_VIEW_KEY = "np:weekView";
+const WEEK_BOX_KEY = "np:weekBox";
+/** Widths further apart than this discard the remembered box (see below). */
+const WEEK_BOX_TOLERANCE = 32;
+// The probe's fallback when nothing has been stored yet — the same default
+// `createPlanStore` is constructed with on every page, so the two read the
+// same semester's course list.
+const DEFAULT_SEMESTER_ID = semestersData.current?.id ?? "";
 
 // Two destinations now (rework Task 11): the plan and the catalog search
 // behind it. Kept as a list of sections (not a bare href prefix) so a future
@@ -85,9 +98,29 @@ const crawlDate = formatCrawlDate(semestersData.crawledAt);
     <title>{title}</title>
     <meta name="description" content={description} />
     <link rel="icon" href={faviconDataUri(VERDICT)} />
-    <script is:inline define:vars={{ THEME_KEY }}>
+    <script
+      is:inline
+      define:vars={{
+        THEME_KEY,
+        PLANS_KEY,
+        PROFILE_KEY,
+        LAST_SEMESTER_KEY,
+        DEFAULT_SEMESTER_ID,
+        WEEK_VIEW_KEY,
+        WEEK_BOX_KEY,
+        WEEK_BOX_TOLERANCE,
+      }}
+    >
       // No-flash theme init — reads the stored choice, falls back to the OS
       // preference, and sets data-theme on <html> before first paint.
+      //
+      // It carries a second passenger now: the PLAN PROBE (tokens.css,
+      // `--plan-courses`). Same mechanism, same reason — something only
+      // localStorage knows, needed before the first frame is painted, and
+      // wiped by every view-transition swap. The plan's *contents* are still
+      // read by the store in module code; all this reports is how much space
+      // the page is about to need, so the week and the landing card can hold
+      // it from paint rather than from mount.
       (function () {
         function isDark() {
           try {
@@ -104,7 +137,85 @@ const crawlDate = formatCrawlDate(semestersData.crawledAt);
             document.documentElement.setAttribute("data-theme", "dark");
           else document.documentElement.removeAttribute("data-theme");
         }
+        // Deliberately forgiving: every failure path lands on "no plan", which
+        // reserves nothing and leaves the page exactly as it behaved before
+        // the probe existed. A wrong reservation is worse than none.
+        function applyPlan() {
+          var root = document.documentElement;
+          var count = 0;
+          var program = false;
+          try {
+            var last = localStorage.getItem(LAST_SEMESTER_KEY) || DEFAULT_SEMESTER_ID;
+            var plans = JSON.parse(localStorage.getItem(PLANS_KEY) || "{}");
+            var courses = plans && typeof plans === "object" ? plans[last] : null;
+            // Dropped courses are counted: they still draw a row in the course
+            // list, which is what the reservation is measured in.
+            if (Array.isArray(courses)) count = courses.length;
+            var profile = JSON.parse(localStorage.getItem(PROFILE_KEY) || "{}");
+            program = !!(profile && profile.program && profile.program.code);
+          } catch (e) {
+            count = 0;
+            program = false;
+          }
+          // Two separate facts: the COUNT sizes the reservations, and whether
+          // a programme is stored decides which face the planner's title is
+          // set in — a plan named `MTFYMA Kull 24 H26` is the mono at 1.75rem
+          // and the product's own name is the grotesk at 2rem, and swapping
+          // between them at mount moved the whole page 12px.
+          root.style.setProperty("--plan-courses", String(count));
+          if (program) root.setAttribute("data-plan", "program");
+          else if (count > 0) root.setAttribute("data-plan", "courses");
+          else root.removeAttribute("data-plan");
+          // Whether this load carries a search query. A static build cannot
+          // see `?q=`, so the one surface that changes its resting state for it
+          // (/emner/, whose status line says "Henter emner …" instead of the
+          // invitation) needs the fact before first paint or it paints the
+          // wrong line and swaps it a second later.
+          if (/(^|&)q=[^&]/.test(location.search.slice(1)))
+            root.setAttribute("data-query", "");
+          else root.removeAttribute("data-query");
+          applyWeekBox(root);
+        }
+        // Which way the planner draws its week, and how tall that came out last
+        // time. The three views have three completely different geometries —
+        // Rader is five day rows, Kolonner is eight hours tall, Liste is as long
+        // as the week has sessions — so one reserved height cannot serve all
+        // three, and reserving Rader's for Liste left 0.14 of shift on a first
+        // load (planner-week.css has the measurements).
+        //
+        // The remembered height is preferred over any formula because it is
+        // evidence rather than a model, and it is nearly always available: you
+        // can only be in Kolonner or Liste because you pressed the tab that put
+        // you there, so a load in either is by construction a return visit. It
+        // is stored WITH the width it was measured at and discarded outside a
+        // small tolerance — a phone turned on its side, or a window dragged
+        // wider, changes how the list wraps and how many days fit, and a height
+        // measured at another width is not evidence about this one.
+        function applyWeekBox(root) {
+          var view = "uke";
+          var box = null;
+          try {
+            var stored = localStorage.getItem(WEEK_VIEW_KEY);
+            if (stored === "kolonner" || stored === "tavle") view = stored;
+            var saved = JSON.parse(localStorage.getItem(WEEK_BOX_KEY) || "{}");
+            var entry = saved && typeof saved === "object" ? saved[view] : null;
+            if (
+              Array.isArray(entry) &&
+              entry[1] > 0 &&
+              Math.abs(entry[0] - window.innerWidth) <= WEEK_BOX_TOLERANCE
+            ) {
+              box = entry[1];
+            }
+          } catch (e) {
+            view = "uke";
+            box = null;
+          }
+          root.setAttribute("data-view", view);
+          if (box === null) root.style.removeProperty("--planner-box");
+          else root.style.setProperty("--planner-box", box + "px");
+        }
         applyTheme();
+        applyPlan();
         // ClientRouter's swapRootAttributes() removes EVERY attribute from
         // <html> and restores only the ones the server rendered — and
         // data-theme is set here on the client, so it is wiped on every
@@ -112,7 +223,17 @@ const crawlDate = formatCrawlDate(semestersData.crawledAt);
         // re-execute on a swap (head elements are re-appended, not re-run),
         // so re-apply from a listener on `document`, which survives swaps.
         // astro:after-swap fires before the new page paints: no flash.
-        document.addEventListener("astro:after-swap", applyTheme);
+        //
+        // The plan probe rides the same listener for the same reason, and it
+        // matters more here than on a cold load: a soft navigation does NOT
+        // reset CLS, so the shift the next page would open with lands in the
+        // score of the page-load the visitor started on. Re-read rather than
+        // re-apply a cached value — the plan may have changed on the page we
+        // are leaving.
+        document.addEventListener("astro:after-swap", function () {
+          applyTheme();
+          applyPlan();
+        });
         matchMedia("(prefers-color-scheme: dark)").addEventListener(
           "change",
           function () {
