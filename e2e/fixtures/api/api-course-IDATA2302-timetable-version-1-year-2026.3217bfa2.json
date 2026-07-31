@@ -1,0 +1,100 @@
+{
+  "url": "http://127.0.0.1:8788/api/course/IDATA2302/timetable?year=2026&version=1",
+  "status": 200,
+  "contentType": "application/json; charset=utf-8",
+  "body": [
+    {
+      "courseCode": "IDATA2302",
+      "courseName": {
+        "nob": "Algoritmer og datastrukturer",
+        "nno": "Algoritmar og Datastrukturar",
+        "eng": "Algorithms and Data Structures"
+      },
+      "acronym": "FORM",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Formidling",
+      "title": "Forelesning / Øving",
+      "dayNumber": 3,
+      "startTime": "08:15",
+      "endTime": "12:00",
+      "weeks": [
+        "34-47"
+      ],
+      "rooms": [
+        {
+          "id": "194_702_C220",
+          "building": "Ankeret",
+          "room": "C220",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=702-C220"
+        }
+      ],
+      "studyProgramKeys": [
+        "BIAIS",
+        "BIDATA"
+      ]
+    },
+    {
+      "courseCode": "IDATA2302",
+      "courseName": {
+        "nob": "Algoritmer og datastrukturer",
+        "nno": "Algoritmar og Datastrukturar",
+        "eng": "Algorithms and Data Structures"
+      },
+      "acronym": "FORM",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Formidling",
+      "title": "Forelesning / Øving",
+      "dayNumber": 5,
+      "startTime": "08:15",
+      "endTime": "12:00",
+      "weeks": [
+        "34-47"
+      ],
+      "rooms": [
+        {
+          "id": "194_702_C215",
+          "building": "Ankeret",
+          "room": "C215",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=702-C215"
+        }
+      ],
+      "studyProgramKeys": [
+        "BIAIS",
+        "BIDATA"
+      ]
+    },
+    {
+      "courseCode": "IDATA2302",
+      "courseName": {
+        "nob": "Algoritmer og datastrukturer",
+        "nno": "Algoritmar og Datastrukturar",
+        "eng": "Algorithms and Data Structures"
+      },
+      "acronym": "FORM",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Formidling",
+      "title": "Forelesning / Øving",
+      "dayNumber": 5,
+      "startTime": "08:15",
+      "endTime": "12:00",
+      "weeks": [
+        "34-47"
+      ],
+      "rooms": [
+        {
+          "id": "194_702_F414",
+          "building": "Ankeret",
+          "room": "F414",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=702-F414"
+        }
+      ],
+      "studyProgramKeys": [
+        "BIAIS",
+        "BIDATA"
+      ]
+    }
+  ]
+}

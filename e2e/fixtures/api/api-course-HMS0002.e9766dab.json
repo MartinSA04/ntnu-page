@@ -1,0 +1,201 @@
+{
+  "url": "http://127.0.0.1:8788/api/course/HMS0002",
+  "status": 200,
+  "contentType": "application/json; charset=utf-8",
+  "body": {
+    "courseCode": "HMS0002",
+    "courseName": "HMS-kurs for 1. årsstudenter",
+    "credits": 0,
+    "level": "Grunnleggende emner, nivå I",
+    "teachingStart": "Høst 2026 / Vår 2027",
+    "teachingDuration": "1 semester",
+    "teachingLanguage": "Norsk",
+    "location": "Trondheim",
+    "assessmentScheme": "Deltakelse på HMS-kurs",
+    "gradeRule": "Bestått/ Ikke bestått",
+    "facts": [
+      {
+        "label": "Studiepoeng",
+        "value": "0"
+      },
+      {
+        "label": "Nivå",
+        "value": "Grunnleggende emner, nivå I"
+      },
+      {
+        "label": "Undervisningsstart",
+        "value": "Høst 2026 / Vår 2027"
+      },
+      {
+        "label": "Varighet",
+        "value": "1 semester"
+      },
+      {
+        "label": "Undervisningsspråk",
+        "value": "Norsk"
+      },
+      {
+        "label": "Sted",
+        "value": "Trondheim"
+      },
+      {
+        "label": "Vurderingsordning",
+        "value": "Deltakelse på HMS-kurs"
+      }
+    ],
+    "content": "Opplæring i førstehjelp og brannvern gjennom forelesning og praktiske øvinger i hjerte-lunge redning, bruk av hjertestarter, slukkearbeid og evakueringsrutiner ved brann.\nSpesifikk opplæring på den enkelte lab skjer ved de enkelte instituttene.",
+    "learningOutcome": "Studentene skal tilegne seg nødvendig kunnskap om HMS for å ivareta egen og andres sikkerhet på en god måte underveis i studiet sitt. Den teoretiske og praktiske grunnopplæringen i førstehjelp og brannvern skal gi studentene trening i å handle riktig hvis de kommer opp i en brann- eller ulykkessituasjon.",
+    "learningMethods": "Kurset har en varighet på 3,5 timer og foregår fra kl. 16.15 - 19.45. Det er lagt inn 10 minutt pause mellom førstehjelp og brannvern.\nFørstehjelp: forelesning og praktisk gjennomføring (ca. 2 timer og 15 minutt).\nBrannvern: forelesning og praktisk gjennomføring (ca. 1 time og 15 minutt). Øving i slukkearbeid foregår utendørs, så vær kledd deretter.\nKurset foregår i perioden september til oktober. Alle førsteårsstudenter skal delta på én kurskveld sammen med sitt studieprogram. Informasjon om datoer vil bli gitt ved semesterstart.",
+    "mandatoryActivities": [],
+    "assessmentDetails": "Kurset har obligatorisk oppmøte. Oppmøte registreres ved skanning av QR-koder i løpet av kurset. For å bestå emnet må oppmøte være registrert.",
+    "specialConditions": "Krever opptak til studieprogram:\nAutomatisering og intelligente systemer - Ingeniørfag (BIAIS)\nCybersikkerhet og datakommunikasjon (MTKOM)\nData - Ingeniørfag (BIDATA)\nDatateknologi (MTDT)\nDigital forretningsutvikling (ITBAITBEDR)\nDigital infrastruktur og cybersikkerhet (BDIGSEC)\nElektrifisering og digitalisering - Ingeniørfag (BIELDIG)\nElektronisk systemdesign og innovasjon (MTELSYS)\nElektronisk systemingeniør - Ingeniørfag (BIELSYS)\nEnergi og miljø (MTENERG)\nEttårig forkurs for 3-årig ingeniørutdanning og integrert masterstudium i teknologiske fag (FTFORKURS)\nIndustriell økonomi og teknologiledelse (MTIØT)\nInformatikk (BIT)\nKybernetikk og robotikk (MTTK)\nLektorutdanning i realfag for trinn 8 – 13 (MLREAL)\nMatematiske fag (BMAT)\nMatematiske fag (ÅMATSTAT)",
+    "requiredKnowledge": null,
+    "recommendedKnowledge": null,
+    "courseMaterials": "Oppgis ved kursets start i Canvas\nAndre sider om emnet\nBlackboard - VÅR-2025",
+    "creditReductions": [],
+    "subjectAreas": [
+      "HMS - Helse, miljø og sikkerhet i tungindustrien",
+      "Helse, miljø og sikkerhet",
+      "Helse, miljø og sikkerhet",
+      "Tekniske fag"
+    ],
+    "studyPrograms": [
+      {
+        "code": "BIAIS",
+        "name": "Automatisering og intelligente systemer - Ingeniørfag"
+      },
+      {
+        "code": "MTKOM",
+        "name": "Cybersikkerhet og datakommunikasjon"
+      },
+      {
+        "code": "BIDATA",
+        "name": "Data - Ingeniørfag"
+      },
+      {
+        "code": "MTDT",
+        "name": "Datateknologi"
+      },
+      {
+        "code": "ITBAITBEDR",
+        "name": "Digital forretningsutvikling"
+      },
+      {
+        "code": "BDIGSEC",
+        "name": "Digital infrastruktur og cybersikkerhet"
+      },
+      {
+        "code": "BIELDIG",
+        "name": "Elektrifisering og digitalisering - Ingeniørfag"
+      },
+      {
+        "code": "MTELSYS",
+        "name": "Elektronisk systemdesign og innovasjon"
+      },
+      {
+        "code": "BIELSYS",
+        "name": "Elektronisk systemingeniør - Ingeniørfag"
+      },
+      {
+        "code": "MTENERG",
+        "name": "Energi og miljø"
+      },
+      {
+        "code": "FTFORKURS",
+        "name": "Ettårig forkurs for 3-årig ingeniørutdanning og integrert masterstudium i teknologiske fag"
+      },
+      {
+        "code": "MTIØT",
+        "name": "Industriell økonomi og teknologiledelse"
+      },
+      {
+        "code": "BIT",
+        "name": "Informatikk"
+      },
+      {
+        "code": "MTTK",
+        "name": "Kybernetikk og robotikk"
+      },
+      {
+        "code": "MLREAL",
+        "name": "Lektorutdanning i realfag for trinn 8 – 13"
+      },
+      {
+        "code": "BMAT",
+        "name": "Matematiske fag"
+      },
+      {
+        "code": "ÅMATSTAT",
+        "name": "Matematiske fag"
+      }
+    ],
+    "contacts": [
+      {
+        "role": "Emneansvarlig/koordinator",
+        "persons": [
+          {
+            "name": "Kjersti Marie Bakken",
+            "url": "https://www.ntnu.no/ansatte/kjersti.m.bakken"
+          }
+        ]
+      }
+    ],
+    "department": "Fakultet for informasjonsteknologi og elektroteknikk",
+    "exams": [
+      {
+        "occasion": "Ordinær eksamen",
+        "season": "Høst 2026",
+        "form": "Deltakelse på HMS-kurs",
+        "weighting": "100/100",
+        "aidCode": null,
+        "aidCodeDescription": null,
+        "date": null,
+        "dateText": null,
+        "time": null,
+        "timeText": null,
+        "duration": null,
+        "system": "Inspera Assessment",
+        "rooms": []
+      },
+      {
+        "occasion": "Ordinær eksamen",
+        "season": "Vår 2027",
+        "form": "Deltakelse på HMS-kurs",
+        "weighting": "100/100",
+        "aidCode": null,
+        "aidCodeDescription": null,
+        "date": null,
+        "dateText": null,
+        "time": null,
+        "timeText": null,
+        "duration": null,
+        "system": "Inspera Assessment",
+        "rooms": []
+      }
+    ],
+    "studyYear": 2026,
+    "availableYears": [
+      2026,
+      2025,
+      2024,
+      2023,
+      2022,
+      2021,
+      2020,
+      2019,
+      2018,
+      2017,
+      2016,
+      2015
+    ],
+    "notices": [
+      "Vurdering og obligatoriske aktiviteter kan bli endret frem til 20. september."
+    ],
+    "courseLinks": [
+      {
+        "label": "Blackboard - VÅR-2025",
+        "url": "https://ntnu.blackboard.com/webapps/login?action=guest_login&new_loc=/webapps/blackboard/execute/courseMain?course_id=_45694_1"
+      }
+    ]
+  }
+}

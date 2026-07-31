@@ -1,0 +1,3018 @@
+{
+  "url": "http://127.0.0.1:8788/api/program/BSPL/plan?year=2020",
+  "status": 200,
+  "contentType": "application/json; charset=utf-8",
+  "body": {
+    "code": "BSPL",
+    "name": "Sykepleie - bachelor",
+    "year": 2020,
+    "startTerm": "HØST",
+    "updated": "12-05-2026 at 04:58:15",
+    "periods": [
+      {
+        "periodNumber": 1,
+        "direction": {
+          "code": null,
+          "name": null,
+          "courseGroups": [],
+          "waypoints": [
+            {
+              "code": "BSPLVEI20",
+              "name": "Valg av studieby",
+              "description": null,
+              "deadlineDate": null,
+              "directions": [
+                {
+                  "code": "BSPL_GJØVIK20",
+                  "name": "Bachelor i sykepleie (Gjøvik)",
+                  "courseGroups": [
+                    {
+                      "code": "BSPL_GJØVIK_TEORI20",
+                      "name": "Bachelor i sykepleie - obligatoriske emner",
+                      "description": null,
+                      "courses": [
+                        {
+                          "code": "SYG1000",
+                          "version": "1",
+                          "name": "Grunnleggende sykepleie",
+                          "credits": 10.5,
+                          "planElement": false,
+                          "studyChoice": {
+                            "code": "O",
+                            "name": "Obligatorisk emne",
+                            "description": "Obligatorisk emne"
+                          }
+                        },
+                        {
+                          "code": "SYG1001",
+                          "version": "1",
+                          "name": "Anatomi, fysiologi og biokjemi",
+                          "credits": 12,
+                          "planElement": false,
+                          "studyChoice": {
+                            "code": "O",
+                            "name": "Obligatorisk emne",
+                            "description": "Obligatorisk emne"
+                          }
+                        },
+                        {
+                          "code": "EXPH0400",
+                          "version": "1",
+                          "name": "Examen philosophicum for medisin og helsefag",
+                          "credits": 7.5,
+                          "planElement": false,
+                          "studyChoice": {
+                            "code": "O",
+                            "name": "Obligatorisk emne",
+                            "description": "Obligatorisk emne"
+                          }
+                        }
+                      ]
+                    }
+                  ],
+                  "waypoints": [
+                    {
+                      "code": "BSPL_GJØVIK_PRA_LØP",
+                      "name": "Bachelor i sykepleie - valg av praksisløp, Gjøvik",
+                      "description": null,
+                      "deadlineDate": null,
+                      "directions": [
+                        {
+                          "code": "BSPL_GJØ_PRALØP1",
+                          "name": "Bachelor i sykepleie - Praksisløp 1, Gjøvik",
+                          "courseGroups": [],
+                          "waypoints": []
+                        },
+                        {
+                          "code": "BSPL_GJØ_PRALØP2",
+                          "name": "Bachelor i sykepleie - Praksisløp 2, Gjøvik",
+                          "courseGroups": [],
+                          "waypoints": []
+                        },
+                        {
+                          "code": "BSPL_GJØ_PRALØP3",
+                          "name": "Bachelor i sykepleie - Praksisløp 3, Gjøvik",
+                          "courseGroups": [],
+                          "waypoints": []
+                        },
+                        {
+                          "code": "BSPL_GJØ_PRALØP4",
+                          "name": "Bachelor i sykepleie - Praksisløp 4, Gjøvik",
+                          "courseGroups": [],
+                          "waypoints": []
+                        },
+                        {
+                          "code": "BSPL_GJØ_PRALØP5",
+                          "name": "Bachelor i sykepleie - Praksisløp 5, Gjøvik",
+                          "courseGroups": [
+                            {
+                              "code": "BSPL_GJØ_PRA_LØP_5",
+                              "name": "Bachelor i sykepleie - Praksisløp 5, Gjøvik",
+                              "description": null,
+                              "courses": [
+                                {
+                                  "code": "SYG2101HJE",
+                                  "version": "1",
+                                  "name": "Kliniske vurderinger i sykepleie ved sykdom og behandling - praksisstudier",
+                                  "credits": 15,
+                                  "planElement": false,
+                                  "studyChoice": {
+                                    "code": "-",
+                                    "name": "-",
+                                    "description": null
+                                  }
+                                },
+                                {
+                                  "code": "SYG2101MED",
+                                  "version": "1",
+                                  "name": "Kliniske vurderinger i sykepleie ved sykdom og behandling - praksisstudier",
+                                  "credits": 15,
+                                  "planElement": false,
+                                  "studyChoice": {
+                                    "code": "-",
+                                    "name": "-",
+                                    "description": null
+                                  }
+                                },
+                                {
+                                  "code": "SYG2101KIR",
+                                  "version": "1",
+                                  "name": "Kliniske vurderinger i sykepleie ved sykdom og behandling - praksisstudier",
+                                  "credits": 15,
+                                  "planElement": false,
+                                  "studyChoice": {
+                                    "code": "-",
+                                    "name": "-",
+                                    "description": null
+                                  }
+                                },
+                                {
+                                  "code": "SYG2101PSY",
+                                  "version": "1",
+                                  "name": "Kliniske vurderinger i sykepleie ved sykdom og behandling - praksisstudier",
+                                  "credits": 15,
+                                  "planElement": false,
+                                  "studyChoice": {
+                                    "code": "-",
+                                    "name": "-",
+                                    "description": null
+                                  }
+                                },
+                                {
+                                  "code": "SYG2103HJE",
+                                  "version": "1",
+                                  "name": "Kliniske vurderinger i sykepleie ved sykdom og behandling - helsefremming og rehabilitering - praksisstudier",
+                                  "credits": 15,
+                                  "planElement": false,
+                                  "studyChoice": {
+                                    "code": "-",
+                                    "name": "-",
+                                    "description": null
+                                  }
+                                },
+                                {
+                                  "code": "SYG2103MED",
+                                  "version": "1",
+                                  "name": "Kliniske vurderinger i sykepleie ved sykdom og behandling - helsefremming og rehabilitering - praksisstudier",
+                                  "credits": 15,
+                                  "planElement": false,
+                                  "studyChoice": {
+                                    "code": "-",
+                                    "name": "-",
+                                    "description": null
+                                  }
+                                },
+                                {
+                                  "code": "SYG2103KIR",
+                                  "version": "1",
+                                  "name": "Kliniske vurderinger i sykepleie ved sykdom og behandling - helsefremming og rehabilitering - praksisstudier",
+                                  "credits": 15,
+                                  "planElement": false,
+                                  "studyChoice": {
+                                    "code": "-",
+                                    "name": "-",
+                                    "description": null
+                                  }
+                                },
+                                {
+                                  "code": "SYG2103PSY",
+                                  "version": "1",
+                                  "name": "Kliniske vurderinger i sykepleie ved sykdom og behandling - helsefremming og rehabilitering - praksisstudier",
+                                  "credits": 15,
+                                  "planElement": false,
+                                  "studyChoice": {
+                                    "code": "-",
+                                    "name": "-",
+                                    "description": null
+                                  }
+                                },
+                                {
+                                  "code": "SYG2300HJE",
+                                  "version": "1",
+                                  "name": "Faglig ledelse og tjenesteutvikling - praksisstudier",
+                                  "credits": 15,
+                                  "planElement": false,
+                                  "studyChoice": {
+                                    "code": "-",
+                                    "name": "-",
+                                    "description": null
+                                  }
+                                },
+                                {
+                                  "code": "SYG2300MED",
+                                  "version": "1",
+                                  "name": "Faglig ledelse og tjenesteutvikling - praksisstudier",
+                                  "credits": 15,
+                                  "planElement": false,
+                                  "studyChoice": {
+                                    "code": "-",
+                                    "name": "-",
+                                    "description": null
+                                  }
+                                },
+                                {
+                                  "code": "SYG2300KIR",
+                                  "version": "1",
+                                  "name": "Faglig ledelse og tjenesteutvikling - praksisstudier",
+                                  "credits": 15,
+                                  "planElement": false,
+                                  "studyChoice": {
+                                    "code": "-",
+                                    "name": "-",
+                                    "description": null
+                                  }
+                                },
+                                {
+                                  "code": "SYG2300PSY",
+                                  "version": "1",
+                                  "name": "Faglig ledelse og tjenesteutvikling - praksisstudier",
+                                  "credits": 15,
+                                  "planElement": false,
+                                  "studyChoice": {
+                                    "code": "-",
+                                    "name": "-",
+                                    "description": null
+                                  }
+                                },
+                                {
+                                  "code": "SYG2302HJE",
+                                  "version": "1",
+                                  "name": "Komplekse vurderinger og beslutninger i sykepleie - praksisstudier",
+                                  "credits": 15,
+                                  "planElement": false,
+                                  "studyChoice": {
+                                    "code": "-",
+                                    "name": "-",
+                                    "description": null
+                                  }
+                                },
+                                {
+                                  "code": "SYG2302MED",
+                                  "version": "1",
+                                  "name": "Komplekse vurderinger og beslutninger i sykepleie - praksisstudier",
+                                  "credits": 15,
+                                  "planElement": false,
+                                  "studyChoice": {
+                                    "code": "-",
+                                    "name": "-",
+                                    "description": null
+                                  }
+                                },
+                                {
+                                  "code": "SYG2302KIR",
+                                  "version": "1",
+                                  "name": "Komplekse vurderinger og beslutninger i sykepleie - praksisstudier",
+                                  "credits": 15,
+                                  "planElement": false,
+                                  "studyChoice": {
+                                    "code": "-",
+                                    "name": "-",
+                                    "description": null
+                                  }
+                                },
+                                {
+                                  "code": "SYG2302PSY",
+                                  "version": "1",
+                                  "name": "Komplekse vurderinger og beslutninger i sykepleie - praksisstudier",
+                                  "credits": 15,
+                                  "planElement": false,
+                                  "studyChoice": {
+                                    "code": "-",
+                                    "name": "-",
+                                    "description": null
+                                  }
+                                }
+                              ]
+                            }
+                          ],
+                          "waypoints": []
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "code": "BSPL_TRONDHEIM20",
+                  "name": "Bachelor i sykepleie (Trondheim)",
+                  "courseGroups": [
+                    {
+                      "code": "BSPL_TRHEIM_TEORI20",
+                      "name": "Bachelor i sykepleie - obligatoriske emner",
+                      "description": null,
+                      "courses": [
+                        {
+                          "code": "SYT1000",
+                          "version": "1",
+                          "name": "Grunnleggende sykepleie",
+                          "credits": 10.5,
+                          "planElement": false,
+                          "studyChoice": {
+                            "code": "O",
+                            "name": "Obligatorisk emne",
+                            "description": "Obligatorisk emne"
+                          }
+                        },
+                        {
+                          "code": "SYT1001",
+                          "version": "1",
+                          "name": "Anatomi, fysiologi og biokjemi",
+                          "credits": 12,
+                          "planElement": false,
+                          "studyChoice": {
+                            "code": "O",
+                            "name": "Obligatorisk emne",
+                            "description": "Obligatorisk emne"
+                          }
+                        },
+                        {
+                          "code": "EXPH0400",
+                          "version": "1",
+                          "name": "Examen philosophicum for medisin og helsefag",
+                          "credits": 7.5,
+                          "planElement": false,
+                          "studyChoice": {
+                            "code": "O",
+                            "name": "Obligatorisk emne",
+                            "description": "Obligatorisk emne"
+                          }
+                        }
+                      ]
+                    }
+                  ],
+                  "waypoints": [
+                    {
+                      "code": "BSPL_TRONDH_PRA_LØP",
+                      "name": "Bachelor i sykepleie - valg av praksisløp, Trondheim",
+                      "description": null,
+                      "deadlineDate": null,
+                      "directions": [
+                        {
+                          "code": "BSPL_TRH_PRALØP1",
+                          "name": "Bachelor i sykepleie - Praksisløp 1, Trondheim",
+                          "courseGroups": [],
+                          "waypoints": []
+                        },
+                        {
+                          "code": "BSPL_TRH_PRALØP2",
+                          "name": "Bachelor i sykepleie - Praksisløp 2, Trondheim",
+                          "courseGroups": [],
+                          "waypoints": []
+                        },
+                        {
+                          "code": "BSPL_TRH_PRALØP3",
+                          "name": "Bachelor i sykepleie - Praksisløp 3, Trondheim",
+                          "courseGroups": [],
+                          "waypoints": []
+                        },
+                        {
+                          "code": "BSPL_TRH_PRALØP4",
+                          "name": "Bachelor i sykepleie - Praksisløp 4, Trondheim",
+                          "courseGroups": [],
+                          "waypoints": []
+                        },
+                        {
+                          "code": "BSPL_TRH_PRALØP5",
+                          "name": "Bachelor i sykepleie - Praksisløp 5, Trondheim",
+                          "courseGroups": [
+                            {
+                              "code": "BSPL_TRH_PRA_LØP_5",
+                              "name": "Bachelor i sykepleie - Praksisløp 5, Trondheim",
+                              "description": null,
+                              "courses": [
+                                {
+                                  "code": "SYT2101HJE",
+                                  "version": "1",
+                                  "name": "Kliniske vurderinger i sykepleie ved sykdom og behandling - praksisstudier",
+                                  "credits": 15,
+                                  "planElement": false,
+                                  "studyChoice": {
+                                    "code": "-",
+                                    "name": "-",
+                                    "description": null
+                                  }
+                                },
+                                {
+                                  "code": "SYT2101MED",
+                                  "version": "1",
+                                  "name": "Kliniske vurderinger i sykepleie ved sykdom og behandling - praksisstudier",
+                                  "credits": 15,
+                                  "planElement": false,
+                                  "studyChoice": {
+                                    "code": "-",
+                                    "name": "-",
+                                    "description": null
+                                  }
+                                },
+                                {
+                                  "code": "SYT2101KIR",
+                                  "version": "1",
+                                  "name": "Kliniske vurderinger i sykepleie ved sykdom og behandling - praksisstudier",
+                                  "credits": 15,
+                                  "planElement": false,
+                                  "studyChoice": {
+                                    "code": "-",
+                                    "name": "-",
+                                    "description": null
+                                  }
+                                },
+                                {
+                                  "code": "SYT2101PSY",
+                                  "version": "1",
+                                  "name": "Kliniske vurderinger i sykepleie ved sykdom og behandling - praksisstudier",
+                                  "credits": 15,
+                                  "planElement": false,
+                                  "studyChoice": {
+                                    "code": "-",
+                                    "name": "-",
+                                    "description": null
+                                  }
+                                },
+                                {
+                                  "code": "SYT2103MED",
+                                  "version": "1",
+                                  "name": "Kliniske vurderinger i sykepleie ved sykdom og behandling - helsefremming og rehabilitering - praksisstudier",
+                                  "credits": 15,
+                                  "planElement": false,
+                                  "studyChoice": {
+                                    "code": "-",
+                                    "name": "-",
+                                    "description": null
+                                  }
+                                },
+                                {
+                                  "code": "SYT2103PSY",
+                                  "version": "1",
+                                  "name": "Kliniske vurderinger i sykepleie ved sykdom og behandling - helsefremming og rehabilitering - praksisstudier",
+                                  "credits": 15,
+                                  "planElement": false,
+                                  "studyChoice": {
+                                    "code": "-",
+                                    "name": "-",
+                                    "description": null
+                                  }
+                                },
+                                {
+                                  "code": "SYT2103HJE",
+                                  "version": "1",
+                                  "name": "Kliniske vurderinger i sykepleie ved sykdom og behandling - helsefremming og rehabilitering - praksisstudier",
+                                  "credits": 15,
+                                  "planElement": false,
+                                  "studyChoice": {
+                                    "code": "-",
+                                    "name": "-",
+                                    "description": null
+                                  }
+                                },
+                                {
+                                  "code": "SYT2103KIR",
+                                  "version": "1",
+                                  "name": "Kliniske vurderinger i sykepleie ved sykdom og behandling - helsefremming og rehabilitering - praksisstudier",
+                                  "credits": 15,
+                                  "planElement": false,
+                                  "studyChoice": {
+                                    "code": "-",
+                                    "name": "-",
+                                    "description": null
+                                  }
+                                },
+                                {
+                                  "code": "SYT2300PSY",
+                                  "version": "1",
+                                  "name": "Faglig ledelse og tjenesteutvikling - praksisstudier",
+                                  "credits": 15,
+                                  "planElement": false,
+                                  "studyChoice": {
+                                    "code": "-",
+                                    "name": "-",
+                                    "description": null
+                                  }
+                                },
+                                {
+                                  "code": "SYT2300KIR",
+                                  "version": "1",
+                                  "name": "Faglig ledelse og tjenesteutvikling - praksisstudier",
+                                  "credits": 15,
+                                  "planElement": false,
+                                  "studyChoice": {
+                                    "code": "-",
+                                    "name": "-",
+                                    "description": null
+                                  }
+                                },
+                                {
+                                  "code": "SYT2300MED",
+                                  "version": "1",
+                                  "name": "Faglig ledelse og tjenesteutvikling - praksisstudier",
+                                  "credits": 15,
+                                  "planElement": false,
+                                  "studyChoice": {
+                                    "code": "-",
+                                    "name": "-",
+                                    "description": null
+                                  }
+                                },
+                                {
+                                  "code": "SYT2300HJE",
+                                  "version": "1",
+                                  "name": "Faglig ledelse og tjenesteutvikling - praksisstudier",
+                                  "credits": 15,
+                                  "planElement": false,
+                                  "studyChoice": {
+                                    "code": "-",
+                                    "name": "-",
+                                    "description": null
+                                  }
+                                },
+                                {
+                                  "code": "SYT2302KIR",
+                                  "version": "1",
+                                  "name": "Komplekse vurderinger og beslutninger i sykepleie - praksisstudier",
+                                  "credits": 15,
+                                  "planElement": false,
+                                  "studyChoice": {
+                                    "code": "-",
+                                    "name": "-",
+                                    "description": null
+                                  }
+                                },
+                                {
+                                  "code": "SYT2302HJE",
+                                  "version": "1",
+                                  "name": "Komplekse vurderinger og beslutninger i sykepleie - praksisstudier",
+                                  "credits": 15,
+                                  "planElement": false,
+                                  "studyChoice": {
+                                    "code": "-",
+                                    "name": "-",
+                                    "description": null
+                                  }
+                                },
+                                {
+                                  "code": "SYT2302PSY",
+                                  "version": "1",
+                                  "name": "Komplekse vurderinger og beslutninger i sykepleie - praksisstudier",
+                                  "credits": 15,
+                                  "planElement": false,
+                                  "studyChoice": {
+                                    "code": "-",
+                                    "name": "-",
+                                    "description": null
+                                  }
+                                },
+                                {
+                                  "code": "SYT2302MED",
+                                  "version": "1",
+                                  "name": "Komplekse vurderinger og beslutninger i sykepleie - praksisstudier",
+                                  "credits": 15,
+                                  "planElement": false,
+                                  "studyChoice": {
+                                    "code": "-",
+                                    "name": "-",
+                                    "description": null
+                                  }
+                                }
+                              ]
+                            }
+                          ],
+                          "waypoints": []
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "code": "BSPL_ÅLESUND20",
+                  "name": "Bachelor i sykepleie (Ålesund)",
+                  "courseGroups": [
+                    {
+                      "code": "BSPL_ÅLESUND_TEORI20",
+                      "name": "Bachelor i sykepleie - obligatoriske emner",
+                      "description": null,
+                      "courses": [
+                        {
+                          "code": "SYA1000",
+                          "version": "1",
+                          "name": "Grunnleggende sykepleie",
+                          "credits": 10.5,
+                          "planElement": false,
+                          "studyChoice": {
+                            "code": "O",
+                            "name": "Obligatorisk emne",
+                            "description": "Obligatorisk emne"
+                          }
+                        },
+                        {
+                          "code": "SYA1001",
+                          "version": "1",
+                          "name": "Anatomi, fysiologi og biokjemi",
+                          "credits": 12,
+                          "planElement": false,
+                          "studyChoice": {
+                            "code": "O",
+                            "name": "Obligatorisk emne",
+                            "description": "Obligatorisk emne"
+                          }
+                        },
+                        {
+                          "code": "EXPH0400",
+                          "version": "1",
+                          "name": "Examen philosophicum for medisin og helsefag",
+                          "credits": 7.5,
+                          "planElement": false,
+                          "studyChoice": {
+                            "code": "O",
+                            "name": "Obligatorisk emne",
+                            "description": "Obligatorisk emne"
+                          }
+                        }
+                      ]
+                    }
+                  ],
+                  "waypoints": [
+                    {
+                      "code": "BSPL_ALESUND_PRA_LØP",
+                      "name": "Bachelor i sykepleie - valg av praksisløp, Ålesund",
+                      "description": null,
+                      "deadlineDate": null,
+                      "directions": [
+                        {
+                          "code": "BSPL_ALE_PRALØP1",
+                          "name": "Bachelor i sykepleie - Praksisløp 1, Ålesund",
+                          "courseGroups": [],
+                          "waypoints": []
+                        },
+                        {
+                          "code": "BSPL_ALE_PRALØP2",
+                          "name": "Bachelor i sykepleie - Praksisløp 2, Ålesund",
+                          "courseGroups": [],
+                          "waypoints": []
+                        },
+                        {
+                          "code": "BSPL_ALE_PRALØP3",
+                          "name": "Bachelor i sykepleie - Praksisløp 3, Ålesund",
+                          "courseGroups": [],
+                          "waypoints": []
+                        },
+                        {
+                          "code": "BSPL_ALE_PRALØP4",
+                          "name": "Bachelor i sykepleie - Praksisløp 4, Ålesund",
+                          "courseGroups": [],
+                          "waypoints": []
+                        },
+                        {
+                          "code": "BSPL_ALE_PRALØP5",
+                          "name": "Bachelor i sykepleie - Praksisløp 5, Ålesund",
+                          "courseGroups": [
+                            {
+                              "code": "BSPL_ALE_PRA_LØP_5",
+                              "name": "Bachelor i sykepleie - Praksisløp 5, Ålesund",
+                              "description": null,
+                              "courses": [
+                                {
+                                  "code": "SYA2101HJE",
+                                  "version": "1",
+                                  "name": "Kliniske vurderinger i sykepleie ved sykdom og behandling - praksisstudier",
+                                  "credits": 15,
+                                  "planElement": false,
+                                  "studyChoice": {
+                                    "code": "-",
+                                    "name": "-",
+                                    "description": null
+                                  }
+                                },
+                                {
+                                  "code": "SYA2101MED",
+                                  "version": "1",
+                                  "name": "Kliniske vurderinger i sykepleie ved sykdom og behandling - praksisstudier",
+                                  "credits": 15,
+                                  "planElement": false,
+                                  "studyChoice": {
+                                    "code": "-",
+                                    "name": "-",
+                                    "description": null
+                                  }
+                                },
+                                {
+                                  "code": "SYA2101KIR",
+                                  "version": "1",
+                                  "name": "Kliniske vurderinger i sykepleie ved sykdom og behandling - praksisstudier",
+                                  "credits": 15,
+                                  "planElement": false,
+                                  "studyChoice": {
+                                    "code": "-",
+                                    "name": "-",
+                                    "description": null
+                                  }
+                                },
+                                {
+                                  "code": "SYA2101PSY",
+                                  "version": "1",
+                                  "name": "Kliniske vurderinger i sykepleie ved sykdom og behandling - praksisstudier",
+                                  "credits": 15,
+                                  "planElement": false,
+                                  "studyChoice": {
+                                    "code": "-",
+                                    "name": "-",
+                                    "description": null
+                                  }
+                                },
+                                {
+                                  "code": "SYA2103MED",
+                                  "version": "1",
+                                  "name": "Kliniske vurderinger i sykepleie ved sykdom og behandling - helsefremming og rehabilitering - praksisstudier",
+                                  "credits": 15,
+                                  "planElement": false,
+                                  "studyChoice": {
+                                    "code": "-",
+                                    "name": "-",
+                                    "description": null
+                                  }
+                                },
+                                {
+                                  "code": "SYA2103PSY",
+                                  "version": "1",
+                                  "name": "Kliniske vurderinger i sykepleie ved sykdom og behandling - helsefremming og rehabilitering - praksisstudier",
+                                  "credits": 15,
+                                  "planElement": false,
+                                  "studyChoice": {
+                                    "code": "-",
+                                    "name": "-",
+                                    "description": null
+                                  }
+                                },
+                                {
+                                  "code": "SYA2103HJE",
+                                  "version": "1",
+                                  "name": "Kliniske vurderinger i sykepleie ved sykdom og behandling - helsefremming og rehabilitering - praksisstudier",
+                                  "credits": 15,
+                                  "planElement": false,
+                                  "studyChoice": {
+                                    "code": "-",
+                                    "name": "-",
+                                    "description": null
+                                  }
+                                },
+                                {
+                                  "code": "SYA2103KIR",
+                                  "version": "1",
+                                  "name": "Kliniske vurderinger i sykepleie ved sykdom og behandling - helsefremming og rehabilitering - praksisstudier",
+                                  "credits": 15,
+                                  "planElement": false,
+                                  "studyChoice": {
+                                    "code": "-",
+                                    "name": "-",
+                                    "description": null
+                                  }
+                                },
+                                {
+                                  "code": "SYA2300PSY",
+                                  "version": "1",
+                                  "name": "Faglig ledelse og tjenesteutvikling - praksisstudier",
+                                  "credits": 15,
+                                  "planElement": false,
+                                  "studyChoice": {
+                                    "code": "-",
+                                    "name": "-",
+                                    "description": null
+                                  }
+                                },
+                                {
+                                  "code": "SYA2300KIR",
+                                  "version": "1",
+                                  "name": "Faglig ledelse og tjenesteutvikling - praksisstudier",
+                                  "credits": 15,
+                                  "planElement": false,
+                                  "studyChoice": {
+                                    "code": "-",
+                                    "name": "-",
+                                    "description": null
+                                  }
+                                },
+                                {
+                                  "code": "SYA2300MED",
+                                  "version": "1",
+                                  "name": "Faglig ledelse og tjenesteutvikling - praksisstudier",
+                                  "credits": 15,
+                                  "planElement": false,
+                                  "studyChoice": {
+                                    "code": "-",
+                                    "name": "-",
+                                    "description": null
+                                  }
+                                },
+                                {
+                                  "code": "SYA2300HJE",
+                                  "version": "1",
+                                  "name": "Faglig ledelse og tjenesteutvikling - praksisstudier",
+                                  "credits": 15,
+                                  "planElement": false,
+                                  "studyChoice": {
+                                    "code": "-",
+                                    "name": "-",
+                                    "description": null
+                                  }
+                                },
+                                {
+                                  "code": "SYA2302KIR",
+                                  "version": "1",
+                                  "name": "Komplekse vurderinger og beslutninger i sykepleie - praksisstudier",
+                                  "credits": 15,
+                                  "planElement": false,
+                                  "studyChoice": {
+                                    "code": "-",
+                                    "name": "-",
+                                    "description": null
+                                  }
+                                },
+                                {
+                                  "code": "SYA2302HJE",
+                                  "version": "1",
+                                  "name": "Komplekse vurderinger og beslutninger i sykepleie - praksisstudier",
+                                  "credits": 15,
+                                  "planElement": false,
+                                  "studyChoice": {
+                                    "code": "-",
+                                    "name": "-",
+                                    "description": null
+                                  }
+                                },
+                                {
+                                  "code": "SYA2302PSY",
+                                  "version": "1",
+                                  "name": "Komplekse vurderinger og beslutninger i sykepleie - praksisstudier",
+                                  "credits": 15,
+                                  "planElement": false,
+                                  "studyChoice": {
+                                    "code": "-",
+                                    "name": "-",
+                                    "description": null
+                                  }
+                                },
+                                {
+                                  "code": "SYA2302MED",
+                                  "version": "1",
+                                  "name": "Komplekse vurderinger og beslutninger i sykepleie - praksisstudier",
+                                  "credits": 15,
+                                  "planElement": false,
+                                  "studyChoice": {
+                                    "code": "-",
+                                    "name": "-",
+                                    "description": null
+                                  }
+                                }
+                              ]
+                            }
+                          ],
+                          "waypoints": []
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "periodNumber": 2,
+        "direction": {
+          "code": null,
+          "name": null,
+          "courseGroups": [],
+          "waypoints": [
+            {
+              "code": "BSPLVEI20",
+              "name": "Valg av studieby",
+              "description": null,
+              "deadlineDate": null,
+              "directions": [
+                {
+                  "code": "BSPL_GJØVIK20",
+                  "name": "Bachelor i sykepleie (Gjøvik)",
+                  "courseGroups": [
+                    {
+                      "code": "BSPL_GJØVIK_TEORI20",
+                      "name": "Bachelor i sykepleie - obligatoriske emner",
+                      "description": null,
+                      "courses": [
+                        {
+                          "code": "SYG1002",
+                          "version": "1",
+                          "name": "Sykepleierens observasjon og vurdering av pasientens helse og sykdom",
+                          "credits": 15,
+                          "planElement": false,
+                          "studyChoice": {
+                            "code": "O",
+                            "name": "Obligatorisk emne",
+                            "description": "Obligatorisk emne"
+                          }
+                        },
+                        {
+                          "code": "SYG1003KOM",
+                          "version": "1",
+                          "name": "Sykepleierens observasjon og vurdering av pasientens helse og sykdom - praksisstudier",
+                          "credits": 15,
+                          "planElement": false,
+                          "studyChoice": {
+                            "code": "O",
+                            "name": "Obligatorisk emne",
+                            "description": "Obligatorisk emne"
+                          }
+                        }
+                      ]
+                    }
+                  ],
+                  "waypoints": [
+                    {
+                      "code": "BSPL_GJØVIK_PRA_LØP",
+                      "name": "Bachelor i sykepleie - valg av praksisløp, Gjøvik",
+                      "description": null,
+                      "deadlineDate": null,
+                      "directions": [
+                        {
+                          "code": "BSPL_GJØ_PRALØP1",
+                          "name": "Bachelor i sykepleie - Praksisløp 1, Gjøvik",
+                          "courseGroups": [],
+                          "waypoints": []
+                        },
+                        {
+                          "code": "BSPL_GJØ_PRALØP2",
+                          "name": "Bachelor i sykepleie - Praksisløp 2, Gjøvik",
+                          "courseGroups": [],
+                          "waypoints": []
+                        },
+                        {
+                          "code": "BSPL_GJØ_PRALØP3",
+                          "name": "Bachelor i sykepleie - Praksisløp 3, Gjøvik",
+                          "courseGroups": [],
+                          "waypoints": []
+                        },
+                        {
+                          "code": "BSPL_GJØ_PRALØP4",
+                          "name": "Bachelor i sykepleie - Praksisløp 4, Gjøvik",
+                          "courseGroups": [],
+                          "waypoints": []
+                        },
+                        {
+                          "code": "BSPL_GJØ_PRALØP5",
+                          "name": "Bachelor i sykepleie - Praksisløp 5, Gjøvik",
+                          "courseGroups": [],
+                          "waypoints": []
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "code": "BSPL_TRONDHEIM20",
+                  "name": "Bachelor i sykepleie (Trondheim)",
+                  "courseGroups": [
+                    {
+                      "code": "BSPL_TRHEIM_TEORI20",
+                      "name": "Bachelor i sykepleie - obligatoriske emner",
+                      "description": null,
+                      "courses": [
+                        {
+                          "code": "SYT1002",
+                          "version": "1",
+                          "name": "Sykepleierens observasjon og vurdering av pasientens helse og sykdom",
+                          "credits": 15,
+                          "planElement": false,
+                          "studyChoice": {
+                            "code": "O",
+                            "name": "Obligatorisk emne",
+                            "description": "Obligatorisk emne"
+                          }
+                        },
+                        {
+                          "code": "SYT1003KOM",
+                          "version": "1",
+                          "name": "Sykepleierens observasjon og vurdering av pasientens helse og sykdom - praksisstudier",
+                          "credits": 15,
+                          "planElement": false,
+                          "studyChoice": {
+                            "code": "O",
+                            "name": "Obligatorisk emne",
+                            "description": "Obligatorisk emne"
+                          }
+                        }
+                      ]
+                    }
+                  ],
+                  "waypoints": [
+                    {
+                      "code": "BSPL_TRONDH_PRA_LØP",
+                      "name": "Bachelor i sykepleie - valg av praksisløp, Trondheim",
+                      "description": null,
+                      "deadlineDate": null,
+                      "directions": [
+                        {
+                          "code": "BSPL_TRH_PRALØP1",
+                          "name": "Bachelor i sykepleie - Praksisløp 1, Trondheim",
+                          "courseGroups": [],
+                          "waypoints": []
+                        },
+                        {
+                          "code": "BSPL_TRH_PRALØP2",
+                          "name": "Bachelor i sykepleie - Praksisløp 2, Trondheim",
+                          "courseGroups": [],
+                          "waypoints": []
+                        },
+                        {
+                          "code": "BSPL_TRH_PRALØP3",
+                          "name": "Bachelor i sykepleie - Praksisløp 3, Trondheim",
+                          "courseGroups": [],
+                          "waypoints": []
+                        },
+                        {
+                          "code": "BSPL_TRH_PRALØP4",
+                          "name": "Bachelor i sykepleie - Praksisløp 4, Trondheim",
+                          "courseGroups": [],
+                          "waypoints": []
+                        },
+                        {
+                          "code": "BSPL_TRH_PRALØP5",
+                          "name": "Bachelor i sykepleie - Praksisløp 5, Trondheim",
+                          "courseGroups": [],
+                          "waypoints": []
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "code": "BSPL_ÅLESUND20",
+                  "name": "Bachelor i sykepleie (Ålesund)",
+                  "courseGroups": [
+                    {
+                      "code": "BSPL_ÅLESUND_TEORI20",
+                      "name": "Bachelor i sykepleie - obligatoriske emner",
+                      "description": null,
+                      "courses": [
+                        {
+                          "code": "SYA1002",
+                          "version": "1",
+                          "name": "Sykepleierens observasjon og vurdering av pasientens helse og sykdom",
+                          "credits": 15,
+                          "planElement": false,
+                          "studyChoice": {
+                            "code": "O",
+                            "name": "Obligatorisk emne",
+                            "description": "Obligatorisk emne"
+                          }
+                        },
+                        {
+                          "code": "SYA1003KOM",
+                          "version": "1",
+                          "name": "Sykepleierens observasjon og vurdering av pasientens helse og sykdom - praksisstudier",
+                          "credits": 15,
+                          "planElement": false,
+                          "studyChoice": {
+                            "code": "O",
+                            "name": "Obligatorisk emne",
+                            "description": "Obligatorisk emne"
+                          }
+                        }
+                      ]
+                    }
+                  ],
+                  "waypoints": [
+                    {
+                      "code": "BSPL_ALESUND_PRA_LØP",
+                      "name": "Bachelor i sykepleie - valg av praksisløp, Ålesund",
+                      "description": null,
+                      "deadlineDate": null,
+                      "directions": [
+                        {
+                          "code": "BSPL_ALE_PRALØP1",
+                          "name": "Bachelor i sykepleie - Praksisløp 1, Ålesund",
+                          "courseGroups": [],
+                          "waypoints": []
+                        },
+                        {
+                          "code": "BSPL_ALE_PRALØP2",
+                          "name": "Bachelor i sykepleie - Praksisløp 2, Ålesund",
+                          "courseGroups": [],
+                          "waypoints": []
+                        },
+                        {
+                          "code": "BSPL_ALE_PRALØP3",
+                          "name": "Bachelor i sykepleie - Praksisløp 3, Ålesund",
+                          "courseGroups": [],
+                          "waypoints": []
+                        },
+                        {
+                          "code": "BSPL_ALE_PRALØP4",
+                          "name": "Bachelor i sykepleie - Praksisløp 4, Ålesund",
+                          "courseGroups": [],
+                          "waypoints": []
+                        },
+                        {
+                          "code": "BSPL_ALE_PRALØP5",
+                          "name": "Bachelor i sykepleie - Praksisløp 5, Ålesund",
+                          "courseGroups": [],
+                          "waypoints": []
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "periodNumber": 3,
+        "direction": {
+          "code": null,
+          "name": null,
+          "courseGroups": [],
+          "waypoints": [
+            {
+              "code": "BSPLVEI20",
+              "name": "Valg av studieby",
+              "description": null,
+              "deadlineDate": null,
+              "directions": [
+                {
+                  "code": "BSPL_GJØVIK20",
+                  "name": "Bachelor i sykepleie (Gjøvik)",
+                  "courseGroups": [
+                    {
+                      "code": "BSPL_GJØVIK_TEORI20",
+                      "name": "Bachelor i sykepleie - obligatoriske emner",
+                      "description": null,
+                      "courses": [
+                        {
+                          "code": "SYG2100",
+                          "version": "1",
+                          "name": "Kliniske vurderinger i sykepleie ved sykdom og behandling",
+                          "credits": 15,
+                          "planElement": false,
+                          "studyChoice": {
+                            "code": "O",
+                            "name": "Obligatorisk emne",
+                            "description": "Obligatorisk emne"
+                          }
+                        }
+                      ]
+                    }
+                  ],
+                  "waypoints": [
+                    {
+                      "code": "BSPL_GJØVIK_PRA_LØP",
+                      "name": "Bachelor i sykepleie - valg av praksisløp, Gjøvik",
+                      "description": null,
+                      "deadlineDate": null,
+                      "directions": [
+                        {
+                          "code": "BSPL_GJØ_PRALØP1",
+                          "name": "Bachelor i sykepleie - Praksisløp 1, Gjøvik",
+                          "courseGroups": [
+                            {
+                              "code": "BSPL_GJØ_PRA_LØP_1",
+                              "name": "Bachelor i sykepleie - Praksisløp 1, Gjøvik",
+                              "description": null,
+                              "courses": [
+                                {
+                                  "code": "SYG2101HJE",
+                                  "version": "1",
+                                  "name": "Kliniske vurderinger i sykepleie ved sykdom og behandling - praksisstudier",
+                                  "credits": 15,
+                                  "planElement": false,
+                                  "studyChoice": {
+                                    "code": "O",
+                                    "name": "Obligatorisk emne",
+                                    "description": "Obligatorisk emne"
+                                  }
+                                }
+                              ]
+                            }
+                          ],
+                          "waypoints": []
+                        },
+                        {
+                          "code": "BSPL_GJØ_PRALØP2",
+                          "name": "Bachelor i sykepleie - Praksisløp 2, Gjøvik",
+                          "courseGroups": [
+                            {
+                              "code": "BSPL_GJØ_PRA_LØP_2",
+                              "name": "Bachelor i sykepleie - Praksisløp 2, Gjøvik",
+                              "description": null,
+                              "courses": [
+                                {
+                                  "code": "SYG2101MED",
+                                  "version": "1",
+                                  "name": "Kliniske vurderinger i sykepleie ved sykdom og behandling - praksisstudier",
+                                  "credits": 15,
+                                  "planElement": false,
+                                  "studyChoice": {
+                                    "code": "O",
+                                    "name": "Obligatorisk emne",
+                                    "description": "Obligatorisk emne"
+                                  }
+                                }
+                              ]
+                            }
+                          ],
+                          "waypoints": []
+                        },
+                        {
+                          "code": "BSPL_GJØ_PRALØP3",
+                          "name": "Bachelor i sykepleie - Praksisløp 3, Gjøvik",
+                          "courseGroups": [
+                            {
+                              "code": "BSPL_GJØ_PRA_LØP_3",
+                              "name": "Bachelor i sykepleie - Praksisløp 3, Gjøvik",
+                              "description": null,
+                              "courses": [
+                                {
+                                  "code": "SYG2101KIR",
+                                  "version": "1",
+                                  "name": "Kliniske vurderinger i sykepleie ved sykdom og behandling - praksisstudier",
+                                  "credits": 15,
+                                  "planElement": false,
+                                  "studyChoice": {
+                                    "code": "O",
+                                    "name": "Obligatorisk emne",
+                                    "description": "Obligatorisk emne"
+                                  }
+                                }
+                              ]
+                            }
+                          ],
+                          "waypoints": []
+                        },
+                        {
+                          "code": "BSPL_GJØ_PRALØP4",
+                          "name": "Bachelor i sykepleie - Praksisløp 4, Gjøvik",
+                          "courseGroups": [
+                            {
+                              "code": "BSPL_GJØ_PRA_LØP_4",
+                              "name": "Bachelor i sykepleie - Praksisløp 4, Gjøvik",
+                              "description": null,
+                              "courses": [
+                                {
+                                  "code": "SYG2101PSY",
+                                  "version": "1",
+                                  "name": "Kliniske vurderinger i sykepleie ved sykdom og behandling - praksisstudier",
+                                  "credits": 15,
+                                  "planElement": false,
+                                  "studyChoice": {
+                                    "code": "O",
+                                    "name": "Obligatorisk emne",
+                                    "description": "Obligatorisk emne"
+                                  }
+                                }
+                              ]
+                            }
+                          ],
+                          "waypoints": []
+                        },
+                        {
+                          "code": "BSPL_GJØ_PRALØP5",
+                          "name": "Bachelor i sykepleie - Praksisløp 5, Gjøvik",
+                          "courseGroups": [],
+                          "waypoints": []
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "code": "BSPL_TRONDHEIM20",
+                  "name": "Bachelor i sykepleie (Trondheim)",
+                  "courseGroups": [
+                    {
+                      "code": "BSPL_TRHEIM_TEORI20",
+                      "name": "Bachelor i sykepleie - obligatoriske emner",
+                      "description": null,
+                      "courses": [
+                        {
+                          "code": "SYT2100",
+                          "version": "1",
+                          "name": "Kliniske vurderinger i sykepleie ved sykdom og behandling",
+                          "credits": 15,
+                          "planElement": false,
+                          "studyChoice": {
+                            "code": "O",
+                            "name": "Obligatorisk emne",
+                            "description": "Obligatorisk emne"
+                          }
+                        }
+                      ]
+                    }
+                  ],
+                  "waypoints": [
+                    {
+                      "code": "BSPL_TRONDH_PRA_LØP",
+                      "name": "Bachelor i sykepleie - valg av praksisløp, Trondheim",
+                      "description": null,
+                      "deadlineDate": null,
+                      "directions": [
+                        {
+                          "code": "BSPL_TRH_PRALØP1",
+                          "name": "Bachelor i sykepleie - Praksisløp 1, Trondheim",
+                          "courseGroups": [
+                            {
+                              "code": "BSPL_TRH_PRA_LØP_1",
+                              "name": "Bachelor i sykepleie - Praksisløp 1, Trondheim",
+                              "description": null,
+                              "courses": [
+                                {
+                                  "code": "SYT2101HJE",
+                                  "version": "1",
+                                  "name": "Kliniske vurderinger i sykepleie ved sykdom og behandling - praksisstudier",
+                                  "credits": 15,
+                                  "planElement": false,
+                                  "studyChoice": {
+                                    "code": "O",
+                                    "name": "Obligatorisk emne",
+                                    "description": "Obligatorisk emne"
+                                  }
+                                }
+                              ]
+                            }
+                          ],
+                          "waypoints": []
+                        },
+                        {
+                          "code": "BSPL_TRH_PRALØP2",
+                          "name": "Bachelor i sykepleie - Praksisløp 2, Trondheim",
+                          "courseGroups": [
+                            {
+                              "code": "BSPL_TRH_PRA_LØP_2",
+                              "name": "Bachelor i sykepleie - Praksisløp 2, Trondheim",
+                              "description": null,
+                              "courses": [
+                                {
+                                  "code": "SYT2101MED",
+                                  "version": "1",
+                                  "name": "Kliniske vurderinger i sykepleie ved sykdom og behandling - praksisstudier",
+                                  "credits": 15,
+                                  "planElement": false,
+                                  "studyChoice": {
+                                    "code": "O",
+                                    "name": "Obligatorisk emne",
+                                    "description": "Obligatorisk emne"
+                                  }
+                                }
+                              ]
+                            }
+                          ],
+                          "waypoints": []
+                        },
+                        {
+                          "code": "BSPL_TRH_PRALØP3",
+                          "name": "Bachelor i sykepleie - Praksisløp 3, Trondheim",
+                          "courseGroups": [
+                            {
+                              "code": "BSPL_TRH_PRA_LØP_3",
+                              "name": "Bachelor i sykepleie - Praksisløp 3, Trondheim",
+                              "description": null,
+                              "courses": [
+                                {
+                                  "code": "SYT2101KIR",
+                                  "version": "1",
+                                  "name": "Kliniske vurderinger i sykepleie ved sykdom og behandling - praksisstudier",
+                                  "credits": 15,
+                                  "planElement": false,
+                                  "studyChoice": {
+                                    "code": "O",
+                                    "name": "Obligatorisk emne",
+                                    "description": "Obligatorisk emne"
+                                  }
+                                }
+                              ]
+                            }
+                          ],
+                          "waypoints": []
+                        },
+                        {
+                          "code": "BSPL_TRH_PRALØP4",
+                          "name": "Bachelor i sykepleie - Praksisløp 4, Trondheim",
+                          "courseGroups": [
+                            {
+                              "code": "BSPL_TRH_PRA_LØP_4",
+                              "name": "Bachelor i sykepleie - Praksisløp 4, Trondheim",
+                              "description": null,
+                              "courses": [
+                                {
+                                  "code": "SYT2101PSY",
+                                  "version": "1",
+                                  "name": "Kliniske vurderinger i sykepleie ved sykdom og behandling - praksisstudier",
+                                  "credits": 15,
+                                  "planElement": false,
+                                  "studyChoice": {
+                                    "code": "O",
+                                    "name": "Obligatorisk emne",
+                                    "description": "Obligatorisk emne"
+                                  }
+                                }
+                              ]
+                            }
+                          ],
+                          "waypoints": []
+                        },
+                        {
+                          "code": "BSPL_TRH_PRALØP5",
+                          "name": "Bachelor i sykepleie - Praksisløp 5, Trondheim",
+                          "courseGroups": [],
+                          "waypoints": []
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "code": "BSPL_ÅLESUND20",
+                  "name": "Bachelor i sykepleie (Ålesund)",
+                  "courseGroups": [
+                    {
+                      "code": "BSPL_ÅLESUND_TEORI20",
+                      "name": "Bachelor i sykepleie - obligatoriske emner",
+                      "description": null,
+                      "courses": [
+                        {
+                          "code": "SYA2100",
+                          "version": "1",
+                          "name": "Kliniske vurderinger i sykepleie ved sykdom og behandling",
+                          "credits": 15,
+                          "planElement": false,
+                          "studyChoice": {
+                            "code": "O",
+                            "name": "Obligatorisk emne",
+                            "description": "Obligatorisk emne"
+                          }
+                        }
+                      ]
+                    }
+                  ],
+                  "waypoints": [
+                    {
+                      "code": "BSPL_ALESUND_PRA_LØP",
+                      "name": "Bachelor i sykepleie - valg av praksisløp, Ålesund",
+                      "description": null,
+                      "deadlineDate": null,
+                      "directions": [
+                        {
+                          "code": "BSPL_ALE_PRALØP1",
+                          "name": "Bachelor i sykepleie - Praksisløp 1, Ålesund",
+                          "courseGroups": [
+                            {
+                              "code": "BSPL_ALE_PRA_LØP_1",
+                              "name": "Bachelor i sykepleie - Praksisløp 1, Ålesund",
+                              "description": null,
+                              "courses": [
+                                {
+                                  "code": "SYA2101HJE",
+                                  "version": "1",
+                                  "name": "Kliniske vurderinger i sykepleie ved sykdom og behandling - praksisstudier",
+                                  "credits": 15,
+                                  "planElement": false,
+                                  "studyChoice": {
+                                    "code": "O",
+                                    "name": "Obligatorisk emne",
+                                    "description": "Obligatorisk emne"
+                                  }
+                                }
+                              ]
+                            }
+                          ],
+                          "waypoints": []
+                        },
+                        {
+                          "code": "BSPL_ALE_PRALØP2",
+                          "name": "Bachelor i sykepleie - Praksisløp 2, Ålesund",
+                          "courseGroups": [
+                            {
+                              "code": "BSPL_ALE_PRA_LØP_2",
+                              "name": "Bachelor i sykepleie - Praksisløp 2, Ålesund",
+                              "description": null,
+                              "courses": [
+                                {
+                                  "code": "SYA2101MED",
+                                  "version": "1",
+                                  "name": "Kliniske vurderinger i sykepleie ved sykdom og behandling - praksisstudier",
+                                  "credits": 15,
+                                  "planElement": false,
+                                  "studyChoice": {
+                                    "code": "O",
+                                    "name": "Obligatorisk emne",
+                                    "description": "Obligatorisk emne"
+                                  }
+                                }
+                              ]
+                            }
+                          ],
+                          "waypoints": []
+                        },
+                        {
+                          "code": "BSPL_ALE_PRALØP3",
+                          "name": "Bachelor i sykepleie - Praksisløp 3, Ålesund",
+                          "courseGroups": [
+                            {
+                              "code": "BSPL_ALE_PRA_LØP_3",
+                              "name": "Bachelor i sykepleie - Praksisløp 3, Ålesund",
+                              "description": null,
+                              "courses": [
+                                {
+                                  "code": "SYA2101KIR",
+                                  "version": "1",
+                                  "name": "Kliniske vurderinger i sykepleie ved sykdom og behandling - praksisstudier",
+                                  "credits": 15,
+                                  "planElement": false,
+                                  "studyChoice": {
+                                    "code": "O",
+                                    "name": "Obligatorisk emne",
+                                    "description": "Obligatorisk emne"
+                                  }
+                                }
+                              ]
+                            }
+                          ],
+                          "waypoints": []
+                        },
+                        {
+                          "code": "BSPL_ALE_PRALØP4",
+                          "name": "Bachelor i sykepleie - Praksisløp 4, Ålesund",
+                          "courseGroups": [
+                            {
+                              "code": "BSPL_ALE_PRA_LØP_4",
+                              "name": "Bachelor i sykepleie - Praksisløp 4, Ålesund",
+                              "description": null,
+                              "courses": [
+                                {
+                                  "code": "SYA2101PSY",
+                                  "version": "1",
+                                  "name": "Kliniske vurderinger i sykepleie ved sykdom og behandling - praksisstudier",
+                                  "credits": 15,
+                                  "planElement": false,
+                                  "studyChoice": {
+                                    "code": "O",
+                                    "name": "Obligatorisk emne",
+                                    "description": "Obligatorisk emne"
+                                  }
+                                }
+                              ]
+                            }
+                          ],
+                          "waypoints": []
+                        },
+                        {
+                          "code": "BSPL_ALE_PRALØP5",
+                          "name": "Bachelor i sykepleie - Praksisløp 5, Ålesund",
+                          "courseGroups": [],
+                          "waypoints": []
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "periodNumber": 4,
+        "direction": {
+          "code": null,
+          "name": null,
+          "courseGroups": [],
+          "waypoints": [
+            {
+              "code": "BSPLVEI20",
+              "name": "Valg av studieby",
+              "description": null,
+              "deadlineDate": null,
+              "directions": [
+                {
+                  "code": "BSPL_GJØVIK20",
+                  "name": "Bachelor i sykepleie (Gjøvik)",
+                  "courseGroups": [
+                    {
+                      "code": "BSPL_GJØVIK_TEORI20",
+                      "name": "Bachelor i sykepleie - obligatoriske emner",
+                      "description": null,
+                      "courses": [
+                        {
+                          "code": "SYG2102",
+                          "version": "1",
+                          "name": "Kliniske vurderinger i sykepleie ved sykdom og behandling - helsefremming og rehabilitering",
+                          "credits": 15,
+                          "planElement": false,
+                          "studyChoice": {
+                            "code": "O",
+                            "name": "Obligatorisk emne",
+                            "description": "Obligatorisk emne"
+                          }
+                        }
+                      ]
+                    }
+                  ],
+                  "waypoints": [
+                    {
+                      "code": "BSPL_GJØVIK_PRA_LØP",
+                      "name": "Bachelor i sykepleie - valg av praksisløp, Gjøvik",
+                      "description": null,
+                      "deadlineDate": null,
+                      "directions": [
+                        {
+                          "code": "BSPL_GJØ_PRALØP1",
+                          "name": "Bachelor i sykepleie - Praksisløp 1, Gjøvik",
+                          "courseGroups": [
+                            {
+                              "code": "BSPL_GJØ_PRA_LØP_1",
+                              "name": "Bachelor i sykepleie - Praksisløp 1, Gjøvik",
+                              "description": null,
+                              "courses": [
+                                {
+                                  "code": "SYG2103MED",
+                                  "version": "1",
+                                  "name": "Kliniske vurderinger i sykepleie ved sykdom og behandling - helsefremming og rehabilitering - praksisstudier",
+                                  "credits": 15,
+                                  "planElement": false,
+                                  "studyChoice": {
+                                    "code": "O",
+                                    "name": "Obligatorisk emne",
+                                    "description": "Obligatorisk emne"
+                                  }
+                                }
+                              ]
+                            }
+                          ],
+                          "waypoints": []
+                        },
+                        {
+                          "code": "BSPL_GJØ_PRALØP2",
+                          "name": "Bachelor i sykepleie - Praksisløp 2, Gjøvik",
+                          "courseGroups": [
+                            {
+                              "code": "BSPL_GJØ_PRA_LØP_2",
+                              "name": "Bachelor i sykepleie - Praksisløp 2, Gjøvik",
+                              "description": null,
+                              "courses": [
+                                {
+                                  "code": "SYG2103PSY",
+                                  "version": "1",
+                                  "name": "Kliniske vurderinger i sykepleie ved sykdom og behandling - helsefremming og rehabilitering - praksisstudier",
+                                  "credits": 15,
+                                  "planElement": false,
+                                  "studyChoice": {
+                                    "code": "O",
+                                    "name": "Obligatorisk emne",
+                                    "description": "Obligatorisk emne"
+                                  }
+                                }
+                              ]
+                            }
+                          ],
+                          "waypoints": []
+                        },
+                        {
+                          "code": "BSPL_GJØ_PRALØP3",
+                          "name": "Bachelor i sykepleie - Praksisløp 3, Gjøvik",
+                          "courseGroups": [
+                            {
+                              "code": "BSPL_GJØ_PRA_LØP_3",
+                              "name": "Bachelor i sykepleie - Praksisløp 3, Gjøvik",
+                              "description": null,
+                              "courses": [
+                                {
+                                  "code": "SYG2103HJE",
+                                  "version": "1",
+                                  "name": "Kliniske vurderinger i sykepleie ved sykdom og behandling - helsefremming og rehabilitering - praksisstudier",
+                                  "credits": 15,
+                                  "planElement": false,
+                                  "studyChoice": {
+                                    "code": "O",
+                                    "name": "Obligatorisk emne",
+                                    "description": "Obligatorisk emne"
+                                  }
+                                }
+                              ]
+                            }
+                          ],
+                          "waypoints": []
+                        },
+                        {
+                          "code": "BSPL_GJØ_PRALØP4",
+                          "name": "Bachelor i sykepleie - Praksisløp 4, Gjøvik",
+                          "courseGroups": [
+                            {
+                              "code": "BSPL_GJØ_PRA_LØP_4",
+                              "name": "Bachelor i sykepleie - Praksisløp 4, Gjøvik",
+                              "description": null,
+                              "courses": [
+                                {
+                                  "code": "SYG2103KIR",
+                                  "version": "1",
+                                  "name": "Kliniske vurderinger i sykepleie ved sykdom og behandling - helsefremming og rehabilitering - praksisstudier",
+                                  "credits": 15,
+                                  "planElement": false,
+                                  "studyChoice": {
+                                    "code": "O",
+                                    "name": "Obligatorisk emne",
+                                    "description": "Obligatorisk emne"
+                                  }
+                                }
+                              ]
+                            }
+                          ],
+                          "waypoints": []
+                        },
+                        {
+                          "code": "BSPL_GJØ_PRALØP5",
+                          "name": "Bachelor i sykepleie - Praksisløp 5, Gjøvik",
+                          "courseGroups": [],
+                          "waypoints": []
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "code": "BSPL_TRONDHEIM20",
+                  "name": "Bachelor i sykepleie (Trondheim)",
+                  "courseGroups": [
+                    {
+                      "code": "BSPL_TRHEIM_TEORI20",
+                      "name": "Bachelor i sykepleie - obligatoriske emner",
+                      "description": null,
+                      "courses": [
+                        {
+                          "code": "SYT2102",
+                          "version": "1",
+                          "name": "Kliniske vurderinger i sykepleie ved sykdom og behandling - helsefremming og rehabilitering",
+                          "credits": 15,
+                          "planElement": false,
+                          "studyChoice": {
+                            "code": "O",
+                            "name": "Obligatorisk emne",
+                            "description": "Obligatorisk emne"
+                          }
+                        }
+                      ]
+                    }
+                  ],
+                  "waypoints": [
+                    {
+                      "code": "BSPL_TRONDH_PRA_LØP",
+                      "name": "Bachelor i sykepleie - valg av praksisløp, Trondheim",
+                      "description": null,
+                      "deadlineDate": null,
+                      "directions": [
+                        {
+                          "code": "BSPL_TRH_PRALØP1",
+                          "name": "Bachelor i sykepleie - Praksisløp 1, Trondheim",
+                          "courseGroups": [
+                            {
+                              "code": "BSPL_TRH_PRA_LØP_1",
+                              "name": "Bachelor i sykepleie - Praksisløp 1, Trondheim",
+                              "description": null,
+                              "courses": [
+                                {
+                                  "code": "SYT2103MED",
+                                  "version": "1",
+                                  "name": "Kliniske vurderinger i sykepleie ved sykdom og behandling - helsefremming og rehabilitering - praksisstudier",
+                                  "credits": 15,
+                                  "planElement": false,
+                                  "studyChoice": {
+                                    "code": "O",
+                                    "name": "Obligatorisk emne",
+                                    "description": "Obligatorisk emne"
+                                  }
+                                }
+                              ]
+                            }
+                          ],
+                          "waypoints": []
+                        },
+                        {
+                          "code": "BSPL_TRH_PRALØP2",
+                          "name": "Bachelor i sykepleie - Praksisløp 2, Trondheim",
+                          "courseGroups": [
+                            {
+                              "code": "BSPL_TRH_PRA_LØP_2",
+                              "name": "Bachelor i sykepleie - Praksisløp 2, Trondheim",
+                              "description": null,
+                              "courses": [
+                                {
+                                  "code": "SYT2103PSY",
+                                  "version": "1",
+                                  "name": "Kliniske vurderinger i sykepleie ved sykdom og behandling - helsefremming og rehabilitering - praksisstudier",
+                                  "credits": 15,
+                                  "planElement": false,
+                                  "studyChoice": {
+                                    "code": "O",
+                                    "name": "Obligatorisk emne",
+                                    "description": "Obligatorisk emne"
+                                  }
+                                }
+                              ]
+                            }
+                          ],
+                          "waypoints": []
+                        },
+                        {
+                          "code": "BSPL_TRH_PRALØP3",
+                          "name": "Bachelor i sykepleie - Praksisløp 3, Trondheim",
+                          "courseGroups": [
+                            {
+                              "code": "BSPL_TRH_PRA_LØP_3",
+                              "name": "Bachelor i sykepleie - Praksisløp 3, Trondheim",
+                              "description": null,
+                              "courses": [
+                                {
+                                  "code": "SYT2103HJE",
+                                  "version": "1",
+                                  "name": "Kliniske vurderinger i sykepleie ved sykdom og behandling - helsefremming og rehabilitering - praksisstudier",
+                                  "credits": 15,
+                                  "planElement": false,
+                                  "studyChoice": {
+                                    "code": "O",
+                                    "name": "Obligatorisk emne",
+                                    "description": "Obligatorisk emne"
+                                  }
+                                }
+                              ]
+                            }
+                          ],
+                          "waypoints": []
+                        },
+                        {
+                          "code": "BSPL_TRH_PRALØP4",
+                          "name": "Bachelor i sykepleie - Praksisløp 4, Trondheim",
+                          "courseGroups": [
+                            {
+                              "code": "BSPL_TRH_PRA_LØP_4",
+                              "name": "Bachelor i sykepleie - Praksisløp 4, Trondheim",
+                              "description": null,
+                              "courses": [
+                                {
+                                  "code": "SYT2103KIR",
+                                  "version": "1",
+                                  "name": "Kliniske vurderinger i sykepleie ved sykdom og behandling - helsefremming og rehabilitering - praksisstudier",
+                                  "credits": 15,
+                                  "planElement": false,
+                                  "studyChoice": {
+                                    "code": "O",
+                                    "name": "Obligatorisk emne",
+                                    "description": "Obligatorisk emne"
+                                  }
+                                }
+                              ]
+                            }
+                          ],
+                          "waypoints": []
+                        },
+                        {
+                          "code": "BSPL_TRH_PRALØP5",
+                          "name": "Bachelor i sykepleie - Praksisløp 5, Trondheim",
+                          "courseGroups": [],
+                          "waypoints": []
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "code": "BSPL_ÅLESUND20",
+                  "name": "Bachelor i sykepleie (Ålesund)",
+                  "courseGroups": [
+                    {
+                      "code": "BSPL_ÅLESUND_TEORI20",
+                      "name": "Bachelor i sykepleie - obligatoriske emner",
+                      "description": null,
+                      "courses": [
+                        {
+                          "code": "SYA2102",
+                          "version": "1",
+                          "name": "Kliniske vurderinger i sykepleie ved sykdom og behandling - helsefremming og rehabilitering",
+                          "credits": 15,
+                          "planElement": false,
+                          "studyChoice": {
+                            "code": "O",
+                            "name": "Obligatorisk emne",
+                            "description": "Obligatorisk emne"
+                          }
+                        }
+                      ]
+                    }
+                  ],
+                  "waypoints": [
+                    {
+                      "code": "BSPL_ALESUND_PRA_LØP",
+                      "name": "Bachelor i sykepleie - valg av praksisløp, Ålesund",
+                      "description": null,
+                      "deadlineDate": null,
+                      "directions": [
+                        {
+                          "code": "BSPL_ALE_PRALØP1",
+                          "name": "Bachelor i sykepleie - Praksisløp 1, Ålesund",
+                          "courseGroups": [
+                            {
+                              "code": "BSPL_ALE_PRA_LØP_1",
+                              "name": "Bachelor i sykepleie - Praksisløp 1, Ålesund",
+                              "description": null,
+                              "courses": [
+                                {
+                                  "code": "SYA2103MED",
+                                  "version": "1",
+                                  "name": "Kliniske vurderinger i sykepleie ved sykdom og behandling - helsefremming og rehabilitering - praksisstudier",
+                                  "credits": 15,
+                                  "planElement": false,
+                                  "studyChoice": {
+                                    "code": "O",
+                                    "name": "Obligatorisk emne",
+                                    "description": "Obligatorisk emne"
+                                  }
+                                }
+                              ]
+                            }
+                          ],
+                          "waypoints": []
+                        },
+                        {
+                          "code": "BSPL_ALE_PRALØP2",
+                          "name": "Bachelor i sykepleie - Praksisløp 2, Ålesund",
+                          "courseGroups": [
+                            {
+                              "code": "BSPL_ALE_PRA_LØP_2",
+                              "name": "Bachelor i sykepleie - Praksisløp 2, Ålesund",
+                              "description": null,
+                              "courses": [
+                                {
+                                  "code": "SYA2103PSY",
+                                  "version": "1",
+                                  "name": "Kliniske vurderinger i sykepleie ved sykdom og behandling - helsefremming og rehabilitering - praksisstudier",
+                                  "credits": 15,
+                                  "planElement": false,
+                                  "studyChoice": {
+                                    "code": "O",
+                                    "name": "Obligatorisk emne",
+                                    "description": "Obligatorisk emne"
+                                  }
+                                }
+                              ]
+                            }
+                          ],
+                          "waypoints": []
+                        },
+                        {
+                          "code": "BSPL_ALE_PRALØP3",
+                          "name": "Bachelor i sykepleie - Praksisløp 3, Ålesund",
+                          "courseGroups": [
+                            {
+                              "code": "BSPL_ALE_PRA_LØP_3",
+                              "name": "Bachelor i sykepleie - Praksisløp 3, Ålesund",
+                              "description": null,
+                              "courses": [
+                                {
+                                  "code": "SYA2103HJE",
+                                  "version": "1",
+                                  "name": "Kliniske vurderinger i sykepleie ved sykdom og behandling - helsefremming og rehabilitering - praksisstudier",
+                                  "credits": 15,
+                                  "planElement": false,
+                                  "studyChoice": {
+                                    "code": "O",
+                                    "name": "Obligatorisk emne",
+                                    "description": "Obligatorisk emne"
+                                  }
+                                }
+                              ]
+                            }
+                          ],
+                          "waypoints": []
+                        },
+                        {
+                          "code": "BSPL_ALE_PRALØP4",
+                          "name": "Bachelor i sykepleie - Praksisløp 4, Ålesund",
+                          "courseGroups": [
+                            {
+                              "code": "BSPL_ALE_PRA_LØP_4",
+                              "name": "Bachelor i sykepleie - Praksisløp 4, Ålesund",
+                              "description": null,
+                              "courses": [
+                                {
+                                  "code": "SYA2103KIR",
+                                  "version": "1",
+                                  "name": "Kliniske vurderinger i sykepleie ved sykdom og behandling - helsefremming og rehabilitering - praksisstudier",
+                                  "credits": 15,
+                                  "planElement": false,
+                                  "studyChoice": {
+                                    "code": "O",
+                                    "name": "Obligatorisk emne",
+                                    "description": "Obligatorisk emne"
+                                  }
+                                }
+                              ]
+                            }
+                          ],
+                          "waypoints": []
+                        },
+                        {
+                          "code": "BSPL_ALE_PRALØP5",
+                          "name": "Bachelor i sykepleie - Praksisløp 5, Ålesund",
+                          "courseGroups": [],
+                          "waypoints": []
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "periodNumber": 5,
+        "direction": {
+          "code": null,
+          "name": null,
+          "courseGroups": [],
+          "waypoints": [
+            {
+              "code": "BSPLVEI20",
+              "name": "Valg av studieby",
+              "description": null,
+              "deadlineDate": null,
+              "directions": [
+                {
+                  "code": "BSPL_GJØVIK20",
+                  "name": "Bachelor i sykepleie (Gjøvik)",
+                  "courseGroups": [
+                    {
+                      "code": "BSPL_GJØVIK_TEORI20",
+                      "name": "Bachelor i sykepleie - obligatoriske emner",
+                      "description": null,
+                      "courses": [
+                        {
+                          "code": "MH2000",
+                          "version": "1",
+                          "name": "Teknologiforståelse",
+                          "credits": 7.5,
+                          "planElement": false,
+                          "studyChoice": {
+                            "code": "O",
+                            "name": "Obligatorisk emne",
+                            "description": "Obligatorisk emne"
+                          }
+                        },
+                        {
+                          "code": "SYG2301",
+                          "version": "1",
+                          "name": "Faglig ledelse og tjenesteutvikling",
+                          "credits": 7.5,
+                          "planElement": false,
+                          "studyChoice": {
+                            "code": "O",
+                            "name": "Obligatorisk emne",
+                            "description": "Obligatorisk emne"
+                          }
+                        }
+                      ]
+                    }
+                  ],
+                  "waypoints": [
+                    {
+                      "code": "BSPL_GJØVIK_PRA_LØP",
+                      "name": "Bachelor i sykepleie - valg av praksisløp, Gjøvik",
+                      "description": null,
+                      "deadlineDate": null,
+                      "directions": [
+                        {
+                          "code": "BSPL_GJØ_PRALØP1",
+                          "name": "Bachelor i sykepleie - Praksisløp 1, Gjøvik",
+                          "courseGroups": [
+                            {
+                              "code": "BSPL_GJØ_PRA_LØP_1",
+                              "name": "Bachelor i sykepleie - Praksisløp 1, Gjøvik",
+                              "description": null,
+                              "courses": [
+                                {
+                                  "code": "SYG2300PSY",
+                                  "version": "1",
+                                  "name": "Faglig ledelse og tjenesteutvikling - praksisstudier",
+                                  "credits": 15,
+                                  "planElement": false,
+                                  "studyChoice": {
+                                    "code": "O",
+                                    "name": "Obligatorisk emne",
+                                    "description": "Obligatorisk emne"
+                                  }
+                                }
+                              ]
+                            }
+                          ],
+                          "waypoints": []
+                        },
+                        {
+                          "code": "BSPL_GJØ_PRALØP2",
+                          "name": "Bachelor i sykepleie - Praksisløp 2, Gjøvik",
+                          "courseGroups": [
+                            {
+                              "code": "BSPL_GJØ_PRA_LØP_2",
+                              "name": "Bachelor i sykepleie - Praksisløp 2, Gjøvik",
+                              "description": null,
+                              "courses": [
+                                {
+                                  "code": "SYG2300KIR",
+                                  "version": "1",
+                                  "name": "Faglig ledelse og tjenesteutvikling - praksisstudier",
+                                  "credits": 15,
+                                  "planElement": false,
+                                  "studyChoice": {
+                                    "code": "O",
+                                    "name": "Obligatorisk emne",
+                                    "description": "Obligatorisk emne"
+                                  }
+                                }
+                              ]
+                            }
+                          ],
+                          "waypoints": []
+                        },
+                        {
+                          "code": "BSPL_GJØ_PRALØP3",
+                          "name": "Bachelor i sykepleie - Praksisløp 3, Gjøvik",
+                          "courseGroups": [
+                            {
+                              "code": "BSPL_GJØ_PRA_LØP_3",
+                              "name": "Bachelor i sykepleie - Praksisløp 3, Gjøvik",
+                              "description": null,
+                              "courses": [
+                                {
+                                  "code": "SYG2300MED",
+                                  "version": "1",
+                                  "name": "Faglig ledelse og tjenesteutvikling - praksisstudier",
+                                  "credits": 15,
+                                  "planElement": false,
+                                  "studyChoice": {
+                                    "code": "O",
+                                    "name": "Obligatorisk emne",
+                                    "description": "Obligatorisk emne"
+                                  }
+                                }
+                              ]
+                            }
+                          ],
+                          "waypoints": []
+                        },
+                        {
+                          "code": "BSPL_GJØ_PRALØP4",
+                          "name": "Bachelor i sykepleie - Praksisløp 4, Gjøvik",
+                          "courseGroups": [
+                            {
+                              "code": "BSPL_GJØ_PRA_LØP_4",
+                              "name": "Bachelor i sykepleie - Praksisløp 4, Gjøvik",
+                              "description": null,
+                              "courses": [
+                                {
+                                  "code": "SYG2300HJE",
+                                  "version": "1",
+                                  "name": "Faglig ledelse og tjenesteutvikling - praksisstudier",
+                                  "credits": 15,
+                                  "planElement": false,
+                                  "studyChoice": {
+                                    "code": "O",
+                                    "name": "Obligatorisk emne",
+                                    "description": "Obligatorisk emne"
+                                  }
+                                }
+                              ]
+                            }
+                          ],
+                          "waypoints": []
+                        },
+                        {
+                          "code": "BSPL_GJØ_PRALØP5",
+                          "name": "Bachelor i sykepleie - Praksisløp 5, Gjøvik",
+                          "courseGroups": [],
+                          "waypoints": []
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "code": "BSPL_TRONDHEIM20",
+                  "name": "Bachelor i sykepleie (Trondheim)",
+                  "courseGroups": [
+                    {
+                      "code": "BSPL_TRHEIM_TEORI20",
+                      "name": "Bachelor i sykepleie - obligatoriske emner",
+                      "description": null,
+                      "courses": [
+                        {
+                          "code": "MH2000",
+                          "version": "1",
+                          "name": "Teknologiforståelse",
+                          "credits": 7.5,
+                          "planElement": false,
+                          "studyChoice": {
+                            "code": "O",
+                            "name": "Obligatorisk emne",
+                            "description": "Obligatorisk emne"
+                          }
+                        },
+                        {
+                          "code": "SYT2301",
+                          "version": "1",
+                          "name": "Faglig ledelse og tjenesteutvikling",
+                          "credits": 7.5,
+                          "planElement": false,
+                          "studyChoice": {
+                            "code": "O",
+                            "name": "Obligatorisk emne",
+                            "description": "Obligatorisk emne"
+                          }
+                        }
+                      ]
+                    }
+                  ],
+                  "waypoints": [
+                    {
+                      "code": "BSPL_TRONDH_PRA_LØP",
+                      "name": "Bachelor i sykepleie - valg av praksisløp, Trondheim",
+                      "description": null,
+                      "deadlineDate": null,
+                      "directions": [
+                        {
+                          "code": "BSPL_TRH_PRALØP1",
+                          "name": "Bachelor i sykepleie - Praksisløp 1, Trondheim",
+                          "courseGroups": [
+                            {
+                              "code": "BSPL_TRH_PRA_LØP_1",
+                              "name": "Bachelor i sykepleie - Praksisløp 1, Trondheim",
+                              "description": null,
+                              "courses": [
+                                {
+                                  "code": "SYT2300PSY",
+                                  "version": "1",
+                                  "name": "Faglig ledelse og tjenesteutvikling - praksisstudier",
+                                  "credits": 15,
+                                  "planElement": false,
+                                  "studyChoice": {
+                                    "code": "O",
+                                    "name": "Obligatorisk emne",
+                                    "description": "Obligatorisk emne"
+                                  }
+                                }
+                              ]
+                            }
+                          ],
+                          "waypoints": []
+                        },
+                        {
+                          "code": "BSPL_TRH_PRALØP2",
+                          "name": "Bachelor i sykepleie - Praksisløp 2, Trondheim",
+                          "courseGroups": [
+                            {
+                              "code": "BSPL_TRH_PRA_LØP_2",
+                              "name": "Bachelor i sykepleie - Praksisløp 2, Trondheim",
+                              "description": null,
+                              "courses": [
+                                {
+                                  "code": "SYT2300KIR",
+                                  "version": "1",
+                                  "name": "Faglig ledelse og tjenesteutvikling - praksisstudier",
+                                  "credits": 15,
+                                  "planElement": false,
+                                  "studyChoice": {
+                                    "code": "O",
+                                    "name": "Obligatorisk emne",
+                                    "description": "Obligatorisk emne"
+                                  }
+                                }
+                              ]
+                            }
+                          ],
+                          "waypoints": []
+                        },
+                        {
+                          "code": "BSPL_TRH_PRALØP3",
+                          "name": "Bachelor i sykepleie - Praksisløp 3, Trondheim",
+                          "courseGroups": [
+                            {
+                              "code": "BSPL_TRH_PRA_LØP_3",
+                              "name": "Bachelor i sykepleie - Praksisløp 3, Trondheim",
+                              "description": null,
+                              "courses": [
+                                {
+                                  "code": "SYT2300MED",
+                                  "version": "1",
+                                  "name": "Faglig ledelse og tjenesteutvikling - praksisstudier",
+                                  "credits": 15,
+                                  "planElement": false,
+                                  "studyChoice": {
+                                    "code": "O",
+                                    "name": "Obligatorisk emne",
+                                    "description": "Obligatorisk emne"
+                                  }
+                                }
+                              ]
+                            }
+                          ],
+                          "waypoints": []
+                        },
+                        {
+                          "code": "BSPL_TRH_PRALØP4",
+                          "name": "Bachelor i sykepleie - Praksisløp 4, Trondheim",
+                          "courseGroups": [
+                            {
+                              "code": "BSPL_TRH_PRA_LØP_4",
+                              "name": "Bachelor i sykepleie - Praksisløp 4, Trondheim",
+                              "description": null,
+                              "courses": [
+                                {
+                                  "code": "SYT2300HJE",
+                                  "version": "1",
+                                  "name": "Faglig ledelse og tjenesteutvikling - praksisstudier",
+                                  "credits": 15,
+                                  "planElement": false,
+                                  "studyChoice": {
+                                    "code": "O",
+                                    "name": "Obligatorisk emne",
+                                    "description": "Obligatorisk emne"
+                                  }
+                                }
+                              ]
+                            }
+                          ],
+                          "waypoints": []
+                        },
+                        {
+                          "code": "BSPL_TRH_PRALØP5",
+                          "name": "Bachelor i sykepleie - Praksisløp 5, Trondheim",
+                          "courseGroups": [],
+                          "waypoints": []
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "code": "BSPL_ÅLESUND20",
+                  "name": "Bachelor i sykepleie (Ålesund)",
+                  "courseGroups": [
+                    {
+                      "code": "BSPL_ÅLESUND_TEORI20",
+                      "name": "Bachelor i sykepleie - obligatoriske emner",
+                      "description": null,
+                      "courses": [
+                        {
+                          "code": "MH2000",
+                          "version": "1",
+                          "name": "Teknologiforståelse",
+                          "credits": 7.5,
+                          "planElement": false,
+                          "studyChoice": {
+                            "code": "O",
+                            "name": "Obligatorisk emne",
+                            "description": "Obligatorisk emne"
+                          }
+                        },
+                        {
+                          "code": "SYA2301",
+                          "version": "1",
+                          "name": "Faglig ledelse og tjenesteutvikling",
+                          "credits": 7.5,
+                          "planElement": false,
+                          "studyChoice": {
+                            "code": "O",
+                            "name": "Obligatorisk emne",
+                            "description": "Obligatorisk emne"
+                          }
+                        }
+                      ]
+                    }
+                  ],
+                  "waypoints": [
+                    {
+                      "code": "BSPL_ALESUND_PRA_LØP",
+                      "name": "Bachelor i sykepleie - valg av praksisløp, Ålesund",
+                      "description": null,
+                      "deadlineDate": null,
+                      "directions": [
+                        {
+                          "code": "BSPL_ALE_PRALØP1",
+                          "name": "Bachelor i sykepleie - Praksisløp 1, Ålesund",
+                          "courseGroups": [
+                            {
+                              "code": "BSPL_ALE_PRA_LØP_1",
+                              "name": "Bachelor i sykepleie - Praksisløp 1, Ålesund",
+                              "description": null,
+                              "courses": [
+                                {
+                                  "code": "SYA2300PSY",
+                                  "version": "1",
+                                  "name": "Faglig ledelse og tjenesteutvikling - praksisstudier",
+                                  "credits": 15,
+                                  "planElement": false,
+                                  "studyChoice": {
+                                    "code": "O",
+                                    "name": "Obligatorisk emne",
+                                    "description": "Obligatorisk emne"
+                                  }
+                                }
+                              ]
+                            }
+                          ],
+                          "waypoints": []
+                        },
+                        {
+                          "code": "BSPL_ALE_PRALØP2",
+                          "name": "Bachelor i sykepleie - Praksisløp 2, Ålesund",
+                          "courseGroups": [
+                            {
+                              "code": "BSPL_ALE_PRA_LØP_2",
+                              "name": "Bachelor i sykepleie - Praksisløp 2, Ålesund",
+                              "description": null,
+                              "courses": [
+                                {
+                                  "code": "SYA2300KIR",
+                                  "version": "1",
+                                  "name": "Faglig ledelse og tjenesteutvikling - praksisstudier",
+                                  "credits": 15,
+                                  "planElement": false,
+                                  "studyChoice": {
+                                    "code": "O",
+                                    "name": "Obligatorisk emne",
+                                    "description": "Obligatorisk emne"
+                                  }
+                                }
+                              ]
+                            }
+                          ],
+                          "waypoints": []
+                        },
+                        {
+                          "code": "BSPL_ALE_PRALØP3",
+                          "name": "Bachelor i sykepleie - Praksisløp 3, Ålesund",
+                          "courseGroups": [
+                            {
+                              "code": "BSPL_ALE_PRA_LØP_3",
+                              "name": "Bachelor i sykepleie - Praksisløp 3, Ålesund",
+                              "description": null,
+                              "courses": [
+                                {
+                                  "code": "SYA2300MED",
+                                  "version": "1",
+                                  "name": "Faglig ledelse og tjenesteutvikling - praksisstudier",
+                                  "credits": 15,
+                                  "planElement": false,
+                                  "studyChoice": {
+                                    "code": "O",
+                                    "name": "Obligatorisk emne",
+                                    "description": "Obligatorisk emne"
+                                  }
+                                }
+                              ]
+                            }
+                          ],
+                          "waypoints": []
+                        },
+                        {
+                          "code": "BSPL_ALE_PRALØP4",
+                          "name": "Bachelor i sykepleie - Praksisløp 4, Ålesund",
+                          "courseGroups": [
+                            {
+                              "code": "BSPL_ALE_PRA_LØP_4",
+                              "name": "Bachelor i sykepleie - Praksisløp 4, Ålesund",
+                              "description": null,
+                              "courses": [
+                                {
+                                  "code": "SYA2300HJE",
+                                  "version": "1",
+                                  "name": "Faglig ledelse og tjenesteutvikling - praksisstudier",
+                                  "credits": 15,
+                                  "planElement": false,
+                                  "studyChoice": {
+                                    "code": "O",
+                                    "name": "Obligatorisk emne",
+                                    "description": "Obligatorisk emne"
+                                  }
+                                }
+                              ]
+                            }
+                          ],
+                          "waypoints": []
+                        },
+                        {
+                          "code": "BSPL_ALE_PRALØP5",
+                          "name": "Bachelor i sykepleie - Praksisløp 5, Ålesund",
+                          "courseGroups": [],
+                          "waypoints": []
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "periodNumber": 6,
+        "direction": {
+          "code": null,
+          "name": null,
+          "courseGroups": [],
+          "waypoints": [
+            {
+              "code": "BSPLVEI20",
+              "name": "Valg av studieby",
+              "description": null,
+              "deadlineDate": null,
+              "directions": [
+                {
+                  "code": "BSPL_GJØVIK20",
+                  "name": "Bachelor i sykepleie (Gjøvik)",
+                  "courseGroups": [
+                    {
+                      "code": "BSPL_GJØVIK_TEORI20",
+                      "name": "Bachelor i sykepleie - obligatoriske emner",
+                      "description": null,
+                      "courses": [
+                        {
+                          "code": "SYG2900",
+                          "version": "1",
+                          "name": "Bacheloroppgave i sykepleie",
+                          "credits": 15,
+                          "planElement": false,
+                          "studyChoice": {
+                            "code": "O",
+                            "name": "Obligatorisk emne",
+                            "description": "Obligatorisk emne"
+                          }
+                        }
+                      ]
+                    }
+                  ],
+                  "waypoints": [
+                    {
+                      "code": "BSPL_GJØVIK_PRA_LØP",
+                      "name": "Bachelor i sykepleie - valg av praksisløp, Gjøvik",
+                      "description": null,
+                      "deadlineDate": null,
+                      "directions": [
+                        {
+                          "code": "BSPL_GJØ_PRALØP1",
+                          "name": "Bachelor i sykepleie - Praksisløp 1, Gjøvik",
+                          "courseGroups": [
+                            {
+                              "code": "BSPL_GJØ_PRA_LØP_1",
+                              "name": "Bachelor i sykepleie - Praksisløp 1, Gjøvik",
+                              "description": null,
+                              "courses": [
+                                {
+                                  "code": "SYG2302KIR",
+                                  "version": "1",
+                                  "name": "Komplekse vurderinger og beslutninger i sykepleie - praksisstudier",
+                                  "credits": 15,
+                                  "planElement": false,
+                                  "studyChoice": {
+                                    "code": "O",
+                                    "name": "Obligatorisk emne",
+                                    "description": "Obligatorisk emne"
+                                  }
+                                }
+                              ]
+                            }
+                          ],
+                          "waypoints": []
+                        },
+                        {
+                          "code": "BSPL_GJØ_PRALØP2",
+                          "name": "Bachelor i sykepleie - Praksisløp 2, Gjøvik",
+                          "courseGroups": [
+                            {
+                              "code": "BSPL_GJØ_PRA_LØP_2",
+                              "name": "Bachelor i sykepleie - Praksisløp 2, Gjøvik",
+                              "description": null,
+                              "courses": [
+                                {
+                                  "code": "SYG2302HJE",
+                                  "version": "1",
+                                  "name": "Komplekse vurderinger og beslutninger i sykepleie - praksisstudier",
+                                  "credits": 15,
+                                  "planElement": false,
+                                  "studyChoice": {
+                                    "code": "O",
+                                    "name": "Obligatorisk emne",
+                                    "description": "Obligatorisk emne"
+                                  }
+                                }
+                              ]
+                            }
+                          ],
+                          "waypoints": []
+                        },
+                        {
+                          "code": "BSPL_GJØ_PRALØP3",
+                          "name": "Bachelor i sykepleie - Praksisløp 3, Gjøvik",
+                          "courseGroups": [
+                            {
+                              "code": "BSPL_GJØ_PRA_LØP_3",
+                              "name": "Bachelor i sykepleie - Praksisløp 3, Gjøvik",
+                              "description": null,
+                              "courses": [
+                                {
+                                  "code": "SYG2302PSY",
+                                  "version": "1",
+                                  "name": "Komplekse vurderinger og beslutninger i sykepleie - praksisstudier",
+                                  "credits": 15,
+                                  "planElement": false,
+                                  "studyChoice": {
+                                    "code": "O",
+                                    "name": "Obligatorisk emne",
+                                    "description": "Obligatorisk emne"
+                                  }
+                                }
+                              ]
+                            }
+                          ],
+                          "waypoints": []
+                        },
+                        {
+                          "code": "BSPL_GJØ_PRALØP4",
+                          "name": "Bachelor i sykepleie - Praksisløp 4, Gjøvik",
+                          "courseGroups": [
+                            {
+                              "code": "BSPL_GJØ_PRA_LØP_4",
+                              "name": "Bachelor i sykepleie - Praksisløp 4, Gjøvik",
+                              "description": null,
+                              "courses": [
+                                {
+                                  "code": "SYG2302MED",
+                                  "version": "1",
+                                  "name": "Komplekse vurderinger og beslutninger i sykepleie - praksisstudier",
+                                  "credits": 15,
+                                  "planElement": false,
+                                  "studyChoice": {
+                                    "code": "O",
+                                    "name": "Obligatorisk emne",
+                                    "description": "Obligatorisk emne"
+                                  }
+                                }
+                              ]
+                            }
+                          ],
+                          "waypoints": []
+                        },
+                        {
+                          "code": "BSPL_GJØ_PRALØP5",
+                          "name": "Bachelor i sykepleie - Praksisløp 5, Gjøvik",
+                          "courseGroups": [],
+                          "waypoints": []
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "code": "BSPL_TRONDHEIM20",
+                  "name": "Bachelor i sykepleie (Trondheim)",
+                  "courseGroups": [
+                    {
+                      "code": "BSPL_TRHEIM_TEORI20",
+                      "name": "Bachelor i sykepleie - obligatoriske emner",
+                      "description": null,
+                      "courses": [
+                        {
+                          "code": "SYT2900",
+                          "version": "1",
+                          "name": "Bacheloroppgave i sykepleie",
+                          "credits": 15,
+                          "planElement": false,
+                          "studyChoice": {
+                            "code": "O",
+                            "name": "Obligatorisk emne",
+                            "description": "Obligatorisk emne"
+                          }
+                        }
+                      ]
+                    }
+                  ],
+                  "waypoints": [
+                    {
+                      "code": "BSPL_TRONDH_PRA_LØP",
+                      "name": "Bachelor i sykepleie - valg av praksisløp, Trondheim",
+                      "description": null,
+                      "deadlineDate": null,
+                      "directions": [
+                        {
+                          "code": "BSPL_TRH_PRALØP1",
+                          "name": "Bachelor i sykepleie - Praksisløp 1, Trondheim",
+                          "courseGroups": [
+                            {
+                              "code": "BSPL_TRH_PRA_LØP_1",
+                              "name": "Bachelor i sykepleie - Praksisløp 1, Trondheim",
+                              "description": null,
+                              "courses": [
+                                {
+                                  "code": "SYT2302KIR",
+                                  "version": "1",
+                                  "name": "Komplekse vurderinger og beslutninger i sykepleie - praksisstudier",
+                                  "credits": 15,
+                                  "planElement": false,
+                                  "studyChoice": {
+                                    "code": "O",
+                                    "name": "Obligatorisk emne",
+                                    "description": "Obligatorisk emne"
+                                  }
+                                }
+                              ]
+                            }
+                          ],
+                          "waypoints": []
+                        },
+                        {
+                          "code": "BSPL_TRH_PRALØP2",
+                          "name": "Bachelor i sykepleie - Praksisløp 2, Trondheim",
+                          "courseGroups": [
+                            {
+                              "code": "BSPL_TRH_PRA_LØP_2",
+                              "name": "Bachelor i sykepleie - Praksisløp 2, Trondheim",
+                              "description": null,
+                              "courses": [
+                                {
+                                  "code": "SYT2302HJE",
+                                  "version": "1",
+                                  "name": "Komplekse vurderinger og beslutninger i sykepleie - praksisstudier",
+                                  "credits": 15,
+                                  "planElement": false,
+                                  "studyChoice": {
+                                    "code": "O",
+                                    "name": "Obligatorisk emne",
+                                    "description": "Obligatorisk emne"
+                                  }
+                                }
+                              ]
+                            }
+                          ],
+                          "waypoints": []
+                        },
+                        {
+                          "code": "BSPL_TRH_PRALØP3",
+                          "name": "Bachelor i sykepleie - Praksisløp 3, Trondheim",
+                          "courseGroups": [
+                            {
+                              "code": "BSPL_TRH_PRA_LØP_3",
+                              "name": "Bachelor i sykepleie - Praksisløp 3, Trondheim",
+                              "description": null,
+                              "courses": [
+                                {
+                                  "code": "SYT2302PSY",
+                                  "version": "1",
+                                  "name": "Komplekse vurderinger og beslutninger i sykepleie - praksisstudier",
+                                  "credits": 15,
+                                  "planElement": false,
+                                  "studyChoice": {
+                                    "code": "O",
+                                    "name": "Obligatorisk emne",
+                                    "description": "Obligatorisk emne"
+                                  }
+                                }
+                              ]
+                            }
+                          ],
+                          "waypoints": []
+                        },
+                        {
+                          "code": "BSPL_TRH_PRALØP4",
+                          "name": "Bachelor i sykepleie - Praksisløp 4, Trondheim",
+                          "courseGroups": [
+                            {
+                              "code": "BSPL_TRH_PRA_LØP_4",
+                              "name": "Bachelor i sykepleie - Praksisløp 4, Trondheim",
+                              "description": null,
+                              "courses": [
+                                {
+                                  "code": "SYT2302MED",
+                                  "version": "1",
+                                  "name": "Komplekse vurderinger og beslutninger i sykepleie - praksisstudier",
+                                  "credits": 15,
+                                  "planElement": false,
+                                  "studyChoice": {
+                                    "code": "O",
+                                    "name": "Obligatorisk emne",
+                                    "description": "Obligatorisk emne"
+                                  }
+                                }
+                              ]
+                            }
+                          ],
+                          "waypoints": []
+                        },
+                        {
+                          "code": "BSPL_TRH_PRALØP5",
+                          "name": "Bachelor i sykepleie - Praksisløp 5, Trondheim",
+                          "courseGroups": [],
+                          "waypoints": []
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "code": "BSPL_ÅLESUND20",
+                  "name": "Bachelor i sykepleie (Ålesund)",
+                  "courseGroups": [
+                    {
+                      "code": "BSPL_ÅLESUND_TEORI20",
+                      "name": "Bachelor i sykepleie - obligatoriske emner",
+                      "description": null,
+                      "courses": [
+                        {
+                          "code": "SYA2900",
+                          "version": "1",
+                          "name": "Bacheloroppgave i sykepleie",
+                          "credits": 15,
+                          "planElement": false,
+                          "studyChoice": {
+                            "code": "O",
+                            "name": "Obligatorisk emne",
+                            "description": "Obligatorisk emne"
+                          }
+                        }
+                      ]
+                    }
+                  ],
+                  "waypoints": [
+                    {
+                      "code": "BSPL_ALESUND_PRA_LØP",
+                      "name": "Bachelor i sykepleie - valg av praksisløp, Ålesund",
+                      "description": null,
+                      "deadlineDate": null,
+                      "directions": [
+                        {
+                          "code": "BSPL_ALE_PRALØP1",
+                          "name": "Bachelor i sykepleie - Praksisløp 1, Ålesund",
+                          "courseGroups": [
+                            {
+                              "code": "BSPL_ALE_PRA_LØP_1",
+                              "name": "Bachelor i sykepleie - Praksisløp 1, Ålesund",
+                              "description": null,
+                              "courses": [
+                                {
+                                  "code": "SYA2302KIR",
+                                  "version": "1",
+                                  "name": "Komplekse vurderinger og beslutninger i sykepleie - praksisstudier",
+                                  "credits": 15,
+                                  "planElement": false,
+                                  "studyChoice": {
+                                    "code": "O",
+                                    "name": "Obligatorisk emne",
+                                    "description": "Obligatorisk emne"
+                                  }
+                                }
+                              ]
+                            }
+                          ],
+                          "waypoints": []
+                        },
+                        {
+                          "code": "BSPL_ALE_PRALØP2",
+                          "name": "Bachelor i sykepleie - Praksisløp 2, Ålesund",
+                          "courseGroups": [
+                            {
+                              "code": "BSPL_ALE_PRA_LØP_2",
+                              "name": "Bachelor i sykepleie - Praksisløp 2, Ålesund",
+                              "description": null,
+                              "courses": [
+                                {
+                                  "code": "SYA2302HJE",
+                                  "version": "1",
+                                  "name": "Komplekse vurderinger og beslutninger i sykepleie - praksisstudier",
+                                  "credits": 15,
+                                  "planElement": false,
+                                  "studyChoice": {
+                                    "code": "O",
+                                    "name": "Obligatorisk emne",
+                                    "description": "Obligatorisk emne"
+                                  }
+                                }
+                              ]
+                            }
+                          ],
+                          "waypoints": []
+                        },
+                        {
+                          "code": "BSPL_ALE_PRALØP3",
+                          "name": "Bachelor i sykepleie - Praksisløp 3, Ålesund",
+                          "courseGroups": [
+                            {
+                              "code": "BSPL_ALE_PRA_LØP_3",
+                              "name": "Bachelor i sykepleie - Praksisløp 3, Ålesund",
+                              "description": null,
+                              "courses": [
+                                {
+                                  "code": "SYA2302PSY",
+                                  "version": "1",
+                                  "name": "Komplekse vurderinger og beslutninger i sykepleie - praksisstudier",
+                                  "credits": 15,
+                                  "planElement": false,
+                                  "studyChoice": {
+                                    "code": "O",
+                                    "name": "Obligatorisk emne",
+                                    "description": "Obligatorisk emne"
+                                  }
+                                }
+                              ]
+                            }
+                          ],
+                          "waypoints": []
+                        },
+                        {
+                          "code": "BSPL_ALE_PRALØP4",
+                          "name": "Bachelor i sykepleie - Praksisløp 4, Ålesund",
+                          "courseGroups": [
+                            {
+                              "code": "BSPL_ALE_PRA_LØP_4",
+                              "name": "Bachelor i sykepleie - Praksisløp 4, Ålesund",
+                              "description": null,
+                              "courses": [
+                                {
+                                  "code": "SYA2302MED",
+                                  "version": "1",
+                                  "name": "Komplekse vurderinger og beslutninger i sykepleie - praksisstudier",
+                                  "credits": 15,
+                                  "planElement": false,
+                                  "studyChoice": {
+                                    "code": "O",
+                                    "name": "Obligatorisk emne",
+                                    "description": "Obligatorisk emne"
+                                  }
+                                }
+                              ]
+                            }
+                          ],
+                          "waypoints": []
+                        },
+                        {
+                          "code": "BSPL_ALE_PRALØP5",
+                          "name": "Bachelor i sykepleie - Praksisløp 5, Ålesund",
+                          "courseGroups": [],
+                          "waypoints": []
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      }
+    ],
+    "publishedYears": [
+      2026,
+      2025,
+      2024,
+      2023,
+      2022,
+      2021,
+      2020,
+      2019,
+      2018,
+      2017,
+      2016,
+      2015,
+      2014,
+      2013,
+      2012,
+      2011,
+      2010,
+      2009,
+      2008,
+      2007
+    ]
+  }
+}

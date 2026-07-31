@@ -150,15 +150,26 @@
 - `mise run check` is the fast unit pass (no server). `mise run e2e` builds,
   serves via wrangler and drives Chromium (`e2e/*.pw.ts` — named `.pw.ts` so
   vitest's default `*.spec/test.*` include never picks them up). Navigation
-  regressions are only visible there. **`mise run e2e` now runs in CI**
-  (`.github/workflows/e2e.yml`, scoped to `src/lib/planner/**`,
-  `src/components/planner/**`, `worker/**` plus a nightly schedule) and
-  **gates `release.yml` directly** — a tag push re-runs it regardless of
-  which paths the tagged diff touched. Before this it ran nowhere in CI,
-  which is how B2/B4-class regressions (docs/REVIEW.md) reached a green
-  build. Do not narrow the trigger paths without checking whether the
-  change you're making could regress the flagship flow through a path
-  that's no longer watched.
+  regressions are only visible there. It **gates `release.yml` directly** — a
+  tag push re-runs it regardless of which paths the tagged diff touched — and
+  runs on push/PR per `.github/workflows/e2e.yml`. Do not narrow the trigger
+  paths without checking whether the change could regress the flagship flow
+  through a path that's no longer watched.
+- **The browser suite replays recorded `/api/*` responses by default**
+  (`e2e/fixtures.ts` installs the layer for every test via `e2e/harness.ts`;
+  the responses are committed under `e2e/fixtures/api/`). That is what makes it
+  ~25 s, deterministic and runnable offline. Two things keep it honest:
+  a **miss is recorded, then fails the run in teardown**, so a fixture gap is
+  never silently a live call and never reappears; and `e2e/contract.pw.ts`
+  asserts — against LIVE upstream — the facts the fixtures bake in (MTDT kull
+  2026's five period-1 courses, TMA4400 partitioning lectures by programme,
+  the TDT4109×TDT4120 clash, BSPL's Ø-coded campus waypoint). Those tests are
+  skipped by default and run on the nightly schedule, which is the only thing
+  that can notice upstream moving. When one fails, `mise run e2e:record`
+  refreshes the store; `mise run e2e:live` runs everything against live.
+  `/api/health` is deliberately NOT intercepted — `navigation.pw.ts` reads the
+  worker's real security headers off it, and a replayed response would answer
+  that with headers captured at some past moment.
 - Two-pass typecheck (Workers vs Node ambient types clash):
   `worker/tsconfig.json` + `tsconfig.test.json`; keep Workers-only ambient
   types out of files the Node pass includes (structural interfaces instead).

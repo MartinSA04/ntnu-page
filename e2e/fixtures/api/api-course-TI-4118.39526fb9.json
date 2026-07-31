@@ -1,0 +1,157 @@
+{
+  "url": "http://127.0.0.1:8788/api/course/TI%C3%984118",
+  "status": 200,
+  "contentType": "application/json; charset=utf-8",
+  "body": {
+    "courseCode": "TIØ4118",
+    "courseName": "Industriell økonomisk analyse",
+    "credits": 7.5,
+    "level": "Tredjeårsemner, nivå III",
+    "teachingStart": "Høst 2026",
+    "teachingDuration": "1 semester",
+    "teachingLanguage": "Engelsk og norsk",
+    "location": "Trondheim",
+    "assessmentScheme": "Skriftlig skoleeksamen",
+    "gradeRule": "Bokstavkarakterer",
+    "facts": [
+      {
+        "label": "Studiepoeng",
+        "value": "7,5"
+      },
+      {
+        "label": "Nivå",
+        "value": "Tredjeårsemner, nivå III"
+      },
+      {
+        "label": "Undervisningsstart",
+        "value": "Høst 2026"
+      },
+      {
+        "label": "Varighet",
+        "value": "1 semester"
+      },
+      {
+        "label": "Undervisningsspråk",
+        "value": "Engelsk og norsk"
+      },
+      {
+        "label": "Sted",
+        "value": "Trondheim"
+      },
+      {
+        "label": "Vurderingsordning",
+        "value": "Skriftlig skoleeksamen"
+      }
+    ],
+    "content": "Mikroøkonomisk analyse av konsumentenes etterspørsel; bedriftenes kostnadsfunksjon og markedstilbud; analyse av markeder; prising med markedsmakt; monopolistisk konkurranse og oligopoli; statlige intervensjoner og økonomisk analyse av velferd; partiell og generell likevekt, markedssvikt, eksternaliteter, spillteoretiske konsepter. Bruk av matematikk til å løse mikroøkonomiske problemstillinger.",
+    "learningOutcome": "Emnets posisjon og funksjon i studiet: Emnet er obligatorisk i 3. årskurs i studieprogrammet MTIØT, og skal konkret bidra til å oppfylle læringsmål 2.3 i den detaljerte læringsmålsoversikten for MTIØT der det kreves \"Broad and sound basic knowledge in administrative and economic areas\". Emnet skal gi kunnskaper til å forstå grunnleggende teori, modeller, metoder og begreper innenfor mikroøkonomi og spillteori for å kunne forklare og forutsi adferden til konsumenten, produsenten og andre økonomiske aktører (inkludert myndighetene) som deltar i markedet og påvirker markedspris og -volum. Ved slutten av semesteret skal studentene være i stand til å bruke teori og kvantitative modeller innenfor mikroøkonomi og spillteori til: 1. Å forklare, analysere og forutsi konsumentenadferd under betingelser av sikkerhet og usikkerhet (og varierende risikoholdningene) og konsekvenser for individer og samlet markedsetterspørsel. 2. Å kunne beregne bedriftens kostnadsminimerende valg av innsatsfaktorer samt optimal pris, tilbudsmengde og profitt under ulike markedsformer (inkludert frikonkurransemarkeder og ikke-perfekte konkurranseformer som monopol, oligopol og monopolistisk konkurranse); 3. Å kunne analysere samspillet mellom konsumentene og bedriftene, anvende likevektskonsepter og beregne konsumentoverskudd og samfunnsøkonomisk velferd 4. Å kunne utføre tilbuds- og etterspørselsanalyse for innsatsfaktorer gitt de forskjellige markedsformene 5. Å kunne diskutere og beskrive forskjellige typer av markedssvikt og analysere og forutsi effekten på markedslikevekt og samfunnsøkonomisk velferd 6. Å kunne diskutere og beskrive myndighetenes rolle i økonomien, og analysere og forutsi effekten av tiltak (politikk, skatt, etc.) på pris og volum, samfunnsøkonomisk velferd og økonomisk effektivitet 7. Å kunne forklare strategisk adferd hos markedsdeltakere, inkludert kartellisering og andre former av kooperative og ikke-kooperative spill, og anvende konsepter som dominante strategier til å bestemme Nash-likevekt i små spill 8. Å kunne anvende generell likevektsteori til å forklare og analysere markeder for forskjellige goder simultant, og forklare følger av myndighetenes tiltak og av internasjonal handel for markedslikevekt og samfunnsøkonomisk velferd Emnet skal stimulere, tilrettelegge og bidra til: - utvikling av økonomisk intuisjon; - evnen til trekke ut viktige økonomiske kjennetegn fra en casebeskrivelse; - evne til oversette en casebeskrivelse til et logisk meningsfult kvantitativ problem som kan løses numerisk, og løsningen gis som spesifikk besluttningsstøtte til problemstillingen i caset; - evne til gi godt begrunnede strategianbefalinger for bedrifter basert på det økonomiske modell- og begrepsapparatet.",
+    "learningMethods": "Forelesninger og øvinger. Noen gjesteforelesninger. Øvinger vil bli poengsatt og et minimum antall poeng trengs for å ha bestått øvingsopplegget.",
+    "mandatoryActivities": [
+      "Øving"
+    ],
+    "assessmentDetails": "Ved utsatt eksamen kan skriftlig eksamen bli endret til muntlig eksamen.",
+    "specialConditions": "Krever opptak til studieprogram:\nEntreprenørskap (MENTRE)\nIndustriell økonomi og teknologiledelse (MTIØT)\nNTNUs Entreprenørskole (MIENTRE)\nSustainable Energy (MSSE)",
+    "requiredKnowledge": "Studenter som ikke går på femårige masterstudium i industriell økonomi og teknologiledelse må kunne dokumentere tilsvarende ferdigheter i matematikk som Indøkstudenter har.",
+    "recommendedKnowledge": "Emnet bygger på den obligatoriske undervisningen i matematikk innenfor sivilingeniørstudiet og på emnet TIØ4105 Industriell økonomisk styring eller tilsvarende forkunnskaper. For eksempel er teknikker for å finne maksimum / minimum av kvadratiske funksjoner, å finne førsteordens deriverte, å arbeide med Lagrange-multiplikatorer, og å løse små systemer av lineære ligninger, rutinemessig nødvendig for å løse de ukentlige hjemmeoppgavene.",
+    "courseMaterials": "Annonseres med semesterstart. Sannsynligvis en lærebok og noen vitenskaplige artikler.",
+    "creditReductions": [
+      {
+        "courseCode": "TIØ4117",
+        "reduction": "7,5 sp",
+        "fromTerm": "Høst 2017"
+      },
+      {
+        "courseCode": "TIØ4116",
+        "reduction": "7,5 sp",
+        "fromTerm": "Høst 2017"
+      }
+    ],
+    "subjectAreas": [
+      "Teknologiske fag",
+      "Økonomi"
+    ],
+    "studyPrograms": [
+      {
+        "code": "MENTRE",
+        "name": "Entreprenørskap"
+      },
+      {
+        "code": "MTIØT",
+        "name": "Industriell økonomi og teknologiledelse"
+      },
+      {
+        "code": "MIENTRE",
+        "name": "NTNUs Entreprenørskole"
+      },
+      {
+        "code": "MSSE",
+        "name": "Sustainable Energy"
+      }
+    ],
+    "contacts": [
+      {
+        "role": "Emneansvarlig/koordinator",
+        "persons": [
+          {
+            "name": "Anne Franziska Neumann",
+            "url": "https://www.ntnu.no/ansatte/anne.neumann"
+          }
+        ]
+      }
+    ],
+    "department": "Institutt for industriell økonomi og teknologiledelse",
+    "exams": [
+      {
+        "occasion": "Ordinær eksamen",
+        "season": "Høst 2026",
+        "form": "Skriftlig skoleeksamen",
+        "weighting": "100/100",
+        "aidCode": "Kode D",
+        "aidCodeDescription": "D: Ingen trykte eller håndskrevne hjelpemidler tillatt. Bestemt, enkel kalkulator tillatt.",
+        "date": "2026-11-21",
+        "dateText": "21.11.2026",
+        "time": "09:00",
+        "timeText": "09:00",
+        "duration": "4 timer",
+        "system": "Inspera Assessment",
+        "rooms": [
+          {
+            "building": "Sluppenvegen 14",
+            "room": "SL311 brun sone",
+            "candidates": 81
+          }
+        ]
+      },
+      {
+        "occasion": "Utsatt eksamen",
+        "season": "Sommer 2027",
+        "form": "Skriftlig skoleeksamen",
+        "weighting": "100/100",
+        "aidCode": "Kode D",
+        "aidCodeDescription": "D: Ingen trykte eller håndskrevne hjelpemidler tillatt. Bestemt, enkel kalkulator tillatt.",
+        "date": null,
+        "dateText": null,
+        "time": null,
+        "timeText": null,
+        "duration": "4 timer",
+        "system": "Inspera Assessment",
+        "rooms": []
+      }
+    ],
+    "studyYear": 2026,
+    "availableYears": [
+      2026,
+      2025,
+      2024,
+      2023,
+      2022,
+      2021,
+      2020,
+      2019,
+      2018,
+      2017
+    ],
+    "notices": [],
+    "courseLinks": []
+  }
+}

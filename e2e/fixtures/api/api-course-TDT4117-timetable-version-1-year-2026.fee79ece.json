@@ -1,0 +1,147 @@
+{
+  "url": "http://127.0.0.1:8788/api/course/TDT4117/timetable?year=2026&version=1",
+  "status": 200,
+  "contentType": "application/json; charset=utf-8",
+  "body": [
+    {
+      "courseCode": "TDT4117",
+      "courseName": {
+        "nob": "Informasjonsgjenfinning",
+        "nno": "Informasjonsgjenfinning",
+        "eng": "Information Retrieval"
+      },
+      "acronym": "FORM",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Formidling",
+      "title": "Forelesing",
+      "dayNumber": 1,
+      "startTime": "08:15",
+      "endTime": "10:00",
+      "weeks": [
+        "34-47"
+      ],
+      "rooms": [
+        {
+          "id": "194_307_205",
+          "building": "Verkstedteknisk",
+          "room": "VE1",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=307-205"
+        }
+      ],
+      "studyProgramKeys": [
+        "MTDT",
+        "MSIT",
+        "MLREAL",
+        "MIDT",
+        "BIT",
+        "MTING"
+      ]
+    },
+    {
+      "courseCode": "TDT4117",
+      "courseName": {
+        "nob": "Informasjonsgjenfinning",
+        "nno": "Informasjonsgjenfinning",
+        "eng": "Information Retrieval"
+      },
+      "acronym": "DISAM",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Dialog- og samarbeidsbasert undervisning",
+      "title": "Øving",
+      "dayNumber": 1,
+      "startTime": "15:15",
+      "endTime": "17:00",
+      "weeks": [
+        "34-47"
+      ],
+      "rooms": [
+        {
+          "id": "194_301_340",
+          "building": "Hovedbygningen",
+          "room": "H3",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=301-340"
+        }
+      ],
+      "studyProgramKeys": [
+        "MTDT",
+        "MSIT",
+        "MLREAL",
+        "MIDT",
+        "BIT",
+        "MTING"
+      ]
+    },
+    {
+      "courseCode": "TDT4117",
+      "courseName": {
+        "nob": "Informasjonsgjenfinning",
+        "nno": "Informasjonsgjenfinning",
+        "eng": "Information Retrieval"
+      },
+      "acronym": "FORM",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Formidling",
+      "title": "Forelesing",
+      "dayNumber": 2,
+      "startTime": "08:15",
+      "endTime": "10:00",
+      "weeks": [
+        "34-47"
+      ],
+      "rooms": [
+        {
+          "id": "194_322_115",
+          "building": "Sentralbygg 2",
+          "room": "S5",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=322-115"
+        }
+      ],
+      "studyProgramKeys": [
+        "MTDT",
+        "MSIT",
+        "MLREAL",
+        "MIDT",
+        "BIT",
+        "MTING"
+      ]
+    },
+    {
+      "courseCode": "TDT4117",
+      "courseName": {
+        "nob": "Informasjonsgjenfinning",
+        "nno": "Informasjonsgjenfinning",
+        "eng": "Information Retrieval"
+      },
+      "acronym": "DISAM",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Dialog- og samarbeidsbasert undervisning",
+      "title": "Øving",
+      "dayNumber": 4,
+      "startTime": "08:15",
+      "endTime": "10:00",
+      "weeks": [
+        "34-47"
+      ],
+      "rooms": [
+        {
+          "id": "194_301_340",
+          "building": "Hovedbygningen",
+          "room": "H3",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=301-340"
+        }
+      ],
+      "studyProgramKeys": [
+        "MTDT",
+        "MSIT",
+        "MLREAL",
+        "MIDT",
+        "BIT",
+        "MTING"
+      ]
+    }
+  ]
+}

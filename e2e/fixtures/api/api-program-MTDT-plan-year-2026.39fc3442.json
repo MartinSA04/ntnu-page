@@ -1,0 +1,197 @@
+{
+  "url": "http://127.0.0.1:8788/api/program/MTDT/plan?year=2026",
+  "status": 200,
+  "contentType": "application/json; charset=utf-8",
+  "body": {
+    "code": "MTDT",
+    "name": "Datateknologi - master (5-årig)",
+    "year": 2026,
+    "startTerm": "HØST",
+    "updated": "12-05-2026 at 04:53:33",
+    "periods": [
+      {
+        "periodNumber": 1,
+        "direction": {
+          "code": null,
+          "name": null,
+          "courseGroups": [
+            {
+              "code": "MTDTÅR1-26",
+              "name": "1. år Master i datateknologi - 5-årig",
+              "description": null,
+              "courses": [
+                {
+                  "code": "HMS0002",
+                  "version": "1",
+                  "name": "HMS-kurs for 1. årsstudenter",
+                  "credits": 0,
+                  "planElement": false,
+                  "studyChoice": {
+                    "code": "O",
+                    "name": "Obligatorisk emne",
+                    "description": "Obligatorisk emne"
+                  }
+                },
+                {
+                  "code": "TDT4109",
+                  "version": "1",
+                  "name": "Informasjonsteknologi, grunnkurs",
+                  "credits": 7.5,
+                  "planElement": false,
+                  "studyChoice": {
+                    "code": "O",
+                    "name": "Obligatorisk emne",
+                    "description": "Obligatorisk emne"
+                  }
+                },
+                {
+                  "code": "TMA4400",
+                  "version": "1",
+                  "name": "Matematikk 1: Kalkulus og lineær algebra",
+                  "credits": 7.5,
+                  "planElement": false,
+                  "studyChoice": {
+                    "code": "O",
+                    "name": "Obligatorisk emne",
+                    "description": "Obligatorisk emne"
+                  }
+                },
+                {
+                  "code": "TMA4412",
+                  "version": "1",
+                  "name": "Matematikk 2C: Diskret matematikk",
+                  "credits": 7.5,
+                  "planElement": false,
+                  "studyChoice": {
+                    "code": "O",
+                    "name": "Obligatorisk emne",
+                    "description": "Obligatorisk emne"
+                  }
+                },
+                {
+                  "code": "EXPH0300",
+                  "version": "1",
+                  "name": "Examen philosophicum for naturvitenskap og teknologi",
+                  "credits": 7.5,
+                  "planElement": false,
+                  "studyChoice": {
+                    "code": "O",
+                    "name": "Obligatorisk emne",
+                    "description": "Obligatorisk emne"
+                  }
+                }
+              ]
+            },
+            {
+              "code": "SIVING-ARBERFARING26",
+              "name": "Krav om arbeidslivserfaring (praksis)",
+              "description": "Alle studenter ved NTNU som går studieprogram som gir tilleggsbetegnelsen sivilingeniør på vitnemålet må ha oppfylt kravet om arbeidslivserfaring før de kan begynne på masteroppgaven. Les mer om kravet i \"Forskrift om arbeidslivserfaring for sivilingeniørutdanningen ved NTNU\", https://i.ntnu.no/wiki/-/wiki/Norsk/Praksis+og+arbeidslivserfaring+under+studiet.\n\nKravet er godkjent når det er grønn hake der det står \"Gjennomført krav om arbeidslivserfaring\".\n\nGodkjent krav om arbeidslivserfaring vil også være markert i selve utdanningsplanen med \"Godkjent\".",
+              "courses": [
+                {
+                  "code": "SIVINGPRA",
+                  "version": null,
+                  "name": "Gjennomført krav om arbeidslivserfaring",
+                  "credits": 0,
+                  "planElement": true,
+                  "studyChoice": {
+                    "code": "O",
+                    "name": "Obligatorisk emne",
+                    "description": null
+                  }
+                }
+              ]
+            }
+          ],
+          "waypoints": []
+        }
+      },
+      {
+        "periodNumber": 2,
+        "direction": {
+          "code": null,
+          "name": null,
+          "courseGroups": [
+            {
+              "code": "MTDTÅR1-26",
+              "name": "1. år Master i datateknologi - 5-årig",
+              "description": null,
+              "courses": [
+                {
+                  "code": "TDT4100",
+                  "version": "1",
+                  "name": "Objektorientert programmering",
+                  "credits": 7.5,
+                  "planElement": false,
+                  "studyChoice": {
+                    "code": "O",
+                    "name": "Obligatorisk emne",
+                    "description": "Obligatorisk emne"
+                  }
+                },
+                {
+                  "code": "TDT4180",
+                  "version": "1",
+                  "name": "Menneske–maskin-interaksjon",
+                  "credits": 7.5,
+                  "planElement": false,
+                  "studyChoice": {
+                    "code": "O",
+                    "name": "Obligatorisk emne",
+                    "description": "Obligatorisk emne"
+                  }
+                },
+                {
+                  "code": "TMA4422",
+                  "version": "1",
+                  "name": "Matematikk 3C: Lineær algebra, differensialligninger, funksjonsapproksimasjon og rekker",
+                  "credits": 7.5,
+                  "planElement": false,
+                  "studyChoice": {
+                    "code": "O",
+                    "name": "Obligatorisk emne",
+                    "description": "Obligatorisk emne"
+                  }
+                },
+                {
+                  "code": "TTT4203",
+                  "version": "1",
+                  "name": "Innføring i analog og digital elektronikk",
+                  "credits": 7.5,
+                  "planElement": false,
+                  "studyChoice": {
+                    "code": "O",
+                    "name": "Obligatorisk emne",
+                    "description": "Obligatorisk emne"
+                  }
+                }
+              ]
+            }
+          ],
+          "waypoints": []
+        }
+      }
+    ],
+    "publishedYears": [
+      2026,
+      2025,
+      2024,
+      2023,
+      2022,
+      2021,
+      2020,
+      2019,
+      2018,
+      2017,
+      2016,
+      2015,
+      2014,
+      2013,
+      2012,
+      2011,
+      2010,
+      2009,
+      2008,
+      2007
+    ]
+  }
+}

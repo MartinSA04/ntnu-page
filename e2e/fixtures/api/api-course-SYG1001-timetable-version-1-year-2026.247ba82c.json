@@ -1,0 +1,1041 @@
+{
+  "url": "http://127.0.0.1:8788/api/course/SYG1001/timetable?year=2026&version=1",
+  "status": 200,
+  "contentType": "application/json; charset=utf-8",
+  "body": [
+    {
+      "courseCode": "SYG1001",
+      "courseName": {
+        "nob": "Anatomi, fysiologi og biokjemi",
+        "nno": "Anatomi, fysiologi og biokjemi",
+        "eng": "Anatomy, Physiology and Biochemistry"
+      },
+      "acronym": "FORM",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Formidling",
+      "title": "Diverse",
+      "dayNumber": 1,
+      "startTime": "09:00",
+      "endTime": "10:00",
+      "weeks": [
+        "34-35",
+        "38",
+        "42",
+        "45",
+        "47"
+      ],
+      "rooms": [
+        {
+          "id": "194_505_F125A",
+          "building": "Helvin",
+          "room": "Vrimle Eureka",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=505-F125A"
+        }
+      ],
+      "studyProgramKeys": [
+        "BSPL"
+      ]
+    },
+    {
+      "courseCode": "SYG1001",
+      "courseName": {
+        "nob": "Anatomi, fysiologi og biokjemi",
+        "nno": "Anatomi, fysiologi og biokjemi",
+        "eng": "Anatomy, Physiology and Biochemistry"
+      },
+      "acronym": "FORM",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Formidling",
+      "title": "Undervisning",
+      "dayNumber": 1,
+      "startTime": "12:15",
+      "endTime": "14:00",
+      "weeks": [
+        "33-42",
+        "44-47"
+      ],
+      "rooms": [
+        {
+          "id": "194_505_F126A",
+          "building": "Helvin",
+          "room": "2/3 Eureka",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=505-F126A"
+        }
+      ],
+      "studyProgramKeys": [
+        "BSPL"
+      ]
+    },
+    {
+      "courseCode": "SYG1001",
+      "courseName": {
+        "nob": "Anatomi, fysiologi og biokjemi",
+        "nno": "Anatomi, fysiologi og biokjemi",
+        "eng": "Anatomy, Physiology and Biochemistry"
+      },
+      "acronym": "FORM",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Formidling",
+      "title": "Diverse",
+      "dayNumber": 2,
+      "startTime": "12:15",
+      "endTime": "16:00",
+      "weeks": [
+        "34-35",
+        "38",
+        "42",
+        "45",
+        "47"
+      ],
+      "rooms": [
+        {
+          "id": "194_505_F126A",
+          "building": "Helvin",
+          "room": "2/3 Eureka",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=505-F126A"
+        }
+      ],
+      "studyProgramKeys": [
+        "BSPL"
+      ]
+    },
+    {
+      "courseCode": "SYG1001",
+      "courseName": {
+        "nob": "Anatomi, fysiologi og biokjemi",
+        "nno": "Anatomi, fysiologi og biokjemi",
+        "eng": "Anatomy, Physiology and Biochemistry"
+      },
+      "acronym": "FORM",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Formidling",
+      "title": "Diverse",
+      "dayNumber": 2,
+      "startTime": "12:15",
+      "endTime": "13:00",
+      "weeks": [
+        "34-35",
+        "38",
+        "42",
+        "45",
+        "47"
+      ],
+      "rooms": [
+        {
+          "id": "194_505_F126A",
+          "building": "Helvin",
+          "room": "2/3 Eureka",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=505-F126A"
+        }
+      ],
+      "studyProgramKeys": [
+        "BSPL"
+      ]
+    },
+    {
+      "courseCode": "SYG1001",
+      "courseName": {
+        "nob": "Anatomi, fysiologi og biokjemi",
+        "nno": "Anatomi, fysiologi og biokjemi",
+        "eng": "Anatomy, Physiology and Biochemistry"
+      },
+      "acronym": "FORM",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Formidling",
+      "title": "Undervisning",
+      "dayNumber": 2,
+      "startTime": "12:15",
+      "endTime": "14:00",
+      "weeks": [
+        "33-42",
+        "44-47"
+      ],
+      "rooms": [
+        {
+          "id": "194_510_S206",
+          "building": "Smaragd",
+          "room": "S206",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=510-S212"
+        }
+      ],
+      "studyProgramKeys": [
+        "BSPL"
+      ]
+    },
+    {
+      "courseCode": "SYG1001",
+      "courseName": {
+        "nob": "Anatomi, fysiologi og biokjemi",
+        "nno": "Anatomi, fysiologi og biokjemi",
+        "eng": "Anatomy, Physiology and Biochemistry"
+      },
+      "acronym": "DISAM",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Dialog- og samarbeidsbasert undervisning",
+      "title": "Seminar",
+      "dayNumber": 2,
+      "startTime": "12:15",
+      "endTime": "15:00",
+      "weeks": [
+        "37",
+        "48",
+        "50"
+      ],
+      "rooms": [
+        {
+          "id": "194_510_S410",
+          "building": "Smaragd",
+          "room": "S410",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=510-S410"
+        }
+      ],
+      "studyProgramKeys": [
+        "BSPL"
+      ]
+    },
+    {
+      "courseCode": "SYG1001",
+      "courseName": {
+        "nob": "Anatomi, fysiologi og biokjemi",
+        "nno": "Anatomi, fysiologi og biokjemi",
+        "eng": "Anatomy, Physiology and Biochemistry"
+      },
+      "acronym": "FORM",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Formidling",
+      "title": "Undervisning",
+      "dayNumber": 2,
+      "startTime": "10:15",
+      "endTime": "12:00",
+      "weeks": [
+        "33-42",
+        "44-47"
+      ],
+      "rooms": [
+        {
+          "id": "194_505_F126A",
+          "building": "Helvin",
+          "room": "2/3 Eureka",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=505-F126A"
+        }
+      ],
+      "studyProgramKeys": [
+        "BSPL"
+      ]
+    },
+    {
+      "courseCode": "SYG1001",
+      "courseName": {
+        "nob": "Anatomi, fysiologi og biokjemi",
+        "nno": "Anatomi, fysiologi og biokjemi",
+        "eng": "Anatomy, Physiology and Biochemistry"
+      },
+      "acronym": "FORM",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Formidling",
+      "title": "Undervisning",
+      "dayNumber": 2,
+      "startTime": "13:15",
+      "endTime": "15:00",
+      "weeks": [
+        "33-42",
+        "44-47"
+      ],
+      "rooms": [
+        {
+          "id": "194_505_F126A",
+          "building": "Helvin",
+          "room": "2/3 Eureka",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=505-F126A"
+        }
+      ],
+      "studyProgramKeys": [
+        "BSPL"
+      ]
+    },
+    {
+      "courseCode": "SYG1001",
+      "courseName": {
+        "nob": "Anatomi, fysiologi og biokjemi",
+        "nno": "Anatomi, fysiologi og biokjemi",
+        "eng": "Anatomy, Physiology and Biochemistry"
+      },
+      "acronym": "DISAM",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Dialog- og samarbeidsbasert undervisning",
+      "title": "Seminar",
+      "dayNumber": 2,
+      "startTime": "08:15",
+      "endTime": "11:00",
+      "weeks": [
+        "37",
+        "48",
+        "50"
+      ],
+      "rooms": [
+        {
+          "id": "194_510_S410",
+          "building": "Smaragd",
+          "room": "S410",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=510-S410"
+        }
+      ],
+      "studyProgramKeys": [
+        "BSPL"
+      ]
+    },
+    {
+      "courseCode": "SYG1001",
+      "courseName": {
+        "nob": "Anatomi, fysiologi og biokjemi",
+        "nno": "Anatomi, fysiologi og biokjemi",
+        "eng": "Anatomy, Physiology and Biochemistry"
+      },
+      "acronym": "FORM",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Formidling",
+      "title": "Undervisning",
+      "dayNumber": 3,
+      "startTime": "08:15",
+      "endTime": "10:00",
+      "weeks": [
+        "33-42",
+        "44-47"
+      ],
+      "rooms": [
+        {
+          "id": "194_510_S206",
+          "building": "Smaragd",
+          "room": "S206",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=510-S212"
+        }
+      ],
+      "studyProgramKeys": [
+        "BSPL"
+      ]
+    },
+    {
+      "courseCode": "SYG1001",
+      "courseName": {
+        "nob": "Anatomi, fysiologi og biokjemi",
+        "nno": "Anatomi, fysiologi og biokjemi",
+        "eng": "Anatomy, Physiology and Biochemistry"
+      },
+      "acronym": "FORM",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Formidling",
+      "title": "Undervisning",
+      "dayNumber": 3,
+      "startTime": "08:15",
+      "endTime": "10:00",
+      "weeks": [
+        "33-42",
+        "44-47"
+      ],
+      "rooms": [
+        {
+          "id": "194_505_F126A",
+          "building": "Helvin",
+          "room": "2/3 Eureka",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=505-F126A"
+        }
+      ],
+      "studyProgramKeys": [
+        "BSPL"
+      ]
+    },
+    {
+      "courseCode": "SYG1001",
+      "courseName": {
+        "nob": "Anatomi, fysiologi og biokjemi",
+        "nno": "Anatomi, fysiologi og biokjemi",
+        "eng": "Anatomy, Physiology and Biochemistry"
+      },
+      "acronym": "FORM",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Formidling",
+      "title": "Undervisning",
+      "dayNumber": 3,
+      "startTime": "08:15",
+      "endTime": "09:00",
+      "weeks": [
+        "33-42",
+        "44-47"
+      ],
+      "rooms": [
+        {
+          "id": "194_510_S206",
+          "building": "Smaragd",
+          "room": "S206",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=510-S212"
+        }
+      ],
+      "studyProgramKeys": [
+        "BSPL"
+      ]
+    },
+    {
+      "courseCode": "SYG1001",
+      "courseName": {
+        "nob": "Anatomi, fysiologi og biokjemi",
+        "nno": "Anatomi, fysiologi og biokjemi",
+        "eng": "Anatomy, Physiology and Biochemistry"
+      },
+      "acronym": "FORM",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Formidling",
+      "title": "Undervisning",
+      "dayNumber": 3,
+      "startTime": "08:15",
+      "endTime": "11:00",
+      "weeks": [
+        "33-42",
+        "44-47"
+      ],
+      "rooms": [
+        {
+          "id": "194_510_S410",
+          "building": "Smaragd",
+          "room": "S410",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=510-S410"
+        }
+      ],
+      "studyProgramKeys": [
+        "BSPL"
+      ]
+    },
+    {
+      "courseCode": "SYG1001",
+      "courseName": {
+        "nob": "Anatomi, fysiologi og biokjemi",
+        "nno": "Anatomi, fysiologi og biokjemi",
+        "eng": "Anatomy, Physiology and Biochemistry"
+      },
+      "acronym": "DISAM",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Dialog- og samarbeidsbasert undervisning",
+      "title": "Seminar",
+      "dayNumber": 3,
+      "startTime": "08:15",
+      "endTime": "16:00",
+      "weeks": [
+        "37",
+        "48",
+        "50"
+      ],
+      "rooms": [
+        {
+          "id": "194_505_E211",
+          "building": "Helvin",
+          "room": "E211",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=505-E211"
+        },
+        {
+          "id": "194_505_E208",
+          "building": "Helvin",
+          "room": "E208",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=505-E208"
+        }
+      ],
+      "studyProgramKeys": [
+        "BSPL"
+      ]
+    },
+    {
+      "courseCode": "SYG1001",
+      "courseName": {
+        "nob": "Anatomi, fysiologi og biokjemi",
+        "nno": "Anatomi, fysiologi og biokjemi",
+        "eng": "Anatomy, Physiology and Biochemistry"
+      },
+      "acronym": "DISAM",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Dialog- og samarbeidsbasert undervisning",
+      "title": "Seminar",
+      "dayNumber": 3,
+      "startTime": "08:15",
+      "endTime": "16:00",
+      "weeks": [
+        "37",
+        "48",
+        "50"
+      ],
+      "rooms": [
+        {
+          "id": "194_505_E208",
+          "building": "Helvin",
+          "room": "E208",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=505-E208"
+        },
+        {
+          "id": "194_505_E211",
+          "building": "Helvin",
+          "room": "E211",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=505-E211"
+        }
+      ],
+      "studyProgramKeys": [
+        "BSPL"
+      ]
+    },
+    {
+      "courseCode": "SYG1001",
+      "courseName": {
+        "nob": "Anatomi, fysiologi og biokjemi",
+        "nno": "Anatomi, fysiologi og biokjemi",
+        "eng": "Anatomy, Physiology and Biochemistry"
+      },
+      "acronym": "FORM",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Formidling",
+      "title": "Undervisning",
+      "dayNumber": 3,
+      "startTime": "10:15",
+      "endTime": "12:00",
+      "weeks": [
+        "33-42",
+        "44-47"
+      ],
+      "rooms": [
+        {
+          "id": "194_505_F126A",
+          "building": "Helvin",
+          "room": "2/3 Eureka",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=505-F126A"
+        }
+      ],
+      "studyProgramKeys": [
+        "BSPL"
+      ]
+    },
+    {
+      "courseCode": "SYG1001",
+      "courseName": {
+        "nob": "Anatomi, fysiologi og biokjemi",
+        "nno": "Anatomi, fysiologi og biokjemi",
+        "eng": "Anatomy, Physiology and Biochemistry"
+      },
+      "acronym": "FORM",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Formidling",
+      "title": "Undervisning",
+      "dayNumber": 3,
+      "startTime": "12:15",
+      "endTime": "15:00",
+      "weeks": [
+        "33-42",
+        "44-47"
+      ],
+      "rooms": [
+        {
+          "id": "194_510_S410",
+          "building": "Smaragd",
+          "room": "S410",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=510-S410"
+        }
+      ],
+      "studyProgramKeys": [
+        "BSPL"
+      ]
+    },
+    {
+      "courseCode": "SYG1001",
+      "courseName": {
+        "nob": "Anatomi, fysiologi og biokjemi",
+        "nno": "Anatomi, fysiologi og biokjemi",
+        "eng": "Anatomy, Physiology and Biochemistry"
+      },
+      "acronym": "FORM",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Formidling",
+      "title": "Undervisning",
+      "dayNumber": 3,
+      "startTime": "09:15",
+      "endTime": "12:00",
+      "weeks": [
+        "33-42",
+        "44-47"
+      ],
+      "rooms": [
+        {
+          "id": "194_510_S206",
+          "building": "Smaragd",
+          "room": "S206",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=510-S212"
+        }
+      ],
+      "studyProgramKeys": [
+        "BSPL"
+      ]
+    },
+    {
+      "courseCode": "SYG1001",
+      "courseName": {
+        "nob": "Anatomi, fysiologi og biokjemi",
+        "nno": "Anatomi, fysiologi og biokjemi",
+        "eng": "Anatomy, Physiology and Biochemistry"
+      },
+      "acronym": "FORM",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Formidling",
+      "title": "Undervisning",
+      "dayNumber": 3,
+      "startTime": "09:15",
+      "endTime": "10:00",
+      "weeks": [
+        "33-42",
+        "44-47"
+      ],
+      "rooms": [
+        {
+          "id": "194_510_S206",
+          "building": "Smaragd",
+          "room": "S206",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=510-S212"
+        }
+      ],
+      "studyProgramKeys": [
+        "BSPL"
+      ]
+    },
+    {
+      "courseCode": "SYG1001",
+      "courseName": {
+        "nob": "Anatomi, fysiologi og biokjemi",
+        "nno": "Anatomi, fysiologi og biokjemi",
+        "eng": "Anatomy, Physiology and Biochemistry"
+      },
+      "acronym": "FORM",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Formidling",
+      "title": "Undervisning",
+      "dayNumber": 3,
+      "startTime": "12:00",
+      "endTime": "12:45",
+      "weeks": [
+        "33-42",
+        "44-47"
+      ],
+      "rooms": [
+        {
+          "id": "194_505_F126A",
+          "building": "Helvin",
+          "room": "2/3 Eureka",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=505-F126A"
+        }
+      ],
+      "studyProgramKeys": [
+        "BSPL"
+      ]
+    },
+    {
+      "courseCode": "SYG1001",
+      "courseName": {
+        "nob": "Anatomi, fysiologi og biokjemi",
+        "nno": "Anatomi, fysiologi og biokjemi",
+        "eng": "Anatomy, Physiology and Biochemistry"
+      },
+      "acronym": "FORM",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Formidling",
+      "title": "Undervisning",
+      "dayNumber": 4,
+      "startTime": "13:15",
+      "endTime": "15:00",
+      "weeks": [
+        "33-42",
+        "44-47"
+      ],
+      "rooms": [
+        {
+          "id": "194_510_S206",
+          "building": "Smaragd",
+          "room": "S206",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=510-S212"
+        }
+      ],
+      "studyProgramKeys": [
+        "BSPL"
+      ]
+    },
+    {
+      "courseCode": "SYG1001",
+      "courseName": {
+        "nob": "Anatomi, fysiologi og biokjemi",
+        "nno": "Anatomi, fysiologi og biokjemi",
+        "eng": "Anatomy, Physiology and Biochemistry"
+      },
+      "acronym": "FORM",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Formidling",
+      "title": "Undervisning",
+      "dayNumber": 4,
+      "startTime": "10:15",
+      "endTime": "12:00",
+      "weeks": [
+        "33-42",
+        "44-47"
+      ],
+      "rooms": [
+        {
+          "id": "194_510_S206",
+          "building": "Smaragd",
+          "room": "S206",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=510-S212"
+        }
+      ],
+      "studyProgramKeys": [
+        "BSPL"
+      ]
+    },
+    {
+      "courseCode": "SYG1001",
+      "courseName": {
+        "nob": "Anatomi, fysiologi og biokjemi",
+        "nno": "Anatomi, fysiologi og biokjemi",
+        "eng": "Anatomy, Physiology and Biochemistry"
+      },
+      "acronym": "FORM",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Formidling",
+      "title": "Undervisning",
+      "dayNumber": 4,
+      "startTime": "12:15",
+      "endTime": "15:00",
+      "weeks": [
+        "33-42",
+        "44-47"
+      ],
+      "rooms": [
+        {
+          "id": "194_510_S410",
+          "building": "Smaragd",
+          "room": "S410",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=510-S410"
+        }
+      ],
+      "studyProgramKeys": [
+        "BSPL"
+      ]
+    },
+    {
+      "courseCode": "SYG1001",
+      "courseName": {
+        "nob": "Anatomi, fysiologi og biokjemi",
+        "nno": "Anatomi, fysiologi og biokjemi",
+        "eng": "Anatomy, Physiology and Biochemistry"
+      },
+      "acronym": "FORM",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Formidling",
+      "title": "Undervisning",
+      "dayNumber": 4,
+      "startTime": "08:15",
+      "endTime": "11:00",
+      "weeks": [
+        "33-42",
+        "44-47"
+      ],
+      "rooms": [
+        {
+          "id": "194_510_S410",
+          "building": "Smaragd",
+          "room": "S410",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=510-S410"
+        }
+      ],
+      "studyProgramKeys": [
+        "BSPL"
+      ]
+    },
+    {
+      "courseCode": "SYG1001",
+      "courseName": {
+        "nob": "Anatomi, fysiologi og biokjemi",
+        "nno": "Anatomi, fysiologi og biokjemi",
+        "eng": "Anatomy, Physiology and Biochemistry"
+      },
+      "acronym": "FORM",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Formidling",
+      "title": "Undervisning",
+      "dayNumber": 4,
+      "startTime": "08:15",
+      "endTime": "11:00",
+      "weeks": [
+        "33-42",
+        "44-47"
+      ],
+      "rooms": [
+        {
+          "id": "194_510_S206",
+          "building": "Smaragd",
+          "room": "S206",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=510-S212"
+        }
+      ],
+      "studyProgramKeys": [
+        "BSPL"
+      ]
+    },
+    {
+      "courseCode": "SYG1001",
+      "courseName": {
+        "nob": "Anatomi, fysiologi og biokjemi",
+        "nno": "Anatomi, fysiologi og biokjemi",
+        "eng": "Anatomy, Physiology and Biochemistry"
+      },
+      "acronym": "FORM",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Formidling",
+      "title": "Undervisning",
+      "dayNumber": 4,
+      "startTime": "08:15",
+      "endTime": "12:00",
+      "weeks": [
+        "33-42",
+        "44-47"
+      ],
+      "rooms": [
+        {
+          "id": "194_510_S410",
+          "building": "Smaragd",
+          "room": "S410",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=510-S410"
+        }
+      ],
+      "studyProgramKeys": [
+        "BSPL"
+      ]
+    },
+    {
+      "courseCode": "SYG1001",
+      "courseName": {
+        "nob": "Anatomi, fysiologi og biokjemi",
+        "nno": "Anatomi, fysiologi og biokjemi",
+        "eng": "Anatomy, Physiology and Biochemistry"
+      },
+      "acronym": "DISAM",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Dialog- og samarbeidsbasert undervisning",
+      "title": "Seminar",
+      "dayNumber": 4,
+      "startTime": "08:15",
+      "endTime": "16:00",
+      "weeks": [
+        "37",
+        "48",
+        "50"
+      ],
+      "rooms": [
+        {
+          "id": "194_505_E208",
+          "building": "Helvin",
+          "room": "E208",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=505-E208"
+        },
+        {
+          "id": "194_505_E211",
+          "building": "Helvin",
+          "room": "E211",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=505-E211"
+        }
+      ],
+      "studyProgramKeys": [
+        "BSPL"
+      ]
+    },
+    {
+      "courseCode": "SYG1001",
+      "courseName": {
+        "nob": "Anatomi, fysiologi og biokjemi",
+        "nno": "Anatomi, fysiologi og biokjemi",
+        "eng": "Anatomy, Physiology and Biochemistry"
+      },
+      "acronym": "DISAM",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Dialog- og samarbeidsbasert undervisning",
+      "title": "Seminar",
+      "dayNumber": 4,
+      "startTime": "08:15",
+      "endTime": "16:00",
+      "weeks": [
+        "37",
+        "48",
+        "50"
+      ],
+      "rooms": [
+        {
+          "id": "194_505_E211",
+          "building": "Helvin",
+          "room": "E211",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=505-E211"
+        },
+        {
+          "id": "194_505_E208",
+          "building": "Helvin",
+          "room": "E208",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=505-E208"
+        }
+      ],
+      "studyProgramKeys": [
+        "BSPL"
+      ]
+    },
+    {
+      "courseCode": "SYG1001",
+      "courseName": {
+        "nob": "Anatomi, fysiologi og biokjemi",
+        "nno": "Anatomi, fysiologi og biokjemi",
+        "eng": "Anatomy, Physiology and Biochemistry"
+      },
+      "acronym": "FORM",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Formidling",
+      "title": "Diverse",
+      "dayNumber": 5,
+      "startTime": "12:15",
+      "endTime": "14:00",
+      "weeks": [
+        "34-35",
+        "38",
+        "42",
+        "45",
+        "47"
+      ],
+      "rooms": [
+        {
+          "id": "194_505_F126A",
+          "building": "Helvin",
+          "room": "2/3 Eureka",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=505-F126A"
+        }
+      ],
+      "studyProgramKeys": [
+        "BSPL"
+      ]
+    },
+    {
+      "courseCode": "SYG1001",
+      "courseName": {
+        "nob": "Anatomi, fysiologi og biokjemi",
+        "nno": "Anatomi, fysiologi og biokjemi",
+        "eng": "Anatomy, Physiology and Biochemistry"
+      },
+      "acronym": "FORM",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Formidling",
+      "title": "Undervisning",
+      "dayNumber": 5,
+      "startTime": "12:15",
+      "endTime": "15:00",
+      "weeks": [
+        "33-42",
+        "44-47"
+      ],
+      "rooms": [
+        {
+          "id": "194_510_S410",
+          "building": "Smaragd",
+          "room": "S410",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=510-S410"
+        }
+      ],
+      "studyProgramKeys": [
+        "BSPL"
+      ]
+    },
+    {
+      "courseCode": "SYG1001",
+      "courseName": {
+        "nob": "Anatomi, fysiologi og biokjemi",
+        "nno": "Anatomi, fysiologi og biokjemi",
+        "eng": "Anatomy, Physiology and Biochemistry"
+      },
+      "acronym": "FORM",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Formidling",
+      "title": "Undervisning",
+      "dayNumber": 5,
+      "startTime": "08:15",
+      "endTime": "11:00",
+      "weeks": [
+        "33-42",
+        "44-47"
+      ],
+      "rooms": [
+        {
+          "id": "194_510_S410",
+          "building": "Smaragd",
+          "room": "S410",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=510-S410"
+        }
+      ],
+      "studyProgramKeys": [
+        "BSPL"
+      ]
+    },
+    {
+      "courseCode": "SYG1001",
+      "courseName": {
+        "nob": "Anatomi, fysiologi og biokjemi",
+        "nno": "Anatomi, fysiologi og biokjemi",
+        "eng": "Anatomy, Physiology and Biochemistry"
+      },
+      "acronym": "FORM",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Formidling",
+      "title": "Undervisning",
+      "dayNumber": 5,
+      "startTime": "08:15",
+      "endTime": "12:00",
+      "weeks": [
+        "33-42",
+        "44-47"
+      ],
+      "rooms": [
+        {
+          "id": "194_510_S410",
+          "building": "Smaragd",
+          "room": "S410",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=510-S410"
+        }
+      ],
+      "studyProgramKeys": [
+        "BSPL"
+      ]
+    }
+  ]
+}

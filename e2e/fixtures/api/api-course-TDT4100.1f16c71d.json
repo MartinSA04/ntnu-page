@@ -1,0 +1,240 @@
+{
+  "url": "http://127.0.0.1:8788/api/course/TDT4100",
+  "status": 200,
+  "contentType": "application/json; charset=utf-8",
+  "body": {
+    "courseCode": "TDT4100",
+    "courseName": "Objektorientert programmering",
+    "credits": 7.5,
+    "level": "Grunnleggende emner, nivå I",
+    "teachingStart": "Vår 2027",
+    "teachingDuration": "1 semester",
+    "teachingLanguage": "Norsk",
+    "location": "Trondheim",
+    "assessmentScheme": "Skriftlig skoleeksamen",
+    "gradeRule": "Bokstavkarakterer",
+    "facts": [
+      {
+        "label": "Studiepoeng",
+        "value": "7,5"
+      },
+      {
+        "label": "Nivå",
+        "value": "Grunnleggende emner, nivå I"
+      },
+      {
+        "label": "Undervisningsstart",
+        "value": "Vår 2027"
+      },
+      {
+        "label": "Varighet",
+        "value": "1 semester"
+      },
+      {
+        "label": "Undervisningsspråk",
+        "value": "Norsk"
+      },
+      {
+        "label": "Sted",
+        "value": "Trondheim"
+      },
+      {
+        "label": "Vurderingsordning",
+        "value": "Skriftlig skoleeksamen"
+      }
+    ],
+    "content": "Grunnleggende algoritmer og datastrukturer, konstruksjoner og kontrollflyt i objektorienterte språk. Modularisering og gjenbruk. Standard programvarebibliotek. Enhetstesting, feilfinning og verktøy for dette. Objektorientert design. Bruk av klasse-, objekt-, sekvens- og samhandlingsdiagrammer i UML. Bruk av design patterns. Enkel app-arkitektur med moderne GUI-toolkit. Java brukes som implementasjonsspråk.",
+    "learningOutcome": "Kunnskap: Studentene skal ha kunnskap om de viktigste begrepene og mekanismene i objektorienterte språk og om hvordan objektorienterte programmer og enkle apps struktureres og testes.\nFerdigheter: Studentene skal få ferdigheter i objektorientert programmering og bruk av relevante programmeringsmetoder (koding, testing og feilfinning) og moderne utviklingsverktøy, inkludert AI-baserte verktøy.\nGenerell kompetanse: Studentene skal kunne bruke objektorientert programmering for å løse praktiske problemer og utnytte mulighetene i moderne utviklingsverktøy.",
+    "learningMethods": "Forelesninger, øvingsforelesninger, øvinger (individuelt, i par og/eller i grupper) og prosjektarbeid individuelt eller i grupper.",
+    "mandatoryActivities": [
+      "Øvinger"
+    ],
+    "assessmentDetails": "Obligatoriske øvinger utføres individuelt eller i grupper, som vil bli presisert i semesteret.\nVed utsatt eksamen (kontinuasjonseksamen) i august kan skriftlig skoleeksamen bli endret til muntlig eksamen.",
+    "specialConditions": null,
+    "requiredKnowledge": null,
+    "recommendedKnowledge": "Emnet Informasjonsteknologi, grunnkurs, eller emner som gir tilsvarende innsikt i bruk av basis dataverktøy i tillegg til ferdighet i metodisk problemanalyse, løsningskonstruksjon og prosedyreorientert programmering.",
+    "courseMaterials": "Oppgis ved semesterstart.",
+    "creditReductions": [
+      {
+        "courseCode": "IT1104",
+        "reduction": "7,5 sp",
+        "fromTerm": null
+      },
+      {
+        "courseCode": "SIF8005",
+        "reduction": "7,5 sp",
+        "fromTerm": null
+      },
+      {
+        "courseCode": "SIF8005",
+        "reduction": "7,5 sp",
+        "fromTerm": null
+      },
+      {
+        "courseCode": "SIF8005",
+        "reduction": "7,5 sp",
+        "fromTerm": null
+      },
+      {
+        "courseCode": "TDT4102",
+        "reduction": "3,7 sp",
+        "fromTerm": "Høst 2008"
+      },
+      {
+        "courseCode": "TDT4130",
+        "reduction": "3,7 sp",
+        "fromTerm": "Høst 2008"
+      },
+      {
+        "courseCode": "INFT1100",
+        "reduction": "7,5 sp",
+        "fromTerm": "Høst 2024"
+      },
+      {
+        "courseCode": "TDT4114",
+        "reduction": "3,7 sp",
+        "fromTerm": "Høst 2024"
+      },
+      {
+        "courseCode": "PROG1003",
+        "reduction": "7,5 sp",
+        "fromTerm": "Høst 2026"
+      },
+      {
+        "courseCode": "IT6203",
+        "reduction": "3,7 sp",
+        "fromTerm": "Høst 2026"
+      }
+    ],
+    "subjectAreas": [
+      "Teknologiske fag"
+    ],
+    "studyPrograms": [
+      {
+        "code": "MTKOM",
+        "name": "Cybersikkerhet og datakommunikasjon"
+      },
+      {
+        "code": "MTDT",
+        "name": "Datateknologi"
+      },
+      {
+        "code": "MTFYMA",
+        "name": "Fysikk og matematikk"
+      },
+      {
+        "code": "BIT",
+        "name": "Informatikk"
+      },
+      {
+        "code": "MTING",
+        "name": "Ingeniørvitenskap og IKT"
+      },
+      {
+        "code": "MLREAL",
+        "name": "Lektorutdanning i realfag for trinn 8 – 13"
+      },
+      {
+        "code": "MMEDIE",
+        "name": "Medier, kommunikasjon og informasjonsteknologi"
+      }
+    ],
+    "contacts": [
+      {
+        "role": "Emneansvarlig/koordinator",
+        "persons": [
+          {
+            "name": "Dag Olav Kjellemo",
+            "url": "https://www.ntnu.no/ansatte/dag.o.kjellemo"
+          }
+        ]
+      },
+      {
+        "role": "Faglærere",
+        "persons": [
+          {
+            "name": "Børge Haugset",
+            "url": "https://www.ntnu.no/ansatte/borgeha"
+          }
+        ]
+      }
+    ],
+    "department": "Institutt for datateknologi og informatikk",
+    "exams": [
+      {
+        "occasion": "Ordinær eksamen",
+        "season": "Vår 2027",
+        "form": "Skriftlig skoleeksamen",
+        "weighting": "100/100",
+        "aidCode": "Kode C",
+        "aidCodeDescription": "C: Spesifiserte trykte og håndskrevne hjelpemidler tillatt. Bestemt, enkel kalkulator tillatt.",
+        "date": null,
+        "dateText": null,
+        "time": null,
+        "timeText": null,
+        "duration": "4 timer",
+        "system": "Inspera Assessment",
+        "rooms": []
+      },
+      {
+        "occasion": "Utsatt eksamen",
+        "season": "Sommer 2027",
+        "form": "Skriftlig skoleeksamen",
+        "weighting": "100/100",
+        "aidCode": "Kode C",
+        "aidCodeDescription": "C: Spesifiserte trykte og håndskrevne hjelpemidler tillatt. Bestemt, enkel kalkulator tillatt.",
+        "date": null,
+        "dateText": null,
+        "time": null,
+        "timeText": null,
+        "duration": "4 timer",
+        "system": "Inspera Assessment",
+        "rooms": []
+      }
+    ],
+    "studyYear": 2026,
+    "availableYears": [
+      2026,
+      2025,
+      2024,
+      2023,
+      2022,
+      2021,
+      2020,
+      2019,
+      2018,
+      2017,
+      2016,
+      2015,
+      2014,
+      2013,
+      2012,
+      2011,
+      2010,
+      2009,
+      2008,
+      2007
+    ],
+    "notices": [
+      "Vurdering og obligatoriske aktiviteter kan bli endret frem til 20. september."
+    ],
+    "courseLinks": [
+      {
+        "label": "Blackboard - VÅR-2022",
+        "url": "https://ntnu.blackboard.com/webapps/login?action=guest_login&new_loc=/webapps/blackboard/execute/courseMain?course_id=_32089_1"
+      },
+      {
+        "label": "Blackboard - VÅR-2021",
+        "url": "https://ntnu.blackboard.com/webapps/login?action=guest_login&new_loc=/webapps/blackboard/execute/courseMain?course_id=_22786_1"
+      },
+      {
+        "label": "Blackboard - VÅR-2020",
+        "url": "https://ntnu.blackboard.com/webapps/login?action=guest_login&new_loc=/webapps/blackboard/execute/courseMain?course_id=_17692_1"
+      },
+      {
+        "label": "Blackboard - VÅR-2019",
+        "url": "https://ntnu.blackboard.com/webapps/login?action=guest_login&new_loc=/webapps/blackboard/execute/courseMain?course_id=_12095_1"
+      }
+    ]
+  }
+}

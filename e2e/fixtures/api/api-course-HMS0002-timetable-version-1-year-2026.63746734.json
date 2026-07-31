@@ -1,0 +1,209 @@
+{
+  "url": "http://127.0.0.1:8788/api/course/HMS0002/timetable?year=2026&version=1",
+  "status": 200,
+  "contentType": "application/json; charset=utf-8",
+  "body": [
+    {
+      "courseCode": "HMS0002",
+      "courseName": {
+        "nob": "HMS-kurs for 1. årsstudenter",
+        "nno": "HMS-kurs for studentar på 1. år",
+        "eng": "Health, Safety and Environment (HSE) course for 1st year students"
+      },
+      "acronym": "FORM",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Formidling",
+      "title": "Praktisk brannvern- og førstehjelpskurs",
+      "dayNumber": 1,
+      "startTime": "16:15",
+      "endTime": "20:00",
+      "weeks": [
+        "38",
+        "40"
+      ],
+      "rooms": [
+        {
+          "id": "194_360_AU1-103",
+          "building": "Realfagbygget",
+          "room": "R8",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=360-AU1-103"
+        }
+      ],
+      "studyProgramKeys": [
+        "BMAT",
+        "BIELSYS",
+        "BDIGSEC",
+        "MSMNFMA",
+        "BIAIS",
+        "MSELSYS",
+        "MSIT",
+        "MSELPOWER",
+        "MSSV",
+        "MSTCNNS"
+      ]
+    },
+    {
+      "courseCode": "HMS0002",
+      "courseName": {
+        "nob": "HMS-kurs for 1. årsstudenter",
+        "nno": "HMS-kurs for studentar på 1. år",
+        "eng": "Health, Safety and Environment (HSE) course for 1st year students"
+      },
+      "acronym": "FORM",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Formidling",
+      "title": "Praktisk brannvern- og førstehjelpskurs",
+      "dayNumber": 1,
+      "startTime": "16:15",
+      "endTime": "20:00",
+      "weeks": [
+        "39",
+        "43"
+      ],
+      "rooms": [
+        {
+          "id": "194_360_AU1-105",
+          "building": "Realfagbygget",
+          "room": "R7",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=360-AU1-105"
+        }
+      ],
+      "studyProgramKeys": [
+        "MTKOM",
+        "MITK",
+        "MIDT",
+        "MTDT"
+      ]
+    },
+    {
+      "courseCode": "HMS0002",
+      "courseName": {
+        "nob": "HMS-kurs for 1. årsstudenter",
+        "nno": "HMS-kurs for studentar på 1. år",
+        "eng": "Health, Safety and Environment (HSE) course for 1st year students"
+      },
+      "acronym": "FORM",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Formidling",
+      "title": "Praktisk brannvern- og førstehjelpskurs",
+      "dayNumber": 2,
+      "startTime": "16:15",
+      "endTime": "20:00",
+      "weeks": [
+        "38"
+      ],
+      "rooms": [
+        {
+          "id": "194_360_AU1-103",
+          "building": "Realfagbygget",
+          "room": "R8",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=360-AU1-103"
+        }
+      ],
+      "studyProgramKeys": []
+    },
+    {
+      "courseCode": "HMS0002",
+      "courseName": {
+        "nob": "HMS-kurs for 1. årsstudenter",
+        "nno": "HMS-kurs for studentar på 1. år",
+        "eng": "Health, Safety and Environment (HSE) course for 1st year students"
+      },
+      "acronym": "FORM",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Formidling",
+      "title": "Praktisk brannvern- og førstehjelpskurs",
+      "dayNumber": 2,
+      "startTime": "16:15",
+      "endTime": "20:00",
+      "weeks": [
+        "39-40",
+        "43"
+      ],
+      "rooms": [
+        {
+          "id": "194_360_AU1-105",
+          "building": "Realfagbygget",
+          "room": "R7",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=360-AU1-105"
+        }
+      ],
+      "studyProgramKeys": [
+        "BIT",
+        "FTFORKURS",
+        "ITBAITBEDR",
+        "BIDATA",
+        "ÅMATSTAT",
+        "BIELDIG"
+      ]
+    },
+    {
+      "courseCode": "HMS0002",
+      "courseName": {
+        "nob": "HMS-kurs for 1. årsstudenter",
+        "nno": "HMS-kurs for studentar på 1. år",
+        "eng": "Health, Safety and Environment (HSE) course for 1st year students"
+      },
+      "acronym": "FERD",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Ferdighetstrening",
+      "title": "Praktisk brannvern- og førstehjelpskurs",
+      "dayNumber": 3,
+      "startTime": "16:15",
+      "endTime": "20:00",
+      "weeks": [
+        "38-39"
+      ],
+      "rooms": [
+        {
+          "id": "194_360_BU1-100",
+          "building": "Realfagbygget",
+          "room": "R5",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=360-BU1-100"
+        }
+      ],
+      "studyProgramKeys": [
+        "MTTK",
+        "FTFORKURS"
+      ]
+    },
+    {
+      "courseCode": "HMS0002",
+      "courseName": {
+        "nob": "HMS-kurs for 1. årsstudenter",
+        "nno": "HMS-kurs for studentar på 1. år",
+        "eng": "Health, Safety and Environment (HSE) course for 1st year students"
+      },
+      "acronym": "FORM",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Formidling",
+      "title": "Praktisk brannvern- og førstehjelpskurs",
+      "dayNumber": 4,
+      "startTime": "16:15",
+      "endTime": "20:00",
+      "weeks": [
+        "38",
+        "42"
+      ],
+      "rooms": [
+        {
+          "id": "194_360_AU1-105",
+          "building": "Realfagbygget",
+          "room": "R7",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=360-AU1-105"
+        }
+      ],
+      "studyProgramKeys": [
+        "MTIØT",
+        "MTENERG",
+        "MTELSYS"
+      ]
+    }
+  ]
+}

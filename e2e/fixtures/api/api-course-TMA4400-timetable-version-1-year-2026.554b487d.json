@@ -1,0 +1,729 @@
+{
+  "url": "http://127.0.0.1:8788/api/course/TMA4400/timetable?year=2026&version=1",
+  "status": 200,
+  "contentType": "application/json; charset=utf-8",
+  "body": [
+    {
+      "courseCode": "TMA4400",
+      "courseName": {
+        "nob": "Matematikk 1: Kalkulus og lineær algebra",
+        "nno": "Matematikk 1: Kalkulus og lineær algebra",
+        "eng": "Mathematics 1: Calculus and Linear Algebra"
+      },
+      "acronym": "DISAM-P",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Dialog- og samarbeidsbasert undervisning",
+      "title": "Forelesning 1 MTBYGG, MTING, MTIØT, MTMART, MTIØT, MTMASKIN, MTDESIG",
+      "dayNumber": 1,
+      "startTime": "10:15",
+      "endTime": "12:00",
+      "weeks": [
+        "34-47"
+      ],
+      "rooms": [
+        {
+          "id": "194_318_152",
+          "building": "IT-bygget, sydfløy",
+          "room": "F1",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=318-152"
+        }
+      ],
+      "studyProgramKeys": [
+        "MTMART",
+        "MTBYGG",
+        "MTIØT",
+        "MTDESIG",
+        "MTMASKIN",
+        "MTING"
+      ]
+    },
+    {
+      "courseCode": "TMA4400",
+      "courseName": {
+        "nob": "Matematikk 1: Kalkulus og lineær algebra",
+        "nno": "Matematikk 1: Kalkulus og lineær algebra",
+        "eng": "Mathematics 1: Calculus and Linear Algebra"
+      },
+      "acronym": "DISAM",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Dialog- og samarbeidsbasert undervisning",
+      "title": "Forelesning 1 MTELSYS & MTTK",
+      "dayNumber": 1,
+      "startTime": "08:15",
+      "endTime": "10:00",
+      "weeks": [
+        "34-47"
+      ],
+      "rooms": [
+        {
+          "id": "194_318_152",
+          "building": "IT-bygget, sydfløy",
+          "room": "F1",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=318-152"
+        }
+      ],
+      "studyProgramKeys": [
+        "MTELSYS",
+        "MTTK"
+      ]
+    },
+    {
+      "courseCode": "TMA4400",
+      "courseName": {
+        "nob": "Matematikk 1: Kalkulus og lineær algebra",
+        "nno": "Matematikk 1: Kalkulus og lineær algebra",
+        "eng": "Mathematics 1: Calculus and Linear Algebra"
+      },
+      "acronym": "DISAM",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Dialog- og samarbeidsbasert undervisning",
+      "title": "Forelesning 1 MTGEORT, MTINGGEO, MTENERG, MTIØT, MTKMB, MTNANO",
+      "dayNumber": 2,
+      "startTime": "08:15",
+      "endTime": "10:00",
+      "weeks": [
+        "34-47"
+      ],
+      "rooms": [
+        {
+          "id": "194_318_152",
+          "building": "IT-bygget, sydfløy",
+          "room": "F1",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=318-152"
+        }
+      ],
+      "studyProgramKeys": [
+        "MTNANO",
+        "MTINGGEO",
+        "MTGEORT",
+        "MTIØT",
+        "MTENERG",
+        "MTKMB"
+      ]
+    },
+    {
+      "courseCode": "TMA4400",
+      "courseName": {
+        "nob": "Matematikk 1: Kalkulus og lineær algebra",
+        "nno": "Matematikk 1: Kalkulus og lineær algebra",
+        "eng": "Mathematics 1: Calculus and Linear Algebra"
+      },
+      "acronym": "DISAM",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Dialog- og samarbeidsbasert undervisning",
+      "title": "Forelesning 1 MTDT, MTIØT, MTKOM",
+      "dayNumber": 2,
+      "startTime": "10:15",
+      "endTime": "12:00",
+      "weeks": [
+        "34-47"
+      ],
+      "rooms": [
+        {
+          "id": "194_318_152",
+          "building": "IT-bygget, sydfløy",
+          "room": "F1",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=318-152"
+        }
+      ],
+      "studyProgramKeys": [
+        "MTDT",
+        "MTKOM",
+        "MTIØT"
+      ]
+    },
+    {
+      "courseCode": "TMA4400",
+      "courseName": {
+        "nob": "Matematikk 1: Kalkulus og lineær algebra",
+        "nno": "Matematikk 1: Kalkulus og lineær algebra",
+        "eng": "Mathematics 1: Calculus and Linear Algebra"
+      },
+      "acronym": "DISAM",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Dialog- og samarbeidsbasert undervisning",
+      "title": "Mattelab 5",
+      "dayNumber": 3,
+      "startTime": "14:15",
+      "endTime": "16:00",
+      "weeks": [
+        "34-47"
+      ],
+      "rooms": [
+        {
+          "id": "194_322_105",
+          "building": "Sentralbygg 2",
+          "room": "S7",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=322-105"
+        }
+      ],
+      "studyProgramKeys": [
+        "BKJ",
+        "BMAT",
+        "MTKOM",
+        "MLREAL",
+        "BIELDIG",
+        "MTENERG",
+        "MTNANO",
+        "MTINGGEO",
+        "MTDT",
+        "MTGEORT",
+        "ÅMATSTAT",
+        "MTIØT",
+        "BDIGSEC",
+        "MTKMB",
+        "BGEOL"
+      ]
+    },
+    {
+      "courseCode": "TMA4400",
+      "courseName": {
+        "nob": "Matematikk 1: Kalkulus og lineær algebra",
+        "nno": "Matematikk 1: Kalkulus og lineær algebra",
+        "eng": "Mathematics 1: Calculus and Linear Algebra"
+      },
+      "acronym": "DISAM",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Dialog- og samarbeidsbasert undervisning",
+      "title": "Mattelab 7",
+      "dayNumber": 3,
+      "startTime": "14:15",
+      "endTime": "16:00",
+      "weeks": [
+        "34-47"
+      ],
+      "rooms": [
+        {
+          "id": "194_322_146",
+          "building": "Sentralbygg 2",
+          "room": "S6",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=322-146"
+        }
+      ],
+      "studyProgramKeys": [
+        "MTMART",
+        "MTBYGG",
+        "MTIØT",
+        "MTDESIG",
+        "MTMASKIN",
+        "MTING"
+      ]
+    },
+    {
+      "courseCode": "TMA4400",
+      "courseName": {
+        "nob": "Matematikk 1: Kalkulus og lineær algebra",
+        "nno": "Matematikk 1: Kalkulus og lineær algebra",
+        "eng": "Mathematics 1: Calculus and Linear Algebra"
+      },
+      "acronym": "FORM-P",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Formidling",
+      "title": "Plenumsregning",
+      "dayNumber": 3,
+      "startTime": "14:15",
+      "endTime": "16:00",
+      "weeks": [
+        "34-47"
+      ],
+      "rooms": [
+        {
+          "id": "194_318_152",
+          "building": "IT-bygget, sydfløy",
+          "room": "F1",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=318-152"
+        }
+      ],
+      "studyProgramKeys": []
+    },
+    {
+      "courseCode": "TMA4400",
+      "courseName": {
+        "nob": "Matematikk 1: Kalkulus og lineær algebra",
+        "nno": "Matematikk 1: Kalkulus og lineær algebra",
+        "eng": "Mathematics 1: Calculus and Linear Algebra"
+      },
+      "acronym": "FORM",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Formidling",
+      "title": "Forelesning 2 MTBYGG",
+      "dayNumber": 3,
+      "startTime": "08:15",
+      "endTime": "10:00",
+      "weeks": [
+        "34-47"
+      ],
+      "rooms": [
+        {
+          "id": "194_322_115",
+          "building": "Sentralbygg 2",
+          "room": "S5",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=322-115"
+        }
+      ],
+      "studyProgramKeys": [
+        "MTBYGG"
+      ]
+    },
+    {
+      "courseCode": "TMA4400",
+      "courseName": {
+        "nob": "Matematikk 1: Kalkulus og lineær algebra",
+        "nno": "Matematikk 1: Kalkulus og lineær algebra",
+        "eng": "Mathematics 1: Calculus and Linear Algebra"
+      },
+      "acronym": "DISAM",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Dialog- og samarbeidsbasert undervisning",
+      "title": "Mattelab 1",
+      "dayNumber": 3,
+      "startTime": "12:15",
+      "endTime": "14:00",
+      "weeks": [
+        "34-47"
+      ],
+      "rooms": [
+        {
+          "id": "194_322_146",
+          "building": "Sentralbygg 2",
+          "room": "S6",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=322-146"
+        }
+      ],
+      "studyProgramKeys": [
+        "MTELSYS",
+        "MTTK"
+      ]
+    },
+    {
+      "courseCode": "TMA4400",
+      "courseName": {
+        "nob": "Matematikk 1: Kalkulus og lineær algebra",
+        "nno": "Matematikk 1: Kalkulus og lineær algebra",
+        "eng": "Mathematics 1: Calculus and Linear Algebra"
+      },
+      "acronym": "FORM-P",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Formidling",
+      "title": "Forelesning 2 MTIØT og MTMASKIN",
+      "dayNumber": 3,
+      "startTime": "12:15",
+      "endTime": "14:00",
+      "weeks": [
+        "34-47"
+      ],
+      "rooms": [
+        {
+          "id": "194_322_115",
+          "building": "Sentralbygg 2",
+          "room": "S5",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=322-115"
+        }
+      ],
+      "studyProgramKeys": [
+        "MTIØT",
+        "MTMASKIN"
+      ]
+    },
+    {
+      "courseCode": "TMA4400",
+      "courseName": {
+        "nob": "Matematikk 1: Kalkulus og lineær algebra",
+        "nno": "Matematikk 1: Kalkulus og lineær algebra",
+        "eng": "Mathematics 1: Calculus and Linear Algebra"
+      },
+      "acronym": "DISAM",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Dialog- og samarbeidsbasert undervisning",
+      "title": "Mattelab 2",
+      "dayNumber": 3,
+      "startTime": "12:15",
+      "endTime": "14:00",
+      "weeks": [
+        "34-47"
+      ],
+      "rooms": [
+        {
+          "id": "194_322_105",
+          "building": "Sentralbygg 2",
+          "room": "S7",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=322-105"
+        }
+      ],
+      "studyProgramKeys": [
+        "BMAT",
+        "MTDT",
+        "MTKOM",
+        "ÅMATSTAT",
+        "MLREAL",
+        "BIELDIG",
+        "MTIØT",
+        "BDIGSEC",
+        "MTENERG",
+        "MTING"
+      ]
+    },
+    {
+      "courseCode": "TMA4400",
+      "courseName": {
+        "nob": "Matematikk 1: Kalkulus og lineær algebra",
+        "nno": "Matematikk 1: Kalkulus og lineær algebra",
+        "eng": "Mathematics 1: Calculus and Linear Algebra"
+      },
+      "acronym": "FORM-P",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Formidling",
+      "title": "Forelesning 2 MTING, MTIØT, MTMART, MTDESIG",
+      "dayNumber": 3,
+      "startTime": "10:15",
+      "endTime": "12:00",
+      "weeks": [
+        "34-47"
+      ],
+      "rooms": [
+        {
+          "id": "194_322_115",
+          "building": "Sentralbygg 2",
+          "room": "S5",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=322-115"
+        }
+      ],
+      "studyProgramKeys": [
+        "MTMART",
+        "MTIØT",
+        "MTDESIG",
+        "MTING"
+      ]
+    },
+    {
+      "courseCode": "TMA4400",
+      "courseName": {
+        "nob": "Matematikk 1: Kalkulus og lineær algebra",
+        "nno": "Matematikk 1: Kalkulus og lineær algebra",
+        "eng": "Mathematics 1: Calculus and Linear Algebra"
+      },
+      "acronym": "DISAM",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Dialog- og samarbeidsbasert undervisning",
+      "title": "Forelesning 2 MTTK, MTELSYS",
+      "dayNumber": 3,
+      "startTime": "10:15",
+      "endTime": "12:00",
+      "weeks": [
+        "34-47"
+      ],
+      "rooms": [
+        {
+          "id": "194_325_G160",
+          "building": "Gamle elektro",
+          "room": "EL5",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=325-G160"
+        }
+      ],
+      "studyProgramKeys": [
+        "MTELSYS",
+        "MTTK"
+      ]
+    },
+    {
+      "courseCode": "TMA4400",
+      "courseName": {
+        "nob": "Matematikk 1: Kalkulus og lineær algebra",
+        "nno": "Matematikk 1: Kalkulus og lineær algebra",
+        "eng": "Mathematics 1: Calculus and Linear Algebra"
+      },
+      "acronym": "DISAM",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Dialog- og samarbeidsbasert undervisning",
+      "title": "Mattelab 3",
+      "dayNumber": 4,
+      "startTime": "12:15",
+      "endTime": "14:00",
+      "weeks": [
+        "34-47"
+      ],
+      "rooms": [
+        {
+          "id": "194_322_146",
+          "building": "Sentralbygg 2",
+          "room": "S6",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=322-146"
+        }
+      ],
+      "studyProgramKeys": [
+        "MTELSYS",
+        "MTTK"
+      ]
+    },
+    {
+      "courseCode": "TMA4400",
+      "courseName": {
+        "nob": "Matematikk 1: Kalkulus og lineær algebra",
+        "nno": "Matematikk 1: Kalkulus og lineær algebra",
+        "eng": "Mathematics 1: Calculus and Linear Algebra"
+      },
+      "acronym": "DISAM",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Dialog- og samarbeidsbasert undervisning",
+      "title": "Mattelab 6",
+      "dayNumber": 4,
+      "startTime": "12:15",
+      "endTime": "14:00",
+      "weeks": [
+        "34-47"
+      ],
+      "rooms": [
+        {
+          "id": "194_322_105",
+          "building": "Sentralbygg 2",
+          "room": "S7",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=322-105"
+        }
+      ],
+      "studyProgramKeys": [
+        "BMAT",
+        "MTDT",
+        "MTKOM",
+        "ÅMATSTAT",
+        "MLREAL",
+        "BIELDIG",
+        "MTIØT",
+        "BDIGSEC",
+        "MTENERG",
+        "MTING"
+      ]
+    },
+    {
+      "courseCode": "TMA4400",
+      "courseName": {
+        "nob": "Matematikk 1: Kalkulus og lineær algebra",
+        "nno": "Matematikk 1: Kalkulus og lineær algebra",
+        "eng": "Mathematics 1: Calculus and Linear Algebra"
+      },
+      "acronym": "FORM-P",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Formidling",
+      "title": "Forelesning 2 MTKMB, MTNANO",
+      "dayNumber": 4,
+      "startTime": "12:15",
+      "endTime": "14:00",
+      "weeks": [
+        "34-47"
+      ],
+      "rooms": [
+        {
+          "id": "194_322_115",
+          "building": "Sentralbygg 2",
+          "room": "S5",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=322-115"
+        }
+      ],
+      "studyProgramKeys": [
+        "MTNANO",
+        "MTKMB"
+      ]
+    },
+    {
+      "courseCode": "TMA4400",
+      "courseName": {
+        "nob": "Matematikk 1: Kalkulus og lineær algebra",
+        "nno": "Matematikk 1: Kalkulus og lineær algebra",
+        "eng": "Mathematics 1: Calculus and Linear Algebra"
+      },
+      "acronym": "DISAM",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Dialog- og samarbeidsbasert undervisning",
+      "title": "Mattelab 4",
+      "dayNumber": 4,
+      "startTime": "14:15",
+      "endTime": "16:00",
+      "weeks": [
+        "34-47"
+      ],
+      "rooms": [
+        {
+          "id": "194_322_105",
+          "building": "Sentralbygg 2",
+          "room": "S7",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=322-105"
+        }
+      ],
+      "studyProgramKeys": [
+        "BKJ",
+        "MTNANO",
+        "MTINGGEO",
+        "MTDT",
+        "MTGEORT",
+        "MTKOM",
+        "MTIØT",
+        "MTENERG",
+        "MTKMB",
+        "BGEOL"
+      ]
+    },
+    {
+      "courseCode": "TMA4400",
+      "courseName": {
+        "nob": "Matematikk 1: Kalkulus og lineær algebra",
+        "nno": "Matematikk 1: Kalkulus og lineær algebra",
+        "eng": "Mathematics 1: Calculus and Linear Algebra"
+      },
+      "acronym": "DISAM",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Dialog- og samarbeidsbasert undervisning",
+      "title": "Mattelab 8",
+      "dayNumber": 4,
+      "startTime": "14:15",
+      "endTime": "16:00",
+      "weeks": [
+        "34-47"
+      ],
+      "rooms": [
+        {
+          "id": "194_322_146",
+          "building": "Sentralbygg 2",
+          "room": "S6",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=322-146"
+        }
+      ],
+      "studyProgramKeys": [
+        "BMAT",
+        "MTKOM",
+        "MLREAL",
+        "BIELDIG",
+        "MTENERG",
+        "MTDT",
+        "MTMART",
+        "ÅMATSTAT",
+        "MTBYGG",
+        "MTIØT",
+        "BDIGSEC",
+        "MTDESIG",
+        "MTMASKIN",
+        "MTING"
+      ]
+    },
+    {
+      "courseCode": "TMA4400",
+      "courseName": {
+        "nob": "Matematikk 1: Kalkulus og lineær algebra",
+        "nno": "Matematikk 1: Kalkulus og lineær algebra",
+        "eng": "Mathematics 1: Calculus and Linear Algebra"
+      },
+      "acronym": "FORM",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Formidling",
+      "title": "Forelesning 2 MTGEORT, MTINGGEO",
+      "dayNumber": 4,
+      "startTime": "08:15",
+      "endTime": "10:00",
+      "weeks": [
+        "34-47"
+      ],
+      "rooms": [
+        {
+          "id": "194_322_115",
+          "building": "Sentralbygg 2",
+          "room": "S5",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=322-115"
+        }
+      ],
+      "studyProgramKeys": [
+        "BKJ",
+        "MTNANO",
+        "MTINGGEO",
+        "MTGEORT",
+        "MTIØT",
+        "MTENERG",
+        "BGEOL"
+      ]
+    },
+    {
+      "courseCode": "TMA4400",
+      "courseName": {
+        "nob": "Matematikk 1: Kalkulus og lineær algebra",
+        "nno": "Matematikk 1: Kalkulus og lineær algebra",
+        "eng": "Mathematics 1: Calculus and Linear Algebra"
+      },
+      "acronym": "FORM",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Formidling",
+      "title": "Forelesning 2 MTENERG, MTIØT",
+      "dayNumber": 4,
+      "startTime": "10:15",
+      "endTime": "12:00",
+      "weeks": [
+        "34-47"
+      ],
+      "rooms": [
+        {
+          "id": "194_322_115",
+          "building": "Sentralbygg 2",
+          "room": "S5",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=322-115"
+        }
+      ],
+      "studyProgramKeys": [
+        "BKJ",
+        "MTNANO",
+        "MTINGGEO",
+        "MTGEORT",
+        "MTIØT",
+        "MTENERG",
+        "BGEOL"
+      ]
+    },
+    {
+      "courseCode": "TMA4400",
+      "courseName": {
+        "nob": "Matematikk 1: Kalkulus og lineær algebra",
+        "nno": "Matematikk 1: Kalkulus og lineær algebra",
+        "eng": "Mathematics 1: Calculus and Linear Algebra"
+      },
+      "acronym": "FORM-P",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Formidling",
+      "title": "Forelesning 2 MTIØT, MTKOM, MTDT",
+      "dayNumber": 4,
+      "startTime": "10:15",
+      "endTime": "12:00",
+      "weeks": [
+        "34-47"
+      ],
+      "rooms": [
+        {
+          "id": "194_325_G160",
+          "building": "Gamle elektro",
+          "room": "EL5",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=325-G160"
+        }
+      ],
+      "studyProgramKeys": [
+        "MTDT",
+        "MTKOM",
+        "MTIØT"
+      ]
+    }
+  ]
+}

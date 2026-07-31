@@ -22,8 +22,16 @@ description = "Run the test suite"
 run = "npm test"
 
 [tasks.e2e]
-description = "Browser suite: builds + serves, then drives Chromium over client-side navigation"
+description = "Browser suite over recorded /api fixtures: builds, serves, drives Chromium"
 run = "npm run test:e2e"
+
+[tasks."e2e:live"]
+description = "Same suite against live NTNU, plus the upstream-contract checks"
+run = "npm run e2e:live"
+
+[tasks."e2e:record"]
+description = "Refresh e2e/fixtures/ from live NTNU (run when the contract suite fails)"
+run = "npm run e2e:record"
 
 [tasks.lint]
 description = "Lint and check formatting"

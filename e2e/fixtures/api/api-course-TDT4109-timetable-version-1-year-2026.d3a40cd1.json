@@ -1,0 +1,1103 @@
+{
+  "url": "http://127.0.0.1:8788/api/course/TDT4109/timetable?year=2026&version=1",
+  "status": 200,
+  "contentType": "application/json; charset=utf-8",
+  "body": [
+    {
+      "courseCode": "TDT4109",
+      "courseName": {
+        "nob": "Informasjonsteknologi, grunnkurs",
+        "nno": "Informasjonsteknologi, grunnkurs",
+        "eng": "Information Technology, Introduction"
+      },
+      "acronym": "DISAM-P",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Dialog- og samarbeidsbasert undervisning",
+      "title": "Lab",
+      "dayNumber": 1,
+      "startTime": "08:00",
+      "endTime": "18:00",
+      "weeks": [
+        "34-47"
+      ],
+      "rooms": [
+        {
+          "id": "194_360_A3-100",
+          "building": "Realfagbygget",
+          "room": "A3-100",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=360-A3-100"
+        },
+        {
+          "id": "194_360_A3-125",
+          "building": "Realfagbygget",
+          "room": "A3-125",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=360-A3-125"
+        },
+        {
+          "id": "194_360_A3-138",
+          "building": "Realfagbygget",
+          "room": "A3-138",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=360-A3-138"
+        },
+        {
+          "id": "194_360_A4-100",
+          "building": "Realfagbygget",
+          "room": "A4-100",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=360-A4-100"
+        }
+      ],
+      "studyProgramKeys": []
+    },
+    {
+      "courseCode": "TDT4109",
+      "courseName": {
+        "nob": "Informasjonsteknologi, grunnkurs",
+        "nno": "Informasjonsteknologi, grunnkurs",
+        "eng": "Information Technology, Introduction"
+      },
+      "acronym": "DISAM-P",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Dialog- og samarbeidsbasert undervisning",
+      "title": "Lab",
+      "dayNumber": 1,
+      "startTime": "08:00",
+      "endTime": "18:00",
+      "weeks": [
+        "34-47"
+      ],
+      "rooms": [
+        {
+          "id": "194_360_A4-100",
+          "building": "Realfagbygget",
+          "room": "A4-100",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=360-A4-100"
+        },
+        {
+          "id": "194_360_A3-138",
+          "building": "Realfagbygget",
+          "room": "A3-138",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=360-A3-138"
+        },
+        {
+          "id": "194_360_A3-125",
+          "building": "Realfagbygget",
+          "room": "A3-125",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=360-A3-125"
+        },
+        {
+          "id": "194_360_A3-100",
+          "building": "Realfagbygget",
+          "room": "A3-100",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=360-A3-100"
+        }
+      ],
+      "studyProgramKeys": []
+    },
+    {
+      "courseCode": "TDT4109",
+      "courseName": {
+        "nob": "Informasjonsteknologi, grunnkurs",
+        "nno": "Informasjonsteknologi, grunnkurs",
+        "eng": "Information Technology, Introduction"
+      },
+      "acronym": "DISAM-P",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Dialog- og samarbeidsbasert undervisning",
+      "title": "Lab",
+      "dayNumber": 1,
+      "startTime": "08:00",
+      "endTime": "18:00",
+      "weeks": [
+        "34-47"
+      ],
+      "rooms": [
+        {
+          "id": "194_360_A3-138",
+          "building": "Realfagbygget",
+          "room": "A3-138",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=360-A3-138"
+        },
+        {
+          "id": "194_360_A4-100",
+          "building": "Realfagbygget",
+          "room": "A4-100",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=360-A4-100"
+        },
+        {
+          "id": "194_360_A3-100",
+          "building": "Realfagbygget",
+          "room": "A3-100",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=360-A3-100"
+        },
+        {
+          "id": "194_360_A3-125",
+          "building": "Realfagbygget",
+          "room": "A3-125",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=360-A3-125"
+        }
+      ],
+      "studyProgramKeys": []
+    },
+    {
+      "courseCode": "TDT4109",
+      "courseName": {
+        "nob": "Informasjonsteknologi, grunnkurs",
+        "nno": "Informasjonsteknologi, grunnkurs",
+        "eng": "Information Technology, Introduction"
+      },
+      "acronym": "DISAM-P",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Dialog- og samarbeidsbasert undervisning",
+      "title": "Lab",
+      "dayNumber": 1,
+      "startTime": "08:00",
+      "endTime": "18:00",
+      "weeks": [
+        "34-47"
+      ],
+      "rooms": [
+        {
+          "id": "194_360_A3-125",
+          "building": "Realfagbygget",
+          "room": "A3-125",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=360-A3-125"
+        },
+        {
+          "id": "194_360_A3-100",
+          "building": "Realfagbygget",
+          "room": "A3-100",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=360-A3-100"
+        },
+        {
+          "id": "194_360_A4-100",
+          "building": "Realfagbygget",
+          "room": "A4-100",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=360-A4-100"
+        },
+        {
+          "id": "194_360_A3-138",
+          "building": "Realfagbygget",
+          "room": "A3-138",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=360-A3-138"
+        }
+      ],
+      "studyProgramKeys": []
+    },
+    {
+      "courseCode": "TDT4109",
+      "courseName": {
+        "nob": "Informasjonsteknologi, grunnkurs",
+        "nno": "Informasjonsteknologi, grunnkurs",
+        "eng": "Information Technology, Introduction"
+      },
+      "acronym": "DISAM-P",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Dialog- og samarbeidsbasert undervisning",
+      "title": "Gruppearbeid",
+      "dayNumber": 1,
+      "startTime": "16:15",
+      "endTime": "18:00",
+      "weeks": [
+        "34-47"
+      ],
+      "rooms": [
+        {
+          "id": "194_360_CU1-100",
+          "building": "Realfagbygget",
+          "room": "R2",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=360-CU1-100"
+        }
+      ],
+      "studyProgramKeys": [
+        "MTDT",
+        "MTKOM",
+        "MTIØT",
+        "BDIGSEC",
+        "BIT",
+        "MTING"
+      ]
+    },
+    {
+      "courseCode": "TDT4109",
+      "courseName": {
+        "nob": "Informasjonsteknologi, grunnkurs",
+        "nno": "Informasjonsteknologi, grunnkurs",
+        "eng": "Information Technology, Introduction"
+      },
+      "acronym": "DISAM-P",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Dialog- og samarbeidsbasert undervisning",
+      "title": "Gruppearbeid",
+      "dayNumber": 1,
+      "startTime": "15:15",
+      "endTime": "17:00",
+      "weeks": [
+        "34-47"
+      ],
+      "rooms": [
+        {
+          "id": "194_360_CU1-100",
+          "building": "Realfagbygget",
+          "room": "R2",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=360-CU1-100"
+        }
+      ],
+      "studyProgramKeys": [
+        "MTDT",
+        "MTKOM",
+        "MTIØT",
+        "BDIGSEC",
+        "BIT",
+        "MTING"
+      ]
+    },
+    {
+      "courseCode": "TDT4109",
+      "courseName": {
+        "nob": "Informasjonsteknologi, grunnkurs",
+        "nno": "Informasjonsteknologi, grunnkurs",
+        "eng": "Information Technology, Introduction"
+      },
+      "acronym": "FORM",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Formidling",
+      "title": "Øvingsforelesning",
+      "dayNumber": 1,
+      "startTime": "14:15",
+      "endTime": "16:00",
+      "weeks": [
+        "34-47"
+      ],
+      "rooms": [
+        {
+          "id": "194_360_CU1-101",
+          "building": "Realfagbygget",
+          "room": "R1",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=360-CU1-101"
+        }
+      ],
+      "studyProgramKeys": [
+        "MTDT",
+        "MTKOM",
+        "MTIØT",
+        "BDIGSEC",
+        "BIT",
+        "MTING"
+      ]
+    },
+    {
+      "courseCode": "TDT4109",
+      "courseName": {
+        "nob": "Informasjonsteknologi, grunnkurs",
+        "nno": "Informasjonsteknologi, grunnkurs",
+        "eng": "Information Technology, Introduction"
+      },
+      "acronym": "DISAM-P",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Dialog- og samarbeidsbasert undervisning",
+      "title": "Lab",
+      "dayNumber": 2,
+      "startTime": "08:00",
+      "endTime": "18:00",
+      "weeks": [
+        "34-47"
+      ],
+      "rooms": [
+        {
+          "id": "194_360_A4-100",
+          "building": "Realfagbygget",
+          "room": "A4-100",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=360-A4-100"
+        },
+        {
+          "id": "194_360_A3-138",
+          "building": "Realfagbygget",
+          "room": "A3-138",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=360-A3-138"
+        },
+        {
+          "id": "194_360_A3-125",
+          "building": "Realfagbygget",
+          "room": "A3-125",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=360-A3-125"
+        },
+        {
+          "id": "194_360_A3-100",
+          "building": "Realfagbygget",
+          "room": "A3-100",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=360-A3-100"
+        }
+      ],
+      "studyProgramKeys": []
+    },
+    {
+      "courseCode": "TDT4109",
+      "courseName": {
+        "nob": "Informasjonsteknologi, grunnkurs",
+        "nno": "Informasjonsteknologi, grunnkurs",
+        "eng": "Information Technology, Introduction"
+      },
+      "acronym": "DISAM-P",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Dialog- og samarbeidsbasert undervisning",
+      "title": "Lab",
+      "dayNumber": 2,
+      "startTime": "08:00",
+      "endTime": "18:00",
+      "weeks": [
+        "34-47"
+      ],
+      "rooms": [
+        {
+          "id": "194_360_A3-125",
+          "building": "Realfagbygget",
+          "room": "A3-125",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=360-A3-125"
+        },
+        {
+          "id": "194_360_A3-100",
+          "building": "Realfagbygget",
+          "room": "A3-100",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=360-A3-100"
+        },
+        {
+          "id": "194_360_A4-100",
+          "building": "Realfagbygget",
+          "room": "A4-100",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=360-A4-100"
+        },
+        {
+          "id": "194_360_A3-138",
+          "building": "Realfagbygget",
+          "room": "A3-138",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=360-A3-138"
+        }
+      ],
+      "studyProgramKeys": []
+    },
+    {
+      "courseCode": "TDT4109",
+      "courseName": {
+        "nob": "Informasjonsteknologi, grunnkurs",
+        "nno": "Informasjonsteknologi, grunnkurs",
+        "eng": "Information Technology, Introduction"
+      },
+      "acronym": "DISAM-P",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Dialog- og samarbeidsbasert undervisning",
+      "title": "Lab",
+      "dayNumber": 2,
+      "startTime": "08:00",
+      "endTime": "18:00",
+      "weeks": [
+        "34-47"
+      ],
+      "rooms": [
+        {
+          "id": "194_360_A3-138",
+          "building": "Realfagbygget",
+          "room": "A3-138",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=360-A3-138"
+        },
+        {
+          "id": "194_360_A4-100",
+          "building": "Realfagbygget",
+          "room": "A4-100",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=360-A4-100"
+        },
+        {
+          "id": "194_360_A3-100",
+          "building": "Realfagbygget",
+          "room": "A3-100",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=360-A3-100"
+        },
+        {
+          "id": "194_360_A3-125",
+          "building": "Realfagbygget",
+          "room": "A3-125",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=360-A3-125"
+        }
+      ],
+      "studyProgramKeys": []
+    },
+    {
+      "courseCode": "TDT4109",
+      "courseName": {
+        "nob": "Informasjonsteknologi, grunnkurs",
+        "nno": "Informasjonsteknologi, grunnkurs",
+        "eng": "Information Technology, Introduction"
+      },
+      "acronym": "DISAM-P",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Dialog- og samarbeidsbasert undervisning",
+      "title": "Lab",
+      "dayNumber": 2,
+      "startTime": "08:00",
+      "endTime": "18:00",
+      "weeks": [
+        "34-47"
+      ],
+      "rooms": [
+        {
+          "id": "194_360_A3-100",
+          "building": "Realfagbygget",
+          "room": "A3-100",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=360-A3-100"
+        },
+        {
+          "id": "194_360_A3-125",
+          "building": "Realfagbygget",
+          "room": "A3-125",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=360-A3-125"
+        },
+        {
+          "id": "194_360_A3-138",
+          "building": "Realfagbygget",
+          "room": "A3-138",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=360-A3-138"
+        },
+        {
+          "id": "194_360_A4-100",
+          "building": "Realfagbygget",
+          "room": "A4-100",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=360-A4-100"
+        }
+      ],
+      "studyProgramKeys": []
+    },
+    {
+      "courseCode": "TDT4109",
+      "courseName": {
+        "nob": "Informasjonsteknologi, grunnkurs",
+        "nno": "Informasjonsteknologi, grunnkurs",
+        "eng": "Information Technology, Introduction"
+      },
+      "acronym": "DISAM-P",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Dialog- og samarbeidsbasert undervisning",
+      "title": "Gruppearbeid",
+      "dayNumber": 2,
+      "startTime": "12:15",
+      "endTime": "14:00",
+      "weeks": [
+        "34-47"
+      ],
+      "rooms": [
+        {
+          "id": "194_360_CU1-100",
+          "building": "Realfagbygget",
+          "room": "R2",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=360-CU1-100"
+        }
+      ],
+      "studyProgramKeys": [
+        "MTDT",
+        "MTKOM",
+        "MTIØT",
+        "BDIGSEC",
+        "BIT",
+        "MTING"
+      ]
+    },
+    {
+      "courseCode": "TDT4109",
+      "courseName": {
+        "nob": "Informasjonsteknologi, grunnkurs",
+        "nno": "Informasjonsteknologi, grunnkurs",
+        "eng": "Information Technology, Introduction"
+      },
+      "acronym": "DISAM-P",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Dialog- og samarbeidsbasert undervisning",
+      "title": "Lab",
+      "dayNumber": 3,
+      "startTime": "08:00",
+      "endTime": "18:00",
+      "weeks": [
+        "34-47"
+      ],
+      "rooms": [
+        {
+          "id": "194_360_A3-138",
+          "building": "Realfagbygget",
+          "room": "A3-138",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=360-A3-138"
+        },
+        {
+          "id": "194_360_A4-100",
+          "building": "Realfagbygget",
+          "room": "A4-100",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=360-A4-100"
+        },
+        {
+          "id": "194_360_A3-100",
+          "building": "Realfagbygget",
+          "room": "A3-100",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=360-A3-100"
+        },
+        {
+          "id": "194_360_A3-125",
+          "building": "Realfagbygget",
+          "room": "A3-125",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=360-A3-125"
+        }
+      ],
+      "studyProgramKeys": []
+    },
+    {
+      "courseCode": "TDT4109",
+      "courseName": {
+        "nob": "Informasjonsteknologi, grunnkurs",
+        "nno": "Informasjonsteknologi, grunnkurs",
+        "eng": "Information Technology, Introduction"
+      },
+      "acronym": "DISAM-P",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Dialog- og samarbeidsbasert undervisning",
+      "title": "Lab",
+      "dayNumber": 3,
+      "startTime": "08:00",
+      "endTime": "18:00",
+      "weeks": [
+        "34-47"
+      ],
+      "rooms": [
+        {
+          "id": "194_360_A4-100",
+          "building": "Realfagbygget",
+          "room": "A4-100",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=360-A4-100"
+        },
+        {
+          "id": "194_360_A3-138",
+          "building": "Realfagbygget",
+          "room": "A3-138",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=360-A3-138"
+        },
+        {
+          "id": "194_360_A3-125",
+          "building": "Realfagbygget",
+          "room": "A3-125",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=360-A3-125"
+        },
+        {
+          "id": "194_360_A3-100",
+          "building": "Realfagbygget",
+          "room": "A3-100",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=360-A3-100"
+        }
+      ],
+      "studyProgramKeys": []
+    },
+    {
+      "courseCode": "TDT4109",
+      "courseName": {
+        "nob": "Informasjonsteknologi, grunnkurs",
+        "nno": "Informasjonsteknologi, grunnkurs",
+        "eng": "Information Technology, Introduction"
+      },
+      "acronym": "DISAM-P",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Dialog- og samarbeidsbasert undervisning",
+      "title": "Lab",
+      "dayNumber": 3,
+      "startTime": "08:00",
+      "endTime": "18:00",
+      "weeks": [
+        "34-47"
+      ],
+      "rooms": [
+        {
+          "id": "194_360_A3-100",
+          "building": "Realfagbygget",
+          "room": "A3-100",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=360-A3-100"
+        },
+        {
+          "id": "194_360_A3-125",
+          "building": "Realfagbygget",
+          "room": "A3-125",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=360-A3-125"
+        },
+        {
+          "id": "194_360_A3-138",
+          "building": "Realfagbygget",
+          "room": "A3-138",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=360-A3-138"
+        },
+        {
+          "id": "194_360_A4-100",
+          "building": "Realfagbygget",
+          "room": "A4-100",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=360-A4-100"
+        }
+      ],
+      "studyProgramKeys": []
+    },
+    {
+      "courseCode": "TDT4109",
+      "courseName": {
+        "nob": "Informasjonsteknologi, grunnkurs",
+        "nno": "Informasjonsteknologi, grunnkurs",
+        "eng": "Information Technology, Introduction"
+      },
+      "acronym": "DISAM-P",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Dialog- og samarbeidsbasert undervisning",
+      "title": "Lab",
+      "dayNumber": 3,
+      "startTime": "08:00",
+      "endTime": "18:00",
+      "weeks": [
+        "34-47"
+      ],
+      "rooms": [
+        {
+          "id": "194_360_A3-125",
+          "building": "Realfagbygget",
+          "room": "A3-125",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=360-A3-125"
+        },
+        {
+          "id": "194_360_A3-100",
+          "building": "Realfagbygget",
+          "room": "A3-100",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=360-A3-100"
+        },
+        {
+          "id": "194_360_A4-100",
+          "building": "Realfagbygget",
+          "room": "A4-100",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=360-A4-100"
+        },
+        {
+          "id": "194_360_A3-138",
+          "building": "Realfagbygget",
+          "room": "A3-138",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=360-A3-138"
+        }
+      ],
+      "studyProgramKeys": []
+    },
+    {
+      "courseCode": "TDT4109",
+      "courseName": {
+        "nob": "Informasjonsteknologi, grunnkurs",
+        "nno": "Informasjonsteknologi, grunnkurs",
+        "eng": "Information Technology, Introduction"
+      },
+      "acronym": "DISAM-P",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Dialog- og samarbeidsbasert undervisning",
+      "title": "Lab",
+      "dayNumber": 4,
+      "startTime": "08:00",
+      "endTime": "18:00",
+      "weeks": [
+        "34-47"
+      ],
+      "rooms": [
+        {
+          "id": "194_360_A3-100",
+          "building": "Realfagbygget",
+          "room": "A3-100",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=360-A3-100"
+        },
+        {
+          "id": "194_360_A3-125",
+          "building": "Realfagbygget",
+          "room": "A3-125",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=360-A3-125"
+        },
+        {
+          "id": "194_360_A3-138",
+          "building": "Realfagbygget",
+          "room": "A3-138",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=360-A3-138"
+        },
+        {
+          "id": "194_360_A4-100",
+          "building": "Realfagbygget",
+          "room": "A4-100",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=360-A4-100"
+        }
+      ],
+      "studyProgramKeys": []
+    },
+    {
+      "courseCode": "TDT4109",
+      "courseName": {
+        "nob": "Informasjonsteknologi, grunnkurs",
+        "nno": "Informasjonsteknologi, grunnkurs",
+        "eng": "Information Technology, Introduction"
+      },
+      "acronym": "DISAM-P",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Dialog- og samarbeidsbasert undervisning",
+      "title": "Lab",
+      "dayNumber": 4,
+      "startTime": "08:00",
+      "endTime": "18:00",
+      "weeks": [
+        "34-47"
+      ],
+      "rooms": [
+        {
+          "id": "194_360_A3-138",
+          "building": "Realfagbygget",
+          "room": "A3-138",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=360-A3-138"
+        },
+        {
+          "id": "194_360_A4-100",
+          "building": "Realfagbygget",
+          "room": "A4-100",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=360-A4-100"
+        },
+        {
+          "id": "194_360_A3-100",
+          "building": "Realfagbygget",
+          "room": "A3-100",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=360-A3-100"
+        },
+        {
+          "id": "194_360_A3-125",
+          "building": "Realfagbygget",
+          "room": "A3-125",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=360-A3-125"
+        }
+      ],
+      "studyProgramKeys": []
+    },
+    {
+      "courseCode": "TDT4109",
+      "courseName": {
+        "nob": "Informasjonsteknologi, grunnkurs",
+        "nno": "Informasjonsteknologi, grunnkurs",
+        "eng": "Information Technology, Introduction"
+      },
+      "acronym": "DISAM-P",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Dialog- og samarbeidsbasert undervisning",
+      "title": "Lab",
+      "dayNumber": 4,
+      "startTime": "08:00",
+      "endTime": "18:00",
+      "weeks": [
+        "34-47"
+      ],
+      "rooms": [
+        {
+          "id": "194_360_A4-100",
+          "building": "Realfagbygget",
+          "room": "A4-100",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=360-A4-100"
+        },
+        {
+          "id": "194_360_A3-138",
+          "building": "Realfagbygget",
+          "room": "A3-138",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=360-A3-138"
+        },
+        {
+          "id": "194_360_A3-125",
+          "building": "Realfagbygget",
+          "room": "A3-125",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=360-A3-125"
+        },
+        {
+          "id": "194_360_A3-100",
+          "building": "Realfagbygget",
+          "room": "A3-100",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=360-A3-100"
+        }
+      ],
+      "studyProgramKeys": []
+    },
+    {
+      "courseCode": "TDT4109",
+      "courseName": {
+        "nob": "Informasjonsteknologi, grunnkurs",
+        "nno": "Informasjonsteknologi, grunnkurs",
+        "eng": "Information Technology, Introduction"
+      },
+      "acronym": "DISAM-P",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Dialog- og samarbeidsbasert undervisning",
+      "title": "Lab",
+      "dayNumber": 4,
+      "startTime": "08:00",
+      "endTime": "18:00",
+      "weeks": [
+        "34-47"
+      ],
+      "rooms": [
+        {
+          "id": "194_360_A3-125",
+          "building": "Realfagbygget",
+          "room": "A3-125",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=360-A3-125"
+        },
+        {
+          "id": "194_360_A3-100",
+          "building": "Realfagbygget",
+          "room": "A3-100",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=360-A3-100"
+        },
+        {
+          "id": "194_360_A4-100",
+          "building": "Realfagbygget",
+          "room": "A4-100",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=360-A4-100"
+        },
+        {
+          "id": "194_360_A3-138",
+          "building": "Realfagbygget",
+          "room": "A3-138",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=360-A3-138"
+        }
+      ],
+      "studyProgramKeys": []
+    },
+    {
+      "courseCode": "TDT4109",
+      "courseName": {
+        "nob": "Informasjonsteknologi, grunnkurs",
+        "nno": "Informasjonsteknologi, grunnkurs",
+        "eng": "Information Technology, Introduction"
+      },
+      "acronym": "DISAM-P",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Dialog- og samarbeidsbasert undervisning",
+      "title": "Lab",
+      "dayNumber": 5,
+      "startTime": "08:00",
+      "endTime": "16:00",
+      "weeks": [
+        "34-47"
+      ],
+      "rooms": [
+        {
+          "id": "194_360_A3-138",
+          "building": "Realfagbygget",
+          "room": "A3-138",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=360-A3-138"
+        },
+        {
+          "id": "194_360_A4-100",
+          "building": "Realfagbygget",
+          "room": "A4-100",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=360-A4-100"
+        },
+        {
+          "id": "194_360_A3-100",
+          "building": "Realfagbygget",
+          "room": "A3-100",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=360-A3-100"
+        },
+        {
+          "id": "194_360_A3-125",
+          "building": "Realfagbygget",
+          "room": "A3-125",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=360-A3-125"
+        }
+      ],
+      "studyProgramKeys": []
+    },
+    {
+      "courseCode": "TDT4109",
+      "courseName": {
+        "nob": "Informasjonsteknologi, grunnkurs",
+        "nno": "Informasjonsteknologi, grunnkurs",
+        "eng": "Information Technology, Introduction"
+      },
+      "acronym": "DISAM-P",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Dialog- og samarbeidsbasert undervisning",
+      "title": "Lab",
+      "dayNumber": 5,
+      "startTime": "08:00",
+      "endTime": "16:00",
+      "weeks": [
+        "34-47"
+      ],
+      "rooms": [
+        {
+          "id": "194_360_A3-100",
+          "building": "Realfagbygget",
+          "room": "A3-100",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=360-A3-100"
+        },
+        {
+          "id": "194_360_A3-125",
+          "building": "Realfagbygget",
+          "room": "A3-125",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=360-A3-125"
+        },
+        {
+          "id": "194_360_A3-138",
+          "building": "Realfagbygget",
+          "room": "A3-138",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=360-A3-138"
+        },
+        {
+          "id": "194_360_A4-100",
+          "building": "Realfagbygget",
+          "room": "A4-100",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=360-A4-100"
+        }
+      ],
+      "studyProgramKeys": []
+    },
+    {
+      "courseCode": "TDT4109",
+      "courseName": {
+        "nob": "Informasjonsteknologi, grunnkurs",
+        "nno": "Informasjonsteknologi, grunnkurs",
+        "eng": "Information Technology, Introduction"
+      },
+      "acronym": "DISAM-P",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Dialog- og samarbeidsbasert undervisning",
+      "title": "Lab",
+      "dayNumber": 5,
+      "startTime": "08:00",
+      "endTime": "16:00",
+      "weeks": [
+        "34-47"
+      ],
+      "rooms": [
+        {
+          "id": "194_360_A4-100",
+          "building": "Realfagbygget",
+          "room": "A4-100",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=360-A4-100"
+        },
+        {
+          "id": "194_360_A3-138",
+          "building": "Realfagbygget",
+          "room": "A3-138",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=360-A3-138"
+        },
+        {
+          "id": "194_360_A3-125",
+          "building": "Realfagbygget",
+          "room": "A3-125",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=360-A3-125"
+        },
+        {
+          "id": "194_360_A3-100",
+          "building": "Realfagbygget",
+          "room": "A3-100",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=360-A3-100"
+        }
+      ],
+      "studyProgramKeys": []
+    },
+    {
+      "courseCode": "TDT4109",
+      "courseName": {
+        "nob": "Informasjonsteknologi, grunnkurs",
+        "nno": "Informasjonsteknologi, grunnkurs",
+        "eng": "Information Technology, Introduction"
+      },
+      "acronym": "DISAM-P",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Dialog- og samarbeidsbasert undervisning",
+      "title": "Lab",
+      "dayNumber": 5,
+      "startTime": "08:00",
+      "endTime": "16:00",
+      "weeks": [
+        "34-47"
+      ],
+      "rooms": [
+        {
+          "id": "194_360_A3-125",
+          "building": "Realfagbygget",
+          "room": "A3-125",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=360-A3-125"
+        },
+        {
+          "id": "194_360_A3-100",
+          "building": "Realfagbygget",
+          "room": "A3-100",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=360-A3-100"
+        },
+        {
+          "id": "194_360_A4-100",
+          "building": "Realfagbygget",
+          "room": "A4-100",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=360-A4-100"
+        },
+        {
+          "id": "194_360_A3-138",
+          "building": "Realfagbygget",
+          "room": "A3-138",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=360-A3-138"
+        }
+      ],
+      "studyProgramKeys": []
+    },
+    {
+      "courseCode": "TDT4109",
+      "courseName": {
+        "nob": "Informasjonsteknologi, grunnkurs",
+        "nno": "Informasjonsteknologi, grunnkurs",
+        "eng": "Information Technology, Introduction"
+      },
+      "acronym": "FORM",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Formidling",
+      "title": "Digital forelesning første og siste uker i semesteret",
+      "dayNumber": 5,
+      "startTime": "12:15",
+      "endTime": "13:00",
+      "weeks": [
+        "34-35",
+        "45-46"
+      ],
+      "rooms": [
+        {
+          "id": "194_VR_GUND",
+          "building": "Digital undervisning",
+          "room": "Digital undervisning",
+          "url": null
+        }
+      ],
+      "studyProgramKeys": [
+        "MTDT",
+        "MTKOM",
+        "MTIØT",
+        "BDIGSEC",
+        "BIT",
+        "MTING"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,591 @@
+{
+  "url": "http://127.0.0.1:8788/api/program/BIT/plan?year=2026",
+  "status": 200,
+  "contentType": "application/json; charset=utf-8",
+  "body": {
+    "code": "BIT",
+    "name": "Informatikk - bachelor",
+    "year": 2026,
+    "startTerm": "HØST",
+    "updated": "12-05-2026 at 04:53:25",
+    "periods": [
+      {
+        "periodNumber": 1,
+        "direction": {
+          "code": null,
+          "name": null,
+          "courseGroups": [
+            {
+              "code": "BITOBLIG26",
+              "name": "Obligatoriske emner",
+              "description": "Disse emnene er obligatoriske og må inngå i bachelorgraden i informatikk",
+              "courses": [
+                {
+                  "code": "EXPH0300",
+                  "version": "1",
+                  "name": "Examen philosophicum for naturvitenskap og teknologi",
+                  "credits": 7.5,
+                  "planElement": false,
+                  "studyChoice": {
+                    "code": "O",
+                    "name": "Obligatorisk emne",
+                    "description": "Obligatorisk emne"
+                  }
+                },
+                {
+                  "code": "HMS0002",
+                  "version": "1",
+                  "name": "HMS-kurs for 1. årsstudenter",
+                  "credits": 0,
+                  "planElement": false,
+                  "studyChoice": {
+                    "code": "O",
+                    "name": "Obligatorisk emne",
+                    "description": "Obligatorisk emne"
+                  }
+                },
+                {
+                  "code": "IT2805",
+                  "version": "1",
+                  "name": "Webteknologi",
+                  "credits": 7.5,
+                  "planElement": false,
+                  "studyChoice": {
+                    "code": "O",
+                    "name": "Obligatorisk emne",
+                    "description": "Obligatorisk emne"
+                  }
+                },
+                {
+                  "code": "MA0001",
+                  "version": "1",
+                  "name": "Brukerkurs i matematikk A",
+                  "credits": 7.5,
+                  "planElement": false,
+                  "studyChoice": {
+                    "code": "O",
+                    "name": "Obligatorisk emne",
+                    "description": "Obligatorisk emne"
+                  }
+                },
+                {
+                  "code": "TDT4109",
+                  "version": "1",
+                  "name": "Informasjonsteknologi, grunnkurs",
+                  "credits": 7.5,
+                  "planElement": false,
+                  "studyChoice": {
+                    "code": "O",
+                    "name": "Obligatorisk emne",
+                    "description": "Obligatorisk emne"
+                  }
+                }
+              ]
+            }
+          ],
+          "waypoints": []
+        }
+      },
+      {
+        "periodNumber": 2,
+        "direction": {
+          "code": null,
+          "name": null,
+          "courseGroups": [
+            {
+              "code": "BITOBLIG26",
+              "name": "Obligatoriske emner",
+              "description": "Disse emnene er obligatoriske og må inngå i bachelorgraden i informatikk",
+              "courses": [
+                {
+                  "code": "MA0301",
+                  "version": "1",
+                  "name": "Elementær diskret matematikk",
+                  "credits": 7.5,
+                  "planElement": false,
+                  "studyChoice": {
+                    "code": "O",
+                    "name": "Obligatorisk emne",
+                    "description": "Obligatorisk emne"
+                  }
+                },
+                {
+                  "code": "TDT4100",
+                  "version": "1",
+                  "name": "Objektorientert programmering",
+                  "credits": 7.5,
+                  "planElement": false,
+                  "studyChoice": {
+                    "code": "O",
+                    "name": "Obligatorisk emne",
+                    "description": "Obligatorisk emne"
+                  }
+                },
+                {
+                  "code": "TDT4180",
+                  "version": "1",
+                  "name": "Menneske–maskin-interaksjon",
+                  "credits": 7.5,
+                  "planElement": false,
+                  "studyChoice": {
+                    "code": "O",
+                    "name": "Obligatorisk emne",
+                    "description": "Obligatorisk emne"
+                  }
+                },
+                {
+                  "code": "TTM4100",
+                  "version": "1",
+                  "name": "Kommunikasjon - Tjenester og nett",
+                  "credits": 7.5,
+                  "planElement": false,
+                  "studyChoice": {
+                    "code": "O",
+                    "name": "Obligatorisk emne",
+                    "description": "Obligatorisk emne"
+                  }
+                }
+              ]
+            }
+          ],
+          "waypoints": []
+        }
+      },
+      {
+        "periodNumber": 3,
+        "direction": {
+          "code": null,
+          "name": null,
+          "courseGroups": [
+            {
+              "code": "BITOBLIG26",
+              "name": "Obligatoriske emner",
+              "description": "Disse emnene er obligatoriske og må inngå i bachelorgraden i informatikk",
+              "courses": [
+                {
+                  "code": "IT1901",
+                  "version": "1",
+                  "name": "Informatikk prosjektarbeid I",
+                  "credits": 7.5,
+                  "planElement": false,
+                  "studyChoice": {
+                    "code": "O",
+                    "name": "Obligatorisk emne",
+                    "description": "Obligatorisk emne"
+                  }
+                },
+                {
+                  "code": "TDT4120",
+                  "version": "1",
+                  "name": "Algoritmer og datastrukturer",
+                  "credits": 7.5,
+                  "planElement": false,
+                  "studyChoice": {
+                    "code": "O",
+                    "name": "Obligatorisk emne",
+                    "description": "Obligatorisk emne"
+                  }
+                },
+                {
+                  "code": "TDT4160",
+                  "version": "1",
+                  "name": "Datamaskiner",
+                  "credits": 7.5,
+                  "planElement": false,
+                  "studyChoice": {
+                    "code": "O",
+                    "name": "Obligatorisk emne",
+                    "description": "Obligatorisk emne"
+                  }
+                }
+              ]
+            },
+            {
+              "code": "BITOMRÅDE26",
+              "name": "Områdeemne",
+              "description": "I løpet av bachelorstudiet må det velges et områdeemne (7,5 studiepoeng). Områdeemnet tas normalt i 3. eller 4. semester.",
+              "courses": [
+                {
+                  "code": "BI2081",
+                  "version": "1",
+                  "name": "Natur, miljø og bærekraft",
+                  "credits": 7.5,
+                  "planElement": false,
+                  "studyChoice": {
+                    "code": "M",
+                    "name": "Minst en av",
+                    "description": "Minst en av"
+                  }
+                },
+                {
+                  "code": "IØ2000",
+                  "version": "1",
+                  "name": "Hvordan bli en endringsagent? Innovasjon og entreprenørskap i praksis",
+                  "credits": 7.5,
+                  "planElement": false,
+                  "studyChoice": {
+                    "code": "M",
+                    "name": "Minst en av",
+                    "description": "Minst en av"
+                  }
+                },
+                {
+                  "code": "ØKO1001",
+                  "version": "1",
+                  "name": "Ledelse",
+                  "credits": 7.5,
+                  "planElement": false,
+                  "studyChoice": {
+                    "code": "M",
+                    "name": "Minst en av",
+                    "description": "Minst en av"
+                  }
+                }
+              ]
+            },
+            {
+              "code": "VALGBAREBIT26",
+              "name": "Valgbare emner i bachelorstudiet i informatikk",
+              "description": "Emnene i listen er utvalgte forslag som ansees å være spesielt relevante, men man kan velge helt fritt blant alle emner ved NTNU som ikke er adgangsbegrenset.",
+              "courses": [
+                {
+                  "code": "IT1604",
+                  "version": "1",
+                  "name": "Digitalt samfunn",
+                  "credits": 7.5,
+                  "planElement": false,
+                  "studyChoice": {
+                    "code": "VA",
+                    "name": "Valgbart emne - Legges kollisjonsfritt",
+                    "description": "Valgbart emne - Legges kollisjonsfritt på time- og eksamensplanen"
+                  }
+                },
+                {
+                  "code": "TTM4135",
+                  "version": "1",
+                  "name": "Anvendt kryptografi og nettverksikkerhet",
+                  "credits": 7.5,
+                  "planElement": false,
+                  "studyChoice": {
+                    "code": "VA",
+                    "name": "Valgbart emne - Legges kollisjonsfritt",
+                    "description": "Valgbart emne - Legges kollisjonsfritt på time- og eksamensplanen"
+                  }
+                },
+                {
+                  "code": "TTM4185",
+                  "version": "1",
+                  "name": "Sikkerhet og robusthet i IKT system",
+                  "credits": 7.5,
+                  "planElement": false,
+                  "studyChoice": {
+                    "code": "VA",
+                    "name": "Valgbart emne - Legges kollisjonsfritt",
+                    "description": "Valgbart emne - Legges kollisjonsfritt på time- og eksamensplanen"
+                  }
+                }
+              ]
+            }
+          ],
+          "waypoints": []
+        }
+      },
+      {
+        "periodNumber": 4,
+        "direction": {
+          "code": null,
+          "name": null,
+          "courseGroups": [
+            {
+              "code": "BITOBLIG26",
+              "name": "Obligatoriske emner",
+              "description": "Disse emnene er obligatoriske og må inngå i bachelorgraden i informatikk",
+              "courses": [
+                {
+                  "code": "TDT4140",
+                  "version": "1",
+                  "name": "Programvareutvikling",
+                  "credits": 7.5,
+                  "planElement": false,
+                  "studyChoice": {
+                    "code": "O",
+                    "name": "Obligatorisk emne",
+                    "description": "Obligatorisk emne"
+                  }
+                },
+                {
+                  "code": "TDT4145",
+                  "version": "1",
+                  "name": "Datamodellering og databasesystemer",
+                  "credits": 7.5,
+                  "planElement": false,
+                  "studyChoice": {
+                    "code": "O",
+                    "name": "Obligatorisk emne",
+                    "description": "Obligatorisk emne"
+                  }
+                }
+              ]
+            }
+          ],
+          "waypoints": []
+        }
+      },
+      {
+        "periodNumber": 5,
+        "direction": {
+          "code": null,
+          "name": null,
+          "courseGroups": [
+            {
+              "code": "BITVALG26",
+              "name": "Valgbare IT-emner",
+              "description": "Man må velge minimum 2 av emnene i M2A-kategorien for å innfri kravene til en bachelor i informatikk",
+              "courses": [
+                {
+                  "code": "IT2810",
+                  "version": "1",
+                  "name": "Webutvikling",
+                  "credits": 7.5,
+                  "planElement": false,
+                  "studyChoice": {
+                    "code": "M2A",
+                    "name": "Minst 2 emner fra A-gruppe",
+                    "description": "Minst 2 emner fra gruppe A"
+                  }
+                },
+                {
+                  "code": "IT3212",
+                  "version": "1",
+                  "name": "Datadrevet Programvare",
+                  "credits": 7.5,
+                  "planElement": false,
+                  "studyChoice": {
+                    "code": "M2A",
+                    "name": "Minst 2 emner fra A-gruppe",
+                    "description": "Minst 2 emner fra gruppe A"
+                  }
+                },
+                {
+                  "code": "TDT4117",
+                  "version": "1",
+                  "name": "Informasjonsgjenfinning",
+                  "credits": 7.5,
+                  "planElement": false,
+                  "studyChoice": {
+                    "code": "M2A",
+                    "name": "Minst 2 emner fra A-gruppe",
+                    "description": "Minst 2 emner fra gruppe A"
+                  }
+                },
+                {
+                  "code": "TDT4136",
+                  "version": "1",
+                  "name": "Introduksjon til kunstig intelligens",
+                  "credits": 7.5,
+                  "planElement": false,
+                  "studyChoice": {
+                    "code": "M2A",
+                    "name": "Minst 2 emner fra A-gruppe",
+                    "description": "Minst 2 emner fra gruppe A"
+                  }
+                },
+                {
+                  "code": "TDT4137",
+                  "version": "1",
+                  "name": "Kognitive systemer",
+                  "credits": 7.5,
+                  "planElement": false,
+                  "studyChoice": {
+                    "code": "M2A",
+                    "name": "Minst 2 emner fra A-gruppe",
+                    "description": "Minst 2 emner fra gruppe A"
+                  }
+                },
+                {
+                  "code": "TDT4165",
+                  "version": "1",
+                  "name": "Programmeringsspråk",
+                  "credits": 7.5,
+                  "planElement": false,
+                  "studyChoice": {
+                    "code": "M2A",
+                    "name": "Minst 2 emner fra A-gruppe",
+                    "description": "Minst 2 emner fra gruppe A"
+                  }
+                },
+                {
+                  "code": "TDT4175",
+                  "version": "1",
+                  "name": "Informasjonssystemer",
+                  "credits": 7.5,
+                  "planElement": false,
+                  "studyChoice": {
+                    "code": "M2A",
+                    "name": "Minst 2 emner fra A-gruppe",
+                    "description": "Minst 2 emner fra gruppe A"
+                  }
+                },
+                {
+                  "code": "TDT4258",
+                  "version": "1",
+                  "name": "Maskinnær programmering",
+                  "credits": 7.5,
+                  "planElement": false,
+                  "studyChoice": {
+                    "code": "M2A",
+                    "name": "Minst 2 emner fra A-gruppe",
+                    "description": "Minst 2 emner fra gruppe A"
+                  }
+                }
+              ]
+            }
+          ],
+          "waypoints": []
+        }
+      },
+      {
+        "periodNumber": 6,
+        "direction": {
+          "code": null,
+          "name": null,
+          "courseGroups": [
+            {
+              "code": "BITOBLIG26",
+              "name": "Obligatoriske emner",
+              "description": "Disse emnene er obligatoriske og må inngå i bachelorgraden i informatikk",
+              "courses": [
+                {
+                  "code": "IT2901",
+                  "version": "1",
+                  "name": "Informatikk prosjektarbeid II",
+                  "credits": 15,
+                  "planElement": false,
+                  "studyChoice": {
+                    "code": "O",
+                    "name": "Obligatorisk emne",
+                    "description": "Obligatorisk emne"
+                  }
+                }
+              ]
+            },
+            {
+              "code": "BITVALG26",
+              "name": "Valgbare IT-emner",
+              "description": "Man må velge minimum 2 av emnene i M2A-kategorien for å innfri kravene til en bachelor i informatikk",
+              "courses": [
+                {
+                  "code": "TDT4171",
+                  "version": "1",
+                  "name": "Metoder i kunstig intelligens",
+                  "credits": 7.5,
+                  "planElement": false,
+                  "studyChoice": {
+                    "code": "M2A",
+                    "name": "Minst 2 emner fra A-gruppe",
+                    "description": "Minst 2 emner fra gruppe A"
+                  }
+                },
+                {
+                  "code": "TDT4186",
+                  "version": "1",
+                  "name": "Operativsystemer",
+                  "credits": 7.5,
+                  "planElement": false,
+                  "studyChoice": {
+                    "code": "M2A",
+                    "name": "Minst 2 emner fra A-gruppe",
+                    "description": "Minst 2 emner fra gruppe A"
+                  }
+                },
+                {
+                  "code": "TDT4205",
+                  "version": "1",
+                  "name": "Kompilatorteknikk",
+                  "credits": 7.5,
+                  "planElement": false,
+                  "studyChoice": {
+                    "code": "M2A",
+                    "name": "Minst 2 emner fra A-gruppe",
+                    "description": "Minst 2 emner fra gruppe A"
+                  }
+                },
+                {
+                  "code": "TDT4237",
+                  "version": "1",
+                  "name": "Programvaresikkerhet og personvern",
+                  "credits": 7.5,
+                  "planElement": false,
+                  "studyChoice": {
+                    "code": "M2A",
+                    "name": "Minst 2 emner fra A-gruppe",
+                    "description": "Minst 2 emner fra gruppe A"
+                  }
+                },
+                {
+                  "code": "TDT4240",
+                  "version": "1",
+                  "name": "Programvarearkitektur",
+                  "credits": 7.5,
+                  "planElement": false,
+                  "studyChoice": {
+                    "code": "M2A",
+                    "name": "Minst 2 emner fra A-gruppe",
+                    "description": "Minst 2 emner fra gruppe A"
+                  }
+                },
+                {
+                  "code": "TDT4300",
+                  "version": "1",
+                  "name": "Datavarehus og datagruvedrift",
+                  "credits": 7.5,
+                  "planElement": false,
+                  "studyChoice": {
+                    "code": "M2A",
+                    "name": "Minst 2 emner fra A-gruppe",
+                    "description": "Minst 2 emner fra gruppe A"
+                  }
+                },
+                {
+                  "code": "TDT4310",
+                  "version": "1",
+                  "name": "Intelligent tekstanalyse og språkforståelse",
+                  "credits": 7.5,
+                  "planElement": false,
+                  "studyChoice": {
+                    "code": "M2A",
+                    "name": "Minst 2 emner fra A-gruppe",
+                    "description": "Minst 2 emner fra gruppe A"
+                  }
+                }
+              ]
+            }
+          ],
+          "waypoints": []
+        }
+      }
+    ],
+    "publishedYears": [
+      2026,
+      2025,
+      2024,
+      2023,
+      2022,
+      2021,
+      2020,
+      2019,
+      2018,
+      2017,
+      2016,
+      2015,
+      2014,
+      2013,
+      2012,
+      2011,
+      2010,
+      2009,
+      2008,
+      2007
+    ]
+  }
+}

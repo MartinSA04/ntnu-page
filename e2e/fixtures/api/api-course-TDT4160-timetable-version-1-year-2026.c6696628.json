@@ -1,0 +1,285 @@
+{
+  "url": "http://127.0.0.1:8788/api/course/TDT4160/timetable?year=2026&version=1",
+  "status": 200,
+  "contentType": "application/json; charset=utf-8",
+  "body": [
+    {
+      "courseCode": "TDT4160",
+      "courseName": {
+        "nob": "Datamaskiner",
+        "nno": "Datamaskiner",
+        "eng": "Computer Fundamentals"
+      },
+      "acronym": "FORM",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Formidling",
+      "title": "Forelesning",
+      "dayNumber": 1,
+      "startTime": "14:15",
+      "endTime": "16:00",
+      "weeks": [
+        "34-47"
+      ],
+      "rooms": [
+        {
+          "id": "194_325_G160",
+          "building": "Gamle elektro",
+          "room": "EL5",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=325-G160"
+        }
+      ],
+      "studyProgramKeys": [
+        "MTDT",
+        "MTKOM",
+        "MTELSYS",
+        "MTIØT",
+        "BIT",
+        "MTENERG"
+      ]
+    },
+    {
+      "courseCode": "TDT4160",
+      "courseName": {
+        "nob": "Datamaskiner",
+        "nno": "Datamaskiner",
+        "eng": "Computer Fundamentals"
+      },
+      "acronym": "DISAM-P",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Dialog- og samarbeidsbasert undervisning",
+      "title": "1-Laboratorieøvelse",
+      "dayNumber": 1,
+      "startTime": "10:15",
+      "endTime": "12:00",
+      "weeks": [
+        "34-47"
+      ],
+      "rooms": [
+        {
+          "id": "194_360_A2-127",
+          "building": "Realfagbygget",
+          "room": "R52",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=360-A2-127"
+        }
+      ],
+      "studyProgramKeys": [
+        "BIT"
+      ]
+    },
+    {
+      "courseCode": "TDT4160",
+      "courseName": {
+        "nob": "Datamaskiner",
+        "nno": "Datamaskiner",
+        "eng": "Computer Fundamentals"
+      },
+      "acronym": "DISAM-P",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Dialog- og samarbeidsbasert undervisning",
+      "title": "4-Laboratorieøvelse",
+      "dayNumber": 2,
+      "startTime": "14:15",
+      "endTime": "16:00",
+      "weeks": [
+        "34-47"
+      ],
+      "rooms": [
+        {
+          "id": "194_322_255B",
+          "building": "Sentralbygg 2",
+          "room": "S21",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=322-255"
+        }
+      ],
+      "studyProgramKeys": [
+        "MTENERG"
+      ]
+    },
+    {
+      "courseCode": "TDT4160",
+      "courseName": {
+        "nob": "Datamaskiner",
+        "nno": "Datamaskiner",
+        "eng": "Computer Fundamentals"
+      },
+      "acronym": "DISAM-P",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Dialog- og samarbeidsbasert undervisning",
+      "title": "5-Laboratorieøvelse",
+      "dayNumber": 3,
+      "startTime": "12:15",
+      "endTime": "14:00",
+      "weeks": [
+        "34-47"
+      ],
+      "rooms": [
+        {
+          "id": "194_358_521",
+          "building": "Tapirbygget",
+          "room": "H3 521 Sprokkit",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=358-521"
+        }
+      ],
+      "studyProgramKeys": [
+        "MTIØT"
+      ]
+    },
+    {
+      "courseCode": "TDT4160",
+      "courseName": {
+        "nob": "Datamaskiner",
+        "nno": "Datamaskiner",
+        "eng": "Computer Fundamentals"
+      },
+      "acronym": "DISAM-P",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Dialog- og samarbeidsbasert undervisning",
+      "title": "2-Laboratorieøvelse",
+      "dayNumber": 3,
+      "startTime": "08:15",
+      "endTime": "10:00",
+      "weeks": [
+        "34-47"
+      ],
+      "rooms": [
+        {
+          "id": "194_322_255B",
+          "building": "Sentralbygg 2",
+          "room": "S21",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=322-255"
+        }
+      ],
+      "studyProgramKeys": [
+        "MTDT"
+      ]
+    },
+    {
+      "courseCode": "TDT4160",
+      "courseName": {
+        "nob": "Datamaskiner",
+        "nno": "Datamaskiner",
+        "eng": "Computer Fundamentals"
+      },
+      "acronym": "DISAM-P",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Dialog- og samarbeidsbasert undervisning",
+      "title": "6-Laboratorieøvelse",
+      "dayNumber": 4,
+      "startTime": "08:15",
+      "endTime": "10:00",
+      "weeks": [
+        "34-47"
+      ],
+      "rooms": [
+        {
+          "id": "194_322_207",
+          "building": "Sentralbygg 2",
+          "room": "Lise",
+          "url": "https://link.mazemap.com/asCYCDpW"
+        }
+      ],
+      "studyProgramKeys": [
+        "MTKOM"
+      ]
+    },
+    {
+      "courseCode": "TDT4160",
+      "courseName": {
+        "nob": "Datamaskiner",
+        "nno": "Datamaskiner",
+        "eng": "Computer Fundamentals"
+      },
+      "acronym": "DISAM-P",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Dialog- og samarbeidsbasert undervisning",
+      "title": "7-Laboratorieøvelse",
+      "dayNumber": 4,
+      "startTime": "16:15",
+      "endTime": "18:00",
+      "weeks": [
+        "34-47"
+      ],
+      "rooms": [
+        {
+          "id": "194_360_E4-103",
+          "building": "Realfagbygget",
+          "room": "R73",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=360-E4-103"
+        }
+      ],
+      "studyProgramKeys": []
+    },
+    {
+      "courseCode": "TDT4160",
+      "courseName": {
+        "nob": "Datamaskiner",
+        "nno": "Datamaskiner",
+        "eng": "Computer Fundamentals"
+      },
+      "acronym": "FORM",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Formidling",
+      "title": "Forelesning",
+      "dayNumber": 4,
+      "startTime": "14:15",
+      "endTime": "16:00",
+      "weeks": [
+        "34-47"
+      ],
+      "rooms": [
+        {
+          "id": "194_360_CU1-101",
+          "building": "Realfagbygget",
+          "room": "R1",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=360-CU1-101"
+        }
+      ],
+      "studyProgramKeys": [
+        "MTDT",
+        "MTKOM",
+        "MTELSYS",
+        "MTIØT",
+        "BIT",
+        "MTENERG"
+      ]
+    },
+    {
+      "courseCode": "TDT4160",
+      "courseName": {
+        "nob": "Datamaskiner",
+        "nno": "Datamaskiner",
+        "eng": "Computer Fundamentals"
+      },
+      "acronym": "DISAM-P",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Dialog- og samarbeidsbasert undervisning",
+      "title": "3-Laboratorieøvelse",
+      "dayNumber": 5,
+      "startTime": "14:15",
+      "endTime": "16:00",
+      "weeks": [
+        "34-47"
+      ],
+      "rooms": [
+        {
+          "id": "194_358_521",
+          "building": "Tapirbygget",
+          "room": "H3 521 Sprokkit",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=358-521"
+        }
+      ],
+      "studyProgramKeys": [
+        "MTELSYS"
+      ]
+    }
+  ]
+}

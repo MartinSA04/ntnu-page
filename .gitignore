@@ -12,3 +12,7 @@ playwright-report/
 # baked into the deployed site — never committed.
 data/
 public/data/
+
+# Requests served live because no fixture matched — the global teardown
+# reads this and fails the run, then clears it.
+e2e/fixtures/.misses

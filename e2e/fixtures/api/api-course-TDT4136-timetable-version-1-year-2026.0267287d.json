@@ -1,0 +1,201 @@
+{
+  "url": "http://127.0.0.1:8788/api/course/TDT4136/timetable?year=2026&version=1",
+  "status": 200,
+  "contentType": "application/json; charset=utf-8",
+  "body": [
+    {
+      "courseCode": "TDT4136",
+      "courseName": {
+        "nob": "Introduksjon til kunstig intelligens ",
+        "nno": "Introduksjon til kunstig intelligens ",
+        "eng": "Introduction to Artificial Intelligence"
+      },
+      "acronym": "FORM-P",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Formidling",
+      "title": "Lab hour for assignments 4",
+      "dayNumber": 1,
+      "startTime": "16:15",
+      "endTime": "18:00",
+      "weeks": [
+        "36-45"
+      ],
+      "rooms": [
+        {
+          "id": "194_380_3086",
+          "building": "Adolf Øien-bygget",
+          "room": "U35",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=380-3086"
+        }
+      ],
+      "studyProgramKeys": []
+    },
+    {
+      "courseCode": "TDT4136",
+      "courseName": {
+        "nob": "Introduksjon til kunstig intelligens ",
+        "nno": "Introduksjon til kunstig intelligens ",
+        "eng": "Introduction to Artificial Intelligence"
+      },
+      "acronym": "FORM-P",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Formidling",
+      "title": "Lab hour for assignments 3",
+      "dayNumber": 2,
+      "startTime": "14:15",
+      "endTime": "16:00",
+      "weeks": [
+        "36-45"
+      ],
+      "rooms": [
+        {
+          "id": "194_380_3088",
+          "building": "Adolf Øien-bygget",
+          "room": "U36",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=380-3088"
+        }
+      ],
+      "studyProgramKeys": []
+    },
+    {
+      "courseCode": "TDT4136",
+      "courseName": {
+        "nob": "Introduksjon til kunstig intelligens ",
+        "nno": "Introduksjon til kunstig intelligens ",
+        "eng": "Introduction to Artificial Intelligence"
+      },
+      "acronym": "FORM-P",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Formidling",
+      "title": "Lab hour for assignments 2",
+      "dayNumber": 3,
+      "startTime": "08:15",
+      "endTime": "10:00",
+      "weeks": [
+        "36-45"
+      ],
+      "rooms": [
+        {
+          "id": "194_380_3086",
+          "building": "Adolf Øien-bygget",
+          "room": "U35",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=380-3086"
+        }
+      ],
+      "studyProgramKeys": []
+    },
+    {
+      "courseCode": "TDT4136",
+      "courseName": {
+        "nob": "Introduksjon til kunstig intelligens ",
+        "nno": "Introduksjon til kunstig intelligens ",
+        "eng": "Introduction to Artificial Intelligence"
+      },
+      "acronym": "FORM",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Formidling",
+      "title": "Main lecture",
+      "dayNumber": 4,
+      "startTime": "14:15",
+      "endTime": "16:00",
+      "weeks": [
+        "34-46"
+      ],
+      "rooms": [
+        {
+          "id": "194_307_205",
+          "building": "Verkstedteknisk",
+          "room": "VE1",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=307-205"
+        }
+      ],
+      "studyProgramKeys": [
+        "MSNEUR",
+        "MSELSYS",
+        "MTDT",
+        "MBIOT5",
+        "MTMART",
+        "MSIT",
+        "MIDT",
+        "BIELDIG",
+        "MTTK",
+        "BIT",
+        "MSN1",
+        "MTING"
+      ]
+    },
+    {
+      "courseCode": "TDT4136",
+      "courseName": {
+        "nob": "Introduksjon til kunstig intelligens ",
+        "nno": "Introduksjon til kunstig intelligens ",
+        "eng": "Introduction to Artificial Intelligence"
+      },
+      "acronym": "FORM-P",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Formidling",
+      "title": "Lab hour for assignments 1",
+      "dayNumber": 5,
+      "startTime": "14:15",
+      "endTime": "16:00",
+      "weeks": [
+        "35-45"
+      ],
+      "rooms": [
+        {
+          "id": "194_380_3088",
+          "building": "Adolf Øien-bygget",
+          "room": "U36",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=380-3088"
+        }
+      ],
+      "studyProgramKeys": []
+    },
+    {
+      "courseCode": "TDT4136",
+      "courseName": {
+        "nob": "Introduksjon til kunstig intelligens ",
+        "nno": "Introduksjon til kunstig intelligens ",
+        "eng": "Introduction to Artificial Intelligence"
+      },
+      "acronym": "FORM",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Formidling",
+      "title": "Assignment lecture",
+      "dayNumber": 5,
+      "startTime": "10:15",
+      "endTime": "12:00",
+      "weeks": [
+        "35-47"
+      ],
+      "rooms": [
+        {
+          "id": "194_360_AU1-103",
+          "building": "Realfagbygget",
+          "room": "R8",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=360-AU1-103"
+        }
+      ],
+      "studyProgramKeys": [
+        "MSNEUR",
+        "MSELSYS",
+        "MTDT",
+        "MBIOT5",
+        "MTMART",
+        "MSIT",
+        "MIDT",
+        "BIELDIG",
+        "MTTK",
+        "BIT",
+        "MSN1",
+        "MTING"
+      ]
+    }
+  ]
+}

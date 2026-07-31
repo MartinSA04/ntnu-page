@@ -1,0 +1,397 @@
+{
+  "url": "http://127.0.0.1:8788/api/course/TMA4135/timetable?year=2026&version=1",
+  "status": 200,
+  "contentType": "application/json; charset=utf-8",
+  "body": [
+    {
+      "courseCode": "TMA4135",
+      "courseName": {
+        "nob": "Matematikk 4D",
+        "nno": "Matematikk 4D",
+        "eng": "Mathematics 4D - Differential equations and Fourier analysis"
+      },
+      "acronym": "FERD-P",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Ferdighetstrening",
+      "title": "Øving 9",
+      "dayNumber": 1,
+      "startTime": "08:15",
+      "endTime": "10:00",
+      "weeks": [
+        "34-47"
+      ],
+      "rooms": [
+        {
+          "id": "194_322_146",
+          "building": "Sentralbygg 2",
+          "room": "S6",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=322-146"
+        }
+      ],
+      "studyProgramKeys": []
+    },
+    {
+      "courseCode": "TMA4135",
+      "courseName": {
+        "nob": "Matematikk 4D",
+        "nno": "Matematikk 4D",
+        "eng": "Mathematics 4D - Differential equations and Fourier analysis"
+      },
+      "acronym": "FERD-P",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Ferdighetstrening",
+      "title": "Øving 2",
+      "dayNumber": 1,
+      "startTime": "12:15",
+      "endTime": "14:00",
+      "weeks": [
+        "34-47"
+      ],
+      "rooms": [
+        {
+          "id": "194_360_BU1-100",
+          "building": "Realfagbygget",
+          "room": "R5",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=360-BU1-100"
+        }
+      ],
+      "studyProgramKeys": []
+    },
+    {
+      "courseCode": "TMA4135",
+      "courseName": {
+        "nob": "Matematikk 4D",
+        "nno": "Matematikk 4D",
+        "eng": "Mathematics 4D - Differential equations and Fourier analysis"
+      },
+      "acronym": "FERD-P",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Ferdighetstrening",
+      "title": "Øving 1",
+      "dayNumber": 2,
+      "startTime": "16:15",
+      "endTime": "18:00",
+      "weeks": [
+        "34-47"
+      ],
+      "rooms": [
+        {
+          "id": "194_325_G102",
+          "building": "Gamle elektro",
+          "room": "EL3",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=325-G102"
+        }
+      ],
+      "studyProgramKeys": [
+        "MTBYGG"
+      ]
+    },
+    {
+      "courseCode": "TMA4135",
+      "courseName": {
+        "nob": "Matematikk 4D",
+        "nno": "Matematikk 4D",
+        "eng": "Mathematics 4D - Differential equations and Fourier analysis"
+      },
+      "acronym": "FERD-P",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Ferdighetstrening",
+      "title": "Øving 7",
+      "dayNumber": 2,
+      "startTime": "16:15",
+      "endTime": "18:00",
+      "weeks": [
+        "34-47"
+      ],
+      "rooms": [
+        {
+          "id": "194_360_BU1-100",
+          "building": "Realfagbygget",
+          "room": "R5",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=360-BU1-100"
+        }
+      ],
+      "studyProgramKeys": [
+        "MTMASKIN"
+      ]
+    },
+    {
+      "courseCode": "TMA4135",
+      "courseName": {
+        "nob": "Matematikk 4D",
+        "nno": "Matematikk 4D",
+        "eng": "Mathematics 4D - Differential equations and Fourier analysis"
+      },
+      "acronym": "FERD-P",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Ferdighetstrening",
+      "title": "Øving 6",
+      "dayNumber": 2,
+      "startTime": "14:15",
+      "endTime": "16:00",
+      "weeks": [
+        "34-47"
+      ],
+      "rooms": [
+        {
+          "id": "194_322_156",
+          "building": "Sentralbygg 2",
+          "room": "S8",
+          "url": "https://use.mazemap.com/#v=1&zlevel=1&center=10.403261,63.417881&zoom=18&campusid=1&sharepoitype=poi&sharepoi=1001610459"
+        }
+      ],
+      "studyProgramKeys": [
+        "MTMART"
+      ]
+    },
+    {
+      "courseCode": "TMA4135",
+      "courseName": {
+        "nob": "Matematikk 4D",
+        "nno": "Matematikk 4D",
+        "eng": "Mathematics 4D - Differential equations and Fourier analysis"
+      },
+      "acronym": "FERD-P",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Ferdighetstrening",
+      "title": "Øving 8",
+      "dayNumber": 2,
+      "startTime": "14:15",
+      "endTime": "16:00",
+      "weeks": [
+        "34-47"
+      ],
+      "rooms": [
+        {
+          "id": "194_321_116",
+          "building": "Sentralbygg 1",
+          "room": "S2",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=321-116"
+        }
+      ],
+      "studyProgramKeys": []
+    },
+    {
+      "courseCode": "TMA4135",
+      "courseName": {
+        "nob": "Matematikk 4D",
+        "nno": "Matematikk 4D",
+        "eng": "Mathematics 4D - Differential equations and Fourier analysis"
+      },
+      "acronym": "FORM-P",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Formidling",
+      "title": "Forelesningsparallell 1",
+      "dayNumber": 2,
+      "startTime": "12:15",
+      "endTime": "14:00",
+      "weeks": [
+        "34-47"
+      ],
+      "rooms": [
+        {
+          "id": "194_318_152",
+          "building": "IT-bygget, sydfløy",
+          "room": "F1",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=318-152"
+        }
+      ],
+      "studyProgramKeys": [
+        "MTMART",
+        "MTIØT",
+        "MTMASKIN"
+      ]
+    },
+    {
+      "courseCode": "TMA4135",
+      "courseName": {
+        "nob": "Matematikk 4D",
+        "nno": "Matematikk 4D",
+        "eng": "Mathematics 4D - Differential equations and Fourier analysis"
+      },
+      "acronym": "FERD-P",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Ferdighetstrening",
+      "title": "Øving 3",
+      "dayNumber": 3,
+      "startTime": "08:15",
+      "endTime": "10:00",
+      "weeks": [
+        "34-47"
+      ],
+      "rooms": [
+        {
+          "id": "194_321_113",
+          "building": "Sentralbygg 1",
+          "room": "S3",
+          "url": "https://use.mazemap.com/#v=1&zlevel=1&center=10.404406,63.417372&zoom=18&campusid=1&sharepoitype=poi&sharepoi=1001610446"
+        }
+      ],
+      "studyProgramKeys": []
+    },
+    {
+      "courseCode": "TMA4135",
+      "courseName": {
+        "nob": "Matematikk 4D",
+        "nno": "Matematikk 4D",
+        "eng": "Mathematics 4D - Differential equations and Fourier analysis"
+      },
+      "acronym": "FERD-P",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Ferdighetstrening",
+      "title": "Øving 5",
+      "dayNumber": 3,
+      "startTime": "16:15",
+      "endTime": "18:00",
+      "weeks": [
+        "34-47"
+      ],
+      "rooms": [
+        {
+          "id": "194_325_G102",
+          "building": "Gamle elektro",
+          "room": "EL3",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=325-G102"
+        }
+      ],
+      "studyProgramKeys": [
+        "MTIØT"
+      ]
+    },
+    {
+      "courseCode": "TMA4135",
+      "courseName": {
+        "nob": "Matematikk 4D",
+        "nno": "Matematikk 4D",
+        "eng": "Mathematics 4D - Differential equations and Fourier analysis"
+      },
+      "acronym": "FORM-P",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Formidling",
+      "title": "Forelesningsparallell 2",
+      "dayNumber": 5,
+      "startTime": "08:15",
+      "endTime": "10:00",
+      "weeks": [
+        "34-47"
+      ],
+      "rooms": [
+        {
+          "id": "194_360_CU1-101",
+          "building": "Realfagbygget",
+          "room": "R1",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=360-CU1-101"
+        }
+      ],
+      "studyProgramKeys": [
+        "MTBYGG",
+        "MTIØT",
+        "MTING"
+      ]
+    },
+    {
+      "courseCode": "TMA4135",
+      "courseName": {
+        "nob": "Matematikk 4D",
+        "nno": "Matematikk 4D",
+        "eng": "Mathematics 4D - Differential equations and Fourier analysis"
+      },
+      "acronym": "FORM-P",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Formidling",
+      "title": "Forelesningsparallell 2",
+      "dayNumber": 5,
+      "startTime": "12:15",
+      "endTime": "14:00",
+      "weeks": [
+        "34-47"
+      ],
+      "rooms": [
+        {
+          "id": "194_380_2027A",
+          "building": "Adolf Øien-bygget",
+          "room": "A1",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=380-2027A"
+        }
+      ],
+      "studyProgramKeys": [
+        "MTBYGG",
+        "MTIØT",
+        "MTING"
+      ]
+    },
+    {
+      "courseCode": "TMA4135",
+      "courseName": {
+        "nob": "Matematikk 4D",
+        "nno": "Matematikk 4D",
+        "eng": "Mathematics 4D - Differential equations and Fourier analysis"
+      },
+      "acronym": "FERD-P",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Ferdighetstrening",
+      "title": "Øving 4",
+      "dayNumber": 5,
+      "startTime": "14:15",
+      "endTime": "16:00",
+      "weeks": [
+        "34-47"
+      ],
+      "rooms": [
+        {
+          "id": "194_301_340",
+          "building": "Hovedbygningen",
+          "room": "H3",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=301-340"
+        }
+      ],
+      "studyProgramKeys": [
+        "MTING"
+      ]
+    },
+    {
+      "courseCode": "TMA4135",
+      "courseName": {
+        "nob": "Matematikk 4D",
+        "nno": "Matematikk 4D",
+        "eng": "Mathematics 4D - Differential equations and Fourier analysis"
+      },
+      "acronym": "FORM-P",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Formidling",
+      "title": "Forelesningsparallell 1",
+      "dayNumber": 5,
+      "startTime": "14:15",
+      "endTime": "16:00",
+      "weeks": [
+        "34-47"
+      ],
+      "rooms": [
+        {
+          "id": "194_380_2027A",
+          "building": "Adolf Øien-bygget",
+          "room": "A1",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=380-2027A"
+        }
+      ],
+      "studyProgramKeys": [
+        "MTMART",
+        "MTIØT",
+        "MTMASKIN"
+      ]
+    }
+  ]
+}

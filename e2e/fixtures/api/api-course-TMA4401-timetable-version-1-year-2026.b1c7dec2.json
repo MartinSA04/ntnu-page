@@ -1,0 +1,164 @@
+{
+  "url": "http://127.0.0.1:8788/api/course/TMA4401/timetable?year=2026&version=1",
+  "status": 200,
+  "contentType": "application/json; charset=utf-8",
+  "body": [
+    {
+      "courseCode": "TMA4401",
+      "courseName": {
+        "nob": "Matematikk 1D: Kalkulus",
+        "nno": "Matematikk 1D: Kalkulus",
+        "eng": "Mathematics 1D: Calculus"
+      },
+      "acronym": "FORM",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Formidling",
+      "title": "Forelesning",
+      "dayNumber": 1,
+      "startTime": "10:15",
+      "endTime": "12:00",
+      "weeks": [
+        "34-47"
+      ],
+      "rooms": [
+        {
+          "id": "194_354_151",
+          "building": "Kjelhuset",
+          "room": "KJL1",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=354-151"
+        }
+      ],
+      "studyProgramKeys": [
+        "BFY",
+        "MTFYMA"
+      ]
+    },
+    {
+      "courseCode": "TMA4401",
+      "courseName": {
+        "nob": "Matematikk 1D: Kalkulus",
+        "nno": "Matematikk 1D: Kalkulus",
+        "eng": "Mathematics 1D: Calculus"
+      },
+      "acronym": "FERD",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Ferdighetstrening",
+      "title": "Øvingstime",
+      "dayNumber": 3,
+      "startTime": "12:15",
+      "endTime": "14:00",
+      "weeks": [
+        "34-47"
+      ],
+      "rooms": [
+        {
+          "id": "194_354_151",
+          "building": "Kjelhuset",
+          "room": "KJL1",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=354-151"
+        }
+      ],
+      "studyProgramKeys": [
+        "BFY",
+        "MTFYMA",
+        "H26 kim kollisjonssikring"
+      ]
+    },
+    {
+      "courseCode": "TMA4401",
+      "courseName": {
+        "nob": "Matematikk 1D: Kalkulus",
+        "nno": "Matematikk 1D: Kalkulus",
+        "eng": "Mathematics 1D: Calculus"
+      },
+      "acronym": "FORM",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Formidling",
+      "title": "Forelesning",
+      "dayNumber": 3,
+      "startTime": "14:15",
+      "endTime": "16:00",
+      "weeks": [
+        "34-47"
+      ],
+      "rooms": [
+        {
+          "id": "194_354_151",
+          "building": "Kjelhuset",
+          "room": "KJL1",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=354-151"
+        }
+      ],
+      "studyProgramKeys": [
+        "BFY",
+        "MTFYMA"
+      ]
+    },
+    {
+      "courseCode": "TMA4401",
+      "courseName": {
+        "nob": "Matematikk 1D: Kalkulus",
+        "nno": "Matematikk 1D: Kalkulus",
+        "eng": "Mathematics 1D: Calculus"
+      },
+      "acronym": "FERD",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Ferdighetstrening",
+      "title": "Øvingstime",
+      "dayNumber": 4,
+      "startTime": "12:15",
+      "endTime": "14:00",
+      "weeks": [
+        "34-47"
+      ],
+      "rooms": [
+        {
+          "id": "194_354_151",
+          "building": "Kjelhuset",
+          "room": "KJL1",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=354-151"
+        }
+      ],
+      "studyProgramKeys": [
+        "BFY",
+        "MTFYMA",
+        "H26 kim kollisjonssikring"
+      ]
+    },
+    {
+      "courseCode": "TMA4401",
+      "courseName": {
+        "nob": "Matematikk 1D: Kalkulus",
+        "nno": "Matematikk 1D: Kalkulus",
+        "eng": "Mathematics 1D: Calculus"
+      },
+      "acronym": "FERD",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Ferdighetstrening",
+      "title": "Plenumsregning",
+      "dayNumber": 5,
+      "startTime": "14:15",
+      "endTime": "16:00",
+      "weeks": [
+        "34-47"
+      ],
+      "rooms": [
+        {
+          "id": "194_354_151",
+          "building": "Kjelhuset",
+          "room": "KJL1",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=354-151"
+        }
+      ],
+      "studyProgramKeys": [
+        "BFY",
+        "MTFYMA"
+      ]
+    }
+  ]
+}

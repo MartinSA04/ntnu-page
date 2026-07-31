@@ -1,0 +1,258 @@
+{
+  "url": "http://127.0.0.1:8788/api/course/TDT4136",
+  "status": 200,
+  "contentType": "application/json; charset=utf-8",
+  "body": {
+    "courseCode": "TDT4136",
+    "courseName": "Introduksjon til kunstig intelligens",
+    "credits": 7.5,
+    "level": "Tredjeårsemner, nivå III",
+    "teachingStart": "Høst 2026",
+    "teachingDuration": "1 semester",
+    "teachingLanguage": "Engelsk",
+    "location": "Ålesund og Trondheim",
+    "assessmentScheme": "Skriftlig skoleeksamen",
+    "gradeRule": "Bokstavkarakterer",
+    "facts": [
+      {
+        "label": "Studiepoeng",
+        "value": "7,5"
+      },
+      {
+        "label": "Nivå",
+        "value": "Tredjeårsemner, nivå III"
+      },
+      {
+        "label": "Undervisningsstart",
+        "value": "Høst 2026"
+      },
+      {
+        "label": "Varighet",
+        "value": "1 semester"
+      },
+      {
+        "label": "Undervisningsspråk",
+        "value": "Engelsk"
+      },
+      {
+        "label": "Sted",
+        "value": "Ålesund og Trondheim"
+      },
+      {
+        "label": "Vurderingsordning",
+        "value": "Skriftlig skoleeksamen"
+      }
+    ],
+    "content": "Emnet starter med å beskrive metoder for problemløsning ved hjelp av heuristisk søk i tilstandsrom. Deretter beskrives forskjellige kunnskapspresentasjonsspråk og slutningsmekanismer for maskinell problemløsning. Representasjon i form av predikatlogikk, regler, rammer og semantiske nett behandles, og knyttes til hovedformene for resonnering - særlig regelbasert resonnering. Emnet behandler videre arkitekturer som integrerer forskjellige resonneringsmetoder, agentbaserte arkitekturer, samt arkitekturer for interaktiv problemløsning i et menneske-maskin samspill. Det gis anvendelseseksempler underveis for å belyse metodene.",
+    "learningOutcome": "Kunnskaper: Kandidaten skal ha kunnskap om:\nhistorisk perspektiv av AI og dens fundament\nhovedprinsipper innen AI for problemløsning, inferens og kunnskapsrepresentasjon\nrepresentasjon og resonnering ved propositional og predicate logikk\nuinformerte og heuristiske søkemetoder\nadversarialsøk\nbegrensning tilfredshet (\"constraint satisfaction\") problemer og løsningsmetoder\nrepresentasjon av planlegging problemer og løsningsmetoder\nmultiagent miljø og spillteoriprinsipper og noen problemløsning metoder\netikkrelaterte problemer i AI\nFerdigheter:\nta beslutning om hvilke type intelligens og tilsvarende agent trengs i et bestemt agentmiljø\ndesign kunnskapsbaserte systemer gjennom bruk av passende representasjon, inferens og problemløsningsmetoder\nkunne identifisere type etiske problemer for et gitt problem.\nGenerell kompetanse:\nKjenne fagfeltet AIs grunnlag hentet fra logikk og kognitive vitenskaper",
+    "learningMethods": "Forelesninger, selvstudium, og øvinger. Et antall obligatoriske øvinger må bli godkjent for å kunne gå opp til eksamen.",
+    "mandatoryActivities": [
+      "Øvinger"
+    ],
+    "assessmentDetails": "Ved utsatt eksamen (kontinuasjonseksamen) i august kan skriftlig eksamen bli endret til muntlig eksamen.\nSkriftlig eksamen blir bare på engelsk da undervisning, slides og boka, og øvrige material er på engelsk alle sammen. Studentene kan svare på norsk.",
+    "specialConditions": null,
+    "requiredKnowledge": null,
+    "recommendedKnowledge": "TDT4120 Algoritmer og datastrukturer og MA0301 Elementær diskret matematikk eller TDT4120 Algoritmer og datastrukturer og TMA4140 Diskret matematikk, eller tilsvarende.",
+    "courseMaterials": "Oppgis ved semesterstart.",
+    "creditReductions": [
+      {
+        "courseCode": "IT2702",
+        "reduction": "3,7 sp",
+        "fromTerm": "Høst 2007"
+      },
+      {
+        "courseCode": "IT272",
+        "reduction": "3,7 sp",
+        "fromTerm": "Høst 2007"
+      },
+      {
+        "courseCode": "MNFIT272",
+        "reduction": "3,7 sp",
+        "fromTerm": "Høst 2007"
+      },
+      {
+        "courseCode": "TDT4135",
+        "reduction": "3,7 sp",
+        "fromTerm": "Høst 2007"
+      },
+      {
+        "courseCode": "SIF8015",
+        "reduction": "3,7 sp",
+        "fromTerm": "Høst 2007"
+      },
+      {
+        "courseCode": "TDT4170",
+        "reduction": "3,7 sp",
+        "fromTerm": "Høst 2007"
+      },
+      {
+        "courseCode": "SIF8031",
+        "reduction": "3,7 sp",
+        "fromTerm": "Høst 2007"
+      },
+      {
+        "courseCode": "IMT3103",
+        "reduction": "7,5 sp",
+        "fromTerm": "Høst 2018"
+      }
+    ],
+    "subjectAreas": [
+      "Datateknikk",
+      "Informatikk"
+    ],
+    "studyPrograms": [
+      {
+        "code": "MIDT",
+        "name": "Datateknologi"
+      },
+      {
+        "code": "MTDT",
+        "name": "Datateknologi"
+      },
+      {
+        "code": "MSIT",
+        "name": "Informatics"
+      },
+      {
+        "code": "BIT",
+        "name": "Informatikk"
+      },
+      {
+        "code": "MLREAL",
+        "name": "Lektorutdanning i realfag for trinn 8 – 13"
+      }
+    ],
+    "contacts": [
+      {
+        "role": "Emneansvarlig/koordinator",
+        "persons": [
+          {
+            "name": "Pinar Øztürk",
+            "url": "https://www.ntnu.no/ansatte/pinar"
+          }
+        ]
+      },
+      {
+        "role": "Faglærere",
+        "persons": [
+          {
+            "name": "Massimiliano Ruocco",
+            "url": "https://www.ntnu.no/ansatte/massimiliano.ruocco"
+          },
+          {
+            "name": "Ole Christian Eidheim",
+            "url": "https://www.ntnu.no/ansatte/ole.c.eidheim"
+          },
+          {
+            "name": "Xavier Fernando Cuauhtémoc Sánchez Diaz",
+            "url": "https://www.ntnu.no/ansatte/xavier.sanchezdz"
+          }
+        ]
+      }
+    ],
+    "department": "Institutt for datateknologi og informatikk",
+    "exams": [
+      {
+        "occasion": "Ordinær eksamen",
+        "season": "Høst 2026",
+        "form": "Skriftlig skoleeksamen",
+        "weighting": "100/100",
+        "aidCode": "Kode D",
+        "aidCodeDescription": "D: Ingen trykte eller håndskrevne hjelpemidler tillatt. Bestemt, enkel kalkulator tillatt.",
+        "date": "2026-12-07",
+        "dateText": "07.12.2026",
+        "time": "15:00",
+        "timeText": "15:00",
+        "duration": "4 timer",
+        "system": "Inspera Assessment",
+        "rooms": [
+          {
+            "building": "Ankeret/Hovedbygget",
+            "room": "C218",
+            "candidates": null
+          },
+          {
+            "building": "Sluppenvegen 14",
+            "room": "SL110 turkis sone",
+            "candidates": 80
+          },
+          {
+            "building": "Sluppenvegen 14",
+            "room": "SL111 blå sone",
+            "candidates": 36
+          },
+          {
+            "building": "Sluppenvegen 14",
+            "room": "SL111 brun sone",
+            "candidates": 42
+          },
+          {
+            "building": "Sluppenvegen 14",
+            "room": "SL111 grønn sone",
+            "candidates": 50
+          },
+          {
+            "building": "Sluppenvegen 14",
+            "room": "SL111 lyseblå sone",
+            "candidates": 72
+          },
+          {
+            "building": "Sluppenvegen 14",
+            "room": "SL111 orange sone",
+            "candidates": 60
+          },
+          {
+            "building": "Sluppenvegen 14",
+            "room": "SL410 blå sone",
+            "candidates": 51
+          },
+          {
+            "building": "Sluppenvegen 14",
+            "room": "SL410 orange sone",
+            "candidates": 58
+          }
+        ]
+      },
+      {
+        "occasion": "Utsatt eksamen",
+        "season": "Sommer 2027",
+        "form": "Skriftlig skoleeksamen",
+        "weighting": "100/100",
+        "aidCode": "Kode D",
+        "aidCodeDescription": "D: Ingen trykte eller håndskrevne hjelpemidler tillatt. Bestemt, enkel kalkulator tillatt.",
+        "date": null,
+        "dateText": null,
+        "time": null,
+        "timeText": null,
+        "duration": "4 timer",
+        "system": "Inspera Assessment",
+        "rooms": []
+      }
+    ],
+    "studyYear": 2026,
+    "availableYears": [
+      2026,
+      2025,
+      2024,
+      2023,
+      2022,
+      2021,
+      2020,
+      2019,
+      2018,
+      2017,
+      2016,
+      2015,
+      2014,
+      2013,
+      2012,
+      2011,
+      2010,
+      2009,
+      2008,
+      2007
+    ],
+    "notices": [],
+    "courseLinks": []
+  }
+}

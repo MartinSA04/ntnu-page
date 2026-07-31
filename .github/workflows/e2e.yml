@@ -80,4 +80,17 @@ jobs:
       - name: Ensure crawl artifacts (crawls only on a cold cache)
         run: node crawler/ensure-data.mjs
       - run: npx playwright install --with-deps chromium
-      - run: npm run test:e2e
+      # Push and PR runs replay `e2e/fixtures/` — deterministic, and an NTNU
+      # outage cannot red a build about a CSS change. The scheduled run goes to
+      # live upstream instead and additionally runs `contract.pw.ts`, which is
+      # what actually notices that the data moved: a plan reshaping or a lecture
+      # being rescheduled happens independently of any commit here, so only the
+      # schedule can catch it. Keep both — the fixtures are a copy of yesterday's
+      # upstream, and nothing but a live run can tell you when they stopped
+      # being true.
+      - name: E2E (replay fixtures)
+        if: github.event_name != 'schedule'
+        run: npm run test:e2e
+      - name: E2E (live upstream + contract)
+        if: github.event_name == 'schedule'
+        run: npm run e2e:live

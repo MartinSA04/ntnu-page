@@ -1,0 +1,3011 @@
+{
+  "url": "http://127.0.0.1:8788/api/course/SYG1000/timetable?year=2026&version=1",
+  "status": 200,
+  "contentType": "application/json; charset=utf-8",
+  "body": [
+    {
+      "courseCode": "SYG1000",
+      "courseName": {
+        "nob": "Grunnleggende sykepleie",
+        "nno": "Grunnleggande sjukepleie",
+        "eng": "Basic Nursing"
+      },
+      "acronym": "FORM",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Formidling",
+      "title": "Diverse",
+      "dayNumber": 1,
+      "startTime": "14:00",
+      "endTime": "15:30",
+      "weeks": [
+        "33-35",
+        "37-38",
+        "42",
+        "44-45"
+      ],
+      "rooms": [],
+      "studyProgramKeys": [
+        "BSPL",
+        "BSPLFLEKS"
+      ]
+    },
+    {
+      "courseCode": "SYG1000",
+      "courseName": {
+        "nob": "Grunnleggende sykepleie",
+        "nno": "Grunnleggande sjukepleie",
+        "eng": "Basic Nursing"
+      },
+      "acronym": "FORM",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Formidling",
+      "title": "Diverse",
+      "dayNumber": 1,
+      "startTime": "14:00",
+      "endTime": "15:00",
+      "weeks": [
+        "33-35",
+        "37-38",
+        "42",
+        "44-45"
+      ],
+      "rooms": [],
+      "studyProgramKeys": [
+        "BSPL",
+        "BSPLFLEKS"
+      ]
+    },
+    {
+      "courseCode": "SYG1000",
+      "courseName": {
+        "nob": "Grunnleggende sykepleie",
+        "nno": "Grunnleggande sjukepleie",
+        "eng": "Basic Nursing"
+      },
+      "acronym": "FORM",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Formidling",
+      "title": "Diverse",
+      "dayNumber": 1,
+      "startTime": "09:00",
+      "endTime": "10:00",
+      "weeks": [
+        "33-35",
+        "37-38",
+        "42",
+        "44-45"
+      ],
+      "rooms": [
+        {
+          "id": "194_505_F125A",
+          "building": "Helvin",
+          "room": "Vrimle Eureka",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=505-F125A"
+        }
+      ],
+      "studyProgramKeys": [
+        "BSPL",
+        "BSPLFLEKS"
+      ]
+    },
+    {
+      "courseCode": "SYG1000",
+      "courseName": {
+        "nob": "Grunnleggende sykepleie",
+        "nno": "Grunnleggande sjukepleie",
+        "eng": "Basic Nursing"
+      },
+      "acronym": "FORM",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Formidling",
+      "title": "Diverse",
+      "dayNumber": 1,
+      "startTime": "09:30",
+      "endTime": "10:00",
+      "weeks": [
+        "33-35",
+        "37-38",
+        "42",
+        "44-45"
+      ],
+      "rooms": [
+        {
+          "id": "194_505_F126A",
+          "building": "Helvin",
+          "room": "2/3 Eureka",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=505-F126A"
+        }
+      ],
+      "studyProgramKeys": [
+        "BSPL",
+        "BSPLFLEKS"
+      ]
+    },
+    {
+      "courseCode": "SYG1000",
+      "courseName": {
+        "nob": "Grunnleggende sykepleie",
+        "nno": "Grunnleggande sjukepleie",
+        "eng": "Basic Nursing"
+      },
+      "acronym": "FORM",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Formidling",
+      "title": "Diverse",
+      "dayNumber": 1,
+      "startTime": "10:00",
+      "endTime": "11:00",
+      "weeks": [
+        "33-35",
+        "37-38",
+        "42",
+        "44-45"
+      ],
+      "rooms": [
+        {
+          "id": "194_505_F126A",
+          "building": "Helvin",
+          "room": "2/3 Eureka",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=505-F126A"
+        }
+      ],
+      "studyProgramKeys": [
+        "BSPL",
+        "BSPLFLEKS"
+      ]
+    },
+    {
+      "courseCode": "SYG1000",
+      "courseName": {
+        "nob": "Grunnleggende sykepleie",
+        "nno": "Grunnleggande sjukepleie",
+        "eng": "Basic Nursing"
+      },
+      "acronym": "FORM",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Formidling",
+      "title": "Diverse",
+      "dayNumber": 1,
+      "startTime": "11:00",
+      "endTime": "12:30",
+      "weeks": [
+        "33-35",
+        "37-38",
+        "42",
+        "44-45"
+      ],
+      "rooms": [],
+      "studyProgramKeys": [
+        "BSPL",
+        "BSPLFLEKS"
+      ]
+    },
+    {
+      "courseCode": "SYG1000",
+      "courseName": {
+        "nob": "Grunnleggende sykepleie",
+        "nno": "Grunnleggande sjukepleie",
+        "eng": "Basic Nursing"
+      },
+      "acronym": "FORM",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Formidling",
+      "title": "Diverse",
+      "dayNumber": 1,
+      "startTime": "12:30",
+      "endTime": "14:00",
+      "weeks": [
+        "33-35",
+        "37-38",
+        "42",
+        "44-45"
+      ],
+      "rooms": [],
+      "studyProgramKeys": [
+        "BSPL",
+        "BSPLFLEKS"
+      ]
+    },
+    {
+      "courseCode": "SYG1000",
+      "courseName": {
+        "nob": "Grunnleggende sykepleie",
+        "nno": "Grunnleggande sjukepleie",
+        "eng": "Basic Nursing"
+      },
+      "acronym": "FORM",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Formidling",
+      "title": "Diverse",
+      "dayNumber": 1,
+      "startTime": "15:00",
+      "endTime": "20:00",
+      "weeks": [
+        "33-35",
+        "37-38",
+        "42",
+        "44-45"
+      ],
+      "rooms": [],
+      "studyProgramKeys": [
+        "BSPL",
+        "BSPLFLEKS"
+      ]
+    },
+    {
+      "courseCode": "SYG1000",
+      "courseName": {
+        "nob": "Grunnleggende sykepleie",
+        "nno": "Grunnleggande sjukepleie",
+        "eng": "Basic Nursing"
+      },
+      "acronym": "FORM",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Formidling",
+      "title": "Diverse",
+      "dayNumber": 1,
+      "startTime": "13:15",
+      "endTime": "14:00",
+      "weeks": [
+        "33-35",
+        "37-38",
+        "42",
+        "44-45"
+      ],
+      "rooms": [
+        {
+          "id": "194_505_F126A",
+          "building": "Helvin",
+          "room": "2/3 Eureka",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=505-F126A"
+        }
+      ],
+      "studyProgramKeys": [
+        "BSPL",
+        "BSPLFLEKS"
+      ]
+    },
+    {
+      "courseCode": "SYG1000",
+      "courseName": {
+        "nob": "Grunnleggende sykepleie",
+        "nno": "Grunnleggande sjukepleie",
+        "eng": "Basic Nursing"
+      },
+      "acronym": "FORM",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Formidling",
+      "title": "Forelesning",
+      "dayNumber": 1,
+      "startTime": "13:15",
+      "endTime": "14:00",
+      "weeks": [
+        "33-38",
+        "40-47"
+      ],
+      "rooms": [
+        {
+          "id": "194_505_C106",
+          "building": "Helvin",
+          "room": "Debriefing A",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=505-C106"
+        },
+        {
+          "id": "194_505_C006",
+          "building": "Helvin",
+          "room": "C006",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=505-C006"
+        },
+        {
+          "id": "194_505_C104D",
+          "building": "Helvin",
+          "room": "Debriefing B",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=505-C104D"
+        }
+      ],
+      "studyProgramKeys": [
+        "BSPL",
+        "BSPLFLEKS"
+      ]
+    },
+    {
+      "courseCode": "SYG1000",
+      "courseName": {
+        "nob": "Grunnleggende sykepleie",
+        "nno": "Grunnleggande sjukepleie",
+        "eng": "Basic Nursing"
+      },
+      "acronym": "FERD",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Ferdighetstrening",
+      "title": "Ferdighetstrening",
+      "dayNumber": 1,
+      "startTime": "08:00",
+      "endTime": "15:00",
+      "weeks": [
+        "35",
+        "38",
+        "40",
+        "42-43",
+        "45-47"
+      ],
+      "rooms": [
+        {
+          "id": "194_505_E106",
+          "building": "Helvin",
+          "room": "Kjøkken klinikk lab (E106)",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=505-E106"
+        },
+        {
+          "id": "194_505_C107A",
+          "building": "Helvin",
+          "room": "C107A - Simlab 1",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=505-C107A"
+        },
+        {
+          "id": "194_505_C104B",
+          "building": "Helvin",
+          "room": "C104B - Simlab 4",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=505-C104B"
+        },
+        {
+          "id": "194_505_E102",
+          "building": "Helvin",
+          "room": " E102 - Studentlab",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=505-E102"
+        },
+        {
+          "id": "194_505_C107B",
+          "building": "Helvin",
+          "room": "C107B - Simlab 2",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=505-C107B"
+        }
+      ],
+      "studyProgramKeys": [
+        "BSPL",
+        "BSPLFLEKS"
+      ]
+    },
+    {
+      "courseCode": "SYG1000",
+      "courseName": {
+        "nob": "Grunnleggende sykepleie",
+        "nno": "Grunnleggande sjukepleie",
+        "eng": "Basic Nursing"
+      },
+      "acronym": "FORM",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Formidling",
+      "title": "Forelesning",
+      "dayNumber": 1,
+      "startTime": "12:15",
+      "endTime": "13:00",
+      "weeks": [
+        "33-38",
+        "40-47"
+      ],
+      "rooms": [
+        {
+          "id": "194_505_F126A",
+          "building": "Helvin",
+          "room": "2/3 Eureka",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=505-F126A"
+        }
+      ],
+      "studyProgramKeys": [
+        "BSPL",
+        "BSPLFLEKS"
+      ]
+    },
+    {
+      "courseCode": "SYG1000",
+      "courseName": {
+        "nob": "Grunnleggende sykepleie",
+        "nno": "Grunnleggande sjukepleie",
+        "eng": "Basic Nursing"
+      },
+      "acronym": "FORM",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Formidling",
+      "title": "Forelesning",
+      "dayNumber": 1,
+      "startTime": "12:15",
+      "endTime": "13:00",
+      "weeks": [
+        "33-38",
+        "40-47"
+      ],
+      "rooms": [
+        {
+          "id": "194_505_C106",
+          "building": "Helvin",
+          "room": "Debriefing A",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=505-C106"
+        },
+        {
+          "id": "194_505_C104D",
+          "building": "Helvin",
+          "room": "Debriefing B",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=505-C104D"
+        },
+        {
+          "id": "194_505_C006",
+          "building": "Helvin",
+          "room": "C006",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=505-C006"
+        }
+      ],
+      "studyProgramKeys": [
+        "BSPL",
+        "BSPLFLEKS"
+      ]
+    },
+    {
+      "courseCode": "SYG1000",
+      "courseName": {
+        "nob": "Grunnleggende sykepleie",
+        "nno": "Grunnleggande sjukepleie",
+        "eng": "Basic Nursing"
+      },
+      "acronym": "FORM",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Formidling",
+      "title": "Forelesning",
+      "dayNumber": 1,
+      "startTime": "12:15",
+      "endTime": "14:00",
+      "weeks": [
+        "33-38",
+        "40-47"
+      ],
+      "rooms": [
+        {
+          "id": "194_505_F126A",
+          "building": "Helvin",
+          "room": "2/3 Eureka",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=505-F126A"
+        }
+      ],
+      "studyProgramKeys": [
+        "BSPL",
+        "BSPLFLEKS"
+      ]
+    },
+    {
+      "courseCode": "SYG1000",
+      "courseName": {
+        "nob": "Grunnleggende sykepleie",
+        "nno": "Grunnleggande sjukepleie",
+        "eng": "Basic Nursing"
+      },
+      "acronym": "FORM",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Formidling",
+      "title": "Forelesning",
+      "dayNumber": 1,
+      "startTime": "12:15",
+      "endTime": "14:00",
+      "weeks": [
+        "33-38",
+        "40-47"
+      ],
+      "rooms": [],
+      "studyProgramKeys": [
+        "BSPL",
+        "BSPLFLEKS"
+      ]
+    },
+    {
+      "courseCode": "SYG1000",
+      "courseName": {
+        "nob": "Grunnleggende sykepleie",
+        "nno": "Grunnleggande sjukepleie",
+        "eng": "Basic Nursing"
+      },
+      "acronym": "FORM",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Formidling",
+      "title": "Forelesning",
+      "dayNumber": 1,
+      "startTime": "11:15",
+      "endTime": "12:00",
+      "weeks": [
+        "33-38",
+        "40-47"
+      ],
+      "rooms": [
+        {
+          "id": "194_505_C006",
+          "building": "Helvin",
+          "room": "C006",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=505-C006"
+        },
+        {
+          "id": "194_505_C104D",
+          "building": "Helvin",
+          "room": "Debriefing B",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=505-C104D"
+        },
+        {
+          "id": "194_505_C106",
+          "building": "Helvin",
+          "room": "Debriefing A",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=505-C106"
+        }
+      ],
+      "studyProgramKeys": [
+        "BSPL",
+        "BSPLFLEKS"
+      ]
+    },
+    {
+      "courseCode": "SYG1000",
+      "courseName": {
+        "nob": "Grunnleggende sykepleie",
+        "nno": "Grunnleggande sjukepleie",
+        "eng": "Basic Nursing"
+      },
+      "acronym": "FORM",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Formidling",
+      "title": "Forelesning",
+      "dayNumber": 1,
+      "startTime": "10:15",
+      "endTime": "11:00",
+      "weeks": [
+        "33-38",
+        "40-47"
+      ],
+      "rooms": [
+        {
+          "id": "194_505_C106",
+          "building": "Helvin",
+          "room": "Debriefing A",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=505-C106"
+        },
+        {
+          "id": "194_505_C006",
+          "building": "Helvin",
+          "room": "C006",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=505-C006"
+        },
+        {
+          "id": "194_505_C104D",
+          "building": "Helvin",
+          "room": "Debriefing B",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=505-C104D"
+        }
+      ],
+      "studyProgramKeys": [
+        "BSPL",
+        "BSPLFLEKS"
+      ]
+    },
+    {
+      "courseCode": "SYG1000",
+      "courseName": {
+        "nob": "Grunnleggende sykepleie",
+        "nno": "Grunnleggande sjukepleie",
+        "eng": "Basic Nursing"
+      },
+      "acronym": "FORM",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Formidling",
+      "title": "Diverse",
+      "dayNumber": 2,
+      "startTime": "11:00",
+      "endTime": "13:00",
+      "weeks": [
+        "33-35",
+        "37-38",
+        "42",
+        "44-45"
+      ],
+      "rooms": [],
+      "studyProgramKeys": [
+        "BSPL",
+        "BSPLFLEKS"
+      ]
+    },
+    {
+      "courseCode": "SYG1000",
+      "courseName": {
+        "nob": "Grunnleggende sykepleie",
+        "nno": "Grunnleggande sjukepleie",
+        "eng": "Basic Nursing"
+      },
+      "acronym": "FORM",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Formidling",
+      "title": "Diverse",
+      "dayNumber": 2,
+      "startTime": "15:00",
+      "endTime": "20:00",
+      "weeks": [
+        "33-35",
+        "37-38",
+        "42",
+        "44-45"
+      ],
+      "rooms": [],
+      "studyProgramKeys": [
+        "BSPL",
+        "BSPLFLEKS"
+      ]
+    },
+    {
+      "courseCode": "SYG1000",
+      "courseName": {
+        "nob": "Grunnleggende sykepleie",
+        "nno": "Grunnleggande sjukepleie",
+        "eng": "Basic Nursing"
+      },
+      "acronym": "FERD",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Ferdighetstrening",
+      "title": "Ferdighetstrening",
+      "dayNumber": 2,
+      "startTime": "14:00",
+      "endTime": "18:00",
+      "weeks": [
+        "35",
+        "38",
+        "40",
+        "42-43",
+        "45-47"
+      ],
+      "rooms": [
+        {
+          "id": "194_505_E112",
+          "building": "Helvin",
+          "room": "Klinikklab (E112) m/klasserom",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=505-E112"
+        }
+      ],
+      "studyProgramKeys": [
+        "BSPL",
+        "BSPLFLEKS"
+      ]
+    },
+    {
+      "courseCode": "SYG1000",
+      "courseName": {
+        "nob": "Grunnleggende sykepleie",
+        "nno": "Grunnleggande sjukepleie",
+        "eng": "Basic Nursing"
+      },
+      "acronym": "FERD",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Ferdighetstrening",
+      "title": "Ferdighetstrening",
+      "dayNumber": 2,
+      "startTime": "08:00",
+      "endTime": "12:00",
+      "weeks": [
+        "35",
+        "38",
+        "40",
+        "42-43",
+        "45-47"
+      ],
+      "rooms": [
+        {
+          "id": "194_505_E106",
+          "building": "Helvin",
+          "room": "Kjøkken klinikk lab (E106)",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=505-E106"
+        },
+        {
+          "id": "194_505_C107A",
+          "building": "Helvin",
+          "room": "C107A - Simlab 1",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=505-C107A"
+        },
+        {
+          "id": "194_505_C104B",
+          "building": "Helvin",
+          "room": "C104B - Simlab 4",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=505-C104B"
+        },
+        {
+          "id": "194_505_E102",
+          "building": "Helvin",
+          "room": " E102 - Studentlab",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=505-E102"
+        },
+        {
+          "id": "194_505_C107B",
+          "building": "Helvin",
+          "room": "C107B - Simlab 2",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=505-C107B"
+        }
+      ],
+      "studyProgramKeys": [
+        "BSPL",
+        "BSPLFLEKS"
+      ]
+    },
+    {
+      "courseCode": "SYG1000",
+      "courseName": {
+        "nob": "Grunnleggende sykepleie",
+        "nno": "Grunnleggande sjukepleie",
+        "eng": "Basic Nursing"
+      },
+      "acronym": "FERD",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Ferdighetstrening",
+      "title": "Ferdighetstrening",
+      "dayNumber": 2,
+      "startTime": "12:15",
+      "endTime": "15:00",
+      "weeks": [
+        "35",
+        "38",
+        "40",
+        "42-43",
+        "45-47"
+      ],
+      "rooms": [
+        {
+          "id": "194_505_E112",
+          "building": "Helvin",
+          "room": "Klinikklab (E112) m/klasserom",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=505-E112"
+        },
+        {
+          "id": "194_505_E102",
+          "building": "Helvin",
+          "room": " E102 - Studentlab",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=505-E102"
+        }
+      ],
+      "studyProgramKeys": [
+        "BSPL",
+        "BSPLFLEKS"
+      ]
+    },
+    {
+      "courseCode": "SYG1000",
+      "courseName": {
+        "nob": "Grunnleggende sykepleie",
+        "nno": "Grunnleggande sjukepleie",
+        "eng": "Basic Nursing"
+      },
+      "acronym": "FERD",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Ferdighetstrening",
+      "title": "Ferdighetstrening",
+      "dayNumber": 2,
+      "startTime": "12:15",
+      "endTime": "15:00",
+      "weeks": [
+        "35",
+        "38",
+        "40",
+        "42-43",
+        "45-47"
+      ],
+      "rooms": [
+        {
+          "id": "194_505_E112",
+          "building": "Helvin",
+          "room": "Klinikklab (E112) m/klasserom",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=505-E112"
+        },
+        {
+          "id": "194_505_E106",
+          "building": "Helvin",
+          "room": "Kjøkken klinikk lab (E106)",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=505-E106"
+        },
+        {
+          "id": "194_505_E102",
+          "building": "Helvin",
+          "room": " E102 - Studentlab",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=505-E102"
+        },
+        {
+          "id": "194_505_C106",
+          "building": "Helvin",
+          "room": "Debriefing A",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=505-C106"
+        },
+        {
+          "id": "194_505_C104D",
+          "building": "Helvin",
+          "room": "Debriefing B",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=505-C104D"
+        }
+      ],
+      "studyProgramKeys": [
+        "BSPL",
+        "BSPLFLEKS"
+      ]
+    },
+    {
+      "courseCode": "SYG1000",
+      "courseName": {
+        "nob": "Grunnleggende sykepleie",
+        "nno": "Grunnleggande sjukepleie",
+        "eng": "Basic Nursing"
+      },
+      "acronym": "FORM",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Formidling",
+      "title": "Forelesning",
+      "dayNumber": 2,
+      "startTime": "12:15",
+      "endTime": "14:00",
+      "weeks": [
+        "33-38",
+        "40-47"
+      ],
+      "rooms": [
+        {
+          "id": "194_510_S206",
+          "building": "Smaragd",
+          "room": "S206",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=510-S212"
+        }
+      ],
+      "studyProgramKeys": [
+        "BSPL",
+        "BSPLFLEKS"
+      ]
+    },
+    {
+      "courseCode": "SYG1000",
+      "courseName": {
+        "nob": "Grunnleggende sykepleie",
+        "nno": "Grunnleggande sjukepleie",
+        "eng": "Basic Nursing"
+      },
+      "acronym": "FERD",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Ferdighetstrening",
+      "title": "Ferdighetstrening",
+      "dayNumber": 2,
+      "startTime": "09:15",
+      "endTime": "12:00",
+      "weeks": [
+        "35",
+        "38",
+        "40",
+        "42-43",
+        "45-47"
+      ],
+      "rooms": [
+        {
+          "id": "194_505_E112",
+          "building": "Helvin",
+          "room": "Klinikklab (E112) m/klasserom",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=505-E112"
+        },
+        {
+          "id": "194_505_E102",
+          "building": "Helvin",
+          "room": " E102 - Studentlab",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=505-E102"
+        }
+      ],
+      "studyProgramKeys": [
+        "BSPL",
+        "BSPLFLEKS"
+      ]
+    },
+    {
+      "courseCode": "SYG1000",
+      "courseName": {
+        "nob": "Grunnleggende sykepleie",
+        "nno": "Grunnleggande sjukepleie",
+        "eng": "Basic Nursing"
+      },
+      "acronym": "FORM",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Formidling",
+      "title": "Forelesning",
+      "dayNumber": 2,
+      "startTime": "09:15",
+      "endTime": "11:00",
+      "weeks": [
+        "33-38",
+        "40-47"
+      ],
+      "rooms": [
+        {
+          "id": "194_505_F126A",
+          "building": "Helvin",
+          "room": "2/3 Eureka",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=505-F126A"
+        }
+      ],
+      "studyProgramKeys": [
+        "BSPL",
+        "BSPLFLEKS"
+      ]
+    },
+    {
+      "courseCode": "SYG1000",
+      "courseName": {
+        "nob": "Grunnleggende sykepleie",
+        "nno": "Grunnleggande sjukepleie",
+        "eng": "Basic Nursing"
+      },
+      "acronym": "FERD",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Ferdighetstrening",
+      "title": "Ferdighetstrening",
+      "dayNumber": 2,
+      "startTime": "08:15",
+      "endTime": "11:00",
+      "weeks": [
+        "35",
+        "38",
+        "40",
+        "42-43",
+        "45-47"
+      ],
+      "rooms": [
+        {
+          "id": "194_505_C104D",
+          "building": "Helvin",
+          "room": "Debriefing B",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=505-C104D"
+        },
+        {
+          "id": "194_505_C106",
+          "building": "Helvin",
+          "room": "Debriefing A",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=505-C106"
+        },
+        {
+          "id": "194_505_E102",
+          "building": "Helvin",
+          "room": " E102 - Studentlab",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=505-E102"
+        },
+        {
+          "id": "194_505_E106",
+          "building": "Helvin",
+          "room": "Kjøkken klinikk lab (E106)",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=505-E106"
+        },
+        {
+          "id": "194_505_E112",
+          "building": "Helvin",
+          "room": "Klinikklab (E112) m/klasserom",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=505-E112"
+        }
+      ],
+      "studyProgramKeys": [
+        "BSPL",
+        "BSPLFLEKS"
+      ]
+    },
+    {
+      "courseCode": "SYG1000",
+      "courseName": {
+        "nob": "Grunnleggende sykepleie",
+        "nno": "Grunnleggande sjukepleie",
+        "eng": "Basic Nursing"
+      },
+      "acronym": "FORM",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Formidling",
+      "title": "Forelesning",
+      "dayNumber": 2,
+      "startTime": "08:15",
+      "endTime": "10:00",
+      "weeks": [
+        "33-38",
+        "40-47"
+      ],
+      "rooms": [
+        {
+          "id": "194_505_F126A",
+          "building": "Helvin",
+          "room": "2/3 Eureka",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=505-F126A"
+        }
+      ],
+      "studyProgramKeys": [
+        "BSPL",
+        "BSPLFLEKS"
+      ]
+    },
+    {
+      "courseCode": "SYG1000",
+      "courseName": {
+        "nob": "Grunnleggende sykepleie",
+        "nno": "Grunnleggande sjukepleie",
+        "eng": "Basic Nursing"
+      },
+      "acronym": "FORM",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Formidling",
+      "title": "Forelesning",
+      "dayNumber": 2,
+      "startTime": "13:15",
+      "endTime": "15:00",
+      "weeks": [
+        "33-38",
+        "40-47"
+      ],
+      "rooms": [
+        {
+          "id": "194_510_S410",
+          "building": "Smaragd",
+          "room": "S410",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=510-S410"
+        }
+      ],
+      "studyProgramKeys": [
+        "BSPL",
+        "BSPLFLEKS"
+      ]
+    },
+    {
+      "courseCode": "SYG1000",
+      "courseName": {
+        "nob": "Grunnleggende sykepleie",
+        "nno": "Grunnleggande sjukepleie",
+        "eng": "Basic Nursing"
+      },
+      "acronym": "FORM",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Formidling",
+      "title": "Forelesning",
+      "dayNumber": 2,
+      "startTime": "11:15",
+      "endTime": "13:00",
+      "weeks": [
+        "33-38",
+        "40-47"
+      ],
+      "rooms": [
+        {
+          "id": "194_505_F126A",
+          "building": "Helvin",
+          "room": "2/3 Eureka",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=505-F126A"
+        }
+      ],
+      "studyProgramKeys": [
+        "BSPL",
+        "BSPLFLEKS"
+      ]
+    },
+    {
+      "courseCode": "SYG1000",
+      "courseName": {
+        "nob": "Grunnleggende sykepleie",
+        "nno": "Grunnleggande sjukepleie",
+        "eng": "Basic Nursing"
+      },
+      "acronym": "FORM",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Formidling",
+      "title": "Diverse",
+      "dayNumber": 3,
+      "startTime": "15:00",
+      "endTime": "20:00",
+      "weeks": [
+        "33-35",
+        "37-38",
+        "42",
+        "44-45"
+      ],
+      "rooms": [],
+      "studyProgramKeys": [
+        "BSPL",
+        "BSPLFLEKS"
+      ]
+    },
+    {
+      "courseCode": "SYG1000",
+      "courseName": {
+        "nob": "Grunnleggende sykepleie",
+        "nno": "Grunnleggande sjukepleie",
+        "eng": "Basic Nursing"
+      },
+      "acronym": "FORM",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Formidling",
+      "title": "Diverse",
+      "dayNumber": 3,
+      "startTime": "10:15",
+      "endTime": "16:00",
+      "weeks": [
+        "33-35",
+        "37-38",
+        "42",
+        "44-45"
+      ],
+      "rooms": [
+        {
+          "id": "194_505_E212",
+          "building": "Helvin",
+          "room": "E212",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=505-E212"
+        }
+      ],
+      "studyProgramKeys": [
+        "BSPL",
+        "BSPLFLEKS"
+      ]
+    },
+    {
+      "courseCode": "SYG1000",
+      "courseName": {
+        "nob": "Grunnleggende sykepleie",
+        "nno": "Grunnleggande sjukepleie",
+        "eng": "Basic Nursing"
+      },
+      "acronym": "FORM",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Formidling",
+      "title": "Forelesning",
+      "dayNumber": 3,
+      "startTime": "10:15",
+      "endTime": "12:00",
+      "weeks": [
+        "33-38",
+        "40-47"
+      ],
+      "rooms": [
+        {
+          "id": "194_505_F126A",
+          "building": "Helvin",
+          "room": "2/3 Eureka",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=505-F126A"
+        }
+      ],
+      "studyProgramKeys": [
+        "BSPL",
+        "BSPLFLEKS"
+      ]
+    },
+    {
+      "courseCode": "SYG1000",
+      "courseName": {
+        "nob": "Grunnleggende sykepleie",
+        "nno": "Grunnleggande sjukepleie",
+        "eng": "Basic Nursing"
+      },
+      "acronym": "FORM",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Formidling",
+      "title": "Forelesning",
+      "dayNumber": 3,
+      "startTime": "10:15",
+      "endTime": "11:00",
+      "weeks": [
+        "33-38",
+        "40-47"
+      ],
+      "rooms": [
+        {
+          "id": "194_505_F126A",
+          "building": "Helvin",
+          "room": "2/3 Eureka",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=505-F126A"
+        }
+      ],
+      "studyProgramKeys": [
+        "BSPL",
+        "BSPLFLEKS"
+      ]
+    },
+    {
+      "courseCode": "SYG1000",
+      "courseName": {
+        "nob": "Grunnleggende sykepleie",
+        "nno": "Grunnleggande sjukepleie",
+        "eng": "Basic Nursing"
+      },
+      "acronym": "DISAM",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Dialog- og samarbeidsbasert undervisning",
+      "title": "Seminar",
+      "dayNumber": 3,
+      "startTime": "08:15",
+      "endTime": "11:00",
+      "weeks": [
+        "36",
+        "38",
+        "43"
+      ],
+      "rooms": [
+        {
+          "id": "194_510_S410",
+          "building": "Smaragd",
+          "room": "S410",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=510-S410"
+        }
+      ],
+      "studyProgramKeys": [
+        "BSPL"
+      ]
+    },
+    {
+      "courseCode": "SYG1000",
+      "courseName": {
+        "nob": "Grunnleggende sykepleie",
+        "nno": "Grunnleggande sjukepleie",
+        "eng": "Basic Nursing"
+      },
+      "acronym": "FERD",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Ferdighetstrening",
+      "title": "Ferdighetstrening",
+      "dayNumber": 3,
+      "startTime": "08:15",
+      "endTime": "11:00",
+      "weeks": [
+        "35",
+        "38",
+        "40",
+        "42-43",
+        "45-47"
+      ],
+      "rooms": [
+        {
+          "id": "194_505_E112",
+          "building": "Helvin",
+          "room": "Klinikklab (E112) m/klasserom",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=505-E112"
+        },
+        {
+          "id": "194_505_E102",
+          "building": "Helvin",
+          "room": " E102 - Studentlab",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=505-E102"
+        }
+      ],
+      "studyProgramKeys": [
+        "BSPL",
+        "BSPLFLEKS"
+      ]
+    },
+    {
+      "courseCode": "SYG1000",
+      "courseName": {
+        "nob": "Grunnleggende sykepleie",
+        "nno": "Grunnleggande sjukepleie",
+        "eng": "Basic Nursing"
+      },
+      "acronym": "FERD",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Ferdighetstrening",
+      "title": "Ferdighetstrening",
+      "dayNumber": 3,
+      "startTime": "08:15",
+      "endTime": "11:00",
+      "weeks": [
+        "35",
+        "38",
+        "40",
+        "42-43",
+        "45-47"
+      ],
+      "rooms": [
+        {
+          "id": "194_505_C104D",
+          "building": "Helvin",
+          "room": "Debriefing B",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=505-C104D"
+        },
+        {
+          "id": "194_505_C106",
+          "building": "Helvin",
+          "room": "Debriefing A",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=505-C106"
+        },
+        {
+          "id": "194_505_E102",
+          "building": "Helvin",
+          "room": " E102 - Studentlab",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=505-E102"
+        },
+        {
+          "id": "194_505_E106",
+          "building": "Helvin",
+          "room": "Kjøkken klinikk lab (E106)",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=505-E106"
+        },
+        {
+          "id": "194_505_E112",
+          "building": "Helvin",
+          "room": "Klinikklab (E112) m/klasserom",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=505-E112"
+        }
+      ],
+      "studyProgramKeys": [
+        "BSPL",
+        "BSPLFLEKS"
+      ]
+    },
+    {
+      "courseCode": "SYG1000",
+      "courseName": {
+        "nob": "Grunnleggende sykepleie",
+        "nno": "Grunnleggande sjukepleie",
+        "eng": "Basic Nursing"
+      },
+      "acronym": "FERD",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Ferdighetstrening",
+      "title": "Ferdighetstrening",
+      "dayNumber": 3,
+      "startTime": "08:15",
+      "endTime": "11:00",
+      "weeks": [
+        "35",
+        "38",
+        "40",
+        "42-43",
+        "45-47"
+      ],
+      "rooms": [
+        {
+          "id": "194_505_C107A",
+          "building": "Helvin",
+          "room": "C107A - Simlab 1",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=505-C107A"
+        },
+        {
+          "id": "194_505_C107B",
+          "building": "Helvin",
+          "room": "C107B - Simlab 2",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=505-C107B"
+        },
+        {
+          "id": "194_505_E102",
+          "building": "Helvin",
+          "room": " E102 - Studentlab",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=505-E102"
+        },
+        {
+          "id": "194_505_E106",
+          "building": "Helvin",
+          "room": "Kjøkken klinikk lab (E106)",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=505-E106"
+        },
+        {
+          "id": "194_505_E112",
+          "building": "Helvin",
+          "room": "Klinikklab (E112) m/klasserom",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=505-E112"
+        }
+      ],
+      "studyProgramKeys": [
+        "BSPL",
+        "BSPLFLEKS"
+      ]
+    },
+    {
+      "courseCode": "SYG1000",
+      "courseName": {
+        "nob": "Grunnleggende sykepleie",
+        "nno": "Grunnleggande sjukepleie",
+        "eng": "Basic Nursing"
+      },
+      "acronym": "FORM",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Formidling",
+      "title": "Forelesning",
+      "dayNumber": 3,
+      "startTime": "08:15",
+      "endTime": "09:00",
+      "weeks": [
+        "33-38",
+        "40-47"
+      ],
+      "rooms": [
+        {
+          "id": "194_510_S206",
+          "building": "Smaragd",
+          "room": "S206",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=510-S212"
+        }
+      ],
+      "studyProgramKeys": [
+        "BSPL",
+        "BSPLFLEKS"
+      ]
+    },
+    {
+      "courseCode": "SYG1000",
+      "courseName": {
+        "nob": "Grunnleggende sykepleie",
+        "nno": "Grunnleggande sjukepleie",
+        "eng": "Basic Nursing"
+      },
+      "acronym": "FORM",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Formidling",
+      "title": "Forelesning",
+      "dayNumber": 3,
+      "startTime": "08:15",
+      "endTime": "10:00",
+      "weeks": [
+        "33-38",
+        "40-47"
+      ],
+      "rooms": [
+        {
+          "id": "194_505_F126A",
+          "building": "Helvin",
+          "room": "2/3 Eureka",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=505-F126A"
+        }
+      ],
+      "studyProgramKeys": [
+        "BSPL",
+        "BSPLFLEKS"
+      ]
+    },
+    {
+      "courseCode": "SYG1000",
+      "courseName": {
+        "nob": "Grunnleggende sykepleie",
+        "nno": "Grunnleggande sjukepleie",
+        "eng": "Basic Nursing"
+      },
+      "acronym": "DISAM",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Dialog- og samarbeidsbasert undervisning",
+      "title": "Seminar",
+      "dayNumber": 3,
+      "startTime": "12:15",
+      "endTime": "15:00",
+      "weeks": [
+        "36",
+        "38",
+        "43"
+      ],
+      "rooms": [
+        {
+          "id": "194_510_S410",
+          "building": "Smaragd",
+          "room": "S410",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=510-S410"
+        }
+      ],
+      "studyProgramKeys": [
+        "BSPL"
+      ]
+    },
+    {
+      "courseCode": "SYG1000",
+      "courseName": {
+        "nob": "Grunnleggende sykepleie",
+        "nno": "Grunnleggande sjukepleie",
+        "eng": "Basic Nursing"
+      },
+      "acronym": "FERD",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Ferdighetstrening",
+      "title": "Ferdighetstrening",
+      "dayNumber": 3,
+      "startTime": "12:15",
+      "endTime": "15:00",
+      "weeks": [
+        "35",
+        "38",
+        "40",
+        "42-43",
+        "45-47"
+      ],
+      "rooms": [
+        {
+          "id": "194_505_E102",
+          "building": "Helvin",
+          "room": " E102 - Studentlab",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=505-E102"
+        },
+        {
+          "id": "194_505_E112",
+          "building": "Helvin",
+          "room": "Klinikklab (E112) m/klasserom",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=505-E112"
+        }
+      ],
+      "studyProgramKeys": [
+        "BSPL",
+        "BSPLFLEKS"
+      ]
+    },
+    {
+      "courseCode": "SYG1000",
+      "courseName": {
+        "nob": "Grunnleggende sykepleie",
+        "nno": "Grunnleggande sjukepleie",
+        "eng": "Basic Nursing"
+      },
+      "acronym": "FERD",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Ferdighetstrening",
+      "title": "Ferdighetstrening",
+      "dayNumber": 3,
+      "startTime": "12:15",
+      "endTime": "15:00",
+      "weeks": [
+        "35",
+        "38",
+        "40",
+        "42-43",
+        "45-47"
+      ],
+      "rooms": [
+        {
+          "id": "194_505_E112",
+          "building": "Helvin",
+          "room": "Klinikklab (E112) m/klasserom",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=505-E112"
+        },
+        {
+          "id": "194_505_E102",
+          "building": "Helvin",
+          "room": " E102 - Studentlab",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=505-E102"
+        }
+      ],
+      "studyProgramKeys": [
+        "BSPL",
+        "BSPLFLEKS"
+      ]
+    },
+    {
+      "courseCode": "SYG1000",
+      "courseName": {
+        "nob": "Grunnleggende sykepleie",
+        "nno": "Grunnleggande sjukepleie",
+        "eng": "Basic Nursing"
+      },
+      "acronym": "FERD",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Ferdighetstrening",
+      "title": "Ferdighetstrening",
+      "dayNumber": 3,
+      "startTime": "12:15",
+      "endTime": "15:00",
+      "weeks": [
+        "35",
+        "38",
+        "40",
+        "42-43",
+        "45-47"
+      ],
+      "rooms": [
+        {
+          "id": "194_505_E106",
+          "building": "Helvin",
+          "room": "Kjøkken klinikk lab (E106)",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=505-E106"
+        },
+        {
+          "id": "194_505_E102",
+          "building": "Helvin",
+          "room": " E102 - Studentlab",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=505-E102"
+        },
+        {
+          "id": "194_505_C106",
+          "building": "Helvin",
+          "room": "Debriefing A",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=505-C106"
+        },
+        {
+          "id": "194_505_C104D",
+          "building": "Helvin",
+          "room": "Debriefing B",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=505-C104D"
+        },
+        {
+          "id": "194_505_E112",
+          "building": "Helvin",
+          "room": "Klinikklab (E112) m/klasserom",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=505-E112"
+        }
+      ],
+      "studyProgramKeys": [
+        "BSPL",
+        "BSPLFLEKS"
+      ]
+    },
+    {
+      "courseCode": "SYG1000",
+      "courseName": {
+        "nob": "Grunnleggende sykepleie",
+        "nno": "Grunnleggande sjukepleie",
+        "eng": "Basic Nursing"
+      },
+      "acronym": "FERD",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Ferdighetstrening",
+      "title": "Ferdighetstrening",
+      "dayNumber": 3,
+      "startTime": "12:15",
+      "endTime": "15:00",
+      "weeks": [
+        "35",
+        "38",
+        "40",
+        "42-43",
+        "45-47"
+      ],
+      "rooms": [
+        {
+          "id": "194_505_E112",
+          "building": "Helvin",
+          "room": "Klinikklab (E112) m/klasserom",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=505-E112"
+        },
+        {
+          "id": "194_505_C107B",
+          "building": "Helvin",
+          "room": "C107B - Simlab 2",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=505-C107B"
+        },
+        {
+          "id": "194_505_C107A",
+          "building": "Helvin",
+          "room": "C107A - Simlab 1",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=505-C107A"
+        },
+        {
+          "id": "194_505_E106",
+          "building": "Helvin",
+          "room": "Kjøkken klinikk lab (E106)",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=505-E106"
+        },
+        {
+          "id": "194_505_E102",
+          "building": "Helvin",
+          "room": " E102 - Studentlab",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=505-E102"
+        }
+      ],
+      "studyProgramKeys": [
+        "BSPL",
+        "BSPLFLEKS"
+      ]
+    },
+    {
+      "courseCode": "SYG1000",
+      "courseName": {
+        "nob": "Grunnleggende sykepleie",
+        "nno": "Grunnleggande sjukepleie",
+        "eng": "Basic Nursing"
+      },
+      "acronym": "FERD",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Ferdighetstrening",
+      "title": "Ferdighetstrening",
+      "dayNumber": 3,
+      "startTime": "12:15",
+      "endTime": "14:00",
+      "weeks": [
+        "35",
+        "38",
+        "40",
+        "42-43",
+        "45-47"
+      ],
+      "rooms": [
+        {
+          "id": "194_505_C107B",
+          "building": "Helvin",
+          "room": "C107B - Simlab 2",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=505-C107B"
+        },
+        {
+          "id": "194_505_C104B",
+          "building": "Helvin",
+          "room": "C104B - Simlab 4",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=505-C104B"
+        },
+        {
+          "id": "194_505_C107A",
+          "building": "Helvin",
+          "room": "C107A - Simlab 1",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=505-C107A"
+        }
+      ],
+      "studyProgramKeys": [
+        "BSPL",
+        "BSPLFLEKS"
+      ]
+    },
+    {
+      "courseCode": "SYG1000",
+      "courseName": {
+        "nob": "Grunnleggende sykepleie",
+        "nno": "Grunnleggande sjukepleie",
+        "eng": "Basic Nursing"
+      },
+      "acronym": "FORM",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Formidling",
+      "title": "Forelesning",
+      "dayNumber": 3,
+      "startTime": "12:15",
+      "endTime": "14:00",
+      "weeks": [
+        "33-38",
+        "40-47"
+      ],
+      "rooms": [
+        {
+          "id": "194_510_S206",
+          "building": "Smaragd",
+          "room": "S206",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=510-S212"
+        }
+      ],
+      "studyProgramKeys": [
+        "BSPL",
+        "BSPLFLEKS"
+      ]
+    },
+    {
+      "courseCode": "SYG1000",
+      "courseName": {
+        "nob": "Grunnleggende sykepleie",
+        "nno": "Grunnleggande sjukepleie",
+        "eng": "Basic Nursing"
+      },
+      "acronym": "FORM",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Formidling",
+      "title": "Forelesning",
+      "dayNumber": 3,
+      "startTime": "12:15",
+      "endTime": "13:00",
+      "weeks": [
+        "33-38",
+        "40-47"
+      ],
+      "rooms": [
+        {
+          "id": "194_505_F126A",
+          "building": "Helvin",
+          "room": "2/3 Eureka",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=505-F126A"
+        }
+      ],
+      "studyProgramKeys": [
+        "BSPL",
+        "BSPLFLEKS"
+      ]
+    },
+    {
+      "courseCode": "SYG1000",
+      "courseName": {
+        "nob": "Grunnleggende sykepleie",
+        "nno": "Grunnleggande sjukepleie",
+        "eng": "Basic Nursing"
+      },
+      "acronym": "FERD",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Ferdighetstrening",
+      "title": "Ferdighetstrening",
+      "dayNumber": 3,
+      "startTime": "14:15",
+      "endTime": "17:00",
+      "weeks": [
+        "35",
+        "38",
+        "40",
+        "42-43",
+        "45-47"
+      ],
+      "rooms": [
+        {
+          "id": "194_505_E112",
+          "building": "Helvin",
+          "room": "Klinikklab (E112) m/klasserom",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=505-E112"
+        }
+      ],
+      "studyProgramKeys": [
+        "BSPL",
+        "BSPLFLEKS"
+      ]
+    },
+    {
+      "courseCode": "SYG1000",
+      "courseName": {
+        "nob": "Grunnleggende sykepleie",
+        "nno": "Grunnleggande sjukepleie",
+        "eng": "Basic Nursing"
+      },
+      "acronym": "FORM",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Formidling",
+      "title": "Forelesning",
+      "dayNumber": 3,
+      "startTime": "13:15",
+      "endTime": "15:00",
+      "weeks": [
+        "33-38",
+        "40-47"
+      ],
+      "rooms": [
+        {
+          "id": "194_505_F126A",
+          "building": "Helvin",
+          "room": "2/3 Eureka",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=505-F126A"
+        }
+      ],
+      "studyProgramKeys": [
+        "BSPL",
+        "BSPLFLEKS"
+      ]
+    },
+    {
+      "courseCode": "SYG1000",
+      "courseName": {
+        "nob": "Grunnleggende sykepleie",
+        "nno": "Grunnleggande sjukepleie",
+        "eng": "Basic Nursing"
+      },
+      "acronym": "FORM",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Formidling",
+      "title": "Forelesning",
+      "dayNumber": 3,
+      "startTime": "13:15",
+      "endTime": "14:00",
+      "weeks": [
+        "33-38",
+        "40-47"
+      ],
+      "rooms": [
+        {
+          "id": "194_505_F126A",
+          "building": "Helvin",
+          "room": "2/3 Eureka",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=505-F126A"
+        }
+      ],
+      "studyProgramKeys": [
+        "BSPL",
+        "BSPLFLEKS"
+      ]
+    },
+    {
+      "courseCode": "SYG1000",
+      "courseName": {
+        "nob": "Grunnleggende sykepleie",
+        "nno": "Grunnleggande sjukepleie",
+        "eng": "Basic Nursing"
+      },
+      "acronym": "FORM",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Formidling",
+      "title": "Forelesning",
+      "dayNumber": 3,
+      "startTime": "11:15",
+      "endTime": "11:45",
+      "weeks": [
+        "33-38",
+        "40-47"
+      ],
+      "rooms": [
+        {
+          "id": "194_505_F126A",
+          "building": "Helvin",
+          "room": "2/3 Eureka",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=505-F126A"
+        }
+      ],
+      "studyProgramKeys": [
+        "BSPL",
+        "BSPLFLEKS"
+      ]
+    },
+    {
+      "courseCode": "SYG1000",
+      "courseName": {
+        "nob": "Grunnleggende sykepleie",
+        "nno": "Grunnleggande sjukepleie",
+        "eng": "Basic Nursing"
+      },
+      "acronym": "FORM",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Formidling",
+      "title": "Forelesning",
+      "dayNumber": 3,
+      "startTime": "10:30",
+      "endTime": "11:00",
+      "weeks": [
+        "33-38",
+        "40-47"
+      ],
+      "rooms": [
+        {
+          "id": "194_505_F126A",
+          "building": "Helvin",
+          "room": "2/3 Eureka",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=505-F126A"
+        }
+      ],
+      "studyProgramKeys": [
+        "BSPL",
+        "BSPLFLEKS"
+      ]
+    },
+    {
+      "courseCode": "SYG1000",
+      "courseName": {
+        "nob": "Grunnleggende sykepleie",
+        "nno": "Grunnleggande sjukepleie",
+        "eng": "Basic Nursing"
+      },
+      "acronym": "FORM",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Formidling",
+      "title": "Forelesning",
+      "dayNumber": 3,
+      "startTime": "09:15",
+      "endTime": "10:30",
+      "weeks": [
+        "33-38",
+        "40-47"
+      ],
+      "rooms": [
+        {
+          "id": "194_505_F126A",
+          "building": "Helvin",
+          "room": "2/3 Eureka",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=505-F126A"
+        }
+      ],
+      "studyProgramKeys": [
+        "BSPL",
+        "BSPLFLEKS"
+      ]
+    },
+    {
+      "courseCode": "SYG1000",
+      "courseName": {
+        "nob": "Grunnleggende sykepleie",
+        "nno": "Grunnleggande sjukepleie",
+        "eng": "Basic Nursing"
+      },
+      "acronym": "FORM",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Formidling",
+      "title": "Diverse",
+      "dayNumber": 4,
+      "startTime": "15:00",
+      "endTime": "20:00",
+      "weeks": [
+        "33-35",
+        "37-38",
+        "42",
+        "44-45"
+      ],
+      "rooms": [],
+      "studyProgramKeys": [
+        "BSPL",
+        "BSPLFLEKS"
+      ]
+    },
+    {
+      "courseCode": "SYG1000",
+      "courseName": {
+        "nob": "Grunnleggende sykepleie",
+        "nno": "Grunnleggande sjukepleie",
+        "eng": "Basic Nursing"
+      },
+      "acronym": "FORM",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Formidling",
+      "title": "Diverse",
+      "dayNumber": 4,
+      "startTime": "13:00",
+      "endTime": "14:30",
+      "weeks": [
+        "33-35",
+        "37-38",
+        "42",
+        "44-45"
+      ],
+      "rooms": [],
+      "studyProgramKeys": [
+        "BSPL",
+        "BSPLFLEKS"
+      ]
+    },
+    {
+      "courseCode": "SYG1000",
+      "courseName": {
+        "nob": "Grunnleggende sykepleie",
+        "nno": "Grunnleggande sjukepleie",
+        "eng": "Basic Nursing"
+      },
+      "acronym": "FORM",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Formidling",
+      "title": "Diverse",
+      "dayNumber": 4,
+      "startTime": "09:15",
+      "endTime": "10:00",
+      "weeks": [
+        "33-35",
+        "37-38",
+        "42",
+        "44-45"
+      ],
+      "rooms": [],
+      "studyProgramKeys": [
+        "BSPL",
+        "BSPLFLEKS"
+      ]
+    },
+    {
+      "courseCode": "SYG1000",
+      "courseName": {
+        "nob": "Grunnleggende sykepleie",
+        "nno": "Grunnleggande sjukepleie",
+        "eng": "Basic Nursing"
+      },
+      "acronym": "DISAM",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Dialog- og samarbeidsbasert undervisning",
+      "title": "Seminar",
+      "dayNumber": 4,
+      "startTime": "08:15",
+      "endTime": "11:00",
+      "weeks": [
+        "36",
+        "38",
+        "43"
+      ],
+      "rooms": [
+        {
+          "id": "194_510_S410",
+          "building": "Smaragd",
+          "room": "S410",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=510-S410"
+        }
+      ],
+      "studyProgramKeys": [
+        "BSPL"
+      ]
+    },
+    {
+      "courseCode": "SYG1000",
+      "courseName": {
+        "nob": "Grunnleggende sykepleie",
+        "nno": "Grunnleggande sjukepleie",
+        "eng": "Basic Nursing"
+      },
+      "acronym": "FERD",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Ferdighetstrening",
+      "title": "Ferdighetstrening",
+      "dayNumber": 4,
+      "startTime": "08:15",
+      "endTime": "11:00",
+      "weeks": [
+        "35",
+        "38",
+        "40",
+        "42-43",
+        "45-47"
+      ],
+      "rooms": [
+        {
+          "id": "194_505_E112",
+          "building": "Helvin",
+          "room": "Klinikklab (E112) m/klasserom",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=505-E112"
+        }
+      ],
+      "studyProgramKeys": [
+        "BSPL",
+        "BSPLFLEKS"
+      ]
+    },
+    {
+      "courseCode": "SYG1000",
+      "courseName": {
+        "nob": "Grunnleggende sykepleie",
+        "nno": "Grunnleggande sjukepleie",
+        "eng": "Basic Nursing"
+      },
+      "acronym": "FERD",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Ferdighetstrening",
+      "title": "Ferdighetstrening",
+      "dayNumber": 4,
+      "startTime": "08:15",
+      "endTime": "11:00",
+      "weeks": [
+        "35",
+        "38",
+        "40",
+        "42-43",
+        "45-47"
+      ],
+      "rooms": [
+        {
+          "id": "194_505_C107B",
+          "building": "Helvin",
+          "room": "C107B - Simlab 2",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=505-C107B"
+        },
+        {
+          "id": "194_505_C107A",
+          "building": "Helvin",
+          "room": "C107A - Simlab 1",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=505-C107A"
+        },
+        {
+          "id": "194_505_E106",
+          "building": "Helvin",
+          "room": "Kjøkken klinikk lab (E106)",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=505-E106"
+        },
+        {
+          "id": "194_505_E102",
+          "building": "Helvin",
+          "room": " E102 - Studentlab",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=505-E102"
+        },
+        {
+          "id": "194_505_E112",
+          "building": "Helvin",
+          "room": "Klinikklab (E112) m/klasserom",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=505-E112"
+        }
+      ],
+      "studyProgramKeys": [
+        "BSPL",
+        "BSPLFLEKS"
+      ]
+    },
+    {
+      "courseCode": "SYG1000",
+      "courseName": {
+        "nob": "Grunnleggende sykepleie",
+        "nno": "Grunnleggande sjukepleie",
+        "eng": "Basic Nursing"
+      },
+      "acronym": "FORM",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Formidling",
+      "title": "Forelesning",
+      "dayNumber": 4,
+      "startTime": "08:15",
+      "endTime": "10:00",
+      "weeks": [
+        "33-38",
+        "40-47"
+      ],
+      "rooms": [
+        {
+          "id": "194_505_F126A",
+          "building": "Helvin",
+          "room": "2/3 Eureka",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=505-F126A"
+        }
+      ],
+      "studyProgramKeys": [
+        "BSPL",
+        "BSPLFLEKS"
+      ]
+    },
+    {
+      "courseCode": "SYG1000",
+      "courseName": {
+        "nob": "Grunnleggende sykepleie",
+        "nno": "Grunnleggande sjukepleie",
+        "eng": "Basic Nursing"
+      },
+      "acronym": "FORM",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Formidling",
+      "title": "Forelesning",
+      "dayNumber": 4,
+      "startTime": "08:15",
+      "endTime": "12:00",
+      "weeks": [
+        "33-38",
+        "40-47"
+      ],
+      "rooms": [
+        {
+          "id": "194_505_D101",
+          "building": "Helvin",
+          "room": "D101",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=505-D101"
+        }
+      ],
+      "studyProgramKeys": [
+        "BSPL",
+        "BSPLFLEKS"
+      ]
+    },
+    {
+      "courseCode": "SYG1000",
+      "courseName": {
+        "nob": "Grunnleggende sykepleie",
+        "nno": "Grunnleggande sjukepleie",
+        "eng": "Basic Nursing"
+      },
+      "acronym": "DISAM",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Dialog- og samarbeidsbasert undervisning",
+      "title": "Seminar",
+      "dayNumber": 4,
+      "startTime": "12:15",
+      "endTime": "15:00",
+      "weeks": [
+        "36",
+        "38",
+        "43"
+      ],
+      "rooms": [
+        {
+          "id": "194_510_S410",
+          "building": "Smaragd",
+          "room": "S410",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=510-S410"
+        }
+      ],
+      "studyProgramKeys": [
+        "BSPL"
+      ]
+    },
+    {
+      "courseCode": "SYG1000",
+      "courseName": {
+        "nob": "Grunnleggende sykepleie",
+        "nno": "Grunnleggande sjukepleie",
+        "eng": "Basic Nursing"
+      },
+      "acronym": "FERD",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Ferdighetstrening",
+      "title": "Ferdighetstrening",
+      "dayNumber": 4,
+      "startTime": "12:15",
+      "endTime": "15:00",
+      "weeks": [
+        "35",
+        "38",
+        "40",
+        "42-43",
+        "45-47"
+      ],
+      "rooms": [
+        {
+          "id": "194_505_E112",
+          "building": "Helvin",
+          "room": "Klinikklab (E112) m/klasserom",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=505-E112"
+        },
+        {
+          "id": "194_505_E102",
+          "building": "Helvin",
+          "room": " E102 - Studentlab",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=505-E102"
+        },
+        {
+          "id": "194_505_E106",
+          "building": "Helvin",
+          "room": "Kjøkken klinikk lab (E106)",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=505-E106"
+        },
+        {
+          "id": "194_505_C107A",
+          "building": "Helvin",
+          "room": "C107A - Simlab 1",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=505-C107A"
+        },
+        {
+          "id": "194_505_C107B",
+          "building": "Helvin",
+          "room": "C107B - Simlab 2",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=505-C107B"
+        }
+      ],
+      "studyProgramKeys": [
+        "BSPL",
+        "BSPLFLEKS"
+      ]
+    },
+    {
+      "courseCode": "SYG1000",
+      "courseName": {
+        "nob": "Grunnleggende sykepleie",
+        "nno": "Grunnleggande sjukepleie",
+        "eng": "Basic Nursing"
+      },
+      "acronym": "FERD",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Ferdighetstrening",
+      "title": "Ferdighetstrening",
+      "dayNumber": 4,
+      "startTime": "12:15",
+      "endTime": "15:00",
+      "weeks": [
+        "35",
+        "38",
+        "40",
+        "42-43",
+        "45-47"
+      ],
+      "rooms": [
+        {
+          "id": "194_505_E112",
+          "building": "Helvin",
+          "room": "Klinikklab (E112) m/klasserom",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=505-E112"
+        }
+      ],
+      "studyProgramKeys": [
+        "BSPL",
+        "BSPLFLEKS"
+      ]
+    },
+    {
+      "courseCode": "SYG1000",
+      "courseName": {
+        "nob": "Grunnleggende sykepleie",
+        "nno": "Grunnleggande sjukepleie",
+        "eng": "Basic Nursing"
+      },
+      "acronym": "FORM",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Formidling",
+      "title": "Forelesning",
+      "dayNumber": 4,
+      "startTime": "12:15",
+      "endTime": "14:00",
+      "weeks": [
+        "33-38",
+        "40-47"
+      ],
+      "rooms": [
+        {
+          "id": "194_510_S206",
+          "building": "Smaragd",
+          "room": "S206",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=510-S212"
+        }
+      ],
+      "studyProgramKeys": [
+        "BSPL",
+        "BSPLFLEKS"
+      ]
+    },
+    {
+      "courseCode": "SYG1000",
+      "courseName": {
+        "nob": "Grunnleggende sykepleie",
+        "nno": "Grunnleggande sjukepleie",
+        "eng": "Basic Nursing"
+      },
+      "acronym": "FORM",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Formidling",
+      "title": "Forelesning",
+      "dayNumber": 4,
+      "startTime": "11:15",
+      "endTime": "13:00",
+      "weeks": [
+        "33-38",
+        "40-47"
+      ],
+      "rooms": [
+        {
+          "id": "194_505_F126A",
+          "building": "Helvin",
+          "room": "2/3 Eureka",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=505-F126A"
+        }
+      ],
+      "studyProgramKeys": [
+        "BSPL",
+        "BSPLFLEKS"
+      ]
+    },
+    {
+      "courseCode": "SYG1000",
+      "courseName": {
+        "nob": "Grunnleggende sykepleie",
+        "nno": "Grunnleggande sjukepleie",
+        "eng": "Basic Nursing"
+      },
+      "acronym": "FORM",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Formidling",
+      "title": "Diverse",
+      "dayNumber": 5,
+      "startTime": "15:00",
+      "endTime": "20:00",
+      "weeks": [
+        "33-35",
+        "37-38",
+        "42",
+        "44-45"
+      ],
+      "rooms": [],
+      "studyProgramKeys": [
+        "BSPL",
+        "BSPLFLEKS"
+      ]
+    },
+    {
+      "courseCode": "SYG1000",
+      "courseName": {
+        "nob": "Grunnleggende sykepleie",
+        "nno": "Grunnleggande sjukepleie",
+        "eng": "Basic Nursing"
+      },
+      "acronym": "FORM",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Formidling",
+      "title": "Diverse",
+      "dayNumber": 5,
+      "startTime": "09:15",
+      "endTime": "10:00",
+      "weeks": [
+        "33-35",
+        "37-38",
+        "42",
+        "44-45"
+      ],
+      "rooms": [],
+      "studyProgramKeys": [
+        "BSPL",
+        "BSPLFLEKS"
+      ]
+    },
+    {
+      "courseCode": "SYG1000",
+      "courseName": {
+        "nob": "Grunnleggende sykepleie",
+        "nno": "Grunnleggande sjukepleie",
+        "eng": "Basic Nursing"
+      },
+      "acronym": "FORM",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Formidling",
+      "title": "Forelesning",
+      "dayNumber": 5,
+      "startTime": "09:15",
+      "endTime": "11:00",
+      "weeks": [
+        "33-38",
+        "40-47"
+      ],
+      "rooms": [
+        {
+          "id": "194_505_F126A",
+          "building": "Helvin",
+          "room": "2/3 Eureka",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=505-F126A"
+        }
+      ],
+      "studyProgramKeys": [
+        "BSPL",
+        "BSPLFLEKS"
+      ]
+    },
+    {
+      "courseCode": "SYG1000",
+      "courseName": {
+        "nob": "Grunnleggende sykepleie",
+        "nno": "Grunnleggande sjukepleie",
+        "eng": "Basic Nursing"
+      },
+      "acronym": "DISAM",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Dialog- og samarbeidsbasert undervisning",
+      "title": "Seminar",
+      "dayNumber": 5,
+      "startTime": "08:15",
+      "endTime": "11:00",
+      "weeks": [
+        "36",
+        "38",
+        "43"
+      ],
+      "rooms": [
+        {
+          "id": "194_510_S410",
+          "building": "Smaragd",
+          "room": "S410",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=510-S410"
+        }
+      ],
+      "studyProgramKeys": [
+        "BSPL"
+      ]
+    },
+    {
+      "courseCode": "SYG1000",
+      "courseName": {
+        "nob": "Grunnleggende sykepleie",
+        "nno": "Grunnleggande sjukepleie",
+        "eng": "Basic Nursing"
+      },
+      "acronym": "FERD",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Ferdighetstrening",
+      "title": "Ferdighetstrening",
+      "dayNumber": 5,
+      "startTime": "08:15",
+      "endTime": "11:00",
+      "weeks": [
+        "35",
+        "38",
+        "40",
+        "42-43",
+        "45-47"
+      ],
+      "rooms": [
+        {
+          "id": "194_505_E112",
+          "building": "Helvin",
+          "room": "Klinikklab (E112) m/klasserom",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=505-E112"
+        },
+        {
+          "id": "194_505_E102",
+          "building": "Helvin",
+          "room": " E102 - Studentlab",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=505-E102"
+        }
+      ],
+      "studyProgramKeys": [
+        "BSPL",
+        "BSPLFLEKS"
+      ]
+    },
+    {
+      "courseCode": "SYG1000",
+      "courseName": {
+        "nob": "Grunnleggende sykepleie",
+        "nno": "Grunnleggande sjukepleie",
+        "eng": "Basic Nursing"
+      },
+      "acronym": "FERD",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Ferdighetstrening",
+      "title": "Ferdighetstrening",
+      "dayNumber": 5,
+      "startTime": "08:15",
+      "endTime": "11:00",
+      "weeks": [
+        "35",
+        "38",
+        "40",
+        "42-43",
+        "45-47"
+      ],
+      "rooms": [
+        {
+          "id": "194_505_E112",
+          "building": "Helvin",
+          "room": "Klinikklab (E112) m/klasserom",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=505-E112"
+        }
+      ],
+      "studyProgramKeys": [
+        "BSPL",
+        "BSPLFLEKS"
+      ]
+    },
+    {
+      "courseCode": "SYG1000",
+      "courseName": {
+        "nob": "Grunnleggende sykepleie",
+        "nno": "Grunnleggande sjukepleie",
+        "eng": "Basic Nursing"
+      },
+      "acronym": "FORM",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Formidling",
+      "title": "Forelesning",
+      "dayNumber": 5,
+      "startTime": "08:15",
+      "endTime": "15:00",
+      "weeks": [
+        "33-38",
+        "40-47"
+      ],
+      "rooms": [
+        {
+          "id": "194_510_S410",
+          "building": "Smaragd",
+          "room": "S410",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=510-S410"
+        }
+      ],
+      "studyProgramKeys": [
+        "BSPL",
+        "BSPLFLEKS"
+      ]
+    },
+    {
+      "courseCode": "SYG1000",
+      "courseName": {
+        "nob": "Grunnleggende sykepleie",
+        "nno": "Grunnleggande sjukepleie",
+        "eng": "Basic Nursing"
+      },
+      "acronym": "FORM",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Formidling",
+      "title": "Forelesning",
+      "dayNumber": 5,
+      "startTime": "08:15",
+      "endTime": "12:00",
+      "weeks": [
+        "33-38",
+        "40-47"
+      ],
+      "rooms": [
+        {
+          "id": "194_505_D101",
+          "building": "Helvin",
+          "room": "D101",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=505-D101"
+        }
+      ],
+      "studyProgramKeys": [
+        "BSPL",
+        "BSPLFLEKS"
+      ]
+    },
+    {
+      "courseCode": "SYG1000",
+      "courseName": {
+        "nob": "Grunnleggende sykepleie",
+        "nno": "Grunnleggande sjukepleie",
+        "eng": "Basic Nursing"
+      },
+      "acronym": "DISAM",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Dialog- og samarbeidsbasert undervisning",
+      "title": "Seminar",
+      "dayNumber": 5,
+      "startTime": "12:15",
+      "endTime": "15:00",
+      "weeks": [
+        "36",
+        "38",
+        "43"
+      ],
+      "rooms": [
+        {
+          "id": "194_510_S410",
+          "building": "Smaragd",
+          "room": "S410",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=510-S410"
+        }
+      ],
+      "studyProgramKeys": [
+        "BSPL"
+      ]
+    },
+    {
+      "courseCode": "SYG1000",
+      "courseName": {
+        "nob": "Grunnleggende sykepleie",
+        "nno": "Grunnleggande sjukepleie",
+        "eng": "Basic Nursing"
+      },
+      "acronym": "FERD",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Ferdighetstrening",
+      "title": "Ferdighetstrening",
+      "dayNumber": 5,
+      "startTime": "12:15",
+      "endTime": "15:00",
+      "weeks": [
+        "35",
+        "38",
+        "40",
+        "42-43",
+        "45-47"
+      ],
+      "rooms": [
+        {
+          "id": "194_505_E102",
+          "building": "Helvin",
+          "room": " E102 - Studentlab",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=505-E102"
+        },
+        {
+          "id": "194_505_E112",
+          "building": "Helvin",
+          "room": "Klinikklab (E112) m/klasserom",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=505-E112"
+        }
+      ],
+      "studyProgramKeys": [
+        "BSPL",
+        "BSPLFLEKS"
+      ]
+    },
+    {
+      "courseCode": "SYG1000",
+      "courseName": {
+        "nob": "Grunnleggende sykepleie",
+        "nno": "Grunnleggande sjukepleie",
+        "eng": "Basic Nursing"
+      },
+      "acronym": "FERD",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Ferdighetstrening",
+      "title": "Ferdighetstrening",
+      "dayNumber": 5,
+      "startTime": "12:15",
+      "endTime": "15:00",
+      "weeks": [
+        "35",
+        "38",
+        "40",
+        "42-43",
+        "45-47"
+      ],
+      "rooms": [
+        {
+          "id": "194_505_E112",
+          "building": "Helvin",
+          "room": "Klinikklab (E112) m/klasserom",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=505-E112"
+        }
+      ],
+      "studyProgramKeys": [
+        "BSPL",
+        "BSPLFLEKS"
+      ]
+    },
+    {
+      "courseCode": "SYG1000",
+      "courseName": {
+        "nob": "Grunnleggende sykepleie",
+        "nno": "Grunnleggande sjukepleie",
+        "eng": "Basic Nursing"
+      },
+      "acronym": "FORM",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Formidling",
+      "title": "Forelesning",
+      "dayNumber": 5,
+      "startTime": "12:15",
+      "endTime": "14:00",
+      "weeks": [
+        "33-38",
+        "40-47"
+      ],
+      "rooms": [
+        {
+          "id": "194_505_F126A",
+          "building": "Helvin",
+          "room": "2/3 Eureka",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=505-F126A"
+        }
+      ],
+      "studyProgramKeys": [
+        "BSPL",
+        "BSPLFLEKS"
+      ]
+    },
+    {
+      "courseCode": "SYG1000",
+      "courseName": {
+        "nob": "Grunnleggende sykepleie",
+        "nno": "Grunnleggande sjukepleie",
+        "eng": "Basic Nursing"
+      },
+      "acronym": "FORM",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Formidling",
+      "title": "Forelesning",
+      "dayNumber": 5,
+      "startTime": "13:15",
+      "endTime": "15:00",
+      "weeks": [
+        "33-38",
+        "40-47"
+      ],
+      "rooms": [
+        {
+          "id": "194_505_E208",
+          "building": "Helvin",
+          "room": "E208",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=505-E208"
+        },
+        {
+          "id": "194_505_C137",
+          "building": "Helvin",
+          "room": "C137",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=505-C137"
+        },
+        {
+          "id": "194_505_C136",
+          "building": "Helvin",
+          "room": "C136",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=505-C136"
+        },
+        {
+          "id": "194_505_C106",
+          "building": "Helvin",
+          "room": "Debriefing A",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=505-C106"
+        },
+        {
+          "id": "194_505_C104D",
+          "building": "Helvin",
+          "room": "Debriefing B",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=505-C104D"
+        },
+        {
+          "id": "194_505_C006",
+          "building": "Helvin",
+          "room": "C006",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=505-C006"
+        }
+      ],
+      "studyProgramKeys": [
+        "BSPL",
+        "BSPLFLEKS"
+      ]
+    },
+    {
+      "courseCode": "SYG1000",
+      "courseName": {
+        "nob": "Grunnleggende sykepleie",
+        "nno": "Grunnleggande sjukepleie",
+        "eng": "Basic Nursing"
+      },
+      "acronym": "FORM",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Formidling",
+      "title": "Forelesning",
+      "dayNumber": 5,
+      "startTime": "11:15",
+      "endTime": "13:00",
+      "weeks": [
+        "33-38",
+        "40-47"
+      ],
+      "rooms": [
+        {
+          "id": "194_505_C006",
+          "building": "Helvin",
+          "room": "C006",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=505-C006"
+        },
+        {
+          "id": "194_505_C104D",
+          "building": "Helvin",
+          "room": "Debriefing B",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=505-C104D"
+        },
+        {
+          "id": "194_505_C106",
+          "building": "Helvin",
+          "room": "Debriefing A",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=505-C106"
+        },
+        {
+          "id": "194_505_C136",
+          "building": "Helvin",
+          "room": "C136",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=505-C136"
+        },
+        {
+          "id": "194_505_C137",
+          "building": "Helvin",
+          "room": "C137",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=505-C137"
+        },
+        {
+          "id": "194_505_E208",
+          "building": "Helvin",
+          "room": "E208",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=505-E208"
+        }
+      ],
+      "studyProgramKeys": [
+        "BSPL",
+        "BSPLFLEKS"
+      ]
+    }
+  ]
+}

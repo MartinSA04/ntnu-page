@@ -1,0 +1,227 @@
+{
+  "url": "http://127.0.0.1:8788/api/course/TDT4120/timetable?year=2026&version=1",
+  "status": 200,
+  "contentType": "application/json; charset=utf-8",
+  "body": [
+    {
+      "courseCode": "TDT4120",
+      "courseName": {
+        "nob": "Algoritmer og datastrukturer",
+        "nno": "Algoritmar og datastrukturar",
+        "eng": "Algorithms and Data Structures"
+      },
+      "acronym": "DISAM-P",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Dialog- og samarbeidsbasert undervisning",
+      "title": "Øvingsveiledning",
+      "dayNumber": 1,
+      "startTime": "08:15",
+      "endTime": "14:00",
+      "weeks": [
+        "34-48"
+      ],
+      "rooms": [
+        {
+          "id": "194_360_A4-156",
+          "building": "Realfagbygget",
+          "room": "A4-156",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=360-A4-156"
+        }
+      ],
+      "studyProgramKeys": []
+    },
+    {
+      "courseCode": "TDT4120",
+      "courseName": {
+        "nob": "Algoritmer og datastrukturer",
+        "nno": "Algoritmar og datastrukturar",
+        "eng": "Algorithms and Data Structures"
+      },
+      "acronym": "DISAM-P",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Dialog- og samarbeidsbasert undervisning",
+      "title": "Øvingsveiledning",
+      "dayNumber": 2,
+      "startTime": "08:15",
+      "endTime": "14:00",
+      "weeks": [
+        "34-48"
+      ],
+      "rooms": [
+        {
+          "id": "194_360_A4-156",
+          "building": "Realfagbygget",
+          "room": "A4-156",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=360-A4-156"
+        }
+      ],
+      "studyProgramKeys": []
+    },
+    {
+      "courseCode": "TDT4120",
+      "courseName": {
+        "nob": "Algoritmer og datastrukturer",
+        "nno": "Algoritmar og datastrukturar",
+        "eng": "Algorithms and Data Structures"
+      },
+      "acronym": "FORM",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Formidling",
+      "title": "Øvingsforelesning",
+      "dayNumber": 3,
+      "startTime": "10:15",
+      "endTime": "12:00",
+      "weeks": [
+        "34-47"
+      ],
+      "rooms": [
+        {
+          "id": "194_360_AU1-105",
+          "building": "Realfagbygget",
+          "room": "R7",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=360-AU1-105"
+        }
+      ],
+      "studyProgramKeys": [
+        "MTDT",
+        "MTKOM",
+        "MITK",
+        "MLREAL",
+        "MTFYMA",
+        "BIELDIG",
+        "MTELSYS",
+        "MTIØT",
+        "MTTK",
+        "BIT",
+        "MTING"
+      ]
+    },
+    {
+      "courseCode": "TDT4120",
+      "courseName": {
+        "nob": "Algoritmer og datastrukturer",
+        "nno": "Algoritmar og datastrukturar",
+        "eng": "Algorithms and Data Structures"
+      },
+      "acronym": "DISAM-P",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Dialog- og samarbeidsbasert undervisning",
+      "title": "Øvingsveiledning",
+      "dayNumber": 3,
+      "startTime": "08:15",
+      "endTime": "14:00",
+      "weeks": [
+        "34-48"
+      ],
+      "rooms": [
+        {
+          "id": "194_360_A4-156",
+          "building": "Realfagbygget",
+          "room": "A4-156",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=360-A4-156"
+        }
+      ],
+      "studyProgramKeys": []
+    },
+    {
+      "courseCode": "TDT4120",
+      "courseName": {
+        "nob": "Algoritmer og datastrukturer",
+        "nno": "Algoritmar og datastrukturar",
+        "eng": "Algorithms and Data Structures"
+      },
+      "acronym": "DISAM-P",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Dialog- og samarbeidsbasert undervisning",
+      "title": "Øvingsveiledning",
+      "dayNumber": 4,
+      "startTime": "08:15",
+      "endTime": "14:00",
+      "weeks": [
+        "34-48"
+      ],
+      "rooms": [
+        {
+          "id": "194_360_A4-156",
+          "building": "Realfagbygget",
+          "room": "A4-156",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=360-A4-156"
+        }
+      ],
+      "studyProgramKeys": []
+    },
+    {
+      "courseCode": "TDT4120",
+      "courseName": {
+        "nob": "Algoritmer og datastrukturer",
+        "nno": "Algoritmar og datastrukturar",
+        "eng": "Algorithms and Data Structures"
+      },
+      "acronym": "FORM",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Formidling",
+      "title": "Forelesning",
+      "dayNumber": 5,
+      "startTime": "12:15",
+      "endTime": "15:00",
+      "weeks": [
+        "34-47"
+      ],
+      "rooms": [
+        {
+          "id": "194_318_152",
+          "building": "IT-bygget, sydfløy",
+          "room": "F1",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=318-152"
+        }
+      ],
+      "studyProgramKeys": [
+        "MTDT",
+        "MTKOM",
+        "MITK",
+        "MLREAL",
+        "MTFYMA",
+        "BIELDIG",
+        "MTELSYS",
+        "MTIØT",
+        "MTTK",
+        "BIT",
+        "MTING"
+      ]
+    },
+    {
+      "courseCode": "TDT4120",
+      "courseName": {
+        "nob": "Algoritmer og datastrukturer",
+        "nno": "Algoritmar og datastrukturar",
+        "eng": "Algorithms and Data Structures"
+      },
+      "acronym": "DISAM-P",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Dialog- og samarbeidsbasert undervisning",
+      "title": "Øvingsveiledning",
+      "dayNumber": 5,
+      "startTime": "08:15",
+      "endTime": "14:00",
+      "weeks": [
+        "34-48"
+      ],
+      "rooms": [
+        {
+          "id": "194_360_A4-156",
+          "building": "Realfagbygget",
+          "room": "A4-156",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=360-A4-156"
+        }
+      ],
+      "studyProgramKeys": []
+    }
+  ]
+}

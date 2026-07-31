@@ -1,0 +1,1574 @@
+{
+  "url": "http://127.0.0.1:8788/api/course/EXPH0400/timetable?year=2026&version=1",
+  "status": 200,
+  "contentType": "application/json; charset=utf-8",
+  "body": [
+    {
+      "courseCode": "EXPH0400",
+      "courseName": {
+        "nob": "Examen philosophicum for medisin og helsefag",
+        "nno": "Examen philosophicum for medisin og helsefag",
+        "eng": "Examen philosophicum for Medicine and Health Sciences"
+      },
+      "acronym": "DISAM-P",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Dialog- og samarbeidsbasert undervisning",
+      "title": "Seminargruppe 19 Audio, Ergo, Fysio Trondheim",
+      "dayNumber": 1,
+      "startTime": "10:15",
+      "endTime": "12:00",
+      "weeks": [
+        "35-36",
+        "38-42",
+        "45-46"
+      ],
+      "rooms": [
+        {
+          "id": "194_2230_231.02.008",
+          "building": "Laboratoriesenteret",
+          "room": "LS21",
+          "url": "https://use.mazemap.com/?campusid=3&sharepoitype=poi&sharepoi=1001276335"
+        }
+      ],
+      "studyProgramKeys": [
+        "HSGFTB",
+        "HSGAUB"
+      ]
+    },
+    {
+      "courseCode": "EXPH0400",
+      "courseName": {
+        "nob": "Examen philosophicum for medisin og helsefag",
+        "nno": "Examen philosophicum for medisin og helsefag",
+        "eng": "Examen philosophicum for Medicine and Health Sciences"
+      },
+      "acronym": "DISAM-P",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Dialog- og samarbeidsbasert undervisning",
+      "title": "Seminargruppe 19 Audio, Ergo, Fysio Trondheim",
+      "dayNumber": 1,
+      "startTime": "10:15",
+      "endTime": "12:00",
+      "weeks": [
+        "35-36",
+        "38-42",
+        "45-46"
+      ],
+      "rooms": [
+        {
+          "id": "194_280_152.03.056",
+          "building": "Øya helsehus",
+          "room": "ØHU2",
+          "url": "https://link.mazemap.com/mSCwGR0U"
+        }
+      ],
+      "studyProgramKeys": [
+        "HSGFTB",
+        "HSGAUB"
+      ]
+    },
+    {
+      "courseCode": "EXPH0400",
+      "courseName": {
+        "nob": "Examen philosophicum for medisin og helsefag",
+        "nno": "Examen philosophicum for medisin og helsefag",
+        "eng": "Examen philosophicum for Medicine and Health Sciences"
+      },
+      "acronym": "DISAM-P",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Dialog- og samarbeidsbasert undervisning",
+      "title": "Seminargruppe 18 Audio, Ergo, Fysio Trondheim",
+      "dayNumber": 1,
+      "startTime": "10:15",
+      "endTime": "12:00",
+      "weeks": [
+        "35-36",
+        "38-42",
+        "45-46"
+      ],
+      "rooms": [
+        {
+          "id": "194_116_BR-U3.036",
+          "building": "Lysholm-bygget",
+          "room": "LY32",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=116-BR-U3.036"
+        }
+      ],
+      "studyProgramKeys": [
+        "BERGO",
+        "HSGFTB",
+        "HSGAUB"
+      ]
+    },
+    {
+      "courseCode": "EXPH0400",
+      "courseName": {
+        "nob": "Examen philosophicum for medisin og helsefag",
+        "nno": "Examen philosophicum for medisin og helsefag",
+        "eng": "Examen philosophicum for Medicine and Health Sciences"
+      },
+      "acronym": "DISAM-P",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Dialog- og samarbeidsbasert undervisning",
+      "title": "Seminargruppe 18 Audio, Ergo, Fysio Trondheim",
+      "dayNumber": 1,
+      "startTime": "10:15",
+      "endTime": "12:00",
+      "weeks": [
+        "35-36",
+        "38-42",
+        "45-46"
+      ],
+      "rooms": [
+        {
+          "id": "194_116_BR-U4.041",
+          "building": "Lysholm-bygget",
+          "room": "LY41",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=116-BR-U4.041"
+        }
+      ],
+      "studyProgramKeys": [
+        "BERGO",
+        "HSGFTB",
+        "HSGAUB"
+      ]
+    },
+    {
+      "courseCode": "EXPH0400",
+      "courseName": {
+        "nob": "Examen philosophicum for medisin og helsefag",
+        "nno": "Examen philosophicum for medisin og helsefag",
+        "eng": "Examen philosophicum for Medicine and Health Sciences"
+      },
+      "acronym": "FORM-P",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Formidling",
+      "title": "Forelesningsparallell 5 Gjøvik",
+      "dayNumber": 1,
+      "startTime": "10:15",
+      "endTime": "12:00",
+      "weeks": [
+        "34-45"
+      ],
+      "rooms": [
+        {
+          "id": "194_505_F126A",
+          "building": "Helvin",
+          "room": "2/3 Eureka",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=505-F126A"
+        }
+      ],
+      "studyProgramKeys": [
+        "BSPL",
+        "CMED",
+        "BPARAMED",
+        "BRADIO",
+        "BSPLFLEKS"
+      ]
+    },
+    {
+      "courseCode": "EXPH0400",
+      "courseName": {
+        "nob": "Examen philosophicum for medisin og helsefag",
+        "nno": "Examen philosophicum for medisin og helsefag",
+        "eng": "Examen philosophicum for Medicine and Health Sciences"
+      },
+      "acronym": "DISAM-P",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Dialog- og samarbeidsbasert undervisning",
+      "title": "Seminargruppe 30 Paramedisin Gjøvik",
+      "dayNumber": 1,
+      "startTime": "12:15",
+      "endTime": "14:00",
+      "weeks": [
+        "35-36",
+        "38-42",
+        "45-46"
+      ],
+      "rooms": [
+        {
+          "id": "194_505_D201",
+          "building": "Helvin",
+          "room": "D201",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=505-D201"
+        }
+      ],
+      "studyProgramKeys": [
+        "BPARAMED"
+      ]
+    },
+    {
+      "courseCode": "EXPH0400",
+      "courseName": {
+        "nob": "Examen philosophicum for medisin og helsefag",
+        "nno": "Examen philosophicum for medisin og helsefag",
+        "eng": "Examen philosophicum for Medicine and Health Sciences"
+      },
+      "acronym": "DISAM-P",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Dialog- og samarbeidsbasert undervisning",
+      "title": "Seminargruppe 21 Audio, Ergo, Fysio Trondheim",
+      "dayNumber": 1,
+      "startTime": "12:15",
+      "endTime": "14:00",
+      "weeks": [
+        "35-36",
+        "38-42",
+        "45-46"
+      ],
+      "rooms": [
+        {
+          "id": "194_116_BR-U4.041",
+          "building": "Lysholm-bygget",
+          "room": "LY41",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=116-BR-U4.041"
+        }
+      ],
+      "studyProgramKeys": [
+        "HSGFTB",
+        "HSGAUB"
+      ]
+    },
+    {
+      "courseCode": "EXPH0400",
+      "courseName": {
+        "nob": "Examen philosophicum for medisin og helsefag",
+        "nno": "Examen philosophicum for medisin og helsefag",
+        "eng": "Examen philosophicum for Medicine and Health Sciences"
+      },
+      "acronym": "DISAM-P",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Dialog- og samarbeidsbasert undervisning",
+      "title": "Seminargruppe 29 Radiografi Gjøvik",
+      "dayNumber": 1,
+      "startTime": "12:15",
+      "endTime": "14:00",
+      "weeks": [
+        "35-36",
+        "38-42",
+        "45-46"
+      ],
+      "rooms": [
+        {
+          "id": "194_505_D101",
+          "building": "Helvin",
+          "room": "D101",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=505-D101"
+        }
+      ],
+      "studyProgramKeys": [
+        "BRADIO"
+      ]
+    },
+    {
+      "courseCode": "EXPH0400",
+      "courseName": {
+        "nob": "Examen philosophicum for medisin og helsefag",
+        "nno": "Examen philosophicum for medisin og helsefag",
+        "eng": "Examen philosophicum for Medicine and Health Sciences"
+      },
+      "acronym": "DISAM-P",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Dialog- og samarbeidsbasert undervisning",
+      "title": "Seminargruppe 20 Audio, Ergo, Fysio Trondheim",
+      "dayNumber": 1,
+      "startTime": "12:15",
+      "endTime": "14:00",
+      "weeks": [
+        "35-36",
+        "38-42",
+        "45-46"
+      ],
+      "rooms": [
+        {
+          "id": "194_2230_231.02.008",
+          "building": "Laboratoriesenteret",
+          "room": "LS21",
+          "url": "https://use.mazemap.com/?campusid=3&sharepoitype=poi&sharepoi=1001276335"
+        }
+      ],
+      "studyProgramKeys": [
+        "HSGFTB",
+        "HSGAUB"
+      ]
+    },
+    {
+      "courseCode": "EXPH0400",
+      "courseName": {
+        "nob": "Examen philosophicum for medisin og helsefag",
+        "nno": "Examen philosophicum for medisin og helsefag",
+        "eng": "Examen philosophicum for Medicine and Health Sciences"
+      },
+      "acronym": "DISAM-P",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Dialog- og samarbeidsbasert undervisning",
+      "title": "Seminargruppe 20 Audio, Ergo, Fysio Trondheim",
+      "dayNumber": 1,
+      "startTime": "12:15",
+      "endTime": "14:00",
+      "weeks": [
+        "35-36",
+        "38-42",
+        "45-46"
+      ],
+      "rooms": [
+        {
+          "id": "194_280_152.02.019A",
+          "building": "Øya helsehus",
+          "room": "ØHA2-1",
+          "url": "https://link.mazemap.com/WHzwptde"
+        }
+      ],
+      "studyProgramKeys": [
+        "HSGFTB",
+        "HSGAUB"
+      ]
+    },
+    {
+      "courseCode": "EXPH0400",
+      "courseName": {
+        "nob": "Examen philosophicum for medisin og helsefag",
+        "nno": "Examen philosophicum for medisin og helsefag",
+        "eng": "Examen philosophicum for Medicine and Health Sciences"
+      },
+      "acronym": "DISAM-P",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Dialog- og samarbeidsbasert undervisning",
+      "title": "Seminargruppe 23 Audio, Ergo, Fysio Trondheim",
+      "dayNumber": 1,
+      "startTime": "15:15",
+      "endTime": "17:00",
+      "weeks": [
+        "35-36",
+        "38-42",
+        "45-46"
+      ],
+      "rooms": [
+        {
+          "id": "194_2230_231.02.008",
+          "building": "Laboratoriesenteret",
+          "room": "LS21",
+          "url": "https://use.mazemap.com/?campusid=3&sharepoitype=poi&sharepoi=1001276335"
+        }
+      ],
+      "studyProgramKeys": [
+        "HSGFTB",
+        "HSGAUB"
+      ]
+    },
+    {
+      "courseCode": "EXPH0400",
+      "courseName": {
+        "nob": "Examen philosophicum for medisin og helsefag",
+        "nno": "Examen philosophicum for medisin og helsefag",
+        "eng": "Examen philosophicum for Medicine and Health Sciences"
+      },
+      "acronym": "DISAM-P",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Dialog- og samarbeidsbasert undervisning",
+      "title": "Seminargruppe 22 Audio, Ergo, Fysio Trondheim",
+      "dayNumber": 1,
+      "startTime": "15:15",
+      "endTime": "17:00",
+      "weeks": [
+        "35-36",
+        "38-42",
+        "45-46"
+      ],
+      "rooms": [
+        {
+          "id": "194_280_152.03.056",
+          "building": "Øya helsehus",
+          "room": "ØHU2",
+          "url": "https://link.mazemap.com/mSCwGR0U"
+        }
+      ],
+      "studyProgramKeys": [
+        "HSGFTB",
+        "HSGAUB"
+      ]
+    },
+    {
+      "courseCode": "EXPH0400",
+      "courseName": {
+        "nob": "Examen philosophicum for medisin og helsefag",
+        "nno": "Examen philosophicum for medisin og helsefag",
+        "eng": "Examen philosophicum for Medicine and Health Sciences"
+      },
+      "acronym": "DISAM-P",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Dialog- og samarbeidsbasert undervisning",
+      "title": "Seminargruppe 32 Sykepl LT 4-6 Gjøvik",
+      "dayNumber": 1,
+      "startTime": "15:15",
+      "endTime": "17:00",
+      "weeks": [
+        "35-36",
+        "38-42",
+        "45-46"
+      ],
+      "rooms": [
+        {
+          "id": "194_505_D201",
+          "building": "Helvin",
+          "room": "D201",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=505-D201"
+        }
+      ],
+      "studyProgramKeys": [
+        "BSPL",
+        "CMED"
+      ]
+    },
+    {
+      "courseCode": "EXPH0400",
+      "courseName": {
+        "nob": "Examen philosophicum for medisin og helsefag",
+        "nno": "Examen philosophicum for medisin og helsefag",
+        "eng": "Examen philosophicum for Medicine and Health Sciences"
+      },
+      "acronym": "FORM-P",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Formidling",
+      "title": "Forelesningsparallell 2 Sykepleie Øya",
+      "dayNumber": 1,
+      "startTime": "15:15",
+      "endTime": "17:00",
+      "weeks": [
+        "34-45"
+      ],
+      "rooms": [
+        {
+          "id": "194_2420_421.01.002",
+          "building": "Kunnskapssenteret",
+          "room": "KA12",
+          "url": "https://link.mazemap.com/6InXvo27"
+        }
+      ],
+      "studyProgramKeys": [
+        "BSPL",
+        "BERGO"
+      ]
+    },
+    {
+      "courseCode": "EXPH0400",
+      "courseName": {
+        "nob": "Examen philosophicum for medisin og helsefag",
+        "nno": "Examen philosophicum for medisin og helsefag",
+        "eng": "Examen philosophicum for Medicine and Health Sciences"
+      },
+      "acronym": "DISAM-P",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Dialog- og samarbeidsbasert undervisning",
+      "title": "Seminargruppe 31 Sykepl LT 1-3 Gjøvik",
+      "dayNumber": 1,
+      "startTime": "15:15",
+      "endTime": "17:00",
+      "weeks": [
+        "35-36",
+        "38-42",
+        "45-46"
+      ],
+      "rooms": [
+        {
+          "id": "194_505_D101",
+          "building": "Helvin",
+          "room": "D101",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=505-D101"
+        }
+      ],
+      "studyProgramKeys": [
+        "BSPL",
+        "CMED"
+      ]
+    },
+    {
+      "courseCode": "EXPH0400",
+      "courseName": {
+        "nob": "Examen philosophicum for medisin og helsefag",
+        "nno": "Examen philosophicum for medisin og helsefag",
+        "eng": "Examen philosophicum for Medicine and Health Sciences"
+      },
+      "acronym": "FORM-P",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Formidling",
+      "title": "Forelesningsparallell 1 Audio, ergo og fysio Trondheim",
+      "dayNumber": 1,
+      "startTime": "08:15",
+      "endTime": "10:00",
+      "weeks": [
+        "34-45"
+      ],
+      "rooms": [
+        {
+          "id": "194_280_152.02.019",
+          "building": "Øya helsehus",
+          "room": "ØHA2",
+          "url": "https://link.mazemap.com/aos1qGaF"
+        }
+      ],
+      "studyProgramKeys": [
+        "HSGFTB",
+        "HSGAUB"
+      ]
+    },
+    {
+      "courseCode": "EXPH0400",
+      "courseName": {
+        "nob": "Examen philosophicum for medisin og helsefag",
+        "nno": "Examen philosophicum for medisin og helsefag",
+        "eng": "Examen philosophicum for Medicine and Health Sciences"
+      },
+      "acronym": "FORM-P",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Formidling",
+      "title": "Forelesningsparallell 1 Audio, ergo og fysio Trondheim",
+      "dayNumber": 1,
+      "startTime": "08:15",
+      "endTime": "10:00",
+      "weeks": [
+        "34-45"
+      ],
+      "rooms": [
+        {
+          "id": "194_280_152.02.019B",
+          "building": "Øya helsehus",
+          "room": "ØHA2-2",
+          "url": "https://link.mazemap.com/QYAquDDD"
+        }
+      ],
+      "studyProgramKeys": [
+        "HSGFTB",
+        "HSGAUB"
+      ]
+    },
+    {
+      "courseCode": "EXPH0400",
+      "courseName": {
+        "nob": "Examen philosophicum for medisin og helsefag",
+        "nno": "Examen philosophicum for medisin og helsefag",
+        "eng": "Examen philosophicum for Medicine and Health Sciences"
+      },
+      "acronym": "FORM-P",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Formidling",
+      "title": "Forelesningsparallell 1 Audio, ergo og fysio Trondheim",
+      "dayNumber": 1,
+      "startTime": "08:15",
+      "endTime": "10:00",
+      "weeks": [
+        "34-45"
+      ],
+      "rooms": [
+        {
+          "id": "194_280_152.01.025A",
+          "building": "Øya helsehus",
+          "room": "ØHA1",
+          "url": "https://link.mazemap.com/VLxMoli2"
+        }
+      ],
+      "studyProgramKeys": [
+        "HSGFTB",
+        "HSGAUB"
+      ]
+    },
+    {
+      "courseCode": "EXPH0400",
+      "courseName": {
+        "nob": "Examen philosophicum for medisin og helsefag",
+        "nno": "Examen philosophicum for medisin og helsefag",
+        "eng": "Examen philosophicum for Medicine and Health Sciences"
+      },
+      "acronym": "FORM-P",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Formidling",
+      "title": "Forelesningsparallell 1 Audio, ergo og fysio Trondheim",
+      "dayNumber": 1,
+      "startTime": "08:15",
+      "endTime": "10:00",
+      "weeks": [
+        "34-45"
+      ],
+      "rooms": [
+        {
+          "id": "194_2230_233.02.001",
+          "building": "Laboratoriesenteret",
+          "room": "LA21",
+          "url": "https://link.mazemap.com/uaDPM4bx"
+        }
+      ],
+      "studyProgramKeys": [
+        "HSGFTB",
+        "HSGAUB"
+      ]
+    },
+    {
+      "courseCode": "EXPH0400",
+      "courseName": {
+        "nob": "Examen philosophicum for medisin og helsefag",
+        "nno": "Examen philosophicum for medisin og helsefag",
+        "eng": "Examen philosophicum for Medicine and Health Sciences"
+      },
+      "acronym": "DISAM-P",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Dialog- og samarbeidsbasert undervisning",
+      "title": "Seminargruppe 34 Sykepl LT 10-12 Gjøvik",
+      "dayNumber": 2,
+      "startTime": "08:15",
+      "endTime": "10:00",
+      "weeks": [
+        "35-36",
+        "38-42",
+        "45-46"
+      ],
+      "rooms": [
+        {
+          "id": "194_505_D201",
+          "building": "Helvin",
+          "room": "D201",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=505-D201"
+        }
+      ],
+      "studyProgramKeys": [
+        "BSPL",
+        "CMED"
+      ]
+    },
+    {
+      "courseCode": "EXPH0400",
+      "courseName": {
+        "nob": "Examen philosophicum for medisin og helsefag",
+        "nno": "Examen philosophicum for medisin og helsefag",
+        "eng": "Examen philosophicum for Medicine and Health Sciences"
+      },
+      "acronym": "DISAM-P",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Dialog- og samarbeidsbasert undervisning",
+      "title": "Seminargruppe 33 Sykepl LT 7-9 Gjøvik",
+      "dayNumber": 2,
+      "startTime": "08:15",
+      "endTime": "10:00",
+      "weeks": [
+        "35-36",
+        "38-42",
+        "45-46"
+      ],
+      "rooms": [
+        {
+          "id": "194_505_D101",
+          "building": "Helvin",
+          "room": "D101",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=505-D101"
+        }
+      ],
+      "studyProgramKeys": [
+        "BSPL",
+        "CMED"
+      ]
+    },
+    {
+      "courseCode": "EXPH0400",
+      "courseName": {
+        "nob": "Examen philosophicum for medisin og helsefag",
+        "nno": "Examen philosophicum for medisin og helsefag",
+        "eng": "Examen philosophicum for Medicine and Health Sciences"
+      },
+      "acronym": "DISAM-P",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Dialog- og samarbeidsbasert undervisning",
+      "title": "Seminargruppe 8 Vernepleie Øya",
+      "dayNumber": 2,
+      "startTime": "16:15",
+      "endTime": "18:00",
+      "weeks": [
+        "35-36",
+        "38-42",
+        "45-46"
+      ],
+      "rooms": [
+        {
+          "id": "194_220_2.102",
+          "building": "Fred Kavli-bygget, del 1 (MTFS)",
+          "room": "MTS11",
+          "url": "https://use.mazemap.com/#v=1&config=ntnu&zlevel=1&center=10.393059,63.420565&zoom=18&campusid=597&sharepoitype=poi&sharepoi=1000475041&utm_medium=longurl"
+        }
+      ],
+      "studyProgramKeys": [
+        "HSGVEB"
+      ]
+    },
+    {
+      "courseCode": "EXPH0400",
+      "courseName": {
+        "nob": "Examen philosophicum for medisin og helsefag",
+        "nno": "Examen philosophicum for medisin og helsefag",
+        "eng": "Examen philosophicum for Medicine and Health Sciences"
+      },
+      "acronym": "DISAM-P",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Dialog- og samarbeidsbasert undervisning",
+      "title": "Seminargruppe 1 Sykepleie SG A Øya",
+      "dayNumber": 2,
+      "startTime": "12:15",
+      "endTime": "14:00",
+      "weeks": [
+        "35-36",
+        "38-42",
+        "45-46"
+      ],
+      "rooms": [
+        {
+          "id": "194_220_2.102",
+          "building": "Fred Kavli-bygget, del 1 (MTFS)",
+          "room": "MTS11",
+          "url": "https://use.mazemap.com/#v=1&config=ntnu&zlevel=1&center=10.393059,63.420565&zoom=18&campusid=597&sharepoitype=poi&sharepoi=1000475041&utm_medium=longurl"
+        }
+      ],
+      "studyProgramKeys": [
+        "BSPL"
+      ]
+    },
+    {
+      "courseCode": "EXPH0400",
+      "courseName": {
+        "nob": "Examen philosophicum for medisin og helsefag",
+        "nno": "Examen philosophicum for medisin og helsefag",
+        "eng": "Examen philosophicum for Medicine and Health Sciences"
+      },
+      "acronym": "DISAM-P",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Dialog- og samarbeidsbasert undervisning",
+      "title": "Seminargruppe 7 Vernepleie Øya",
+      "dayNumber": 2,
+      "startTime": "14:15",
+      "endTime": "16:00",
+      "weeks": [
+        "35-36",
+        "38-42",
+        "45-46"
+      ],
+      "rooms": [
+        {
+          "id": "194_2230_231.02.008",
+          "building": "Laboratoriesenteret",
+          "room": "LS21",
+          "url": "https://use.mazemap.com/?campusid=3&sharepoitype=poi&sharepoi=1001276335"
+        }
+      ],
+      "studyProgramKeys": []
+    },
+    {
+      "courseCode": "EXPH0400",
+      "courseName": {
+        "nob": "Examen philosophicum for medisin og helsefag",
+        "nno": "Examen philosophicum for medisin og helsefag",
+        "eng": "Examen philosophicum for Medicine and Health Sciences"
+      },
+      "acronym": "DISAM-P",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Dialog- og samarbeidsbasert undervisning",
+      "title": "Seminargruppe 2 Sykepleie SG B Øya",
+      "dayNumber": 2,
+      "startTime": "14:15",
+      "endTime": "16:00",
+      "weeks": [
+        "35-36",
+        "38-42",
+        "45-46"
+      ],
+      "rooms": [
+        {
+          "id": "194_220_2.102",
+          "building": "Fred Kavli-bygget, del 1 (MTFS)",
+          "room": "MTS11",
+          "url": "https://use.mazemap.com/#v=1&config=ntnu&zlevel=1&center=10.393059,63.420565&zoom=18&campusid=597&sharepoitype=poi&sharepoi=1000475041&utm_medium=longurl"
+        }
+      ],
+      "studyProgramKeys": [
+        "BSPL"
+      ]
+    },
+    {
+      "courseCode": "EXPH0400",
+      "courseName": {
+        "nob": "Examen philosophicum for medisin og helsefag",
+        "nno": "Examen philosophicum for medisin og helsefag",
+        "eng": "Examen philosophicum for Medicine and Health Sciences"
+      },
+      "acronym": "DISAM-P",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Dialog- og samarbeidsbasert undervisning",
+      "title": "Seminargruppe 3 Sykepleie SG C Øya",
+      "dayNumber": 3,
+      "startTime": "14:15",
+      "endTime": "16:00",
+      "weeks": [
+        "35-36",
+        "38-42",
+        "45-46"
+      ],
+      "rooms": [
+        {
+          "id": "194_220_2.102",
+          "building": "Fred Kavli-bygget, del 1 (MTFS)",
+          "room": "MTS11",
+          "url": "https://use.mazemap.com/#v=1&config=ntnu&zlevel=1&center=10.393059,63.420565&zoom=18&campusid=597&sharepoitype=poi&sharepoi=1000475041&utm_medium=longurl"
+        }
+      ],
+      "studyProgramKeys": [
+        "BSPL"
+      ]
+    },
+    {
+      "courseCode": "EXPH0400",
+      "courseName": {
+        "nob": "Examen philosophicum for medisin og helsefag",
+        "nno": "Examen philosophicum for medisin og helsefag",
+        "eng": "Examen philosophicum for Medicine and Health Sciences"
+      },
+      "acronym": "FORM-P",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Formidling",
+      "title": "Forelesningsparallell 4 Ålesund",
+      "dayNumber": 3,
+      "startTime": "14:15",
+      "endTime": "16:00",
+      "weeks": [
+        "34-45"
+      ],
+      "rooms": [
+        {
+          "id": "194_705_255A",
+          "building": "NMK",
+          "room": "255 - Storhavet",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=705-255A"
+        }
+      ],
+      "studyProgramKeys": [
+        "BSPL",
+        "BBIOING"
+      ]
+    },
+    {
+      "courseCode": "EXPH0400",
+      "courseName": {
+        "nob": "Examen philosophicum for medisin og helsefag",
+        "nno": "Examen philosophicum for medisin og helsefag",
+        "eng": "Examen philosophicum for Medicine and Health Sciences"
+      },
+      "acronym": "FORM-P",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Formidling",
+      "title": "Forelesningsparallell 4 Ålesund",
+      "dayNumber": 3,
+      "startTime": "14:15",
+      "endTime": "16:00",
+      "weeks": [
+        "34-45"
+      ],
+      "rooms": [
+        {
+          "id": "194_702_D210",
+          "building": "Ankeret",
+          "room": "Fogdegården",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=702-D210"
+        }
+      ],
+      "studyProgramKeys": [
+        "BSPL",
+        "BBIOING"
+      ]
+    },
+    {
+      "courseCode": "EXPH0400",
+      "courseName": {
+        "nob": "Examen philosophicum for medisin og helsefag",
+        "nno": "Examen philosophicum for medisin og helsefag",
+        "eng": "Examen philosophicum for Medicine and Health Sciences"
+      },
+      "acronym": "DISAM-P",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Dialog- og samarbeidsbasert undervisning",
+      "title": "Seminargruppe 10 Radiografi Øya",
+      "dayNumber": 3,
+      "startTime": "14:15",
+      "endTime": "16:00",
+      "weeks": [
+        "35-36",
+        "38-42",
+        "45-46"
+      ],
+      "rooms": [
+        {
+          "id": "194_2230_231.02.008",
+          "building": "Laboratoriesenteret",
+          "room": "LS21",
+          "url": "https://use.mazemap.com/?campusid=3&sharepoitype=poi&sharepoi=1001276335"
+        }
+      ],
+      "studyProgramKeys": []
+    },
+    {
+      "courseCode": "EXPH0400",
+      "courseName": {
+        "nob": "Examen philosophicum for medisin og helsefag",
+        "nno": "Examen philosophicum for medisin og helsefag",
+        "eng": "Examen philosophicum for Medicine and Health Sciences"
+      },
+      "acronym": "DISAM-P",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Dialog- og samarbeidsbasert undervisning",
+      "title": "Seminargruppe 9 Bev, Radio og Vernepl Øya",
+      "dayNumber": 3,
+      "startTime": "12:15",
+      "endTime": "14:00",
+      "weeks": [
+        "35-36",
+        "38-42",
+        "45-46"
+      ],
+      "rooms": [
+        {
+          "id": "194_220_2.102",
+          "building": "Fred Kavli-bygget, del 1 (MTFS)",
+          "room": "MTS11",
+          "url": "https://use.mazemap.com/#v=1&config=ntnu&zlevel=1&center=10.393059,63.420565&zoom=18&campusid=597&sharepoitype=poi&sharepoi=1000475041&utm_medium=longurl"
+        }
+      ],
+      "studyProgramKeys": [
+        "HSGVEB",
+        "BBEV"
+      ]
+    },
+    {
+      "courseCode": "EXPH0400",
+      "courseName": {
+        "nob": "Examen philosophicum for medisin og helsefag",
+        "nno": "Examen philosophicum for medisin og helsefag",
+        "eng": "Examen philosophicum for Medicine and Health Sciences"
+      },
+      "acronym": "DISAM-P",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Dialog- og samarbeidsbasert undervisning",
+      "title": "Seminargruppe 28 Bioing Ålesund",
+      "dayNumber": 3,
+      "startTime": "12:15",
+      "endTime": "14:00",
+      "weeks": [
+        "35-36",
+        "38-42",
+        "45-46"
+      ],
+      "rooms": [
+        {
+          "id": "194_702_B228",
+          "building": "Ankeret",
+          "room": "B228",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=702-B228"
+        }
+      ],
+      "studyProgramKeys": [
+        "BBIOING"
+      ]
+    },
+    {
+      "courseCode": "EXPH0400",
+      "courseName": {
+        "nob": "Examen philosophicum for medisin og helsefag",
+        "nno": "Examen philosophicum for medisin og helsefag",
+        "eng": "Examen philosophicum for Medicine and Health Sciences"
+      },
+      "acronym": "FORM-P",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Formidling",
+      "title": "Forelesningsparallell 3 Bev, Bioing, Med, Radio og Vernepl Øya",
+      "dayNumber": 3,
+      "startTime": "16:15",
+      "endTime": "18:00",
+      "weeks": [
+        "34-45"
+      ],
+      "rooms": [
+        {
+          "id": "194_2420_421.01.002",
+          "building": "Kunnskapssenteret",
+          "room": "KA12",
+          "url": "https://link.mazemap.com/6InXvo27"
+        }
+      ],
+      "studyProgramKeys": [
+        "CMED",
+        "HSGVEB",
+        "BBIOING",
+        "BRADIO",
+        "BBEV"
+      ]
+    },
+    {
+      "courseCode": "EXPH0400",
+      "courseName": {
+        "nob": "Examen philosophicum for medisin og helsefag",
+        "nno": "Examen philosophicum for medisin og helsefag",
+        "eng": "Examen philosophicum for Medicine and Health Sciences"
+      },
+      "acronym": "DISAM-P",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Dialog- og samarbeidsbasert undervisning",
+      "title": "Seminargruppe 24 Sykepl LT 1-3 Ålesund",
+      "dayNumber": 4,
+      "startTime": "08:15",
+      "endTime": "10:00",
+      "weeks": [
+        "35-36",
+        "38-42",
+        "45-46"
+      ],
+      "rooms": [
+        {
+          "id": "194_702_B228",
+          "building": "Ankeret",
+          "room": "B228",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=702-B228"
+        }
+      ],
+      "studyProgramKeys": [
+        "BSPL"
+      ]
+    },
+    {
+      "courseCode": "EXPH0400",
+      "courseName": {
+        "nob": "Examen philosophicum for medisin og helsefag",
+        "nno": "Examen philosophicum for medisin og helsefag",
+        "eng": "Examen philosophicum for Medicine and Health Sciences"
+      },
+      "acronym": "DISAM-P",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Dialog- og samarbeidsbasert undervisning",
+      "title": "Seminargruppe 12 Medisin Øya",
+      "dayNumber": 4,
+      "startTime": "16:15",
+      "endTime": "18:00",
+      "weeks": [
+        "35-36",
+        "38-42",
+        "45-46"
+      ],
+      "rooms": [
+        {
+          "id": "194_250_04-066",
+          "building": "Helgasetr",
+          "room": "04-066",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=2500-04-066"
+        }
+      ],
+      "studyProgramKeys": [
+        "CMED"
+      ]
+    },
+    {
+      "courseCode": "EXPH0400",
+      "courseName": {
+        "nob": "Examen philosophicum for medisin og helsefag",
+        "nno": "Examen philosophicum for medisin og helsefag",
+        "eng": "Examen philosophicum for Medicine and Health Sciences"
+      },
+      "acronym": "DISAM-P",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Dialog- og samarbeidsbasert undervisning",
+      "title": "Seminargruppe 13 Medisin Øya",
+      "dayNumber": 4,
+      "startTime": "16:15",
+      "endTime": "18:00",
+      "weeks": [
+        "35-36",
+        "38-42",
+        "45-46"
+      ],
+      "rooms": [
+        {
+          "id": "194_250_02-034",
+          "building": "Helgasetr",
+          "room": "02-034",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=2500-02-034"
+        }
+      ],
+      "studyProgramKeys": []
+    },
+    {
+      "courseCode": "EXPH0400",
+      "courseName": {
+        "nob": "Examen philosophicum for medisin og helsefag",
+        "nno": "Examen philosophicum for medisin og helsefag",
+        "eng": "Examen philosophicum for Medicine and Health Sciences"
+      },
+      "acronym": "DISAM-P",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Dialog- og samarbeidsbasert undervisning",
+      "title": "Seminargruppe 25 Sykepl LT 4-6 Ålesund",
+      "dayNumber": 4,
+      "startTime": "10:15",
+      "endTime": "12:00",
+      "weeks": [
+        "35-36",
+        "38-42",
+        "45-46"
+      ],
+      "rooms": [
+        {
+          "id": "194_702_B228",
+          "building": "Ankeret",
+          "room": "B228",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=702-B228"
+        }
+      ],
+      "studyProgramKeys": [
+        "BSPL"
+      ]
+    },
+    {
+      "courseCode": "EXPH0400",
+      "courseName": {
+        "nob": "Examen philosophicum for medisin og helsefag",
+        "nno": "Examen philosophicum for medisin og helsefag",
+        "eng": "Examen philosophicum for Medicine and Health Sciences"
+      },
+      "acronym": "DISAM-P",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Dialog- og samarbeidsbasert undervisning",
+      "title": "Seminargruppe 25 Sykepl LT 4-6 Ålesund",
+      "dayNumber": 4,
+      "startTime": "10:15",
+      "endTime": "11:00",
+      "weeks": [
+        "35-36",
+        "38-42",
+        "45-46"
+      ],
+      "rooms": [
+        {
+          "id": "194_702_B228",
+          "building": "Ankeret",
+          "room": "B228",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=702-B228"
+        }
+      ],
+      "studyProgramKeys": [
+        "BSPL"
+      ]
+    },
+    {
+      "courseCode": "EXPH0400",
+      "courseName": {
+        "nob": "Examen philosophicum for medisin og helsefag",
+        "nno": "Examen philosophicum for medisin og helsefag",
+        "eng": "Examen philosophicum for Medicine and Health Sciences"
+      },
+      "acronym": "DISAM-P",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Dialog- og samarbeidsbasert undervisning",
+      "title": "Seminargruppe 4 Sykepleie SG D Øya",
+      "dayNumber": 4,
+      "startTime": "14:15",
+      "endTime": "16:00",
+      "weeks": [
+        "35-36",
+        "38-42",
+        "45-46"
+      ],
+      "rooms": [
+        {
+          "id": "194_220_2.102",
+          "building": "Fred Kavli-bygget, del 1 (MTFS)",
+          "room": "MTS11",
+          "url": "https://use.mazemap.com/#v=1&config=ntnu&zlevel=1&center=10.393059,63.420565&zoom=18&campusid=597&sharepoitype=poi&sharepoi=1000475041&utm_medium=longurl"
+        }
+      ],
+      "studyProgramKeys": [
+        "BSPL"
+      ]
+    },
+    {
+      "courseCode": "EXPH0400",
+      "courseName": {
+        "nob": "Examen philosophicum for medisin og helsefag",
+        "nno": "Examen philosophicum for medisin og helsefag",
+        "eng": "Examen philosophicum for Medicine and Health Sciences"
+      },
+      "acronym": "DISAM-P",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Dialog- og samarbeidsbasert undervisning",
+      "title": "Seminargruppe 4 Sykepleie SG D Øya",
+      "dayNumber": 4,
+      "startTime": "14:15",
+      "endTime": "16:00",
+      "weeks": [
+        "35-36",
+        "38-42",
+        "45-46"
+      ],
+      "rooms": [
+        {
+          "id": "194_250_03-023",
+          "building": "Helgasetr",
+          "room": "03-023",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=2500-03-023"
+        }
+      ],
+      "studyProgramKeys": [
+        "BSPL"
+      ]
+    },
+    {
+      "courseCode": "EXPH0400",
+      "courseName": {
+        "nob": "Examen philosophicum for medisin og helsefag",
+        "nno": "Examen philosophicum for medisin og helsefag",
+        "eng": "Examen philosophicum for Medicine and Health Sciences"
+      },
+      "acronym": "DISAM-P",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Dialog- og samarbeidsbasert undervisning",
+      "title": "Seminargruppe 28 Bioing Ålesund",
+      "dayNumber": 4,
+      "startTime": "14:15",
+      "endTime": "16:00",
+      "weeks": [
+        "35-36",
+        "38-42",
+        "45-46"
+      ],
+      "rooms": [
+        {
+          "id": "194_702_B228",
+          "building": "Ankeret",
+          "room": "B228",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=702-B228"
+        }
+      ],
+      "studyProgramKeys": [
+        "BBIOING"
+      ]
+    },
+    {
+      "courseCode": "EXPH0400",
+      "courseName": {
+        "nob": "Examen philosophicum for medisin og helsefag",
+        "nno": "Examen philosophicum for medisin og helsefag",
+        "eng": "Examen philosophicum for Medicine and Health Sciences"
+      },
+      "acronym": "DISAM-P",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Dialog- og samarbeidsbasert undervisning",
+      "title": "Seminargruppe 11 Bevegelsesvitenskap Øya",
+      "dayNumber": 4,
+      "startTime": "14:15",
+      "endTime": "16:00",
+      "weeks": [
+        "35-36",
+        "38-42",
+        "45-46"
+      ],
+      "rooms": [
+        {
+          "id": "194_2230_231.02.008",
+          "building": "Laboratoriesenteret",
+          "room": "LS21",
+          "url": "https://use.mazemap.com/?campusid=3&sharepoitype=poi&sharepoi=1001276335"
+        }
+      ],
+      "studyProgramKeys": []
+    },
+    {
+      "courseCode": "EXPH0400",
+      "courseName": {
+        "nob": "Examen philosophicum for medisin og helsefag",
+        "nno": "Examen philosophicum for medisin og helsefag",
+        "eng": "Examen philosophicum for Medicine and Health Sciences"
+      },
+      "acronym": "DISAM-P",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Dialog- og samarbeidsbasert undervisning",
+      "title": "Seminargruppe 17 Bioing Øya",
+      "dayNumber": 5,
+      "startTime": "10:15",
+      "endTime": "12:00",
+      "weeks": [
+        "35-36",
+        "38-42",
+        "45-46"
+      ],
+      "rooms": [
+        {
+          "id": "194_220_2.212A",
+          "building": "Fred Kavli-bygget, del 1 (MTFS)",
+          "room": "MTS23",
+          "url": "https://use.mazemap.com/#v=1&config=ntnu&zlevel=2&center=10.393101,63.420292&zoom=18&campusid=597&sharepoitype=poi&sharepoi=1000475317&utm_medium=longurl"
+        }
+      ],
+      "studyProgramKeys": []
+    },
+    {
+      "courseCode": "EXPH0400",
+      "courseName": {
+        "nob": "Examen philosophicum for medisin og helsefag",
+        "nno": "Examen philosophicum for medisin og helsefag",
+        "eng": "Examen philosophicum for Medicine and Health Sciences"
+      },
+      "acronym": "DISAM-P",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Dialog- og samarbeidsbasert undervisning",
+      "title": "Seminargruppe 16 Bioing Øya",
+      "dayNumber": 5,
+      "startTime": "10:15",
+      "endTime": "12:00",
+      "weeks": [
+        "35-36",
+        "38-42",
+        "45-46"
+      ],
+      "rooms": [
+        {
+          "id": "194_220_2.102",
+          "building": "Fred Kavli-bygget, del 1 (MTFS)",
+          "room": "MTS11",
+          "url": "https://use.mazemap.com/#v=1&config=ntnu&zlevel=1&center=10.393059,63.420565&zoom=18&campusid=597&sharepoitype=poi&sharepoi=1000475041&utm_medium=longurl"
+        }
+      ],
+      "studyProgramKeys": [
+        "BBIOING"
+      ]
+    },
+    {
+      "courseCode": "EXPH0400",
+      "courseName": {
+        "nob": "Examen philosophicum for medisin og helsefag",
+        "nno": "Examen philosophicum for medisin og helsefag",
+        "eng": "Examen philosophicum for Medicine and Health Sciences"
+      },
+      "acronym": "DISAM-P",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Dialog- og samarbeidsbasert undervisning",
+      "title": "Seminargruppe 27 Sykepl LT 10-12 Ålesund",
+      "dayNumber": 5,
+      "startTime": "10:15",
+      "endTime": "12:00",
+      "weeks": [
+        "35-36",
+        "38-42",
+        "45-46"
+      ],
+      "rooms": [
+        {
+          "id": "194_702_B228",
+          "building": "Ankeret",
+          "room": "B228",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=702-B228"
+        }
+      ],
+      "studyProgramKeys": [
+        "BSPL"
+      ]
+    },
+    {
+      "courseCode": "EXPH0400",
+      "courseName": {
+        "nob": "Examen philosophicum for medisin og helsefag",
+        "nno": "Examen philosophicum for medisin og helsefag",
+        "eng": "Examen philosophicum for Medicine and Health Sciences"
+      },
+      "acronym": "DISAM-P",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Dialog- og samarbeidsbasert undervisning",
+      "title": "Seminargruppe 5 Sykepleie SG E Øya",
+      "dayNumber": 5,
+      "startTime": "08:15",
+      "endTime": "10:00",
+      "weeks": [
+        "35-36",
+        "38-42",
+        "45-46"
+      ],
+      "rooms": [
+        {
+          "id": "194_220_2.102",
+          "building": "Fred Kavli-bygget, del 1 (MTFS)",
+          "room": "MTS11",
+          "url": "https://use.mazemap.com/#v=1&config=ntnu&zlevel=1&center=10.393059,63.420565&zoom=18&campusid=597&sharepoitype=poi&sharepoi=1000475041&utm_medium=longurl"
+        }
+      ],
+      "studyProgramKeys": [
+        "BSPL"
+      ]
+    },
+    {
+      "courseCode": "EXPH0400",
+      "courseName": {
+        "nob": "Examen philosophicum for medisin og helsefag",
+        "nno": "Examen philosophicum for medisin og helsefag",
+        "eng": "Examen philosophicum for Medicine and Health Sciences"
+      },
+      "acronym": "DISAM-P",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Dialog- og samarbeidsbasert undervisning",
+      "title": "Seminargruppe 26 Sykepl LT 7-9 Ålesund",
+      "dayNumber": 5,
+      "startTime": "08:15",
+      "endTime": "10:00",
+      "weeks": [
+        "35-36",
+        "38-42",
+        "45-46"
+      ],
+      "rooms": [
+        {
+          "id": "194_702_B228",
+          "building": "Ankeret",
+          "room": "B228",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=702-B228"
+        }
+      ],
+      "studyProgramKeys": [
+        "BSPL"
+      ]
+    },
+    {
+      "courseCode": "EXPH0400",
+      "courseName": {
+        "nob": "Examen philosophicum for medisin og helsefag",
+        "nno": "Examen philosophicum for medisin og helsefag",
+        "eng": "Examen philosophicum for Medicine and Health Sciences"
+      },
+      "acronym": "DISAM-P",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Dialog- og samarbeidsbasert undervisning",
+      "title": "Seminargruppe 6 Sykepleie SG F Øya",
+      "dayNumber": 5,
+      "startTime": "08:15",
+      "endTime": "10:00",
+      "weeks": [
+        "35-36",
+        "38-42",
+        "45-46"
+      ],
+      "rooms": [
+        {
+          "id": "194_220_2.212A",
+          "building": "Fred Kavli-bygget, del 1 (MTFS)",
+          "room": "MTS23",
+          "url": "https://use.mazemap.com/#v=1&config=ntnu&zlevel=2&center=10.393101,63.420292&zoom=18&campusid=597&sharepoitype=poi&sharepoi=1000475317&utm_medium=longurl"
+        }
+      ],
+      "studyProgramKeys": []
+    },
+    {
+      "courseCode": "EXPH0400",
+      "courseName": {
+        "nob": "Examen philosophicum for medisin og helsefag",
+        "nno": "Examen philosophicum for medisin og helsefag",
+        "eng": "Examen philosophicum for Medicine and Health Sciences"
+      },
+      "acronym": "DISAM-P",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Dialog- og samarbeidsbasert undervisning",
+      "title": "Seminargruppe 15 Medisin Øya",
+      "dayNumber": 5,
+      "startTime": "12:15",
+      "endTime": "14:00",
+      "weeks": [
+        "35-36",
+        "38-42",
+        "45-46"
+      ],
+      "rooms": [
+        {
+          "id": "194_220_2.202",
+          "building": "Fred Kavli-bygget, del 1 (MTFS)",
+          "room": "MTS21",
+          "url": "https://use.mazemap.com/#v=1&config=ntnu&zlevel=2&center=10.393059,63.420565&zoom=18&campusid=597&sharepoitype=poi&sharepoi=1000475223&utm_medium=longurl"
+        }
+      ],
+      "studyProgramKeys": []
+    },
+    {
+      "courseCode": "EXPH0400",
+      "courseName": {
+        "nob": "Examen philosophicum for medisin og helsefag",
+        "nno": "Examen philosophicum for medisin og helsefag",
+        "eng": "Examen philosophicum for Medicine and Health Sciences"
+      },
+      "acronym": "DISAM-P",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Dialog- og samarbeidsbasert undervisning",
+      "title": "Seminargruppe 14 Vernepleie Øya",
+      "dayNumber": 5,
+      "startTime": "12:15",
+      "endTime": "14:00",
+      "weeks": [
+        "35-36",
+        "38-42",
+        "45-46"
+      ],
+      "rooms": [
+        {
+          "id": "194_220_2.102",
+          "building": "Fred Kavli-bygget, del 1 (MTFS)",
+          "room": "MTS11",
+          "url": "https://use.mazemap.com/#v=1&config=ntnu&zlevel=1&center=10.393059,63.420565&zoom=18&campusid=597&sharepoitype=poi&sharepoi=1000475041&utm_medium=longurl"
+        }
+      ],
+      "studyProgramKeys": [
+        "HSGVEB"
+      ]
+    }
+  ]
+}

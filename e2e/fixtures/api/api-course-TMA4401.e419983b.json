@@ -1,0 +1,236 @@
+{
+  "url": "http://127.0.0.1:8788/api/course/TMA4401",
+  "status": 200,
+  "contentType": "application/json; charset=utf-8",
+  "body": {
+    "courseCode": "TMA4401",
+    "courseName": "Matematikk 1D: Kalkulus",
+    "credits": 7.5,
+    "level": "Grunnleggende emner, nivå I",
+    "teachingStart": "Høst 2026",
+    "teachingDuration": "1 semester",
+    "teachingLanguage": "Norsk",
+    "location": "Trondheim",
+    "assessmentScheme": "Skriftlig skoleeksamen",
+    "gradeRule": "Bokstavkarakterer",
+    "facts": [
+      {
+        "label": "Studiepoeng",
+        "value": "7,5"
+      },
+      {
+        "label": "Nivå",
+        "value": "Grunnleggende emner, nivå I"
+      },
+      {
+        "label": "Undervisningsstart",
+        "value": "Høst 2026"
+      },
+      {
+        "label": "Varighet",
+        "value": "1 semester"
+      },
+      {
+        "label": "Undervisningsspråk",
+        "value": "Norsk"
+      },
+      {
+        "label": "Sted",
+        "value": "Trondheim"
+      },
+      {
+        "label": "Vurderingsordning",
+        "value": "Skriftlig skoleeksamen"
+      }
+    ],
+    "content": "Følger. Kompletthetsegenskapen for reelle tall. Konvergens av følger (både punktvis og uniform konvergens). Kardinalitet og tellbarhet. Grensebegrepet.\nEgenskaper og teoremer knyttet til kontinuerlige funksjoner av én variabel: Kontinuitet, skjæringssetningen og ekstremalverdisetningen.\nDerivasjon av funksjoner av én variabel. Derivasjonsregler. Sekantsetningen. Optimering av funksjoner (finne maksima og minima).\nApproksimasjon av funksjoner med taylorpolynom. Taylors teorem.\nTranscendente funksjoner. Inverse funksjoner. Eksponentialfunksjoner og logaritmer. Trigonometriske funksjoner. Inverse trigonometriske funksjoner.\nDet bestemte integralet av funksjoner av én variabel. Riemannsummer. Analysens fundamentalteorem. Analytiske og numeriske integrasjonsteknikker. Areal av omdreiningsflater. Volum av omdreiningslegemer.\nRekker. Konvergenstester for rekker. Alternerende rekker. Potensrekker. Taylorrekker.\nSeparable og lineære differensialligninger. Eksistens og entydighet av løsninger. Analytiske og numeriske løsningsmetoder. Konvergens og feilanalyse. Stive differensialligninger.\nEksempler på matematisk modellering og anvendelser innenfor naturvitenskap og teknologi.",
+    "learningOutcome": "Studenten forstår og kan anvende grunnleggende begreper, resultater og metoder fra envariabel matematisk analyse knyttet til følger, kontinuitet, derivasjon, integrasjon, taylorpolynom og konvergens av rekker. Studenten har kunnskap om algoritmisk tenkning for å kunne forstå og anvende grunnleggende numeriske metoder for integrasjon og for løsning differensialligninger. Studenten kan videre analysere slike metoder med tanke på anvendbarhet og presisjon.\nStudenten kjenner til bruken av numeriske metoder i et programmeringsspråk og forstår muligheter og begrensninger som ligger i de ulike metodene i forhold til de problemer de anvendes på.\nStudenten kan anvende både analytiske og beregningsorienterte angrepsmåter til å formulere, modellere og løse enkle teknologiske problemer relevant for sitt studieprogram.\nEmnet vil primært bidra til kompetanseområde K1, vise fagkunnskaper og faglig fundert perspektiv. Det vil videre bidra til kompetanseområde K2, analysere ingeniørfaglige problemstillinger, i samarbeid med de enkelte studieprogrammene som emnet betjener.",
+    "learningMethods": "Forelesninger og obligatoriske øvinger. Antall øvinger som må godkjennes vil bli oppgitt ved semesterstart på hjemmesiden til emnet. Emnet vil undervises på norsk.",
+    "mandatoryActivities": [
+      "Obligatoriske øvinger"
+    ],
+    "assessmentDetails": "Karakter basert på avsluttende skriftlig eksamen. Ved utsatt eksamen (kontinuasjonseksamen) kan skriftlig eksamen bli endret til muntlig eksamen. Utsatt eksamen er i august.",
+    "specialConditions": null,
+    "requiredKnowledge": null,
+    "recommendedKnowledge": "Matematikk R2 fra videregående skole, eller tilsvarende kunnskaper.",
+    "courseMaterials": "Oppgis ved semesterstart.",
+    "creditReductions": [
+      {
+        "courseCode": "SIF5003",
+        "reduction": "5,5 sp",
+        "fromTerm": "Høst 2025"
+      },
+      {
+        "courseCode": "MA1101",
+        "reduction": "5,5 sp",
+        "fromTerm": "Høst 2025"
+      },
+      {
+        "courseCode": "MA1102",
+        "reduction": "2 sp",
+        "fromTerm": "Høst 2025"
+      },
+      {
+        "courseCode": "MA6101",
+        "reduction": "3,7 sp",
+        "fromTerm": "Høst 2025"
+      },
+      {
+        "courseCode": "MA6102",
+        "reduction": "3,7 sp",
+        "fromTerm": "Høst 2025"
+      },
+      {
+        "courseCode": "MA0001",
+        "reduction": "6 sp",
+        "fromTerm": "Høst 2025"
+      },
+      {
+        "courseCode": "MA0003",
+        "reduction": "6 sp",
+        "fromTerm": "Høst 2025"
+      },
+      {
+        "courseCode": "TMA4100",
+        "reduction": "7,5 sp",
+        "fromTerm": "Høst 2025"
+      },
+      {
+        "courseCode": "TMA4101",
+        "reduction": "5 sp",
+        "fromTerm": "Høst 2025"
+      },
+      {
+        "courseCode": "TMA4400",
+        "reduction": "5 sp",
+        "fromTerm": "Høst 2025"
+      },
+      {
+        "courseCode": "TMA4410",
+        "reduction": "2,5 sp",
+        "fromTerm": "Høst 2025"
+      },
+      {
+        "courseCode": "TMA4411",
+        "reduction": "2,5 sp",
+        "fromTerm": "Høst 2025"
+      },
+      {
+        "courseCode": "TMA4422",
+        "reduction": "2,5 sp",
+        "fromTerm": "Høst 2025"
+      },
+      {
+        "courseCode": "IMAA1002",
+        "reduction": "4 sp",
+        "fromTerm": "Høst 2025"
+      },
+      {
+        "courseCode": "IMAG1002",
+        "reduction": "4 sp",
+        "fromTerm": "Høst 2025"
+      },
+      {
+        "courseCode": "IMAT1002",
+        "reduction": "4 sp",
+        "fromTerm": "Høst 2025"
+      },
+      {
+        "courseCode": "IMAG1002F",
+        "reduction": "4 sp",
+        "fromTerm": "Høst 2026"
+      }
+    ],
+    "subjectAreas": [
+      "Matematikk",
+      "Teknologiske fag"
+    ],
+    "studyPrograms": [
+      {
+        "code": "BFY",
+        "name": "Fysikk"
+      },
+      {
+        "code": "MTFYMA",
+        "name": "Fysikk og matematikk"
+      }
+    ],
+    "contacts": [
+      {
+        "role": "Emneansvarlig/koordinator",
+        "persons": [
+          {
+            "name": "Dag Wessel-Berg",
+            "url": "https://www.ntnu.no/ansatte/dag.wessel-berg"
+          }
+        ]
+      }
+    ],
+    "department": "Institutt for matematiske fag",
+    "exams": [
+      {
+        "occasion": "Ordinær eksamen",
+        "season": "Høst 2026",
+        "form": "Skriftlig skoleeksamen",
+        "weighting": "100/100",
+        "aidCode": "Kode D",
+        "aidCodeDescription": "D: Ingen trykte eller håndskrevne hjelpemidler tillatt. Bestemt, enkel kalkulator tillatt.",
+        "date": "2026-11-23",
+        "dateText": "23.11.2026",
+        "time": "15:00",
+        "timeText": "15:00",
+        "duration": "4 timer",
+        "system": "Inspera Assessment",
+        "rooms": [
+          {
+            "building": "Sluppenvegen 14",
+            "room": "SL110 lilla sone",
+            "candidates": 45
+          },
+          {
+            "building": "Sluppenvegen 14",
+            "room": "SL111 blå sone",
+            "candidates": 25
+          },
+          {
+            "building": "Sluppenvegen 14",
+            "room": "SL410 blå sone",
+            "candidates": 51
+          },
+          {
+            "building": "Sluppenvegen 14",
+            "room": "SL410 orange sone",
+            "candidates": 25
+          }
+        ]
+      },
+      {
+        "occasion": "Utsatt eksamen",
+        "season": "Sommer 2027",
+        "form": "Skriftlig skoleeksamen",
+        "weighting": "100/100",
+        "aidCode": "Kode D",
+        "aidCodeDescription": "D: Ingen trykte eller håndskrevne hjelpemidler tillatt. Bestemt, enkel kalkulator tillatt.",
+        "date": null,
+        "dateText": null,
+        "time": null,
+        "timeText": null,
+        "duration": "4 timer",
+        "system": "Inspera Assessment",
+        "rooms": []
+      }
+    ],
+    "studyYear": 2026,
+    "availableYears": [
+      2026,
+      2025
+    ],
+    "notices": [],
+    "courseLinks": [
+      {
+        "label": "Faglærers emneside",
+        "url": "https://wiki.math.ntnu.no/tma4401"
+      }
+    ]
+  }
+}

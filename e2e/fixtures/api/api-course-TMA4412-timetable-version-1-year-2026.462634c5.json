@@ -1,0 +1,328 @@
+{
+  "url": "http://127.0.0.1:8788/api/course/TMA4412/timetable?year=2026&version=1",
+  "status": 200,
+  "contentType": "application/json; charset=utf-8",
+  "body": [
+    {
+      "courseCode": "TMA4412",
+      "courseName": {
+        "nob": "Matematikk 2C: Diskret matematikk",
+        "nno": "Matematikk 2C: Diskret matematikk",
+        "eng": "Mathematics 2C: Discrete Mathematics"
+      },
+      "acronym": "FORM",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Formidling",
+      "title": "Øvingsforelesing",
+      "dayNumber": 1,
+      "startTime": "12:15",
+      "endTime": "14:00",
+      "weeks": [
+        "34-47"
+      ],
+      "rooms": [
+        {
+          "id": "194_307_205",
+          "building": "Verkstedteknisk",
+          "room": "VE1",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=307-205"
+        }
+      ],
+      "studyProgramKeys": [
+        "BMAT",
+        "MTDT",
+        "MTKOM",
+        "ÅMATSTAT",
+        "MLREAL",
+        "BIELDIG",
+        "MTIØT",
+        "BDIGSEC",
+        "MTENERG",
+        "MTING"
+      ]
+    },
+    {
+      "courseCode": "TMA4412",
+      "courseName": {
+        "nob": "Matematikk 2C: Diskret matematikk",
+        "nno": "Matematikk 2C: Diskret matematikk",
+        "eng": "Mathematics 2C: Discrete Mathematics"
+      },
+      "acronym": "FORM",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Formidling",
+      "title": "Forelesning",
+      "dayNumber": 1,
+      "startTime": "08:15",
+      "endTime": "10:00",
+      "weeks": [
+        "34-47"
+      ],
+      "rooms": [
+        {
+          "id": "194_360_CU1-101",
+          "building": "Realfagbygget",
+          "room": "R1",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=360-CU1-101"
+        }
+      ],
+      "studyProgramKeys": [
+        "BMAT",
+        "MTDT",
+        "MTKOM",
+        "ÅMATSTAT",
+        "MLREAL",
+        "BIELDIG",
+        "MTIØT",
+        "BDIGSEC",
+        "MTENERG",
+        "MTING"
+      ]
+    },
+    {
+      "courseCode": "TMA4412",
+      "courseName": {
+        "nob": "Matematikk 2C: Diskret matematikk",
+        "nno": "Matematikk 2C: Diskret matematikk",
+        "eng": "Mathematics 2C: Discrete Mathematics"
+      },
+      "acronym": "DISAM",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Dialog- og samarbeidsbasert undervisning",
+      "title": "Mattelab 1",
+      "dayNumber": 3,
+      "startTime": "12:15",
+      "endTime": "14:00",
+      "weeks": [
+        "34-47"
+      ],
+      "rooms": [
+        {
+          "id": "194_322_105",
+          "building": "Sentralbygg 2",
+          "room": "S7",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=322-105"
+        }
+      ],
+      "studyProgramKeys": [
+        "BMAT",
+        "MTDT",
+        "MTKOM",
+        "ÅMATSTAT",
+        "MLREAL",
+        "BIELDIG",
+        "MTIØT",
+        "BDIGSEC",
+        "MTENERG",
+        "MTING",
+        "BKJ",
+        "MTNANO",
+        "MTINGGEO",
+        "MTGEORT",
+        "MTKMB",
+        "BGEOL"
+      ]
+    },
+    {
+      "courseCode": "TMA4412",
+      "courseName": {
+        "nob": "Matematikk 2C: Diskret matematikk",
+        "nno": "Matematikk 2C: Diskret matematikk",
+        "eng": "Mathematics 2C: Discrete Mathematics"
+      },
+      "acronym": "DISAM",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Dialog- og samarbeidsbasert undervisning",
+      "title": "Mattelab 1",
+      "dayNumber": 3,
+      "startTime": "14:15",
+      "endTime": "16:00",
+      "weeks": [
+        "34-47"
+      ],
+      "rooms": [
+        {
+          "id": "194_322_105",
+          "building": "Sentralbygg 2",
+          "room": "S7",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=322-105"
+        }
+      ],
+      "studyProgramKeys": [
+        "BMAT",
+        "MTDT",
+        "MTKOM",
+        "ÅMATSTAT",
+        "MLREAL",
+        "BIELDIG",
+        "MTIØT",
+        "BDIGSEC",
+        "MTENERG",
+        "MTING",
+        "BKJ",
+        "MTNANO",
+        "MTINGGEO",
+        "MTGEORT",
+        "MTKMB",
+        "BGEOL"
+      ]
+    },
+    {
+      "courseCode": "TMA4412",
+      "courseName": {
+        "nob": "Matematikk 2C: Diskret matematikk",
+        "nno": "Matematikk 2C: Diskret matematikk",
+        "eng": "Mathematics 2C: Discrete Mathematics"
+      },
+      "acronym": "FORM",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Formidling",
+      "title": "Forelesning",
+      "dayNumber": 3,
+      "startTime": "08:15",
+      "endTime": "10:00",
+      "weeks": [
+        "34-47"
+      ],
+      "rooms": [
+        {
+          "id": "194_360_CU1-101",
+          "building": "Realfagbygget",
+          "room": "R1",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=360-CU1-101"
+        }
+      ],
+      "studyProgramKeys": [
+        "BMAT",
+        "MTDT",
+        "MTKOM",
+        "ÅMATSTAT",
+        "MLREAL",
+        "BIELDIG",
+        "MTIØT",
+        "BDIGSEC",
+        "MTENERG",
+        "MTING"
+      ]
+    },
+    {
+      "courseCode": "TMA4412",
+      "courseName": {
+        "nob": "Matematikk 2C: Diskret matematikk",
+        "nno": "Matematikk 2C: Diskret matematikk",
+        "eng": "Mathematics 2C: Discrete Mathematics"
+      },
+      "acronym": "DISAM",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Dialog- og samarbeidsbasert undervisning",
+      "title": "Mattelab 2",
+      "dayNumber": 4,
+      "startTime": "14:15",
+      "endTime": "16:00",
+      "weeks": [
+        "34-47"
+      ],
+      "rooms": [
+        {
+          "id": "194_322_146",
+          "building": "Sentralbygg 2",
+          "room": "S6",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=322-146"
+        }
+      ],
+      "studyProgramKeys": [
+        "BMAT",
+        "MTKOM",
+        "MLREAL",
+        "BIELDIG",
+        "MTENERG",
+        "MTDT",
+        "MTMART",
+        "ÅMATSTAT",
+        "MTIØT",
+        "BDIGSEC",
+        "MTBYGG",
+        "MTDESIG",
+        "MTMASKIN",
+        "MTING"
+      ]
+    },
+    {
+      "courseCode": "TMA4412",
+      "courseName": {
+        "nob": "Matematikk 2C: Diskret matematikk",
+        "nno": "Matematikk 2C: Diskret matematikk",
+        "eng": "Mathematics 2C: Discrete Mathematics"
+      },
+      "acronym": "DISAM",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Dialog- og samarbeidsbasert undervisning",
+      "title": "Mattelab 2",
+      "dayNumber": 4,
+      "startTime": "12:15",
+      "endTime": "14:00",
+      "weeks": [
+        "34-47"
+      ],
+      "rooms": [
+        {
+          "id": "194_322_105",
+          "building": "Sentralbygg 2",
+          "room": "S7",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=322-105"
+        }
+      ],
+      "studyProgramKeys": [
+        "BMAT",
+        "MTKOM",
+        "MLREAL",
+        "BIELDIG",
+        "MTENERG",
+        "MTDT",
+        "MTMART",
+        "ÅMATSTAT",
+        "MTIØT",
+        "BDIGSEC",
+        "MTBYGG",
+        "MTDESIG",
+        "MTMASKIN",
+        "MTING"
+      ]
+    },
+    {
+      "courseCode": "TMA4412",
+      "courseName": {
+        "nob": "Matematikk 2C: Diskret matematikk",
+        "nno": "Matematikk 2C: Diskret matematikk",
+        "eng": "Mathematics 2C: Discrete Mathematics"
+      },
+      "acronym": "DISAM",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Dialog- og samarbeidsbasert undervisning",
+      "title": "Regneverksted",
+      "dayNumber": 5,
+      "startTime": "13:15",
+      "endTime": "16:00",
+      "weeks": [
+        "49"
+      ],
+      "rooms": [
+        {
+          "id": "194_307_243",
+          "building": "Verkstedteknisk",
+          "room": "VE24",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=307-243"
+        }
+      ],
+      "studyProgramKeys": []
+    }
+  ]
+}

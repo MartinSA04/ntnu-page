@@ -1,0 +1,372 @@
+{
+  "url": "http://127.0.0.1:8788/api/course/TDT4100/timetable?year=2026&version=1",
+  "status": 200,
+  "contentType": "application/json; charset=utf-8",
+  "body": [
+    {
+      "courseCode": "TDT4100",
+      "courseName": {
+        "nob": "Objektorientert programmering",
+        "nno": "Objektorientert programmering",
+        "eng": "Object-Oriented Programming"
+      },
+      "acronym": "FORM",
+      "term": "2026_VÅR",
+      "termNumber": 1,
+      "name": "Formidling",
+      "title": "Forelesning 1",
+      "dayNumber": 1,
+      "startTime": "12:15",
+      "endTime": "14:00",
+      "weeks": [
+        "2-13",
+        "15-18"
+      ],
+      "rooms": [
+        {
+          "id": "194_318_152",
+          "building": "IT-bygget, sydfløy",
+          "room": "F1",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=318-152"
+        }
+      ],
+      "studyProgramKeys": [
+        "BKJ",
+        "MTDT",
+        "MBIOT5",
+        "MTKOM",
+        "MLREAL",
+        "MTIØT",
+        "BDIGSEC",
+        "BSØK",
+        "BIT",
+        "MSIVØK5",
+        "MTING"
+      ]
+    },
+    {
+      "courseCode": "TDT4100",
+      "courseName": {
+        "nob": "Objektorientert programmering",
+        "nno": "Objektorientert programmering",
+        "eng": "Object-Oriented Programming"
+      },
+      "acronym": "DISAM-P",
+      "term": "2026_VÅR",
+      "termNumber": 1,
+      "name": "Dialog- og samarbeidsbasert undervisning",
+      "title": "Laboratorieøvelse",
+      "dayNumber": 1,
+      "startTime": "08:15",
+      "endTime": "18:00",
+      "weeks": [
+        "2-13",
+        "15-18"
+      ],
+      "rooms": [
+        {
+          "id": "194_360_A4-156",
+          "building": "Realfagbygget",
+          "room": "A4-156",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=360-A4-156"
+        }
+      ],
+      "studyProgramKeys": []
+    },
+    {
+      "courseCode": "TDT4100",
+      "courseName": {
+        "nob": "Objektorientert programmering",
+        "nno": "Objektorientert programmering",
+        "eng": "Object-Oriented Programming"
+      },
+      "acronym": "DISAM-P",
+      "term": "2026_VÅR",
+      "termNumber": 1,
+      "name": "Dialog- og samarbeidsbasert undervisning",
+      "title": "Lab BDIGSEC",
+      "dayNumber": 1,
+      "startTime": "08:15",
+      "endTime": "12:00",
+      "weeks": [
+        "2-13",
+        "15-18"
+      ],
+      "rooms": [
+        {
+          "id": "194_360_A2-127",
+          "building": "Realfagbygget",
+          "room": "R52",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=360-A2-127"
+        }
+      ],
+      "studyProgramKeys": []
+    },
+    {
+      "courseCode": "TDT4100",
+      "courseName": {
+        "nob": "Objektorientert programmering",
+        "nno": "Objektorientert programmering",
+        "eng": "Object-Oriented Programming"
+      },
+      "acronym": "FORM",
+      "term": "2026_VÅR",
+      "termNumber": 1,
+      "name": "Formidling",
+      "title": "Forelesning 1",
+      "dayNumber": 2,
+      "startTime": "14:15",
+      "endTime": "16:00",
+      "weeks": [
+        "2-13",
+        "15-18"
+      ],
+      "rooms": [
+        {
+          "id": "194_360_CU1-101",
+          "building": "Realfagbygget",
+          "room": "R1",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=360-CU1-101"
+        }
+      ],
+      "studyProgramKeys": [
+        "BKJ",
+        "MTDT",
+        "MBIOT5",
+        "MTKOM",
+        "MLREAL",
+        "MTIØT",
+        "BDIGSEC",
+        "BSØK",
+        "BIT",
+        "MSIVØK5",
+        "MTING"
+      ]
+    },
+    {
+      "courseCode": "TDT4100",
+      "courseName": {
+        "nob": "Objektorientert programmering",
+        "nno": "Objektorientert programmering",
+        "eng": "Object-Oriented Programming"
+      },
+      "acronym": "DISAM-P",
+      "term": "2026_VÅR",
+      "termNumber": 1,
+      "name": "Dialog- og samarbeidsbasert undervisning",
+      "title": "Laboratorieøvelse",
+      "dayNumber": 2,
+      "startTime": "08:15",
+      "endTime": "18:00",
+      "weeks": [
+        "2-13",
+        "15-18"
+      ],
+      "rooms": [
+        {
+          "id": "194_360_A4-156",
+          "building": "Realfagbygget",
+          "room": "A4-156",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=360-A4-156"
+        }
+      ],
+      "studyProgramKeys": []
+    },
+    {
+      "courseCode": "TDT4100",
+      "courseName": {
+        "nob": "Objektorientert programmering",
+        "nno": "Objektorientert programmering",
+        "eng": "Object-Oriented Programming"
+      },
+      "acronym": "DISAM-P",
+      "term": "2026_VÅR",
+      "termNumber": 1,
+      "name": "Dialog- og samarbeidsbasert undervisning",
+      "title": "Laboratorieøvelse",
+      "dayNumber": 3,
+      "startTime": "08:15",
+      "endTime": "18:00",
+      "weeks": [
+        "2-13",
+        "15-18"
+      ],
+      "rooms": [
+        {
+          "id": "194_360_A4-156",
+          "building": "Realfagbygget",
+          "room": "A4-156",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=360-A4-156"
+        }
+      ],
+      "studyProgramKeys": []
+    },
+    {
+      "courseCode": "TDT4100",
+      "courseName": {
+        "nob": "Objektorientert programmering",
+        "nno": "Objektorientert programmering",
+        "eng": "Object-Oriented Programming"
+      },
+      "acronym": "DISAM",
+      "term": "2026_VÅR",
+      "termNumber": 1,
+      "name": "Dialog- og samarbeidsbasert undervisning",
+      "title": "Labøving Excited arbeidsdag",
+      "dayNumber": 3,
+      "startTime": "16:15",
+      "endTime": "20:00",
+      "weeks": [
+        "3-13",
+        "15-17"
+      ],
+      "rooms": [
+        {
+          "id": "194_360_A2-127",
+          "building": "Realfagbygget",
+          "room": "R52",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=360-A2-127"
+        }
+      ],
+      "studyProgramKeys": [
+        "MTDT",
+        "MBIOT5",
+        "MTKOM",
+        "MLREAL",
+        "MTIØT",
+        "BDIGSEC",
+        "BIT",
+        "MSIVØK5",
+        "MTING"
+      ]
+    },
+    {
+      "courseCode": "TDT4100",
+      "courseName": {
+        "nob": "Objektorientert programmering",
+        "nno": "Objektorientert programmering",
+        "eng": "Object-Oriented Programming"
+      },
+      "acronym": "DISAM-P",
+      "term": "2026_VÅR",
+      "termNumber": 1,
+      "name": "Dialog- og samarbeidsbasert undervisning",
+      "title": "Laboratorieøvelse",
+      "dayNumber": 4,
+      "startTime": "08:00",
+      "endTime": "18:00",
+      "weeks": [
+        "2-13",
+        "15-18"
+      ],
+      "rooms": [
+        {
+          "id": "194_360_A4-156",
+          "building": "Realfagbygget",
+          "room": "A4-156",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=360-A4-156"
+        }
+      ],
+      "studyProgramKeys": []
+    },
+    {
+      "courseCode": "TDT4100",
+      "courseName": {
+        "nob": "Objektorientert programmering",
+        "nno": "Objektorientert programmering",
+        "eng": "Object-Oriented Programming"
+      },
+      "acronym": "DISAM-P",
+      "term": "2026_VÅR",
+      "termNumber": 1,
+      "name": "Dialog- og samarbeidsbasert undervisning",
+      "title": "Lab BDIGSEC",
+      "dayNumber": 4,
+      "startTime": "14:15",
+      "endTime": "18:00",
+      "weeks": [
+        "2-13",
+        "15-18"
+      ],
+      "rooms": [
+        {
+          "id": "194_360_A2-127",
+          "building": "Realfagbygget",
+          "room": "R52",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=360-A2-127"
+        }
+      ],
+      "studyProgramKeys": []
+    },
+    {
+      "courseCode": "TDT4100",
+      "courseName": {
+        "nob": "Objektorientert programmering",
+        "nno": "Objektorientert programmering",
+        "eng": "Object-Oriented Programming"
+      },
+      "acronym": "DISAM-P",
+      "term": "2026_VÅR",
+      "termNumber": 1,
+      "name": "Dialog- og samarbeidsbasert undervisning",
+      "title": "Laboratorieøvelse",
+      "dayNumber": 5,
+      "startTime": "08:00",
+      "endTime": "16:00",
+      "weeks": [
+        "2-13",
+        "15-18"
+      ],
+      "rooms": [
+        {
+          "id": "194_360_A4-156",
+          "building": "Realfagbygget",
+          "room": "A4-156",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=360-A4-156"
+        }
+      ],
+      "studyProgramKeys": []
+    },
+    {
+      "courseCode": "TDT4100",
+      "courseName": {
+        "nob": "Objektorientert programmering",
+        "nno": "Objektorientert programmering",
+        "eng": "Object-Oriented Programming"
+      },
+      "acronym": "FORM",
+      "term": "2026_VÅR",
+      "termNumber": 1,
+      "name": "Formidling",
+      "title": "Øvingsforelesning 1",
+      "dayNumber": 5,
+      "startTime": "14:15",
+      "endTime": "16:00",
+      "weeks": [
+        "2-13",
+        "15-17"
+      ],
+      "rooms": [
+        {
+          "id": "194_360_CU1-101",
+          "building": "Realfagbygget",
+          "room": "R1",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=360-CU1-101"
+        }
+      ],
+      "studyProgramKeys": [
+        "BKJ",
+        "MTDT",
+        "MBIOT5",
+        "MTKOM",
+        "MLREAL",
+        "MTIØT",
+        "BDIGSEC",
+        "BSØK",
+        "BIT",
+        "MSIVØK5",
+        "MTING"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,154 @@
+{
+  "url": "http://127.0.0.1:8788/api/course/IT1901",
+  "status": 200,
+  "contentType": "application/json; charset=utf-8",
+  "body": {
+    "courseCode": "IT1901",
+    "courseName": "Informatikk prosjektarbeid I",
+    "credits": 7.5,
+    "level": "Videregående emner, nivå II",
+    "teachingStart": "Høst 2026",
+    "teachingDuration": "1 semester",
+    "teachingLanguage": "Norsk",
+    "location": "Trondheim",
+    "assessmentScheme": "Mappevurdering",
+    "gradeRule": "Bokstavkarakterer",
+    "facts": [
+      {
+        "label": "Studiepoeng",
+        "value": "7,5"
+      },
+      {
+        "label": "Nivå",
+        "value": "Videregående emner, nivå II"
+      },
+      {
+        "label": "Undervisningsstart",
+        "value": "Høst 2026"
+      },
+      {
+        "label": "Varighet",
+        "value": "1 semester"
+      },
+      {
+        "label": "Undervisningsspråk",
+        "value": "Norsk"
+      },
+      {
+        "label": "Sted",
+        "value": "Trondheim"
+      },
+      {
+        "label": "Vurderingsordning",
+        "value": "Mappevurdering"
+      }
+    ],
+    "content": "Emnet gir kunnskap og ferdigheter i smidig applikasjonsutvikling i team. Applikasjonen vil bruke en klientserverarkitektur, strukturert i moduler og konfigurert med et byggesystem. Gruppene vil bruke et system for sporing av utviklingsoppgaver, kildekodeadministrasjon og kodevurdering. Fokuset er mer på kodekvalitet og testing, enn på funksjonalitet.",
+    "learningOutcome": "Kunnskap:\nhar kunnskap om smidig programvareutviklingspraksis, og kunne forklare teknikker som korte utviklingssykluser, parprogrammering og testdrevet utvikling.\nhar kunnskap om objektorienterte designprinsipper, kodekvaliteter og verktøy og teknikker for å forbedre dem\nhar kunnskap om teknikker og rammer for automatisk testing av programvare\nhar kunnskap om problemsporing, kildekodeadministrasjon, kontinuerlig integrasjon med automatiske bygg og deres rolle i smidig utvikling.\nhar kunnskap om programvarearkitekturen til desktop og web klienter ved å bruke en REST API-server og hvordan den visualiseres og dokumenteres Ferdigheter:\nkan skrive brukerhistorier, transformere dem om til utviklingsoppgaver som administreres av et sporingssystem og bruke et kildekodeadministrasjonssystem med forgrening og sammenslåing for å følge dem opp.\nkan designe, skrive og teste kode for desktop-klient og REST API-server, ved hjelp av moderne verktøy for utvikling- og kvalitetsvurdering\nkan strukturere programvare som moduler og konfigurere et byggesystem for å håndtere kjøring og testing av alle deler\nkan dokumentere programvaren med lettvekts formater og verktøy Generelle kompetanser:\nkan planlegge og koordinere småskala utviklingsprosesser\nkan reflektere over både tekniske og organisatoriske aspekter av et programvareutviklingsprosjekt.",
+    "learningMethods": "Læringsmetoder: 1) Praktiske programmeringsoppgaver 2) Gruppearbeid og refleksjon 3) Forelesninger og presentasjoner i grupper. Aktiviteter: a) Praktisk programmering og bruk av ulike verktøy b) Gruppearbeid og prosjektstyring c) Utvikling av et programvareprodukt\nFor å få obligatorisk aktivitet godkjent må studenter ha:\nminst 75% oppmøte ved forelesninger\nminst 75% oppmøte til gruppemøter med læringsassistent\ngodkjent individuell øving(er)\ngodkjent gruppekontrakt\nObligatorisk aktivitet må være godkjent for å få karakter i emnet. Instituttet kan i særskilte tilfeller innvilge søknad om lavere oppmøte.",
+    "mandatoryActivities": [
+      "Øvinger, oppmøte og gruppekontrakt"
+    ],
+    "assessmentDetails": "Emnet inkluderer obligatoriske, ikke-karaktergivende innleveringer (obligatorisk aktivitet).\nMappeevaluering gir grunnlag for sluttkarakteren i emnet. Vurdering gjøres på bakgrunn av både individuelle og gruppebaserte innleveringer.\nMappen består av:\n* 3 gruppebaserte innleveringer - (prosjekt, 70 % av karakteren) Studentene jobber i grupper med et semesterlangt prosjekt. Ulike faser av arbeidet leveres som innleveringer.\n- 1. gruppeleveranse - 10 %, estimert levering i uke 38\n- 2. gruppeleveranse - 10 %, estimert levering i uke 41\n- 3. gruppeleveranse - 50 %, estimert levering i uke 46\n* 1 individuell innlevering - (rapport, 30 % av karakteren)\n- estimert levering av rapporten er siste dag i eksamensperioden (uke 51)\nGrupper har en fast læringssassistent som vil gi veiledning og tilbakemelding.\nFor å bli vurdert må studentene ha godkjent de obligatoriske aktivitetene og oppfylle minimumskravene til oppmøte.\nVed frivillig gjentak, stryk eller gyldig fravær, må hele prosjektet og mappen tas på nytt.",
+    "specialConditions": "Krever opptak til studieprogram:\nDatateknologi (MTDT)\nInformatikk (BIT)\nLektorutdanning i realfag for trinn 8 – 13 (MLREAL)",
+    "requiredKnowledge": "Emnet er kun tilgjengelig for studenter som er tatt opp på Bachelor i informatikk, lektorutdanning i realfag (studieretningen for matematikk og informatikk) og 5-årig Master i datateknologi.",
+    "recommendedKnowledge": "TDT4100 Objektorientert programmering eller tilsvarende",
+    "courseMaterials": "Oppgis ved semesterstart.",
+    "creditReductions": [
+      {
+        "courseCode": "MNFIT191",
+        "reduction": "7,5 sp",
+        "fromTerm": null
+      }
+    ],
+    "subjectAreas": [
+      "Datateknikk",
+      "Informatikk"
+    ],
+    "studyPrograms": [
+      {
+        "code": "MTDT",
+        "name": "Datateknologi"
+      },
+      {
+        "code": "BIT",
+        "name": "Informatikk"
+      },
+      {
+        "code": "MLREAL",
+        "name": "Lektorutdanning i realfag for trinn 8 – 13"
+      }
+    ],
+    "contacts": [
+      {
+        "role": "Emneansvarlig/koordinator",
+        "persons": [
+          {
+            "name": "George Adrian Stoica",
+            "url": "https://www.ntnu.no/ansatte/stoica"
+          }
+        ]
+      }
+    ],
+    "department": "Institutt for datateknologi og informatikk",
+    "exams": [
+      {
+        "occasion": "Ordinær eksamen",
+        "season": "Høst 2026",
+        "form": "Mappevurdering",
+        "weighting": "100/100",
+        "aidCode": null,
+        "aidCodeDescription": null,
+        "date": null,
+        "dateText": null,
+        "time": null,
+        "timeText": null,
+        "duration": null,
+        "system": "Inspera Assessment",
+        "rooms": []
+      }
+    ],
+    "studyYear": 2026,
+    "availableYears": [
+      2026,
+      2025,
+      2024,
+      2023,
+      2022,
+      2021,
+      2020,
+      2019,
+      2018,
+      2017,
+      2016,
+      2015,
+      2014,
+      2013,
+      2012,
+      2011,
+      2010,
+      2009,
+      2008,
+      2007
+    ],
+    "notices": [],
+    "courseLinks": [
+      {
+        "label": "Blackboard - HØST-2021",
+        "url": "https://ntnu.blackboard.com/webapps/login?action=guest_login&new_loc=/webapps/blackboard/execute/courseMain?course_id=_27131_1"
+      },
+      {
+        "label": "Blackboard - HØST-2020",
+        "url": "https://ntnu.blackboard.com/webapps/login?action=guest_login&new_loc=/webapps/blackboard/execute/courseMain?course_id=_21464_1"
+      },
+      {
+        "label": "Blackboard - HØST-2019",
+        "url": "https://ntnu.blackboard.com/webapps/login?action=guest_login&new_loc=/webapps/blackboard/execute/courseMain?course_id=_16886_1"
+      },
+      {
+        "label": "Blackboard - HØST-2017",
+        "url": "https://ntnu.blackboard.com/webapps/login?action=guest_login&new_loc=/webapps/blackboard/execute/courseMain?course_id=_3691_1"
+      }
+    ]
+  }
+}

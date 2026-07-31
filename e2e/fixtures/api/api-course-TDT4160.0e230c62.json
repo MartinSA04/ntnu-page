@@ -1,0 +1,252 @@
+{
+  "url": "http://127.0.0.1:8788/api/course/TDT4160",
+  "status": 200,
+  "contentType": "application/json; charset=utf-8",
+  "body": {
+    "courseCode": "TDT4160",
+    "courseName": "Datamaskiner",
+    "credits": 7.5,
+    "level": "Videregående emner, nivå II",
+    "teachingStart": "Høst 2026",
+    "teachingDuration": "1 semester",
+    "teachingLanguage": "Norsk",
+    "location": "Trondheim",
+    "assessmentScheme": "Skriftlig skoleeksamen",
+    "gradeRule": "Bokstavkarakterer",
+    "facts": [
+      {
+        "label": "Studiepoeng",
+        "value": "7,5"
+      },
+      {
+        "label": "Nivå",
+        "value": "Videregående emner, nivå II"
+      },
+      {
+        "label": "Undervisningsstart",
+        "value": "Høst 2026"
+      },
+      {
+        "label": "Varighet",
+        "value": "1 semester"
+      },
+      {
+        "label": "Undervisningsspråk",
+        "value": "Norsk"
+      },
+      {
+        "label": "Sted",
+        "value": "Trondheim"
+      },
+      {
+        "label": "Vurderingsordning",
+        "value": "Skriftlig skoleeksamen"
+      }
+    ],
+    "content": "Emnet vil inneholde terminologi, prinsipper og begrep for konstruksjon og virkemåte for ulike typer moderne datamaskiner og annet datateknisk utstyr.\nVidere hvordan datamaskiner (og andre digitale maskiner) er bygget opp av kombinatoriske og sekvensielle byggeblokker. Oppbygging (organisering), virkemåte og realisering av datamaskiner og datamaskinsystemer.\nDatamaskinkonstruksjon på forskjellige nivå, instruksjonsformat, adresseringsmodi, prosessorarkitekturer og -typer. Grensesnitt mellom maskinvare og programvare, sammenkobling av komponenter, avbrudd, busser, minnehierarki og hurtigbuffer (Eng. cache). Kort introduksjon til distribuerte systemer, innvevde (\"embedded\") systemer, parallelle datamaskiner, nye teknologier og nye anvendelser (applikasjoner).",
+    "learningOutcome": "Kunnskaper:\nStudenten skal kjenne til datamaskiners konstruksjon og virkemåte, inkludert prinsippene for hvordan man oppnår høy effektivitet.\nStudenten skal forstå hvordan datamaskinens instruksjonssett realiserer grensesnittet mellom programvare og maskinvare på en effektiv måte.\nStudenten skal forstå hvordan man bygger enkle og effektive prosessorer, inkludert enkeltsykel, flersykel, og samlebåndsarkitekturer samt kjenne til prinsippene for hvordan avanserte prosessorer oppnår høy ytelse.\nStudenten skal forstå hvordan man konstruerer enkle aritmetiske-logiske enheter for heltall samt ha grunnleggende innsikt i flyttallsaritmetikk.\nStudenten skal forstå prinsippene bak hvordan man bygger effektive minnesystemer, inkludert hurtigbuffere og virtuelt minne.\nStudenten skal forstå begrensningene ved datamaskiner som benytter én prosessor samt hvordan multiprosessorer, grafikkprosessorer, og domene-spesifikke akseleratorer kan adressere disse begrensningene.\nFerdigheter:\nStudenten skal være i stand til å formulere enkle programmer i assemblykode.\nStudenten skal være i stand til å lese blokkdiagrammer.\nStudenten skal kunne relatere blokkdiagrammer og skjemategninger på ulike abstraksjonsnivå til hverandre.\nGenerell kompetanse:\nStudenten skal forstå den generelle virkemåten til en datamaskin og kunne anvende denne kunnskapen i prosjekter på alle abstraksjonsnivå.",
+    "learningMethods": "Forelesninger og øvinger.\nØvingene er obligatoriske og dekker både teori og praksis. De teoretiske øvingene fokuserer på viktige konsepter i pensum, for eksempel ytelsesberegning, oversettelse fra instruksjoner til kontrollord, beregning av aksesstid på hurtigbuffere, og refleksjon rundt datamaskinens oppførsel. De praktiske øvingene fokuserer på assemblyprogrammering i simulatoren Ripes.",
+    "mandatoryActivities": [
+      "Øvinger"
+    ],
+    "assessmentDetails": "Utsatt eksamen for skriftlig skoleeksamen avholdes i august, og eksamensform kan bli endret fra skriftlig skoleeksamen til muntlig eksamen.",
+    "specialConditions": null,
+    "requiredKnowledge": null,
+    "recommendedKnowledge": "TDT4100 Objektorientert programmering eller tilsvarende kunnskaper i høynivåprogrammering.",
+    "courseMaterials": "Patterson and Hennessy, Computer Organization and Design RISC-V Edition: The Hardware Software Interface (2nd Edition), Morgan Kaufmann Publishers, 2020, Paperback ISBN: 9780128203316, eBook ISBN: 9780128245583",
+    "creditReductions": [
+      {
+        "courseCode": "SIF8026",
+        "reduction": "7,5 sp",
+        "fromTerm": null
+      },
+      {
+        "courseCode": "IT2201",
+        "reduction": "7,5 sp",
+        "fromTerm": "Vår 2006"
+      },
+      {
+        "courseCode": "TFE4105",
+        "reduction": "3,7 sp",
+        "fromTerm": "Høst 2010"
+      }
+    ],
+    "subjectAreas": [
+      "Informatikk",
+      "Teknologiske fag"
+    ],
+    "studyPrograms": [
+      {
+        "code": "MTKOM",
+        "name": "Cybersikkerhet og datakommunikasjon"
+      },
+      {
+        "code": "MTDT",
+        "name": "Datateknologi"
+      },
+      {
+        "code": "MTELSYS",
+        "name": "Elektronisk systemdesign og innovasjon"
+      },
+      {
+        "code": "MSIT",
+        "name": "Informatics"
+      },
+      {
+        "code": "BIT",
+        "name": "Informatikk"
+      },
+      {
+        "code": "MTTK",
+        "name": "Kybernetikk og robotikk"
+      },
+      {
+        "code": "MLREAL",
+        "name": "Lektorutdanning i realfag for trinn 8 – 13"
+      }
+    ],
+    "contacts": [
+      {
+        "role": "Emneansvarlig/koordinator",
+        "persons": [
+          {
+            "name": "Magnus Jahre",
+            "url": "https://www.ntnu.no/ansatte/magnus.jahre"
+          }
+        ]
+      }
+    ],
+    "department": "Institutt for datateknologi og informatikk",
+    "exams": [
+      {
+        "occasion": "Ordinær eksamen",
+        "season": "Høst 2026",
+        "form": "Skriftlig skoleeksamen",
+        "weighting": "100/100",
+        "aidCode": "Kode D",
+        "aidCodeDescription": "D: Ingen trykte eller håndskrevne hjelpemidler tillatt. Bestemt, enkel kalkulator tillatt.",
+        "date": "2026-12-16",
+        "dateText": "16.12.2026",
+        "time": "09:00",
+        "timeText": "09:00",
+        "duration": "4 timer",
+        "system": "Inspera Assessment",
+        "rooms": [
+          {
+            "building": "Sluppenvegen 14",
+            "room": "SL110 hvit sone",
+            "candidates": 64
+          },
+          {
+            "building": "Sluppenvegen 14",
+            "room": "SL110 lilla sone",
+            "candidates": 64
+          },
+          {
+            "building": "Sluppenvegen 14",
+            "room": "SL110 turkis sone",
+            "candidates": 46
+          },
+          {
+            "building": "Sluppenvegen 14",
+            "room": "SL111 blå sone",
+            "candidates": 36
+          },
+          {
+            "building": "Sluppenvegen 14",
+            "room": "SL111 grønn sone",
+            "candidates": 50
+          },
+          {
+            "building": "Sluppenvegen 14",
+            "room": "SL111 orange sone",
+            "candidates": 60
+          },
+          {
+            "building": "Sluppenvegen 14",
+            "room": "SL210",
+            "candidates": 51
+          },
+          {
+            "building": "Sluppenvegen 14",
+            "room": "SL311 brun sone",
+            "candidates": 82
+          },
+          {
+            "building": "Sluppenvegen 14",
+            "room": "SL311 lyseblå sone",
+            "candidates": 22
+          },
+          {
+            "building": "Sluppenvegen 14",
+            "room": "SL410 blå sone",
+            "candidates": 51
+          },
+          {
+            "building": "Sluppenvegen 14",
+            "room": "SL410 orange sone",
+            "candidates": 58
+          },
+          {
+            "building": "Sluppenvegen 14",
+            "room": "SL415",
+            "candidates": 53
+          }
+        ]
+      },
+      {
+        "occasion": "Utsatt eksamen",
+        "season": "Sommer 2027",
+        "form": "Skriftlig skoleeksamen",
+        "weighting": "100/100",
+        "aidCode": "Kode D",
+        "aidCodeDescription": "D: Ingen trykte eller håndskrevne hjelpemidler tillatt. Bestemt, enkel kalkulator tillatt.",
+        "date": null,
+        "dateText": null,
+        "time": null,
+        "timeText": null,
+        "duration": "4 timer",
+        "system": "Inspera Assessment",
+        "rooms": []
+      }
+    ],
+    "studyYear": 2026,
+    "availableYears": [
+      2026,
+      2025,
+      2024,
+      2023,
+      2022,
+      2021,
+      2020,
+      2019,
+      2018,
+      2017,
+      2016,
+      2015,
+      2014,
+      2013,
+      2012,
+      2011,
+      2010,
+      2009,
+      2008,
+      2007
+    ],
+    "notices": [],
+    "courseLinks": [
+      {
+        "label": "Blackboard - HØST-2025",
+        "url": "https://ntnu.blackboard.com/webapps/login?action=guest_login&new_loc=/webapps/blackboard/execute/courseMain?course_id=_56260_1"
+      },
+      {
+        "label": "Blackboard - HØST-2024",
+        "url": "https://ntnu.blackboard.com/webapps/login?action=guest_login&new_loc=/webapps/blackboard/execute/courseMain?course_id=_50175_1"
+      },
+      {
+        "label": "Blackboard - HØST-2017",
+        "url": "https://ntnu.blackboard.com/webapps/login?action=guest_login&new_loc=/webapps/blackboard/execute/courseMain?course_id=_5953_1"
+      }
+    ]
+  }
+}

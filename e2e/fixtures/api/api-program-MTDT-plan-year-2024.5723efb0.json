@@ -1,0 +1,1307 @@
+{
+  "url": "http://127.0.0.1:8788/api/program/MTDT/plan?year=2024",
+  "status": 200,
+  "contentType": "application/json; charset=utf-8",
+  "body": {
+    "code": "MTDT",
+    "name": "Datateknologi - master (5-årig)",
+    "year": 2024,
+    "startTerm": "HØST",
+    "updated": "12-05-2026 at 04:53:33",
+    "periods": [
+      {
+        "periodNumber": 1,
+        "direction": {
+          "code": null,
+          "name": null,
+          "courseGroups": [
+            {
+              "code": "MTDTÅR1-24",
+              "name": "1. år Master i datateknologi - 5-årig",
+              "description": null,
+              "courses": [
+                {
+                  "code": "EXPH0300",
+                  "version": "1",
+                  "name": "Examen philosophicum for naturvitenskap og teknologi",
+                  "credits": 7.5,
+                  "planElement": false,
+                  "studyChoice": {
+                    "code": "O",
+                    "name": "Obligatorisk emne",
+                    "description": "Obligatorisk emne"
+                  }
+                },
+                {
+                  "code": "HMS0002",
+                  "version": "1",
+                  "name": "HMS-kurs for 1. årsstudenter",
+                  "credits": 0,
+                  "planElement": false,
+                  "studyChoice": {
+                    "code": "O",
+                    "name": "Obligatorisk emne",
+                    "description": "Obligatorisk emne"
+                  }
+                },
+                {
+                  "code": "TDT4109",
+                  "version": "1",
+                  "name": "Informasjonsteknologi, grunnkurs",
+                  "credits": 7.5,
+                  "planElement": false,
+                  "studyChoice": {
+                    "code": "O",
+                    "name": "Obligatorisk emne",
+                    "description": "Obligatorisk emne"
+                  }
+                },
+                {
+                  "code": "TMA4100",
+                  "version": "1",
+                  "name": "Matematikk 1",
+                  "credits": 7.5,
+                  "planElement": false,
+                  "studyChoice": {
+                    "code": "O",
+                    "name": "Obligatorisk emne",
+                    "description": "Obligatorisk emne"
+                  }
+                },
+                {
+                  "code": "TMA4140",
+                  "version": "1",
+                  "name": "Diskret matematikk",
+                  "credits": 7.5,
+                  "planElement": false,
+                  "studyChoice": {
+                    "code": "O",
+                    "name": "Obligatorisk emne",
+                    "description": "Obligatorisk emne"
+                  }
+                }
+              ]
+            },
+            {
+              "code": "SIVING-ARBERFARING24",
+              "name": "Krav om arbeidslivserfaring (praksis)",
+              "description": "Alle studenter ved NTNU som går studieprogram som gir tilleggsbetegnelsen sivilingeniør på vitnemålet må ha oppfylt kravet om arbeidslivserfaring før de kan begynne på masteroppgaven. Les mer om kravet i \"Forskrift om arbeidslivserfaring for sivilingeniørutdanningen ved NTNU\", https://i.ntnu.no/wiki/-/wiki/Norsk/Praksis+og+arbeidslivserfaring+under+studiet.\n\nKravet er godkjent når det er grønn hake der det står \"Gjennomført krav om arbeidslivserfaring\".\n\nGodkjent krav om arbeidslivserfaring vil også være markert i selve utdanningsplanen med \"Godkjent\".",
+              "courses": [
+                {
+                  "code": "SIVINGPRA",
+                  "version": null,
+                  "name": "Gjennomført krav om arbeidslivserfaring",
+                  "credits": 0,
+                  "planElement": true,
+                  "studyChoice": {
+                    "code": "O",
+                    "name": "Obligatorisk emne",
+                    "description": null
+                  }
+                }
+              ]
+            }
+          ],
+          "waypoints": []
+        }
+      },
+      {
+        "periodNumber": 2,
+        "direction": {
+          "code": null,
+          "name": null,
+          "courseGroups": [
+            {
+              "code": "MTDTÅR1-24",
+              "name": "1. år Master i datateknologi - 5-årig",
+              "description": null,
+              "courses": [
+                {
+                  "code": "TDT4100",
+                  "version": "1",
+                  "name": "Objektorientert programmering",
+                  "credits": 7.5,
+                  "planElement": false,
+                  "studyChoice": {
+                    "code": "O",
+                    "name": "Obligatorisk emne",
+                    "description": "Obligatorisk emne"
+                  }
+                },
+                {
+                  "code": "TDT4180",
+                  "version": "1",
+                  "name": "Menneske–maskin-interaksjon",
+                  "credits": 7.5,
+                  "planElement": false,
+                  "studyChoice": {
+                    "code": "O",
+                    "name": "Obligatorisk emne",
+                    "description": "Obligatorisk emne"
+                  }
+                },
+                {
+                  "code": "TMA4115",
+                  "version": "1",
+                  "name": "Matematikk 3",
+                  "credits": 7.5,
+                  "planElement": false,
+                  "studyChoice": {
+                    "code": "O",
+                    "name": "Obligatorisk emne",
+                    "description": "Obligatorisk emne"
+                  }
+                },
+                {
+                  "code": "TTT4203",
+                  "version": "1",
+                  "name": "Innføring i analog og digital elektronikk",
+                  "credits": 7.5,
+                  "planElement": false,
+                  "studyChoice": {
+                    "code": "O",
+                    "name": "Obligatorisk emne",
+                    "description": "Obligatorisk emne"
+                  }
+                }
+              ]
+            }
+          ],
+          "waypoints": []
+        }
+      },
+      {
+        "periodNumber": 3,
+        "direction": {
+          "code": null,
+          "name": null,
+          "courseGroups": [
+            {
+              "code": "MTDTÅR2-24",
+              "name": "2. år Master i datateknologi - 5-årig",
+              "description": null,
+              "courses": [
+                {
+                  "code": "IT1901",
+                  "version": "1",
+                  "name": "Informatikk prosjektarbeid I",
+                  "credits": 7.5,
+                  "planElement": false,
+                  "studyChoice": {
+                    "code": "O",
+                    "name": "Obligatorisk emne",
+                    "description": "Obligatorisk emne"
+                  }
+                },
+                {
+                  "code": "TDT4120",
+                  "version": "1",
+                  "name": "Algoritmer og datastrukturer",
+                  "credits": 7.5,
+                  "planElement": false,
+                  "studyChoice": {
+                    "code": "O",
+                    "name": "Obligatorisk emne",
+                    "description": "Obligatorisk emne"
+                  }
+                },
+                {
+                  "code": "TDT4160",
+                  "version": "1",
+                  "name": "Datamaskiner",
+                  "credits": 7.5,
+                  "planElement": false,
+                  "studyChoice": {
+                    "code": "O",
+                    "name": "Obligatorisk emne",
+                    "description": "Obligatorisk emne"
+                  }
+                },
+                {
+                  "code": "TMA4240",
+                  "version": "1",
+                  "name": "Statistikk",
+                  "credits": 7.5,
+                  "planElement": false,
+                  "studyChoice": {
+                    "code": "O",
+                    "name": "Obligatorisk emne",
+                    "description": "Obligatorisk emne"
+                  }
+                }
+              ]
+            }
+          ],
+          "waypoints": []
+        }
+      },
+      {
+        "periodNumber": 4,
+        "direction": {
+          "code": null,
+          "name": null,
+          "courseGroups": [
+            {
+              "code": "MTDTÅR2-24",
+              "name": "2. år Master i datateknologi - 5-årig",
+              "description": null,
+              "courses": [
+                {
+                  "code": "TDT4140",
+                  "version": "1",
+                  "name": "Programvareutvikling",
+                  "credits": 7.5,
+                  "planElement": false,
+                  "studyChoice": {
+                    "code": "O",
+                    "name": "Obligatorisk emne",
+                    "description": "Obligatorisk emne"
+                  }
+                },
+                {
+                  "code": "TDT4145",
+                  "version": "1",
+                  "name": "Datamodellering og databasesystemer",
+                  "credits": 7.5,
+                  "planElement": false,
+                  "studyChoice": {
+                    "code": "O",
+                    "name": "Obligatorisk emne",
+                    "description": "Obligatorisk emne"
+                  }
+                },
+                {
+                  "code": "TDT4186",
+                  "version": "1",
+                  "name": "Operativsystemer",
+                  "credits": 7.5,
+                  "planElement": false,
+                  "studyChoice": {
+                    "code": "O",
+                    "name": "Obligatorisk emne",
+                    "description": "Obligatorisk emne"
+                  }
+                },
+                {
+                  "code": "TTM4100",
+                  "version": "1",
+                  "name": "Kommunikasjon - Tjenester og nett",
+                  "credits": 7.5,
+                  "planElement": false,
+                  "studyChoice": {
+                    "code": "O",
+                    "name": "Obligatorisk emne",
+                    "description": "Obligatorisk emne"
+                  }
+                }
+              ]
+            }
+          ],
+          "waypoints": []
+        }
+      },
+      {
+        "periodNumber": 5,
+        "direction": {
+          "code": null,
+          "name": null,
+          "courseGroups": [],
+          "waypoints": [
+            {
+              "code": "MTDTÅR3VALG-24",
+              "name": "Valg av studieretning",
+              "description": "Du skal velge studieretninger i prioritert rekkefølge. Valg og prioritering kan endres fram til fristen. Etter at opptak er gjennomført vil du kunne se de obligatoriske emnene, og du vil kunne sette inn valgbare emner i planen.",
+              "deadlineDate": "2026-05-15",
+              "directions": [
+                {
+                  "code": "MTDTDS-24",
+                  "name": "Databaser og søk",
+                  "courseGroups": [
+                    {
+                      "code": "MTDTDSÅR3EMNER-24",
+                      "name": "Obligatoriske og valgbare emner - 3. år",
+                      "description": "Andre emner enn de som er oppført i tabellen som VA og VB på våren kan velges etter avtale med studieveileder.",
+                      "courses": [
+                        {
+                          "code": "TDT4117",
+                          "version": "1",
+                          "name": "Informasjonsgjenfinning",
+                          "credits": 7.5,
+                          "planElement": false,
+                          "studyChoice": {
+                            "code": "O",
+                            "name": "Obligatorisk emne",
+                            "description": "Obligatorisk emne"
+                          }
+                        },
+                        {
+                          "code": "TDT4136",
+                          "version": "1",
+                          "name": "Introduksjon til kunstig intelligens",
+                          "credits": 7.5,
+                          "planElement": false,
+                          "studyChoice": {
+                            "code": "O",
+                            "name": "Obligatorisk emne",
+                            "description": "Obligatorisk emne"
+                          }
+                        },
+                        {
+                          "code": "TMA4135",
+                          "version": "1",
+                          "name": "Matematikk 4D",
+                          "credits": 7.5,
+                          "planElement": false,
+                          "studyChoice": {
+                            "code": "O",
+                            "name": "Obligatorisk emne",
+                            "description": "Obligatorisk emne"
+                          }
+                        },
+                        {
+                          "code": "IT2810",
+                          "version": "1",
+                          "name": "Webutvikling",
+                          "credits": 7.5,
+                          "planElement": false,
+                          "studyChoice": {
+                            "code": "VA",
+                            "name": "Valgbart emne - Legges kollisjonsfritt",
+                            "description": "Valgbart emne - Legges kollisjonsfritt på time- og eksamensplanen"
+                          }
+                        },
+                        {
+                          "code": "IT3212",
+                          "version": "1",
+                          "name": "Datadrevet Programvare",
+                          "credits": 7.5,
+                          "planElement": false,
+                          "studyChoice": {
+                            "code": "VA",
+                            "name": "Valgbart emne - Legges kollisjonsfritt",
+                            "description": "Valgbart emne - Legges kollisjonsfritt på time- og eksamensplanen"
+                          }
+                        },
+                        {
+                          "code": "TDT4137",
+                          "version": "1",
+                          "name": "Kognitive systemer",
+                          "credits": 7.5,
+                          "planElement": false,
+                          "studyChoice": {
+                            "code": "VA",
+                            "name": "Valgbart emne - Legges kollisjonsfritt",
+                            "description": "Valgbart emne - Legges kollisjonsfritt på time- og eksamensplanen"
+                          }
+                        },
+                        {
+                          "code": "TDT4165",
+                          "version": "1",
+                          "name": "Programmeringsspråk",
+                          "credits": 7.5,
+                          "planElement": false,
+                          "studyChoice": {
+                            "code": "VA",
+                            "name": "Valgbart emne - Legges kollisjonsfritt",
+                            "description": "Valgbart emne - Legges kollisjonsfritt på time- og eksamensplanen"
+                          }
+                        },
+                        {
+                          "code": "TDT4175",
+                          "version": "1",
+                          "name": "Informasjonssystemer",
+                          "credits": 7.5,
+                          "planElement": false,
+                          "studyChoice": {
+                            "code": "VA",
+                            "name": "Valgbart emne - Legges kollisjonsfritt",
+                            "description": "Valgbart emne - Legges kollisjonsfritt på time- og eksamensplanen"
+                          }
+                        }
+                      ]
+                    }
+                  ],
+                  "waypoints": []
+                },
+                {
+                  "code": "MTDTKI-24",
+                  "name": "Kunstig intelligens",
+                  "courseGroups": [
+                    {
+                      "code": "MTDTKIÅR3EMNER-24",
+                      "name": "Obligatoriske og valgbare emner - 3. år",
+                      "description": "Andre emner enn de som er oppført i tabellen som VA og VB på våren kan velges etter avtale med studieveileder.",
+                      "courses": [
+                        {
+                          "code": "TDT4136",
+                          "version": "1",
+                          "name": "Introduksjon til kunstig intelligens",
+                          "credits": 7.5,
+                          "planElement": false,
+                          "studyChoice": {
+                            "code": "O",
+                            "name": "Obligatorisk emne",
+                            "description": "Obligatorisk emne"
+                          }
+                        },
+                        {
+                          "code": "TDT4172",
+                          "version": "1",
+                          "name": "Introduksjon til maskinlæring",
+                          "credits": 7.5,
+                          "planElement": false,
+                          "studyChoice": {
+                            "code": "O",
+                            "name": "Obligatorisk emne",
+                            "description": "Obligatorisk emne"
+                          }
+                        },
+                        {
+                          "code": "TMA4135",
+                          "version": "1",
+                          "name": "Matematikk 4D",
+                          "credits": 7.5,
+                          "planElement": false,
+                          "studyChoice": {
+                            "code": "O",
+                            "name": "Obligatorisk emne",
+                            "description": "Obligatorisk emne"
+                          }
+                        },
+                        {
+                          "code": "IT2810",
+                          "version": "1",
+                          "name": "Webutvikling",
+                          "credits": 7.5,
+                          "planElement": false,
+                          "studyChoice": {
+                            "code": "VA",
+                            "name": "Valgbart emne - Legges kollisjonsfritt",
+                            "description": "Valgbart emne - Legges kollisjonsfritt på time- og eksamensplanen"
+                          }
+                        },
+                        {
+                          "code": "IT3212",
+                          "version": "1",
+                          "name": "Datadrevet Programvare",
+                          "credits": 7.5,
+                          "planElement": false,
+                          "studyChoice": {
+                            "code": "VA",
+                            "name": "Valgbart emne - Legges kollisjonsfritt",
+                            "description": "Valgbart emne - Legges kollisjonsfritt på time- og eksamensplanen"
+                          }
+                        },
+                        {
+                          "code": "TDT4117",
+                          "version": "1",
+                          "name": "Informasjonsgjenfinning",
+                          "credits": 7.5,
+                          "planElement": false,
+                          "studyChoice": {
+                            "code": "VA",
+                            "name": "Valgbart emne - Legges kollisjonsfritt",
+                            "description": "Valgbart emne - Legges kollisjonsfritt på time- og eksamensplanen"
+                          }
+                        },
+                        {
+                          "code": "TDT4165",
+                          "version": "1",
+                          "name": "Programmeringsspråk",
+                          "credits": 7.5,
+                          "planElement": false,
+                          "studyChoice": {
+                            "code": "VA",
+                            "name": "Valgbart emne - Legges kollisjonsfritt",
+                            "description": "Valgbart emne - Legges kollisjonsfritt på time- og eksamensplanen"
+                          }
+                        },
+                        {
+                          "code": "TDT4175",
+                          "version": "1",
+                          "name": "Informasjonssystemer",
+                          "credits": 7.5,
+                          "planElement": false,
+                          "studyChoice": {
+                            "code": "VA",
+                            "name": "Valgbart emne - Legges kollisjonsfritt",
+                            "description": "Valgbart emne - Legges kollisjonsfritt på time- og eksamensplanen"
+                          }
+                        }
+                      ]
+                    }
+                  ],
+                  "waypoints": []
+                },
+                {
+                  "code": "MTDTPS-24",
+                  "name": "Programvaresystemer",
+                  "courseGroups": [
+                    {
+                      "code": "MTDTPSÅR3EMNER-24",
+                      "name": "Obligatoriske og valgbare emner - 3. år",
+                      "description": "Andre emner enn de som er oppført i tabellen som VA og VB på våren kan velges etter avtale med studieveileder.",
+                      "courses": [
+                        {
+                          "code": "TDT4136",
+                          "version": "1",
+                          "name": "Introduksjon til kunstig intelligens",
+                          "credits": 7.5,
+                          "planElement": false,
+                          "studyChoice": {
+                            "code": "O",
+                            "name": "Obligatorisk emne",
+                            "description": "Obligatorisk emne"
+                          }
+                        },
+                        {
+                          "code": "TDT4175",
+                          "version": "1",
+                          "name": "Informasjonssystemer",
+                          "credits": 7.5,
+                          "planElement": false,
+                          "studyChoice": {
+                            "code": "O",
+                            "name": "Obligatorisk emne",
+                            "description": "Obligatorisk emne"
+                          }
+                        },
+                        {
+                          "code": "TMA4135",
+                          "version": "1",
+                          "name": "Matematikk 4D",
+                          "credits": 7.5,
+                          "planElement": false,
+                          "studyChoice": {
+                            "code": "O",
+                            "name": "Obligatorisk emne",
+                            "description": "Obligatorisk emne"
+                          }
+                        },
+                        {
+                          "code": "IT2810",
+                          "version": "1",
+                          "name": "Webutvikling",
+                          "credits": 7.5,
+                          "planElement": false,
+                          "studyChoice": {
+                            "code": "VA",
+                            "name": "Valgbart emne - Legges kollisjonsfritt",
+                            "description": "Valgbart emne - Legges kollisjonsfritt på time- og eksamensplanen"
+                          }
+                        },
+                        {
+                          "code": "IT3212",
+                          "version": "1",
+                          "name": "Datadrevet Programvare",
+                          "credits": 7.5,
+                          "planElement": false,
+                          "studyChoice": {
+                            "code": "VA",
+                            "name": "Valgbart emne - Legges kollisjonsfritt",
+                            "description": "Valgbart emne - Legges kollisjonsfritt på time- og eksamensplanen"
+                          }
+                        },
+                        {
+                          "code": "TDT4117",
+                          "version": "1",
+                          "name": "Informasjonsgjenfinning",
+                          "credits": 7.5,
+                          "planElement": false,
+                          "studyChoice": {
+                            "code": "VA",
+                            "name": "Valgbart emne - Legges kollisjonsfritt",
+                            "description": "Valgbart emne - Legges kollisjonsfritt på time- og eksamensplanen"
+                          }
+                        },
+                        {
+                          "code": "TDT4137",
+                          "version": "1",
+                          "name": "Kognitive systemer",
+                          "credits": 7.5,
+                          "planElement": false,
+                          "studyChoice": {
+                            "code": "VA",
+                            "name": "Valgbart emne - Legges kollisjonsfritt",
+                            "description": "Valgbart emne - Legges kollisjonsfritt på time- og eksamensplanen"
+                          }
+                        },
+                        {
+                          "code": "TDT4165",
+                          "version": "1",
+                          "name": "Programmeringsspråk",
+                          "credits": 7.5,
+                          "planElement": false,
+                          "studyChoice": {
+                            "code": "VA",
+                            "name": "Valgbart emne - Legges kollisjonsfritt",
+                            "description": "Valgbart emne - Legges kollisjonsfritt på time- og eksamensplanen"
+                          }
+                        }
+                      ]
+                    }
+                  ],
+                  "waypoints": []
+                },
+                {
+                  "code": "MTDTVD-24",
+                  "name": "Visuell databehandling",
+                  "courseGroups": [
+                    {
+                      "code": "MTDTVDÅR3EMNER-24",
+                      "name": "Obligatoriske og valgbare emner - 3. år",
+                      "description": "Andre emner enn de som er oppført i tabellen som VA og VB på våren kan velges etter avtale med studieveileder. NB! Studenter som planlegger å dra på utveksling på våren i 4. år, bør ta minst ett av emnene TDT4230 og TDT4265 på våren i 3. år.",
+                      "courses": [
+                        {
+                          "code": "TDT4136",
+                          "version": "1",
+                          "name": "Introduksjon til kunstig intelligens",
+                          "credits": 7.5,
+                          "planElement": false,
+                          "studyChoice": {
+                            "code": "O",
+                            "name": "Obligatorisk emne",
+                            "description": "Obligatorisk emne"
+                          }
+                        },
+                        {
+                          "code": "TDT4195",
+                          "version": "1",
+                          "name": "Grunnleggende visuell databehandling",
+                          "credits": 7.5,
+                          "planElement": false,
+                          "studyChoice": {
+                            "code": "O",
+                            "name": "Obligatorisk emne",
+                            "description": "Obligatorisk emne"
+                          }
+                        },
+                        {
+                          "code": "TMA4135",
+                          "version": "1",
+                          "name": "Matematikk 4D",
+                          "credits": 7.5,
+                          "planElement": false,
+                          "studyChoice": {
+                            "code": "O",
+                            "name": "Obligatorisk emne",
+                            "description": "Obligatorisk emne"
+                          }
+                        },
+                        {
+                          "code": "IT2810",
+                          "version": "1",
+                          "name": "Webutvikling",
+                          "credits": 7.5,
+                          "planElement": false,
+                          "studyChoice": {
+                            "code": "VA",
+                            "name": "Valgbart emne - Legges kollisjonsfritt",
+                            "description": "Valgbart emne - Legges kollisjonsfritt på time- og eksamensplanen"
+                          }
+                        },
+                        {
+                          "code": "TDT4172",
+                          "version": "1",
+                          "name": "Introduksjon til maskinlæring",
+                          "credits": 7.5,
+                          "planElement": false,
+                          "studyChoice": {
+                            "code": "VA",
+                            "name": "Valgbart emne - Legges kollisjonsfritt",
+                            "description": "Valgbart emne - Legges kollisjonsfritt på time- og eksamensplanen"
+                          }
+                        },
+                        {
+                          "code": "TDT4200",
+                          "version": "1",
+                          "name": "Parallelle beregninger",
+                          "credits": 7.5,
+                          "planElement": false,
+                          "studyChoice": {
+                            "code": "VA",
+                            "name": "Valgbart emne - Legges kollisjonsfritt",
+                            "description": "Valgbart emne - Legges kollisjonsfritt på time- og eksamensplanen"
+                          }
+                        },
+                        {
+                          "code": "TDT4255",
+                          "version": "1",
+                          "name": "Datamaskinkonstruksjon",
+                          "credits": 7.5,
+                          "planElement": false,
+                          "studyChoice": {
+                            "code": "VA",
+                            "name": "Valgbart emne - Legges kollisjonsfritt",
+                            "description": "Valgbart emne - Legges kollisjonsfritt på time- og eksamensplanen"
+                          }
+                        },
+                        {
+                          "code": "TDT4258",
+                          "version": "1",
+                          "name": "Maskinnær programmering",
+                          "credits": 7.5,
+                          "planElement": false,
+                          "studyChoice": {
+                            "code": "VA",
+                            "name": "Valgbart emne - Legges kollisjonsfritt",
+                            "description": "Valgbart emne - Legges kollisjonsfritt på time- og eksamensplanen"
+                          }
+                        },
+                        {
+                          "code": "TDT4287",
+                          "version": "1",
+                          "name": "Algoritmer for bioinformatikk",
+                          "credits": 7.5,
+                          "planElement": false,
+                          "studyChoice": {
+                            "code": "VA",
+                            "name": "Valgbart emne - Legges kollisjonsfritt",
+                            "description": "Valgbart emne - Legges kollisjonsfritt på time- og eksamensplanen"
+                          }
+                        }
+                      ]
+                    }
+                  ],
+                  "waypoints": []
+                },
+                {
+                  "code": "MTDTED-24",
+                  "name": "Effektive datasystemer",
+                  "courseGroups": [
+                    {
+                      "code": "MTDTEDÅR3EMNER-24",
+                      "name": "Obligatoriske og valgbare emner - 3. år",
+                      "description": "Andre emner enn de som er oppført i tabellen som VA og VB på våren kan velges etter avtale med studieveileder.",
+                      "courses": [
+                        {
+                          "code": "TDT4136",
+                          "version": "1",
+                          "name": "Introduksjon til kunstig intelligens",
+                          "credits": 7.5,
+                          "planElement": false,
+                          "studyChoice": {
+                            "code": "O",
+                            "name": "Obligatorisk emne",
+                            "description": "Obligatorisk emne"
+                          }
+                        },
+                        {
+                          "code": "TMA4135",
+                          "version": "1",
+                          "name": "Matematikk 4D",
+                          "credits": 7.5,
+                          "planElement": false,
+                          "studyChoice": {
+                            "code": "O",
+                            "name": "Obligatorisk emne",
+                            "description": "Obligatorisk emne"
+                          }
+                        },
+                        {
+                          "code": "TDT4200",
+                          "version": "1",
+                          "name": "Parallelle beregninger",
+                          "credits": 7.5,
+                          "planElement": false,
+                          "studyChoice": {
+                            "code": "VA",
+                            "name": "Valgbart emne - Legges kollisjonsfritt",
+                            "description": "Valgbart emne - Legges kollisjonsfritt på time- og eksamensplanen"
+                          }
+                        },
+                        {
+                          "code": "TDT4255",
+                          "version": "1",
+                          "name": "Datamaskinkonstruksjon",
+                          "credits": 7.5,
+                          "planElement": false,
+                          "studyChoice": {
+                            "code": "VA",
+                            "name": "Valgbart emne - Legges kollisjonsfritt",
+                            "description": "Valgbart emne - Legges kollisjonsfritt på time- og eksamensplanen"
+                          }
+                        },
+                        {
+                          "code": "TDT4258",
+                          "version": "1",
+                          "name": "Maskinnær programmering",
+                          "credits": 7.5,
+                          "planElement": false,
+                          "studyChoice": {
+                            "code": "VA",
+                            "name": "Valgbart emne - Legges kollisjonsfritt",
+                            "description": "Valgbart emne - Legges kollisjonsfritt på time- og eksamensplanen"
+                          }
+                        },
+                        {
+                          "code": "TDT4287",
+                          "version": "1",
+                          "name": "Algoritmer for bioinformatikk",
+                          "credits": 7.5,
+                          "planElement": false,
+                          "studyChoice": {
+                            "code": "VA",
+                            "name": "Valgbart emne - Legges kollisjonsfritt",
+                            "description": "Valgbart emne - Legges kollisjonsfritt på time- og eksamensplanen"
+                          }
+                        },
+                        {
+                          "code": "TDT4165",
+                          "version": "1",
+                          "name": "Programmeringsspråk",
+                          "credits": 7.5,
+                          "planElement": false,
+                          "studyChoice": {
+                            "code": "VB",
+                            "name": "Valgbart emne - Kan kollidere",
+                            "description": "Valgbart emne - Kan kollidere på time- og eksamensplanen"
+                          }
+                        }
+                      ]
+                    }
+                  ],
+                  "waypoints": []
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "periodNumber": 6,
+        "direction": {
+          "code": null,
+          "name": null,
+          "courseGroups": [],
+          "waypoints": [
+            {
+              "code": "MTDTÅR3VALG-24",
+              "name": "Valg av studieretning",
+              "description": "Du skal velge studieretninger i prioritert rekkefølge. Valg og prioritering kan endres fram til fristen. Etter at opptak er gjennomført vil du kunne se de obligatoriske emnene, og du vil kunne sette inn valgbare emner i planen.",
+              "deadlineDate": "2026-05-15",
+              "directions": [
+                {
+                  "code": "MTDTDS-24",
+                  "name": "Databaser og søk",
+                  "courseGroups": [
+                    {
+                      "code": "MTDTDSÅR3EMNER-24",
+                      "name": "Obligatoriske og valgbare emner - 3. år",
+                      "description": "Andre emner enn de som er oppført i tabellen som VA og VB på våren kan velges etter avtale med studieveileder.",
+                      "courses": [
+                        {
+                          "code": "TDT4237",
+                          "version": "1",
+                          "name": "Programvaresikkerhet og personvern",
+                          "credits": 7.5,
+                          "planElement": false,
+                          "studyChoice": {
+                            "code": "O",
+                            "name": "Obligatorisk emne",
+                            "description": "Obligatorisk emne"
+                          }
+                        },
+                        {
+                          "code": "TDT4300",
+                          "version": "1",
+                          "name": "Datavarehus og datagruvedrift",
+                          "credits": 7.5,
+                          "planElement": false,
+                          "studyChoice": {
+                            "code": "O",
+                            "name": "Obligatorisk emne",
+                            "description": "Obligatorisk emne"
+                          }
+                        },
+                        {
+                          "code": "TFY4125",
+                          "version": "1",
+                          "name": "Fysikk",
+                          "credits": 7.5,
+                          "planElement": false,
+                          "studyChoice": {
+                            "code": "O",
+                            "name": "Obligatorisk emne",
+                            "description": "Obligatorisk emne"
+                          }
+                        },
+                        {
+                          "code": "TIØ4252",
+                          "version": "1",
+                          "name": "Teknologiledelse",
+                          "credits": 7.5,
+                          "planElement": false,
+                          "studyChoice": {
+                            "code": "O",
+                            "name": "Obligatorisk emne",
+                            "description": "Obligatorisk emne"
+                          }
+                        }
+                      ]
+                    }
+                  ],
+                  "waypoints": []
+                },
+                {
+                  "code": "MTDTKI-24",
+                  "name": "Kunstig intelligens",
+                  "courseGroups": [
+                    {
+                      "code": "MTDTKIÅR3EMNER-24",
+                      "name": "Obligatoriske og valgbare emner - 3. år",
+                      "description": "Andre emner enn de som er oppført i tabellen som VA og VB på våren kan velges etter avtale med studieveileder.",
+                      "courses": [
+                        {
+                          "code": "TDT4171",
+                          "version": "1",
+                          "name": "Metoder i kunstig intelligens",
+                          "credits": 7.5,
+                          "planElement": false,
+                          "studyChoice": {
+                            "code": "O",
+                            "name": "Obligatorisk emne",
+                            "description": "Obligatorisk emne"
+                          }
+                        },
+                        {
+                          "code": "TDT4237",
+                          "version": "1",
+                          "name": "Programvaresikkerhet og personvern",
+                          "credits": 7.5,
+                          "planElement": false,
+                          "studyChoice": {
+                            "code": "O",
+                            "name": "Obligatorisk emne",
+                            "description": "Obligatorisk emne"
+                          }
+                        },
+                        {
+                          "code": "TFY4125",
+                          "version": "1",
+                          "name": "Fysikk",
+                          "credits": 7.5,
+                          "planElement": false,
+                          "studyChoice": {
+                            "code": "O",
+                            "name": "Obligatorisk emne",
+                            "description": "Obligatorisk emne"
+                          }
+                        },
+                        {
+                          "code": "TIØ4252",
+                          "version": "1",
+                          "name": "Teknologiledelse",
+                          "credits": 7.5,
+                          "planElement": false,
+                          "studyChoice": {
+                            "code": "O",
+                            "name": "Obligatorisk emne",
+                            "description": "Obligatorisk emne"
+                          }
+                        }
+                      ]
+                    }
+                  ],
+                  "waypoints": []
+                },
+                {
+                  "code": "MTDTPS-24",
+                  "name": "Programvaresystemer",
+                  "courseGroups": [
+                    {
+                      "code": "MTDTPSÅR3EMNER-24",
+                      "name": "Obligatoriske og valgbare emner - 3. år",
+                      "description": "Andre emner enn de som er oppført i tabellen som VA og VB på våren kan velges etter avtale med studieveileder.",
+                      "courses": [
+                        {
+                          "code": "TDT4237",
+                          "version": "1",
+                          "name": "Programvaresikkerhet og personvern",
+                          "credits": 7.5,
+                          "planElement": false,
+                          "studyChoice": {
+                            "code": "O",
+                            "name": "Obligatorisk emne",
+                            "description": "Obligatorisk emne"
+                          }
+                        },
+                        {
+                          "code": "TDT4240",
+                          "version": "1",
+                          "name": "Programvarearkitektur",
+                          "credits": 7.5,
+                          "planElement": false,
+                          "studyChoice": {
+                            "code": "O",
+                            "name": "Obligatorisk emne",
+                            "description": "Obligatorisk emne"
+                          }
+                        },
+                        {
+                          "code": "TFY4125",
+                          "version": "1",
+                          "name": "Fysikk",
+                          "credits": 7.5,
+                          "planElement": false,
+                          "studyChoice": {
+                            "code": "O",
+                            "name": "Obligatorisk emne",
+                            "description": "Obligatorisk emne"
+                          }
+                        },
+                        {
+                          "code": "TIØ4252",
+                          "version": "1",
+                          "name": "Teknologiledelse",
+                          "credits": 7.5,
+                          "planElement": false,
+                          "studyChoice": {
+                            "code": "O",
+                            "name": "Obligatorisk emne",
+                            "description": "Obligatorisk emne"
+                          }
+                        }
+                      ]
+                    }
+                  ],
+                  "waypoints": []
+                },
+                {
+                  "code": "MTDTVD-24",
+                  "name": "Visuell databehandling",
+                  "courseGroups": [
+                    {
+                      "code": "MTDTVDÅR3EMNER-24",
+                      "name": "Obligatoriske og valgbare emner - 3. år",
+                      "description": "Andre emner enn de som er oppført i tabellen som VA og VB på våren kan velges etter avtale med studieveileder. NB! Studenter som planlegger å dra på utveksling på våren i 4. år, bør ta minst ett av emnene TDT4230 og TDT4265 på våren i 3. år.",
+                      "courses": [
+                        {
+                          "code": "TDT4237",
+                          "version": "1",
+                          "name": "Programvaresikkerhet og personvern",
+                          "credits": 7.5,
+                          "planElement": false,
+                          "studyChoice": {
+                            "code": "O",
+                            "name": "Obligatorisk emne",
+                            "description": "Obligatorisk emne"
+                          }
+                        },
+                        {
+                          "code": "TFY4125",
+                          "version": "1",
+                          "name": "Fysikk",
+                          "credits": 7.5,
+                          "planElement": false,
+                          "studyChoice": {
+                            "code": "O",
+                            "name": "Obligatorisk emne",
+                            "description": "Obligatorisk emne"
+                          }
+                        },
+                        {
+                          "code": "TIØ4252",
+                          "version": "1",
+                          "name": "Teknologiledelse",
+                          "credits": 7.5,
+                          "planElement": false,
+                          "studyChoice": {
+                            "code": "O",
+                            "name": "Obligatorisk emne",
+                            "description": "Obligatorisk emne"
+                          }
+                        },
+                        {
+                          "code": "IT3105",
+                          "version": "1",
+                          "name": "Kunstig intelligens programmering",
+                          "credits": 7.5,
+                          "planElement": false,
+                          "studyChoice": {
+                            "code": "VA",
+                            "name": "Valgbart emne - Legges kollisjonsfritt",
+                            "description": "Valgbart emne - Legges kollisjonsfritt på time- og eksamensplanen"
+                          }
+                        },
+                        {
+                          "code": "TDT4125",
+                          "version": "1",
+                          "name": "Algoritmekonstruksjon",
+                          "credits": 7.5,
+                          "planElement": false,
+                          "studyChoice": {
+                            "code": "VA",
+                            "name": "Valgbart emne - Legges kollisjonsfritt",
+                            "description": "Valgbart emne - Legges kollisjonsfritt på time- og eksamensplanen"
+                          }
+                        },
+                        {
+                          "code": "TDT4171",
+                          "version": "1",
+                          "name": "Metoder i kunstig intelligens",
+                          "credits": 7.5,
+                          "planElement": false,
+                          "studyChoice": {
+                            "code": "VA",
+                            "name": "Valgbart emne - Legges kollisjonsfritt",
+                            "description": "Valgbart emne - Legges kollisjonsfritt på time- og eksamensplanen"
+                          }
+                        },
+                        {
+                          "code": "TDT4230",
+                          "version": "1",
+                          "name": "Grafikk og visualisering",
+                          "credits": 7.5,
+                          "planElement": false,
+                          "studyChoice": {
+                            "code": "VA",
+                            "name": "Valgbart emne - Legges kollisjonsfritt",
+                            "description": "Valgbart emne - Legges kollisjonsfritt på time- og eksamensplanen"
+                          }
+                        },
+                        {
+                          "code": "TDT4240",
+                          "version": "1",
+                          "name": "Programvarearkitektur",
+                          "credits": 7.5,
+                          "planElement": false,
+                          "studyChoice": {
+                            "code": "VA",
+                            "name": "Valgbart emne - Legges kollisjonsfritt",
+                            "description": "Valgbart emne - Legges kollisjonsfritt på time- og eksamensplanen"
+                          }
+                        },
+                        {
+                          "code": "TDT4265",
+                          "version": "1",
+                          "name": "Datasyn og dyp læring",
+                          "credits": 7.5,
+                          "planElement": false,
+                          "studyChoice": {
+                            "code": "VA",
+                            "name": "Valgbart emne - Legges kollisjonsfritt",
+                            "description": "Valgbart emne - Legges kollisjonsfritt på time- og eksamensplanen"
+                          }
+                        }
+                      ]
+                    }
+                  ],
+                  "waypoints": []
+                },
+                {
+                  "code": "MTDTED-24",
+                  "name": "Effektive datasystemer",
+                  "courseGroups": [
+                    {
+                      "code": "MTDTEDÅR3EMNER-24",
+                      "name": "Obligatoriske og valgbare emner - 3. år",
+                      "description": "Andre emner enn de som er oppført i tabellen som VA og VB på våren kan velges etter avtale med studieveileder.",
+                      "courses": [
+                        {
+                          "code": "TDT4237",
+                          "version": "1",
+                          "name": "Programvaresikkerhet og personvern",
+                          "credits": 7.5,
+                          "planElement": false,
+                          "studyChoice": {
+                            "code": "O",
+                            "name": "Obligatorisk emne",
+                            "description": "Obligatorisk emne"
+                          }
+                        },
+                        {
+                          "code": "TFY4125",
+                          "version": "1",
+                          "name": "Fysikk",
+                          "credits": 7.5,
+                          "planElement": false,
+                          "studyChoice": {
+                            "code": "O",
+                            "name": "Obligatorisk emne",
+                            "description": "Obligatorisk emne"
+                          }
+                        },
+                        {
+                          "code": "TIØ4252",
+                          "version": "1",
+                          "name": "Teknologiledelse",
+                          "credits": 7.5,
+                          "planElement": false,
+                          "studyChoice": {
+                            "code": "O",
+                            "name": "Obligatorisk emne",
+                            "description": "Obligatorisk emne"
+                          }
+                        },
+                        {
+                          "code": "TDT4125",
+                          "version": "1",
+                          "name": "Algoritmekonstruksjon",
+                          "credits": 7.5,
+                          "planElement": false,
+                          "studyChoice": {
+                            "code": "VA",
+                            "name": "Valgbart emne - Legges kollisjonsfritt",
+                            "description": "Valgbart emne - Legges kollisjonsfritt på time- og eksamensplanen"
+                          }
+                        },
+                        {
+                          "code": "TDT4205",
+                          "version": "1",
+                          "name": "Kompilatorteknikk",
+                          "credits": 7.5,
+                          "planElement": false,
+                          "studyChoice": {
+                            "code": "VA",
+                            "name": "Valgbart emne - Legges kollisjonsfritt",
+                            "description": "Valgbart emne - Legges kollisjonsfritt på time- og eksamensplanen"
+                          }
+                        },
+                        {
+                          "code": "TDT4260",
+                          "version": "1",
+                          "name": "Datamaskinarkitektur",
+                          "credits": 7.5,
+                          "planElement": false,
+                          "studyChoice": {
+                            "code": "VA",
+                            "name": "Valgbart emne - Legges kollisjonsfritt",
+                            "description": "Valgbart emne - Legges kollisjonsfritt på time- og eksamensplanen"
+                          }
+                        }
+                      ]
+                    }
+                  ],
+                  "waypoints": []
+                }
+              ]
+            }
+          ]
+        }
+      }
+    ],
+    "publishedYears": [
+      2026,
+      2025,
+      2024,
+      2023,
+      2022,
+      2021,
+      2020,
+      2019,
+      2018,
+      2017,
+      2016,
+      2015,
+      2014,
+      2013,
+      2012,
+      2011,
+      2010,
+      2009,
+      2008,
+      2007
+    ]
+  }
+}

@@ -1,0 +1,388 @@
+{
+  "url": "http://127.0.0.1:8788/api/course/TDT4110",
+  "status": 200,
+  "contentType": "application/json; charset=utf-8",
+  "body": {
+    "courseCode": "TDT4110",
+    "courseName": "Informasjonsteknologi, grunnkurs",
+    "credits": 7.5,
+    "level": "Grunnleggende emner, nivå I",
+    "teachingStart": "Høst 2026",
+    "teachingDuration": "1 semester",
+    "teachingLanguage": "Norsk",
+    "location": "Trondheim",
+    "assessmentScheme": "Skriftlig skoleeksamen",
+    "gradeRule": "Bokstavkarakterer",
+    "facts": [
+      {
+        "label": "Studiepoeng",
+        "value": "7,5"
+      },
+      {
+        "label": "Nivå",
+        "value": "Grunnleggende emner, nivå I"
+      },
+      {
+        "label": "Undervisningsstart",
+        "value": "Høst 2026"
+      },
+      {
+        "label": "Varighet",
+        "value": "1 semester"
+      },
+      {
+        "label": "Undervisningsspråk",
+        "value": "Norsk"
+      },
+      {
+        "label": "Sted",
+        "value": "Trondheim"
+      },
+      {
+        "label": "Vurderingsordning",
+        "value": "Skriftlig skoleeksamen"
+      }
+    ],
+    "content": "Emnet gir en introduksjon til prosedyreorientert programmering, med Python som språk. Konsepter som dekkes: Variable og datatyper, tallrepresentasjon og dens betydning i beregninger (f.eks. avrundingsfeil. Input og output. Kontrollstrukturer: Sekvens, valg, og repetisjon. Strukturering og oppdeling av programmer; funksjoner og moduler. Datastrukturer: Strenger, lister, tupler, tabeller, mengder og poster (dictionary). Filbehandling, persistent lagring av informasjon, og unntaksbehandling. Grunnleggende forståelse og bruk av modulene NumPy og Matplotlib for matematiske beregninger og visualisering.",
+    "learningOutcome": "Kunnskaper:\nK1: Kan forklare grunnleggende prinsipper for digital representasjon av informasjon.\nK2: Kan forklare virkemåten til sentrale mekanismer for prosedyre-orientert programmering i Python.\nK3: Kan forklare grunnleggende algoritmer innen programmering, samt for enkle numeriske beregninger.\nK4: Kan forklare noen vanlige måter å bruke KI på innen programmering.\nFerdigheter.\nF1: Kan løse problemer ved å skrive fungerende prosedyre-orienterte programmer, og ved å komplettere kode hvor noen fragmenter mangler, uten bruk av KI og med bruk av KI.\nF2: Kan bruke relevante programmeringsverktøy til utvikling, testing og feilsøking av programkode.\nF3: Kan forklare egen kode for andre og KI (virkemåte, tankegang) og gi konstruktive tilbakemeldinger på andres kode.\nGenerell kompetanse:\nG1: Evne til å reflektere over bruk av programmering til beregninger knyttet til egen fagdisiplin.\nG2: Kan reflektere over hva som er hensiktsmessig og mindre hensiktsmessig bruk av KI som et hjelpeverktøy for å skrive kode og for læring.",
+    "learningMethods": "Forelesninger, øvingsforelesninger, auditorieøvinger, obligatoriske øvinger.",
+    "mandatoryActivities": [
+      "Øvinger"
+    ],
+    "assessmentDetails": "Ved utsatt eksamen (kontinuasjonseksamen) kan eksamen bli endret til muntlig eksamen\nUtsatt eksamen avholdes i august.",
+    "specialConditions": null,
+    "requiredKnowledge": null,
+    "recommendedKnowledge": "Ingen.",
+    "courseMaterials": "Oppgis ved semesterstart.",
+    "creditReductions": [
+      {
+        "courseCode": "TDT4105",
+        "reduction": "7,5 sp",
+        "fromTerm": null
+      },
+      {
+        "courseCode": "TDT4109",
+        "reduction": "7,5 sp",
+        "fromTerm": "Høst 2019"
+      },
+      {
+        "courseCode": "TDT4127",
+        "reduction": "5 sp",
+        "fromTerm": "Høst 2019"
+      },
+      {
+        "courseCode": "TDT4111",
+        "reduction": "5 sp",
+        "fromTerm": "Høst 2022"
+      },
+      {
+        "courseCode": "IT1001",
+        "reduction": "7,5 sp",
+        "fromTerm": "Høst 2023"
+      },
+      {
+        "courseCode": "INGT1002",
+        "reduction": "2,5 sp",
+        "fromTerm": "Høst 2023"
+      },
+      {
+        "courseCode": "INGA1002",
+        "reduction": "2,5 sp",
+        "fromTerm": "Høst 2023"
+      },
+      {
+        "courseCode": "INGG1002",
+        "reduction": "2,5 sp",
+        "fromTerm": "Høst 2023"
+      },
+      {
+        "courseCode": "INFT1010",
+        "reduction": "7,5 sp",
+        "fromTerm": "Høst 2024"
+      },
+      {
+        "courseCode": "PROG1001",
+        "reduction": "7,5 sp",
+        "fromTerm": "Høst 2026"
+      }
+    ],
+    "subjectAreas": [
+      "Teknologiske fag"
+    ],
+    "studyPrograms": [
+      {
+        "code": "BBI",
+        "name": "Biologi"
+      },
+      {
+        "code": "MBIOT5",
+        "name": "Bioteknologi"
+      },
+      {
+        "code": "MTBYGG",
+        "name": "Bygg og infrastruktur"
+      },
+      {
+        "code": "MTDT",
+        "name": "Datateknologi"
+      },
+      {
+        "code": "MTELSYS",
+        "name": "Elektronisk systemdesign og innovasjon"
+      },
+      {
+        "code": "MTENERG",
+        "name": "Energi og miljø"
+      },
+      {
+        "code": "MTFYMA",
+        "name": "Fysikk og matematikk"
+      },
+      {
+        "code": "BGEOL",
+        "name": "Geologi"
+      },
+      {
+        "code": "MTGEORT",
+        "name": "Georessurser og geoteknologi"
+      },
+      {
+        "code": "MTKJ",
+        "name": "Industriell kjemi og bioteknologi"
+      },
+      {
+        "code": "MTKMB",
+        "name": "Industriell kjemi, materialer og bioteknologi"
+      },
+      {
+        "code": "MTIØT",
+        "name": "Industriell økonomi og teknologiledelse"
+      },
+      {
+        "code": "BKJ",
+        "name": "Kjemi"
+      },
+      {
+        "code": "MTTK",
+        "name": "Kybernetikk og robotikk"
+      },
+      {
+        "code": "MLREAL",
+        "name": "Lektorutdanning i realfag for trinn 8 – 13"
+      },
+      {
+        "code": "MTMART",
+        "name": "Marin teknikk"
+      },
+      {
+        "code": "MTMASKIN",
+        "name": "Maskin- og energiteknologi"
+      },
+      {
+        "code": "BMAT",
+        "name": "Matematiske fag"
+      },
+      {
+        "code": "ÅMATSTAT",
+        "name": "Matematiske fag"
+      },
+      {
+        "code": "MTMT",
+        "name": "Materialteknologi"
+      },
+      {
+        "code": "MMEDIE",
+        "name": "Medier, kommunikasjon og informasjonsteknologi"
+      },
+      {
+        "code": "MTNANO",
+        "name": "Nanoteknologi"
+      },
+      {
+        "code": "ØAMSC",
+        "name": "Økonomi og administrasjon"
+      }
+    ],
+    "contacts": [
+      {
+        "role": "Emneansvarlig/koordinator",
+        "persons": [
+          {
+            "name": "Atle Nes",
+            "url": "https://www.ntnu.no/ansatte/atle.nes"
+          }
+        ]
+      },
+      {
+        "role": "Faglærere",
+        "persons": [
+          {
+            "name": "Dag Olav Kjellemo",
+            "url": "https://www.ntnu.no/ansatte/dag.o.kjellemo"
+          }
+        ]
+      }
+    ],
+    "department": "Institutt for datateknologi og informatikk",
+    "exams": [
+      {
+        "occasion": "Ordinær eksamen",
+        "season": "Høst 2026",
+        "form": "Skriftlig skoleeksamen",
+        "weighting": "100/100",
+        "aidCode": "Kode D",
+        "aidCodeDescription": "D: Ingen trykte eller håndskrevne hjelpemidler tillatt. Bestemt, enkel kalkulator tillatt.",
+        "date": "2026-12-14",
+        "dateText": "14.12.2026",
+        "time": "09:00",
+        "timeText": "09:00",
+        "duration": "4 timer",
+        "system": "Inspera Assessment",
+        "rooms": [
+          {
+            "building": "Gnisten/Fagskolen",
+            "room": "G325",
+            "candidates": null
+          },
+          {
+            "building": "Mustad, Inngang D",
+            "room": "M438 Eksamensrom 4.etg, Inngang D",
+            "candidates": null
+          },
+          {
+            "building": "Sluppenvegen 14",
+            "room": "SL110 hvit sone",
+            "candidates": 64
+          },
+          {
+            "building": "Sluppenvegen 14",
+            "room": "SL110 lilla sone",
+            "candidates": 64
+          },
+          {
+            "building": "Sluppenvegen 14",
+            "room": "SL110 turkis sone",
+            "candidates": 80
+          },
+          {
+            "building": "Sluppenvegen 14",
+            "room": "SL111 blå sone",
+            "candidates": 36
+          },
+          {
+            "building": "Sluppenvegen 14",
+            "room": "SL111 brun sone",
+            "candidates": 81
+          },
+          {
+            "building": "Sluppenvegen 14",
+            "room": "SL111 grønn sone",
+            "candidates": 50
+          },
+          {
+            "building": "Sluppenvegen 14",
+            "room": "SL111 lyseblå sone",
+            "candidates": 72
+          },
+          {
+            "building": "Sluppenvegen 14",
+            "room": "SL111 orange sone",
+            "candidates": 60
+          },
+          {
+            "building": "Sluppenvegen 14",
+            "room": "SL310 blå sone",
+            "candidates": 48
+          },
+          {
+            "building": "Sluppenvegen 14",
+            "room": "SL310 hvit sone",
+            "candidates": 46
+          },
+          {
+            "building": "Sluppenvegen 14",
+            "room": "SL310 lilla sone",
+            "candidates": 80
+          },
+          {
+            "building": "Sluppenvegen 14",
+            "room": "SL311 brun sone",
+            "candidates": 4
+          },
+          {
+            "building": "Sluppenvegen 14",
+            "room": "SL410 blå sone",
+            "candidates": 51
+          },
+          {
+            "building": "Sluppenvegen 14",
+            "room": "SL410 orange sone",
+            "candidates": 58
+          },
+          {
+            "building": "Sluppenvegen 14",
+            "room": "SL430",
+            "candidates": 54
+          }
+        ]
+      },
+      {
+        "occasion": "Utsatt eksamen",
+        "season": "Sommer 2027",
+        "form": "Skriftlig skoleeksamen",
+        "weighting": "100/100",
+        "aidCode": "Kode D",
+        "aidCodeDescription": "D: Ingen trykte eller håndskrevne hjelpemidler tillatt. Bestemt, enkel kalkulator tillatt.",
+        "date": null,
+        "dateText": null,
+        "time": null,
+        "timeText": null,
+        "duration": "4 timer",
+        "system": "Inspera Assessment",
+        "rooms": []
+      }
+    ],
+    "studyYear": 2026,
+    "availableYears": [
+      2026,
+      2025,
+      2024,
+      2023,
+      2022,
+      2021,
+      2020,
+      2019,
+      2018,
+      2017,
+      2016,
+      2015,
+      2014,
+      2013,
+      2012,
+      2011,
+      2010,
+      2009,
+      2008,
+      2007
+    ],
+    "notices": [],
+    "courseLinks": [
+      {
+        "label": "Blackboard - HØST-2023",
+        "url": "https://ntnu.blackboard.com/webapps/login?action=guest_login&new_loc=/webapps/blackboard/execute/courseMain?course_id=_44086_1"
+      },
+      {
+        "label": "Blackboard - HØST-2022",
+        "url": "https://ntnu.blackboard.com/webapps/login?action=guest_login&new_loc=/webapps/blackboard/execute/courseMain?course_id=_38192_1"
+      },
+      {
+        "label": "Blackboard - HØST-2021",
+        "url": "https://ntnu.blackboard.com/webapps/login?action=guest_login&new_loc=/webapps/blackboard/execute/courseMain?course_id=_29689_1"
+      },
+      {
+        "label": "Blackboard - HØST-2019",
+        "url": "https://ntnu.blackboard.com/webapps/login?action=guest_login&new_loc=/webapps/blackboard/execute/courseMain?course_id=_17712_1"
+      }
+    ]
+  }
+}

@@ -1,0 +1,167 @@
+{
+  "url": "http://127.0.0.1:8788/api/course/SYG1001",
+  "status": 200,
+  "contentType": "application/json; charset=utf-8",
+  "body": {
+    "courseCode": "SYG1001",
+    "courseName": "Anatomi, fysiologi og biokjemi",
+    "credits": 12,
+    "level": "Grunnleggende emner, nivå I",
+    "teachingStart": "Høst 2026",
+    "teachingDuration": "1 semester",
+    "teachingLanguage": "Norsk",
+    "location": "Gjøvik",
+    "assessmentScheme": "Skriftlig skoleeksamen",
+    "gradeRule": "Bokstavkarakterer",
+    "facts": [
+      {
+        "label": "Studiepoeng",
+        "value": "12"
+      },
+      {
+        "label": "Nivå",
+        "value": "Grunnleggende emner, nivå I"
+      },
+      {
+        "label": "Undervisningsstart",
+        "value": "Høst 2026"
+      },
+      {
+        "label": "Varighet",
+        "value": "1 semester"
+      },
+      {
+        "label": "Undervisningsspråk",
+        "value": "Norsk"
+      },
+      {
+        "label": "Sted",
+        "value": "Gjøvik"
+      },
+      {
+        "label": "Vurderingsordning",
+        "value": "Skriftlig skoleeksamen"
+      }
+    ],
+    "content": "Emnet gir kunnskap i human anatomi, fysiologi og generell biokjemi med vekt på menneskekroppens anatomiske strukturer, oppbygningen av organer og deres fysiologiske prosesser. Emnet gir en innføring i menneskekroppens normalfunksjon, og danner et viktig grunnlag for at sykepleiere skal kunne avdekke avvik og anvende denne kunnskapen i utøvelse av faglig forsvarlig sykepleie.",
+    "learningOutcome": "Kunnskaper\nStudenten:\nnavngir anatomiske strukturer og organer i menneskekroppen\nbeskriver organers beliggenhet i forhold til hverandre\nbeskriver anatomisk oppbygning i betydningen makroanatomisk (organ og organsystem) og mikroanatomisk (celler og vev)\nbeskriver ulike organer og organsystemers funksjoner i kroppen\nforklarer sentrale biokjemiske prosesser i den friske kroppen\ngjør rede for fysiologi i de ulike organene og organsystemene\ngjør rede for reguleringsmekanismer og homeostase i den friske kroppen\nFerdigheter\nStudenten:\nformidler bred kunnskap om menneskekroppens anatomi og fysiologiske prosesser\nformidler kunnskap om biokjemiske prosesser\nGenerell kompetanse\nStudenten:\nforstår at kunnskap i anatomi og fysiologi har betydning for utøvelse av faglig forsvarlig sykepleie\nDetaljert læringsutbytte og faginnhold utarbeides årlig av NOKUT. Detaljert læringsutbytte og faginnhold finner du HER .",
+    "learningMethods": "Forelesninger. Arbeid i grupper (med eller uten veiledning). Seminarer. Workshops. Simulering. Digitale flervalgsoppgaver. E-læringsressurser.",
+    "mandatoryActivities": [
+      "Seminarer. Workshops. Digitale flervalgstester. Skriflige innleveringer"
+    ],
+    "assessmentDetails": "Eksamen er en nasjonal deleksamen arrangert av NOKUT - Nasjonalt organ for kvalitet i utdanninga. Eksamensspråk er norsk (skandinavisk).\nObligatoriske aktiviteter må være godkjent for å kunne gå opp til eksamen i emnet. De obligatoriske aktivitetene godkjennes samlet, og er gyldige så lenge studenten er i studieløpet og inntil ett år etter fullført grad, forutsatt at den obligatoriske aktiviteten ikke har endret seg.\nDetaljert informasjon om obligatorisk aktivitet blir kunngjort ved emnestart.",
+    "specialConditions": "Krever opptak til studieprogram:\nSykepleie (BSPL)",
+    "requiredKnowledge": "Emnet gjennomføres ved det studiested som en er tatt opp ved.",
+    "recommendedKnowledge": null,
+    "courseMaterials": "Kursmateriell publiseres på læringsplattformen ved oppstart av emnet.",
+    "creditReductions": [
+      {
+        "courseCode": "SYA1001",
+        "reduction": "12 sp",
+        "fromTerm": "Høst 2020"
+      },
+      {
+        "courseCode": "SYT1001",
+        "reduction": "12 sp",
+        "fromTerm": "Høst 2020"
+      },
+      {
+        "courseCode": "SPL1004",
+        "reduction": "12 sp",
+        "fromTerm": "Høst 2020"
+      },
+      {
+        "courseCode": "SPL1004D",
+        "reduction": "12 sp",
+        "fromTerm": "Høst 2020"
+      },
+      {
+        "courseCode": "SYGF1001",
+        "reduction": "12 sp",
+        "fromTerm": "Høst 2025"
+      }
+    ],
+    "subjectAreas": [
+      "Helse- og sosialfag",
+      "Sykepleie og jordmor"
+    ],
+    "studyPrograms": [
+      {
+        "code": "BSPL",
+        "name": "Sykepleie"
+      }
+    ],
+    "contacts": [
+      {
+        "role": "Emneansvarlig/koordinator",
+        "persons": [
+          {
+            "name": "Tonette Røstelien",
+            "url": "https://www.ntnu.no/ansatte/tonette.roestelien"
+          }
+        ]
+      }
+    ],
+    "department": "Institutt for helsevitenskap Gjøvik",
+    "exams": [
+      {
+        "occasion": "Ordinær eksamen",
+        "season": "Høst 2026",
+        "form": "Skriftlig skoleeksamen",
+        "weighting": "100/100",
+        "aidCode": "Kode E",
+        "aidCodeDescription": "E: Ingen hjelpemidler tillatt.",
+        "date": "2026-12-16",
+        "dateText": "16.12.2026",
+        "time": "09:00",
+        "timeText": "09:00",
+        "duration": "4 timer",
+        "system": "NOKUT-EKS",
+        "rooms": [
+          {
+            "building": "Ametyst",
+            "room": "A-atriet-2/3 (A-160)",
+            "candidates": 11
+          },
+          {
+            "building": "Mustad, Inngang A",
+            "room": "M433-Eksamensrom 4.etg",
+            "candidates": 80
+          },
+          {
+            "building": "Mustad, Inngang D",
+            "room": "M438 Eksamensrom 4.etg, Inngang D",
+            "candidates": 90
+          }
+        ]
+      },
+      {
+        "occasion": "Utsatt eksamen",
+        "season": "Vår 2027",
+        "form": "Skriftlig skoleeksamen",
+        "weighting": "100/100",
+        "aidCode": "Kode E",
+        "aidCodeDescription": "E: Ingen hjelpemidler tillatt.",
+        "date": null,
+        "dateText": null,
+        "time": "09:00",
+        "timeText": "09:00",
+        "duration": "4 timer",
+        "system": "NOKUT-EKS",
+        "rooms": []
+      }
+    ],
+    "studyYear": 2026,
+    "availableYears": [
+      2026,
+      2025,
+      2024,
+      2023,
+      2022,
+      2021,
+      2020
+    ],
+    "notices": [],
+    "courseLinks": []
+  }
+}

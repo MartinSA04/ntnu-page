@@ -1,0 +1,420 @@
+{
+  "url": "http://127.0.0.1:8788/api/course/TMA4400",
+  "status": 200,
+  "contentType": "application/json; charset=utf-8",
+  "body": {
+    "courseCode": "TMA4400",
+    "courseName": "Matematikk 1: Kalkulus og lineær algebra",
+    "credits": 7.5,
+    "level": "Grunnleggende emner, nivå I",
+    "teachingStart": "Høst 2026",
+    "teachingDuration": "1 semester",
+    "teachingLanguage": "Norsk",
+    "location": "Trondheim",
+    "assessmentScheme": "Skriftlig skoleeksamen",
+    "gradeRule": "Bokstavkarakterer",
+    "facts": [
+      {
+        "label": "Studiepoeng",
+        "value": "7,5"
+      },
+      {
+        "label": "Nivå",
+        "value": "Grunnleggende emner, nivå I"
+      },
+      {
+        "label": "Undervisningsstart",
+        "value": "Høst 2026"
+      },
+      {
+        "label": "Varighet",
+        "value": "1 semester"
+      },
+      {
+        "label": "Undervisningsspråk",
+        "value": "Norsk"
+      },
+      {
+        "label": "Sted",
+        "value": "Trondheim"
+      },
+      {
+        "label": "Vurderingsordning",
+        "value": "Skriftlig skoleeksamen"
+      }
+    ],
+    "content": "Emnet er en fordypning i og videreføring av fagstoffet om funksjoner og vektorer fra videregående skole og legger grunnlaget for de andre matematikkemnene i sivilingeniørstudiet.\nTallmengder (fra naturlige til komplekse tall). Grensebegrepet, konvergens av følger, kompletthet av de reelle tall. Egenskaper og teoremer knyttet til funksjoner av én reell variabel: Kontinuitet, skjæringssetningen, sekantsetningen (middelverditeoremet). Optimering av funksjoner (maks/min-problemer). Approksimasjon av funksjoner med taylorpolynom.\nLineære ligningssystemer. Lineær avhengighet og uavhengighet, og dimensjonsanalyse (i R 3). Gausseliminasjon. Matriser og determinanter. Egenverdier og egenvektorer.\nDen deriverte av funksjoner av én reell variabel. Sammensatte funksjoner. Derivasjonsregler. Det bestemte integralet av funksjoner av én reell variabel. Riemannsummer. Analysens fundamentalteorem. Uegentlige integral. Analytiske og numeriske integrasjonsmetoder.\nIterative metoder. Konvergens og feilanalyse.\nSeparable og lineære differensialligninger. Eksistens og entydighet av løsninger. Analytiske og numeriske løsningsmetoder. Konvergens og feilanalyse.\nEksempler på matematisk modellering og anvendelser innenfor naturvitenskap og teknologi.",
+    "learningOutcome": "Studenten forstår og kan anvende grunnleggende begreper, resultater og metoder fra énvariabel matematisk analyse knyttet til grenser, kontinuitet, derivasjon, integrasjon, konvergens av følger, og taylorpolynom. Studenten forstår og kan anvende grunnleggende begreper og metoder som omhandler lineære ligningssystemer og matriser. Studenten har kunnskap om algoritmisk tenkning for å kunne forstå og anvende grunnleggende numeriske metoder for integrasjon og for løsning av ikke-lineære ligninger, lineære ligningssystemer og differensialligninger. Studenten kan videre analysere slike metoder med tanke på anvendbarhet og presisjon.\nStudenten kjenner til bruken av numeriske metoder i et programmeringsspråk og forstår muligheter og begrensninger som ligger i de ulike metodene i forhold til de problemer de anvendes på.\nStudenten kan anvende både analytiske og beregningsorienterte angrepsmåter til å formulere, modellere og løse enkle teknologiske problemer relevant for sitt studieprogram.\nEmnet vil primært bidra til kompetanseområde K1; vise fagkunnskaper og faglig fundert perspektiv. Det vil videre bidra til kompetanseområde K2; analysere ingeniørfaglige problemstillinger, i samarbeid med de enkelte studieprogrammene som emnet betjener.",
+    "learningMethods": "Forelesninger og obligatoriske øvinger. Antall øvinger som må godkjennes vil bli oppgitt ved semesterstart på hjemmesiden til emnet. Emnet vil undervises på norsk.",
+    "mandatoryActivities": [
+      "Obligatoriske øvinger"
+    ],
+    "assessmentDetails": "Karakteren er basert på en avsluttende skriftlig eksamen. Ved utsatt eksamen (kontinuasjonseksamen) kan skriftlig eksamen bli endret til muntlig eksamen. Utsatt eksamen er i august.",
+    "specialConditions": null,
+    "requiredKnowledge": null,
+    "recommendedKnowledge": "Matematikk R2 fra videregående skole, eller tilsvarende kunnskaper.",
+    "courseMaterials": "Oppgis ved semesterstart.",
+    "creditReductions": [
+      {
+        "courseCode": "TMA4110",
+        "reduction": "2 sp",
+        "fromTerm": "Høst 2025"
+      },
+      {
+        "courseCode": "TMA4100",
+        "reduction": "5,5 sp",
+        "fromTerm": "Høst 2025"
+      },
+      {
+        "courseCode": "TMA4101",
+        "reduction": "7,5 sp",
+        "fromTerm": "Høst 2025"
+      },
+      {
+        "courseCode": "TMA4115",
+        "reduction": "2 sp",
+        "fromTerm": "Høst 2025"
+      },
+      {
+        "courseCode": "MA0001",
+        "reduction": "3,7 sp",
+        "fromTerm": "Høst 2025"
+      },
+      {
+        "courseCode": "MA1101",
+        "reduction": "5 sp",
+        "fromTerm": "Høst 2025"
+      },
+      {
+        "courseCode": "MA6101",
+        "reduction": "5 sp",
+        "fromTerm": "Høst 2025"
+      },
+      {
+        "courseCode": "MA1102",
+        "reduction": "2,5 sp",
+        "fromTerm": "Høst 2025"
+      },
+      {
+        "courseCode": "MA6102",
+        "reduction": "2,5 sp",
+        "fromTerm": "Høst 2025"
+      },
+      {
+        "courseCode": "MA1201",
+        "reduction": "2,5 sp",
+        "fromTerm": "Høst 2025"
+      },
+      {
+        "courseCode": "MA6201",
+        "reduction": "2,5 sp",
+        "fromTerm": "Høst 2025"
+      },
+      {
+        "courseCode": "IMAA1002",
+        "reduction": "4 sp",
+        "fromTerm": "Høst 2025"
+      },
+      {
+        "courseCode": "IMAG1002",
+        "reduction": "4 sp",
+        "fromTerm": "Høst 2025"
+      },
+      {
+        "courseCode": "IMAT1002",
+        "reduction": "4 sp",
+        "fromTerm": "Høst 2025"
+      },
+      {
+        "courseCode": "TMA4401",
+        "reduction": "5 sp",
+        "fromTerm": "Høst 2025"
+      },
+      {
+        "courseCode": "TMA4413",
+        "reduction": "2,5 sp",
+        "fromTerm": "Høst 2025"
+      },
+      {
+        "courseCode": "IMAG1002F",
+        "reduction": "4 sp",
+        "fromTerm": "Høst 2026"
+      }
+    ],
+    "subjectAreas": [
+      "Matematikk",
+      "Teknologiske fag"
+    ],
+    "studyPrograms": [
+      {
+        "code": "MTBYGG",
+        "name": "Bygg og infrastruktur"
+      },
+      {
+        "code": "MTDT",
+        "name": "Datateknologi"
+      },
+      {
+        "code": "MTELSYS",
+        "name": "Elektronisk systemdesign og innovasjon"
+      },
+      {
+        "code": "MTENERG",
+        "name": "Energi og miljø"
+      },
+      {
+        "code": "BGEOL",
+        "name": "Geologi"
+      },
+      {
+        "code": "MTGEORT",
+        "name": "Georessurser og geoteknologi"
+      },
+      {
+        "code": "MTDESIG",
+        "name": "Industriell design"
+      },
+      {
+        "code": "MTKJ",
+        "name": "Industriell kjemi og bioteknologi"
+      },
+      {
+        "code": "MTKMB",
+        "name": "Industriell kjemi, materialer og bioteknologi"
+      },
+      {
+        "code": "MTIØT",
+        "name": "Industriell økonomi og teknologiledelse"
+      },
+      {
+        "code": "MTINGGEO",
+        "name": "Ingeniørgeologi"
+      },
+      {
+        "code": "MTING",
+        "name": "Ingeniørvitenskap og IKT"
+      },
+      {
+        "code": "BKJ",
+        "name": "Kjemi"
+      },
+      {
+        "code": "MTTK",
+        "name": "Kybernetikk og robotikk"
+      },
+      {
+        "code": "MTMART",
+        "name": "Marin teknikk"
+      },
+      {
+        "code": "MTMASKIN",
+        "name": "Maskin- og energiteknologi"
+      },
+      {
+        "code": "MTNANO",
+        "name": "Nanoteknologi"
+      }
+    ],
+    "contacts": [
+      {
+        "role": "Emneansvarlig/koordinator",
+        "persons": [
+          {
+            "name": "Jørgen Endal Letnes",
+            "url": "https://www.ntnu.no/ansatte/jorgen.endal"
+          }
+        ]
+      },
+      {
+        "role": "Faglærere",
+        "persons": [
+          {
+            "name": "Franz Luef",
+            "url": "https://www.ntnu.no/ansatte/franz.luef"
+          },
+          {
+            "name": "Frode Rønning",
+            "url": "https://www.ntnu.no/ansatte/frode.ronning"
+          },
+          {
+            "name": "Gereon Quick",
+            "url": "https://www.ntnu.no/ansatte/gereon.quick"
+          },
+          {
+            "name": "Markus Arthur Köbis",
+            "url": "https://www.ntnu.no/ansatte/markus.kobis"
+          },
+          {
+            "name": "Morten Andreas Nome",
+            "url": "https://www.ntnu.no/ansatte/morten.nome"
+          },
+          {
+            "name": "Silvie Yael Girlani Fleischmann",
+            "url": "https://www.ntnu.no/ansatte/yael.fleischmann"
+          }
+        ]
+      }
+    ],
+    "department": "Institutt for matematiske fag",
+    "exams": [
+      {
+        "occasion": "Ordinær eksamen",
+        "season": "Høst 2026",
+        "form": "Skriftlig skoleeksamen",
+        "weighting": "100/100",
+        "aidCode": "Kode D",
+        "aidCodeDescription": "D: Ingen trykte eller håndskrevne hjelpemidler tillatt. Bestemt, enkel kalkulator tillatt.",
+        "date": "2026-12-01",
+        "dateText": "01.12.2026",
+        "time": "09:00",
+        "timeText": "09:00",
+        "duration": "4 timer",
+        "system": "Inspera Assessment",
+        "rooms": [
+          {
+            "building": "Sluppenvegen 14",
+            "room": "SL110 hvit sone",
+            "candidates": 64
+          },
+          {
+            "building": "Sluppenvegen 14",
+            "room": "SL110 lilla sone",
+            "candidates": 64
+          },
+          {
+            "building": "Sluppenvegen 14",
+            "room": "SL110 turkis sone",
+            "candidates": 80
+          },
+          {
+            "building": "Sluppenvegen 14",
+            "room": "SL111 blå sone",
+            "candidates": 36
+          },
+          {
+            "building": "Sluppenvegen 14",
+            "room": "SL111 brun sone",
+            "candidates": 81
+          },
+          {
+            "building": "Sluppenvegen 14",
+            "room": "SL111 grønn sone",
+            "candidates": 50
+          },
+          {
+            "building": "Sluppenvegen 14",
+            "room": "SL111 lyseblå sone",
+            "candidates": 72
+          },
+          {
+            "building": "Sluppenvegen 14",
+            "room": "SL111 orange sone",
+            "candidates": 60
+          },
+          {
+            "building": "Sluppenvegen 14",
+            "room": "SL210",
+            "candidates": 51
+          },
+          {
+            "building": "Sluppenvegen 14",
+            "room": "SL310 blå sone",
+            "candidates": 48
+          },
+          {
+            "building": "Sluppenvegen 14",
+            "room": "SL310 hvit sone",
+            "candidates": 46
+          },
+          {
+            "building": "Sluppenvegen 14",
+            "room": "SL310 lilla sone",
+            "candidates": 80
+          },
+          {
+            "building": "Sluppenvegen 14",
+            "room": "SL310 turkis sone",
+            "candidates": 59
+          },
+          {
+            "building": "Sluppenvegen 14",
+            "room": "SL311 brun sone",
+            "candidates": 82
+          },
+          {
+            "building": "Sluppenvegen 14",
+            "room": "SL311 grønn sone",
+            "candidates": 68
+          },
+          {
+            "building": "Sluppenvegen 14",
+            "room": "SL311 lyseblå sone",
+            "candidates": 96
+          },
+          {
+            "building": "Sluppenvegen 14",
+            "room": "SL311 orange sone",
+            "candidates": 65
+          },
+          {
+            "building": "Sluppenvegen 14",
+            "room": "SL410 blå sone",
+            "candidates": 51
+          },
+          {
+            "building": "Sluppenvegen 14",
+            "room": "SL410 orange sone",
+            "candidates": 58
+          },
+          {
+            "building": "Sluppenvegen 14",
+            "room": "SL415",
+            "candidates": 53
+          },
+          {
+            "building": "Sluppenvegen 14",
+            "room": "SL430",
+            "candidates": 54
+          },
+          {
+            "building": "Sluppenvegen 14",
+            "room": "SL510",
+            "candidates": 51
+          },
+          {
+            "building": "Sluppenvegen 14",
+            "room": "SL520",
+            "candidates": 54
+          }
+        ]
+      },
+      {
+        "occasion": "Utsatt eksamen",
+        "season": "Sommer 2027",
+        "form": "Skriftlig skoleeksamen",
+        "weighting": "100/100",
+        "aidCode": "Kode D",
+        "aidCodeDescription": "D: Ingen trykte eller håndskrevne hjelpemidler tillatt. Bestemt, enkel kalkulator tillatt.",
+        "date": null,
+        "dateText": null,
+        "time": null,
+        "timeText": null,
+        "duration": "4 timer",
+        "system": "Inspera Assessment",
+        "rooms": []
+      }
+    ],
+    "studyYear": 2026,
+    "availableYears": [
+      2026,
+      2025
+    ],
+    "notices": [],
+    "courseLinks": [
+      {
+        "label": "Faglærers emneside",
+        "url": "https://wiki.math.ntnu.no/tma4400"
+      }
+    ]
+  }
+}

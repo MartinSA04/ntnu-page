@@ -12,18 +12,24 @@ const BASE_URL = `http://127.0.0.1:${PORT}`;
 export default defineConfig({
   testDir: "./e2e",
   testMatch: "**/*.pw.ts",
-  fullyParallel: false,
-  workers: 1,
+  // Every test opens its own context and seeds its own localStorage, so there is
+  // no shared state to serialise on. The cap is about the worker underneath:
+  // `RateLimiter(120, 15)` buckets on CF-Connecting-IP and every local worker
+  // shares 127.0.0.1, so 4 cold planner loads at once is ~44 upstream calls
+  // against a 120 burst. Raise it and check for 429s before assuming it still
+  // clears. CI runners are 2-core, where 4 workers only thrash.
+  fullyParallel: true,
+  workers: process.env.CI ? 2 : 4,
   reporter: [["list"]],
+  globalTeardown: "./e2e/global-teardown.ts",
   // Playwright's default is 30 s, which is BELOW the budgets the specs
   // themselves write: several assertions pass `{ timeout: 45_000 }` for a cold
   // worker cache (a GitHub runner has no KV binding, so the first plan load
   // goes straight to ntnu.no). Summed per test, the longest chains are BSPL's
   // ~155 s and the onboarding flow's ~115 s; capped at 30 s those tests died
   // before their own allowance could expire — a red run on a healthy build,
-  // reported against the grid rather than against the clock (tests-2). 180 s
-  // clears the largest of them. The suite is 1 worker, serial, so this bounds
-  // a hang; a healthy run is nowhere near it.
+  // reported against the grid rather than against the clock. 180 s clears the
+  // largest of them and bounds a hang; a healthy run is nowhere near it.
   timeout: 180_000,
   use: {
     baseURL: BASE_URL,

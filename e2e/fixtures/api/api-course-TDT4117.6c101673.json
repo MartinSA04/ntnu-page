@@ -1,0 +1,171 @@
+{
+  "url": "http://127.0.0.1:8788/api/course/TDT4117",
+  "status": 200,
+  "contentType": "application/json; charset=utf-8",
+  "body": {
+    "courseCode": "TDT4117",
+    "courseName": "Informasjonsgjenfinning",
+    "credits": 7.5,
+    "level": "Tredjeårsemner, nivå III",
+    "teachingStart": "Høst 2026",
+    "teachingDuration": "1 semester",
+    "teachingLanguage": "Engelsk",
+    "location": "Trondheim",
+    "assessmentScheme": "Skriftlig skoleeksamen",
+    "gradeRule": "Bokstavkarakterer",
+    "facts": [
+      {
+        "label": "Studiepoeng",
+        "value": "7,5"
+      },
+      {
+        "label": "Nivå",
+        "value": "Tredjeårsemner, nivå III"
+      },
+      {
+        "label": "Undervisningsstart",
+        "value": "Høst 2026"
+      },
+      {
+        "label": "Varighet",
+        "value": "1 semester"
+      },
+      {
+        "label": "Undervisningsspråk",
+        "value": "Engelsk"
+      },
+      {
+        "label": "Sted",
+        "value": "Trondheim"
+      },
+      {
+        "label": "Vurderingsordning",
+        "value": "Skriftlig skoleeksamen"
+      }
+    ],
+    "content": "Emnet tar vare på den delen av informatikkfaget som omfatter automatisk lagring og gjenfinning av dokumenter. I denne sammenhengen inkluderer dokumentbegrepet også lyd og bilde. Emnet inneholder disipliner som filorganisering, queryoperasjoner, dokumentoperasjoner og kunnskapsbasert gjenfinning av tekstuelle og multimedia informasjon.",
+    "learningOutcome": "Kunnskap . Studenten skal oppnå kunnskap om pre-prosessering, modellering, indeksering og spørring av store samlinger med tekstbaserte dokumenter. Spesifikt skal studenten ha kunnskap om dokumentforbehandling, modeller for informasjonsgjenfinning, omformulering av spørringer, evaluering av informasjonsgjenfinningssystemer, indeksering, nettsøk, nevrale søk og indeksering av multimediainnhold.\nFerdigheter . Etter fullført emne skal studenten være i stand til å implementere en søkemotor som kan indeksere en stor dokumentsamling, og som brukere kan søke i for å dekke sine informasjonsbehov.",
+    "learningMethods": "Emnet innholder forelesninger og øvinger. Øvingsoppgaver handler om problemløsning og programmeringsoppgaver.",
+    "mandatoryActivities": [
+      "Øvinger"
+    ],
+    "assessmentDetails": "Eksamensspråket er engelsk.\nVed utsatt eksamen kan skriftlig eksamen bli endret til muntlig eksamen. Utsatt eksamen for skriftlig skoleeksamen avholdes i august.",
+    "specialConditions": null,
+    "requiredKnowledge": null,
+    "recommendedKnowledge": "IT1104 Programmering VK/TDT4100 Objektorientert programmering og IT1607 Databaseteknikk/TDT4145 Datamodellering og databasesystemer.",
+    "courseMaterials": "Ricardo Baeza-Yates og Berthier Ribeiro-Neto, Modern Information Retrieval, 2. utgave, 2011 (pensum). Christopher D. Manning, Prabhakar Raghavan and Hinrich Schütze, Introduction to Information Retrieval, Cambridge University Press. 2008 (anbefalt/kursorisk).",
+    "creditReductions": [
+      {
+        "courseCode": "IT2801",
+        "reduction": "7,5 sp",
+        "fromTerm": "Høst 2010"
+      }
+    ],
+    "subjectAreas": [
+      "Datateknikk og informasjonsvitenskap",
+      "Datateknikk",
+      "Informatikk"
+    ],
+    "studyPrograms": [
+      {
+        "code": "MTDT",
+        "name": "Datateknologi"
+      },
+      {
+        "code": "BIT",
+        "name": "Informatikk"
+      },
+      {
+        "code": "MLREAL",
+        "name": "Lektorutdanning i realfag for trinn 8 – 13"
+      }
+    ],
+    "contacts": [
+      {
+        "role": "Emneansvarlig/koordinator",
+        "persons": [
+          {
+            "name": "Dhruv Gupta",
+            "url": "https://www.ntnu.no/ansatte/dhruv.gupta"
+          }
+        ]
+      }
+    ],
+    "department": "Institutt for datateknologi og informatikk",
+    "exams": [
+      {
+        "occasion": "Ordinær eksamen",
+        "season": "Høst 2026",
+        "form": "Skriftlig skoleeksamen",
+        "weighting": "100/100",
+        "aidCode": "Kode D",
+        "aidCodeDescription": "D: Ingen trykte eller håndskrevne hjelpemidler tillatt. Bestemt, enkel kalkulator tillatt.",
+        "date": "2026-12-16",
+        "dateText": "16.12.2026",
+        "time": "15:00",
+        "timeText": "15:00",
+        "duration": "4 timer",
+        "system": "Inspera Assessment",
+        "rooms": [
+          {
+            "building": "Sluppenvegen 14",
+            "room": "SL310 hvit sone",
+            "candidates": 46
+          },
+          {
+            "building": "Sluppenvegen 14",
+            "room": "SL310 turkis sone",
+            "candidates": 5
+          },
+          {
+            "building": "Sluppenvegen 14",
+            "room": "SL311 grønn sone",
+            "candidates": 3
+          },
+          {
+            "building": "Sluppenvegen 14",
+            "room": "SL430",
+            "candidates": 54
+          }
+        ]
+      },
+      {
+        "occasion": "Utsatt eksamen",
+        "season": "Sommer 2027",
+        "form": "Skriftlig skoleeksamen",
+        "weighting": "100/100",
+        "aidCode": "Kode D",
+        "aidCodeDescription": "D: Ingen trykte eller håndskrevne hjelpemidler tillatt. Bestemt, enkel kalkulator tillatt.",
+        "date": null,
+        "dateText": null,
+        "time": null,
+        "timeText": null,
+        "duration": "4 timer",
+        "system": "Inspera Assessment",
+        "rooms": []
+      }
+    ],
+    "studyYear": 2026,
+    "availableYears": [
+      2026,
+      2025,
+      2024,
+      2023,
+      2022,
+      2021,
+      2020,
+      2019,
+      2018,
+      2017,
+      2016,
+      2015,
+      2014,
+      2013,
+      2012,
+      2011,
+      2010
+    ],
+    "notices": [],
+    "courseLinks": []
+  }
+}

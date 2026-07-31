@@ -1,0 +1,69 @@
+{
+  "url": "http://127.0.0.1:8788/api/course/TI%C3%984118/timetable?year=2026&version=1",
+  "status": 200,
+  "contentType": "application/json; charset=utf-8",
+  "body": [
+    {
+      "courseCode": "TIØ4118",
+      "courseName": {
+        "nob": "Industriell økonomisk analyse",
+        "nno": "Industriell økonomisk analyse",
+        "eng": "Industrial Economic Analysis"
+      },
+      "acronym": "FORM",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Formidling",
+      "title": "Forelesning",
+      "dayNumber": 3,
+      "startTime": "09:15",
+      "endTime": "12:00",
+      "weeks": [
+        "34-47"
+      ],
+      "rooms": [
+        {
+          "id": "194_306_S68",
+          "building": "Geologi",
+          "room": "G1",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=306-S68"
+        }
+      ],
+      "studyProgramKeys": [
+        "MTKOM",
+        "MTIØT"
+      ]
+    },
+    {
+      "courseCode": "TIØ4118",
+      "courseName": {
+        "nob": "Industriell økonomisk analyse",
+        "nno": "Industriell økonomisk analyse",
+        "eng": "Industrial Economic Analysis"
+      },
+      "acronym": "DISAM",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Dialog- og samarbeidsbasert undervisning",
+      "title": "Fellesøving",
+      "dayNumber": 5,
+      "startTime": "10:15",
+      "endTime": "12:00",
+      "weeks": [
+        "35-47"
+      ],
+      "rooms": [
+        {
+          "id": "194_301_314",
+          "building": "Hovedbygningen",
+          "room": "314",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=301-314"
+        }
+      ],
+      "studyProgramKeys": [
+        "MTKOM",
+        "MTIØT"
+      ]
+    }
+  ]
+}

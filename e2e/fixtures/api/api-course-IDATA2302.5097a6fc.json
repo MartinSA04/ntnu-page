@@ -1,0 +1,193 @@
+{
+  "url": "http://127.0.0.1:8788/api/course/IDATA2302",
+  "status": 200,
+  "contentType": "application/json; charset=utf-8",
+  "body": {
+    "courseCode": "IDATA2302",
+    "courseName": "Algoritmer og datastrukturer",
+    "credits": 7.5,
+    "level": "Videregående emner, nivå II",
+    "teachingStart": "Høst 2026",
+    "teachingDuration": "1 semester",
+    "teachingLanguage": "Engelsk og norsk",
+    "location": "Ålesund",
+    "assessmentScheme": "Skriftlig skoleeksamen",
+    "gradeRule": "Bokstavkarakterer",
+    "facts": [
+      {
+        "label": "Studiepoeng",
+        "value": "7,5"
+      },
+      {
+        "label": "Nivå",
+        "value": "Videregående emner, nivå II"
+      },
+      {
+        "label": "Undervisningsstart",
+        "value": "Høst 2026"
+      },
+      {
+        "label": "Varighet",
+        "value": "1 semester"
+      },
+      {
+        "label": "Undervisningsspråk",
+        "value": "Engelsk og norsk"
+      },
+      {
+        "label": "Sted",
+        "value": "Ålesund"
+      },
+      {
+        "label": "Vurderingsordning",
+        "value": "Skriftlig skoleeksamen"
+      }
+    ],
+    "content": "Faget handler om problemløsning ved hjelp av algoritmisk tenkning.\nTeknikker og algoritmer:\nRekursjon\nSortering\nSøking\nHashing\nGrafalgoritmer\nVelkjente algoritmer\nDatastrukturer:\nTabeller/array\nLister\nKø\nStakk\nTrær\nGrafer\nTeori om kompleksitet:\nKompleksitet og O-notasjon\nTids- og plassforbruk",
+    "learningOutcome": "Kunnskap - kandidaten\nEr kjent med, kunne forklare og anvende en del standard algoritmer for bl.a. sortering, søking og grafhåndtering.\nKan beskrive og forklare ulike datastrukturer (arrayer/tabeller, lenkede lister, køer, stakker, trær og grafer).\nForstår rekursiv tankegang/metode ved problemløsning og programmering.\nKan sammenligne algoritmers kompleksitet.\nKan beskrive NP-kompletthet.\nFerdigheter - kandidaten\nKan benytte en rekke kjente algoritmer for å løse praktiske programmeringsproblemer effektivt.\nKan håndtere avanserte datastrukturer (med særlig vekt på trær og grafer)\nGenerell kompetanse - kandidaten\nKan kombinere standardalgoritmer til større programenheter.\nEr klar over sammenhengen mellom kompleksitet og kjøretid for programmer.",
+    "learningMethods": "Forelesninger, oppgaveløsning, veiledning.",
+    "mandatoryActivities": [
+      "Øvinger"
+    ],
+    "assessmentDetails": "Utsatt eksamen i mai/juni kan bli arrangert som muntlig eksamen.",
+    "specialConditions": "Krever opptak til studieprogram:\nData - Ingeniørfag (BIDATA) - enkelte retninger",
+    "requiredKnowledge": null,
+    "recommendedKnowledge": "Programmering grunnkurs, eller tilsvarende kurs. Noe kunnskaper i matematikk, spesielt grunnleggende logikk, kommer også godt med.",
+    "courseMaterials": "Publiseres ved studiestart",
+    "creditReductions": [
+      {
+        "courseCode": "TDT4120",
+        "reduction": "7,5 sp",
+        "fromTerm": "Høst 2020"
+      },
+      {
+        "courseCode": "IMT2021",
+        "reduction": "7,5 sp",
+        "fromTerm": "Høst 2020"
+      },
+      {
+        "courseCode": "TDAT2005",
+        "reduction": "7,5 sp",
+        "fromTerm": "Høst 2020"
+      },
+      {
+        "courseCode": "IDATT2101",
+        "reduction": "7,5 sp",
+        "fromTerm": "Høst 2020"
+      },
+      {
+        "courseCode": "IDATG2102",
+        "reduction": "7,5 sp",
+        "fromTerm": "Høst 2020"
+      },
+      {
+        "courseCode": "TDT4121",
+        "reduction": "7,5 sp",
+        "fromTerm": "Høst 2022"
+      }
+    ],
+    "subjectAreas": [
+      "Datateknikk og informasjonsvitenskap",
+      "IKT og matematikk",
+      "Informatikk",
+      "Algoritmekonstruksjon",
+      "Analyse",
+      "Datateknikk",
+      "IKT",
+      "Informasjonsteknologi og informatikk",
+      "Ingeniør"
+    ],
+    "studyPrograms": [
+      {
+        "code": "BIDATA",
+        "name": "Data - Ingeniørfag"
+      }
+    ],
+    "contacts": [
+      {
+        "role": "Emneansvarlig/koordinator",
+        "persons": [
+          {
+            "name": "Franck Bertrand Eric Chauvel",
+            "url": "https://www.ntnu.no/ansatte/franck.chauvel"
+          }
+        ]
+      },
+      {
+        "role": "Faglærere",
+        "persons": [
+          {
+            "name": "Arne Gerhard Styve",
+            "url": "https://www.ntnu.no/ansatte/arne.styve"
+          },
+          {
+            "name": "Franck Bertrand Eric Chauvel",
+            "url": "https://www.ntnu.no/ansatte/franck.chauvel"
+          }
+        ]
+      }
+    ],
+    "department": "Institutt for IKT og realfag",
+    "exams": [
+      {
+        "occasion": "Ordinær eksamen",
+        "season": "Høst 2026",
+        "form": "Skriftlig skoleeksamen",
+        "weighting": "100/100",
+        "aidCode": "Kode D",
+        "aidCodeDescription": "D: Ingen trykte eller håndskrevne hjelpemidler tillatt. Bestemt, enkel kalkulator tillatt.",
+        "date": "2026-12-14",
+        "dateText": "14.12.2026",
+        "time": "09:00",
+        "timeText": "09:00",
+        "duration": "4 timer",
+        "system": "Inspera Assessment",
+        "rooms": [
+          {
+            "building": "Gnisten/Fagskolen",
+            "room": "G325",
+            "candidates": 18
+          },
+          {
+            "building": "Gnisten/Fagskolen",
+            "room": "G328B",
+            "candidates": 22
+          },
+          {
+            "building": "Gnisten/Fagskolen",
+            "room": "G328C",
+            "candidates": 4
+          }
+        ]
+      },
+      {
+        "occasion": "Utsatt eksamen",
+        "season": "Vår 2027",
+        "form": "Skriftlig skoleeksamen",
+        "weighting": "100/100",
+        "aidCode": "Kode D",
+        "aidCodeDescription": "D: Ingen trykte eller håndskrevne hjelpemidler tillatt. Bestemt, enkel kalkulator tillatt.",
+        "date": null,
+        "dateText": null,
+        "time": null,
+        "timeText": null,
+        "duration": "4 timer",
+        "system": "Inspera Assessment",
+        "rooms": []
+      }
+    ],
+    "studyYear": 2026,
+    "availableYears": [
+      2026,
+      2025,
+      2024,
+      2023,
+      2022,
+      2021,
+      2020,
+      2019
+    ],
+    "notices": [],
+    "courseLinks": []
+  }
+}

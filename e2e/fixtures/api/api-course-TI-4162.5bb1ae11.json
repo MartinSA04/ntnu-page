@@ -1,0 +1,158 @@
+{
+  "url": "http://127.0.0.1:8788/api/course/TI%C3%984162",
+  "status": 200,
+  "contentType": "application/json; charset=utf-8",
+  "body": {
+    "courseCode": "TIØ4162",
+    "courseName": "Organisasjon og teknologi 2",
+    "credits": 7.5,
+    "level": "Tredjeårsemner, nivå III",
+    "teachingStart": "Høst 2026",
+    "teachingDuration": "1 semester",
+    "teachingLanguage": "Norsk",
+    "location": "Trondheim",
+    "assessmentScheme": "Samlet karakter",
+    "gradeRule": "Bokstavkarakterer",
+    "facts": [
+      {
+        "label": "Studiepoeng",
+        "value": "7,5"
+      },
+      {
+        "label": "Nivå",
+        "value": "Tredjeårsemner, nivå III"
+      },
+      {
+        "label": "Undervisningsstart",
+        "value": "Høst 2026"
+      },
+      {
+        "label": "Varighet",
+        "value": "1 semester"
+      },
+      {
+        "label": "Undervisningsspråk",
+        "value": "Norsk"
+      },
+      {
+        "label": "Sted",
+        "value": "Trondheim"
+      },
+      {
+        "label": "Vurderingsordning",
+        "value": "Samlet karakter"
+      }
+    ],
+    "content": "Systemteori: Modeller for åpne systemer, fokale systemer på ulike nivåer, tilbakemeldingssløyfer for systemer.\nProsjekter og prosjektvirksomhet: organisering av prosjektvirksomhet, program- og porteføljeledelse, ledelse av prosjektorientert virksomhet, prosjektteam og prosjektsuksess,\nInterorganisatorisk teori: Verdikjedestyring og -ledelse, industriell nettverksteori.\nUndervisningen skal sikre at studentene får en god forståelse av interaksjonen mellom teknologi og organisasjon, og dermed hvordan organisatoriske valg skaper muligheter og begrensninger for bruk og utvikling av teknologi, og omvendt.",
+    "learningOutcome": "Emnets posisjon og funksjon i studiet: Emnet er obligatorisk i 2. årskurs i studieprogrammet MTIØT, og skal konkret bidra til å oppfylle læringsmål 2.1 i den detaljerte læringsmålsoversikten for MTIØT der det kreves \"Brede og solide basiskunnskaper i økonomisk-administrative emner\".\nEmnet skal formidle følgende kunnskaper: - Generell kunnskap om åpne systemer og endring av systemgrenser/-nivåer- Generell kunnskap om prosjekter og prosjektarbeid - Spesifikk kunnskap om modeller for å måle prosjektsuksess, samt det å forstå at suksess må sees i sammenheng med hvem som spør, hensikten med målingen og tidspunktet man måler suksess på - Spesifikk kunnskap om modeller og forhold som berører organiseringen av et prosjekt i forhold til basisorganisasjonen - Spesifikk kunnskap om modeller for oppbygging av prosjektteam, og spesielle hensyn som må tas ved bygging av team - Spesifikk kunnskap om modeller for interaksjon mellom prosjekter og interessenter i omgivelsene - Spesifikk kunnskap om hvordan prosjekter samvirker og hvordan vi kan velge en god prosjektportefølje for organisasjonen - Generell kunnskap om interorganisatorisk teori - Spesifikk kunnskap om verdikjedestyring - og ledelse - Spesifikk kunnskap om industriell nettverksteori og hvordan denne teorien ser på samvirke og interkasjon mellom organisasjoner.\nEmnet skal gi studentene ferdigheter i å: - Vurdere hva som utgjør en formålstjenlig avgrensning av et system og hvilke konsekvenser det får å endre avgrensningen - Vurdere og analysere tilstanden i en organisasjon med hensyn på interorganisatoriske spørsmål - Vurdere og analysere tilstanden i en organisasjon med hensyn på viktige spørsmål innenfor prosjekter og drift av disse, samt å kunne foreslå og utforme tiltak for videre utvikling. Andre viktige læringsmål: - Studentene skal, gjennom et større prosjektarbeid i en reell bedrift, skaffe seg trening i å analysere tilstanden i en bedrift, og lære seg å føre skriftlige argumenter rundt faglige utfordringer og alternative løsninger på disse - Studentene skal, gjennom et øvingsopplegg der de skal evaluere hverandres utkast, lære seg å gi respons på skriftlige arbeider med hensyn på å utvikle egen og andres forståelse av en konkret utfordring",
+    "learningMethods": "Forelesninger og gruppebasert øvingsopplegg som sammen med en individuell slutteksamen utgjør sluttkarakteren i emnet. Deltagelse på visse presentasjoner og det å gi tilbakemelding til andre studentgrupper er obligatorisk for alle som tar emnet.",
+    "mandatoryActivities": [
+      "Tilbakemeldingsøving",
+      "Tilstedeværelse presentasjoner"
+    ],
+    "assessmentDetails": "Emnet har to delvurderinger. En gruppeøving som er vektet med 40% og en individuell skriftlig eksamen som er vektet med 60%. Sluttkarakteren er et vektet snitt av karakterene for de to enkeltvurderingene. Studentene skal i tillegg gjennomføre to obligatoriske aktiviteteter i form av en tilbakemeldingsøvelse og et oppmøtekrav når bedrifter og andre grupper har presentasjoner. Ved utsatt eksamen (kontinuasjonseksamen) kan skriftlig eksamen bli endret til muntlig eksamen. Ved frivillig gjentak av emnet må alle vurderinger i emnet tas på nytt.",
+    "specialConditions": "Krever opptak til studieprogram:\nIndustriell økonomi og teknologiledelse (MTIØT)",
+    "requiredKnowledge": "Emnet er forbeholdt studenter ved studieprogrammet MTIØT.",
+    "recommendedKnowledge": "TIØ4102 Organisasjon og teknologi 1 eller tilsvarende kunnskaper. Emnet er forbeholdt studenter ved studieprogrammet MTIØT.",
+    "courseMaterials": "Oppgis ved semesterstart.",
+    "creditReductions": [],
+    "subjectAreas": [
+      "Teknologiske fag"
+    ],
+    "studyPrograms": [
+      {
+        "code": "MTIØT",
+        "name": "Industriell økonomi og teknologiledelse"
+      }
+    ],
+    "contacts": [
+      {
+        "role": "Emneansvarlig/koordinator",
+        "persons": [
+          {
+            "name": "Tim Kristian Andreas Torvatn",
+            "url": "https://www.ntnu.no/ansatte/tim.torvatn"
+          }
+        ]
+      }
+    ],
+    "department": "Institutt for industriell økonomi og teknologiledelse",
+    "exams": [
+      {
+        "occasion": "Ordinær eksamen",
+        "season": "Høst 2026",
+        "form": "Skriftlig skoleeksamen",
+        "weighting": "60/100",
+        "aidCode": "Kode A",
+        "aidCodeDescription": "A: Alle trykte og håndskrevne hjelpemidler tillatt. Alle kalkulatorer tillatt.",
+        "date": "2026-10-08",
+        "dateText": "08.10.2026",
+        "time": "09:00",
+        "timeText": "09:00",
+        "duration": "4 timer",
+        "system": "Inspera Assessment",
+        "rooms": [
+          {
+            "building": "Sluppenvegen 14",
+            "room": "SL310 blå sone",
+            "candidates": 48
+          },
+          {
+            "building": "Sluppenvegen 14",
+            "room": "SL310 lilla sone",
+            "candidates": 54
+          },
+          {
+            "building": "Sluppenvegen 14",
+            "room": "SL311 brun sone",
+            "candidates": 82
+          },
+          {
+            "building": "Sluppenvegen 14",
+            "room": "SL311 lyseblå sone",
+            "candidates": 96
+          }
+        ]
+      },
+      {
+        "occasion": "Ordinær eksamen",
+        "season": "Høst 2026",
+        "form": "Oppgave",
+        "weighting": "40/100",
+        "aidCode": null,
+        "aidCodeDescription": null,
+        "date": null,
+        "dateText": null,
+        "time": null,
+        "timeText": null,
+        "duration": null,
+        "system": "Inspera Assessment",
+        "rooms": []
+      },
+      {
+        "occasion": "Utsatt eksamen",
+        "season": "Sommer 2027",
+        "form": "Skriftlig skoleeksamen",
+        "weighting": "60/100",
+        "aidCode": "Kode A",
+        "aidCodeDescription": "A: Alle trykte og håndskrevne hjelpemidler tillatt. Alle kalkulatorer tillatt.",
+        "date": null,
+        "dateText": null,
+        "time": null,
+        "timeText": null,
+        "duration": "4 timer",
+        "system": "Inspera Assessment",
+        "rooms": []
+      }
+    ],
+    "studyYear": 2026,
+    "availableYears": [
+      2026,
+      2025,
+      2024,
+      2023
+    ],
+    "notices": [],
+    "courseLinks": []
+  }
+}

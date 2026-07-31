@@ -1,0 +1,247 @@
+{
+  "url": "http://127.0.0.1:8788/api/course/IT1901/timetable?year=2026&version=1",
+  "status": 200,
+  "contentType": "application/json; charset=utf-8",
+  "body": [
+    {
+      "courseCode": "IT1901",
+      "courseName": {
+        "nob": "Informatikk prosjektarbeid I",
+        "nno": "Informatikk prosjektarbeid I",
+        "eng": "Informatics, Project I"
+      },
+      "acronym": "FORM",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Formidling",
+      "title": "Forelesning",
+      "dayNumber": 1,
+      "startTime": "14:15",
+      "endTime": "16:00",
+      "weeks": [
+        "34-47"
+      ],
+      "rooms": [
+        {
+          "id": "194_322_146",
+          "building": "Sentralbygg 2",
+          "room": "S6",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=322-146"
+        }
+      ],
+      "studyProgramKeys": [
+        "MTDT",
+        "MLREAL",
+        "BIT"
+      ]
+    },
+    {
+      "courseCode": "IT1901",
+      "courseName": {
+        "nob": "Informatikk prosjektarbeid I",
+        "nno": "Informatikk prosjektarbeid I",
+        "eng": "Informatics, Project I"
+      },
+      "acronym": "DISAM-P",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Dialog- og samarbeidsbasert undervisning",
+      "title": "Øvinger",
+      "dayNumber": 1,
+      "startTime": "16:15",
+      "endTime": "18:00",
+      "weeks": [
+        "34-47"
+      ],
+      "rooms": [
+        {
+          "id": "194_360_BU2-153",
+          "building": "Realfagbygget",
+          "room": "R22",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=360-BU2-153"
+        }
+      ],
+      "studyProgramKeys": []
+    },
+    {
+      "courseCode": "IT1901",
+      "courseName": {
+        "nob": "Informatikk prosjektarbeid I",
+        "nno": "Informatikk prosjektarbeid I",
+        "eng": "Informatics, Project I"
+      },
+      "acronym": "DISAM-P",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Dialog- og samarbeidsbasert undervisning",
+      "title": "Øvinger",
+      "dayNumber": 1,
+      "startTime": "08:15",
+      "endTime": "10:00",
+      "weeks": [
+        "34-47"
+      ],
+      "rooms": [
+        {
+          "id": "194_322_255B",
+          "building": "Sentralbygg 2",
+          "room": "S21",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=322-255"
+        }
+      ],
+      "studyProgramKeys": [
+        "MTDT",
+        "BIT"
+      ]
+    },
+    {
+      "courseCode": "IT1901",
+      "courseName": {
+        "nob": "Informatikk prosjektarbeid I",
+        "nno": "Informatikk prosjektarbeid I",
+        "eng": "Informatics, Project I"
+      },
+      "acronym": "DISAM-P",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Dialog- og samarbeidsbasert undervisning",
+      "title": "Øvinger",
+      "dayNumber": 1,
+      "startTime": "08:15",
+      "endTime": "10:00",
+      "weeks": [
+        "34-47"
+      ],
+      "rooms": [
+        {
+          "id": "194_307_245",
+          "building": "Verkstedteknisk",
+          "room": "VE20",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=307-245"
+        }
+      ],
+      "studyProgramKeys": []
+    },
+    {
+      "courseCode": "IT1901",
+      "courseName": {
+        "nob": "Informatikk prosjektarbeid I",
+        "nno": "Informatikk prosjektarbeid I",
+        "eng": "Informatics, Project I"
+      },
+      "acronym": "DISAM-P",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Dialog- og samarbeidsbasert undervisning",
+      "title": "Øvinger",
+      "dayNumber": 2,
+      "startTime": "08:15",
+      "endTime": "10:00",
+      "weeks": [
+        "34-47"
+      ],
+      "rooms": [
+        {
+          "id": "194_358_521",
+          "building": "Tapirbygget",
+          "room": "H3 521 Sprokkit",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=358-521"
+        }
+      ],
+      "studyProgramKeys": [
+        "MTDT",
+        "BIT"
+      ]
+    },
+    {
+      "courseCode": "IT1901",
+      "courseName": {
+        "nob": "Informatikk prosjektarbeid I",
+        "nno": "Informatikk prosjektarbeid I",
+        "eng": "Informatics, Project I"
+      },
+      "acronym": "FORM",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Formidling",
+      "title": "Forelesning",
+      "dayNumber": 3,
+      "startTime": "14:15",
+      "endTime": "16:00",
+      "weeks": [
+        "34-47"
+      ],
+      "rooms": [
+        {
+          "id": "194_322_115",
+          "building": "Sentralbygg 2",
+          "room": "S5",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=322-115"
+        }
+      ],
+      "studyProgramKeys": [
+        "MTDT",
+        "MLREAL",
+        "BIT"
+      ]
+    },
+    {
+      "courseCode": "IT1901",
+      "courseName": {
+        "nob": "Informatikk prosjektarbeid I",
+        "nno": "Informatikk prosjektarbeid I",
+        "eng": "Informatics, Project I"
+      },
+      "acronym": "DISAM-P",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Dialog- og samarbeidsbasert undervisning",
+      "title": "Øvinger",
+      "dayNumber": 4,
+      "startTime": "14:15",
+      "endTime": "16:00",
+      "weeks": [
+        "34-47"
+      ],
+      "rooms": [
+        {
+          "id": "194_360_BU2-117",
+          "building": "Realfagbygget",
+          "room": "R23",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=360-BU2-117"
+        }
+      ],
+      "studyProgramKeys": []
+    },
+    {
+      "courseCode": "IT1901",
+      "courseName": {
+        "nob": "Informatikk prosjektarbeid I",
+        "nno": "Informatikk prosjektarbeid I",
+        "eng": "Informatics, Project I"
+      },
+      "acronym": "DISAM-P",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Dialog- og samarbeidsbasert undervisning",
+      "title": "Øvinger",
+      "dayNumber": 5,
+      "startTime": "14:15",
+      "endTime": "16:00",
+      "weeks": [
+        "34-47"
+      ],
+      "rooms": [
+        {
+          "id": "194_360_E4-103",
+          "building": "Realfagbygget",
+          "room": "R73",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=360-E4-103"
+        }
+      ],
+      "studyProgramKeys": [
+        "MLREAL"
+      ]
+    }
+  ]
+}

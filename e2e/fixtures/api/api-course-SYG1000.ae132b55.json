@@ -1,0 +1,178 @@
+{
+  "url": "http://127.0.0.1:8788/api/course/SYG1000",
+  "status": 200,
+  "contentType": "application/json; charset=utf-8",
+  "body": {
+    "courseCode": "SYG1000",
+    "courseName": "Grunnleggende sykepleie",
+    "credits": 10.5,
+    "level": "Grunnleggende emner, nivå I",
+    "teachingStart": "Høst 2026",
+    "teachingDuration": "1 semester",
+    "teachingLanguage": "Norsk",
+    "location": "Gjøvik",
+    "assessmentScheme": "Skriftlig skoleeksamen",
+    "gradeRule": "Bokstavkarakterer",
+    "facts": [
+      {
+        "label": "Studiepoeng",
+        "value": "10,5"
+      },
+      {
+        "label": "Nivå",
+        "value": "Grunnleggende emner, nivå I"
+      },
+      {
+        "label": "Undervisningsstart",
+        "value": "Høst 2026"
+      },
+      {
+        "label": "Varighet",
+        "value": "1 semester"
+      },
+      {
+        "label": "Undervisningsspråk",
+        "value": "Norsk"
+      },
+      {
+        "label": "Sted",
+        "value": "Gjøvik"
+      },
+      {
+        "label": "Vurderingsordning",
+        "value": "Skriftlig skoleeksamen"
+      }
+    ],
+    "content": "Emnet gir en grunnleggende innføring i sykepleie som fag og profesjon, med særlig vekt på de verdiene som danner grunnlaget for sykepleierens yrkesidentitet og utøvelse. Studentene får bred kunnskap om ivaretagelse av menneskets fysiologiske grunnleggende behov, og sykepleieprosessen som en systematisk arbeidsmetode i sykepleien. Studentene får praktisk øvelse i utvalgte kliniske ferdigheter. Emnet omfatter kunnskap om mikrobiologi og basale smittevernsrutiner. I tillegg gir emnet en oversikt over helsevesenets organisering og sykepleierens funksjonsområder, samt innføring i relevante lover, forskrifter og retningslinjer som regulerer og rammer inn sykepleieutøvelsen.",
+    "learningOutcome": "Kunnskaper\nStudenten:\nhar kunnskap om sentrale verdier og begreper i sykepleie\nhar kunnskap om utvalgte mikrober og basale smittevernrutiner\nhar bred kunnskap om menneskets fysiologiske grunnleggende behov\nhar bred kunnskap om sykepleieprosessen\nhar kunnskap om grunnleggende kommunikasjon og samhandling\nkjenner til sykepleiens historiske utvikling og dens betydning for profesjons- og tjenesteutøvelse\nkjenner til lov om helsepersonell og lov om pasient- og brukerrettigheter\nkjenner til hvordan helsetjenesten er organisert og sentrale myndighetskrav\nkjenner til kunnskapsbasert praksis\nkjenner til sykepleierens helsefremmende, forebyggende, behandlende, rehabiliterende og lindrende funksjon\nFerdigheter\nStudenten:\nkan anvende kunnskap om menneskets fysiologiske grunnleggende behov i utøvelsen av sykepleie\nkan utøve og begrunne utførelse av utvalgte kliniske ferdigheter\nkan anvende basale smitteverntiltak\nGenerell kompetanse\nStudenten:\nkan anvende gjeldende retningslinjer for referansestil\nkjenner til sykepleiens yrkesetiske retningslinjer",
+    "learningMethods": "Forelesning. Læringsteamsarbeid. Seminarer. Ferdighetstrening/simulering. Digital flervalgstest i Mikrobiologi og smittevern.",
+    "mandatoryActivities": [
+      "Seminar 1: Kommunikasjon og samarbeid",
+      "Seminar 2: Mikrobiologi og smittevern",
+      "Seminar 3: Intro til sykepleieprosessen og grunnleggende behov, tilbakemelding på mikrooppgave 1",
+      "Seminar 4: Respirasjon, sirkulasjon og sykepleieprosessen",
+      "Seminar 5:Tilbakemelding på mikrooppgave 2",
+      "Simulering førstehjelp",
+      "Simulering hygiene og sengeredning",
+      "Simulering kroppspleie",
+      "Simulering vitale målinger",
+      "Simulering kateterisering",
+      "Undervisning Sim Capture som læringsmetode",
+      "Flervalgstest i mikrobiologi og smittevern",
+      "Test i praktiske ferdigheter"
+    ],
+    "assessmentDetails": "Eksamensspråk er norsk (skandinavisk).\nObligatoriske aktiviteter må være godkjent for å kunne gå opp til eksamen i emnet. De obligatoriske aktivitetene godkjennes samlet, og er gyldige så lenge studenten er i studieløpet og inntil ett år etter fullført grad, forutsatt at den obligatoriske aktiviteten ikke har endret seg.",
+    "specialConditions": "Krever opptak til studieprogram:\nSykepleie (BSPL)",
+    "requiredKnowledge": "Emnet gjennomføres ved det studiested som en er tatt opp ved.",
+    "recommendedKnowledge": null,
+    "courseMaterials": "Kursmateriell publiseres på læringsplattformen ved oppstart av emnet.",
+    "creditReductions": [
+      {
+        "courseCode": "SYA1000",
+        "reduction": "10,5 sp",
+        "fromTerm": "Høst 2020"
+      },
+      {
+        "courseCode": "SYT1000",
+        "reduction": "10,5 sp",
+        "fromTerm": "Høst 2020"
+      },
+      {
+        "courseCode": "SYGF1000",
+        "reduction": "10,5 sp",
+        "fromTerm": "Høst 2025"
+      }
+    ],
+    "subjectAreas": [
+      "Helse- og sosialfag",
+      "Sykepleie og jordmor"
+    ],
+    "studyPrograms": [
+      {
+        "code": "BSPL",
+        "name": "Sykepleie"
+      }
+    ],
+    "contacts": [
+      {
+        "role": "Emneansvarlig/koordinator",
+        "persons": [
+          {
+            "name": "Elin Furuseth",
+            "url": "https://www.ntnu.no/ansatte/elin.furuseth"
+          }
+        ]
+      },
+      {
+        "role": "Faglærere",
+        "persons": [
+          {
+            "name": "Torhild Sørum",
+            "url": "https://www.ntnu.no/ansatte/torhild.sorum"
+          }
+        ]
+      }
+    ],
+    "department": "Institutt for helsevitenskap Gjøvik",
+    "exams": [
+      {
+        "occasion": "Ordinær eksamen",
+        "season": "Høst 2026",
+        "form": "Skriftlig skoleeksamen",
+        "weighting": "100/100",
+        "aidCode": "Kode E",
+        "aidCodeDescription": "E: Ingen hjelpemidler tillatt.",
+        "date": "2026-11-30",
+        "dateText": "30.11.2026",
+        "time": "09:00",
+        "timeText": "09:00",
+        "duration": "4 timer",
+        "system": "Inspera Assessment",
+        "rooms": [
+          {
+            "building": "Ametyst",
+            "room": "A-atriet-2/3 (A-160)",
+            "candidates": 16
+          },
+          {
+            "building": "Mustad, Inngang A",
+            "room": "M433-Eksamensrom 4.etg",
+            "candidates": 80
+          },
+          {
+            "building": "Mustad, Inngang D",
+            "room": "M438 Eksamensrom 4.etg, Inngang D",
+            "candidates": 90
+          }
+        ]
+      },
+      {
+        "occasion": "Utsatt eksamen",
+        "season": "Vår 2027",
+        "form": "Skriftlig skoleeksamen",
+        "weighting": "100/100",
+        "aidCode": "Kode E",
+        "aidCodeDescription": "E: Ingen hjelpemidler tillatt.",
+        "date": null,
+        "dateText": null,
+        "time": "09:00",
+        "timeText": "09:00",
+        "duration": "4 timer",
+        "system": "Inspera Assessment",
+        "rooms": []
+      }
+    ],
+    "studyYear": 2026,
+    "availableYears": [
+      2026,
+      2025,
+      2024,
+      2023,
+      2022,
+      2021,
+      2020
+    ],
+    "notices": [],
+    "courseLinks": []
+  }
+}

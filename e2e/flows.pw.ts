@@ -1,51 +1,29 @@
-import { expect, type Page, test } from "@playwright/test";
+import type { Page } from "@playwright/test";
+import { expect, test } from "./harness.js";
 
 /**
- * The rework's modal-first flow, end to end against live NTNU data
- * (REWORK-2026-07-25 task 14). The homepage picker, the plan strip and
- * `/studier/` are all gone (tasks 9–13); every scenario here drives the
- * studieinfo `<dialog>` or seeds the plan via the shareable hash directly —
- * the two ways a plan is ever set now.
+ * The modal-first flow, end to end against live NTNU data. Every scenario
+ * drives the studieinfo `<dialog>` or seeds the plan via the shareable hash —
+ * the two ways a plan is ever set. Tests ABOUT the modal drive it for real;
+ * tests about something else navigate straight to a hash, since `parsePlanHash`
+ * + `loadPeriodCourses` reproduce exactly what Lagre would have written.
  *
- * Two seeding styles on purpose:
- * - Tests ABOUT the modal (onboarding, semester switch, BSPL's campus
- *   question) drive `#studieinfo-dialog` for real.
- * - Tests about something else (overlap, groups, sharing, failure honesty)
- *   seed the plan by navigating straight to its hash — `parsePlanHash` +
- *   `loadPeriodCourses` reproduce exactly what Lagre would have written,
- *   without paying for a modal round trip the test isn't about.
- *
- * Live-data facts this file leans on (verified against the running worker
- * before writing the assertions, not guessed):
- * - MTDT kull 2026 period 1 (26h) = HMS0002, TDT4109, TMA4400, TMA4412,
- *   EXPH0300 (SIVINGPRA is a `planElement`, never a course row) — 5 rows.
- * - TDT4109's only lecture-classified entry ("Digital forelesning …", Friday
- *   12:15–13:00, weeks 34-35+45-46) collides with TDT4120's "Forelesning"
- *   (Friday 12:15–15:00, weeks 34-47) — the known clash the old suite's
- *   ekstraemne test already established via the add-dialog's clash preview.
- * - TDT4110 publishes three numbered lecture parallels with no campus
- *   suffix ("Forelesningsparallell 1/2/3"): parallel 1 is Friday 08:15–10:00,
- *   parallel 2 is Wednesday 08:15–10:00. With no programme to narrow by, the
- *   numbered-parallel fallback in groups.ts defaults to parallel 1.
- * - TMA4400 partitions its lectures by programme cluster (studyProgramKeys):
- *   MTDT's own parallels are "Forelesning 1 MTDT …" (Tue 10:15) and "Forelesning
- *   2 … MTDT" (Thu 10:15); "Forelesning 2 MTBYGG" (Wed 08:15–10:00) is tagged
- *   for MTBYGG only — a cross-programme parallel an MTDT student can still pick.
- * - MTDT kull 2024 at 26h (a 3rd-year autumn) is gated behind "Valg av
- *   studieretning" — the same waypoint the pre-rework suite exercised.
- * - BSPL kull 2026 period 1 is gated behind a campus choice whose own code
- *   is "BSPL26-V-GJØVIK" (B10).
+ * Live-data facts the assertions lean on (verified against the running worker):
+ * MTDT kull 2026 period 1 is 5 rows; TDT4109's only lecture collides with
+ * TDT4120's on Friday; TDT4110's three numbered parallels default to parallel 1
+ * with no programme; TMA4400's "Forelesning 2 MTBYGG" is a cross-programme
+ * parallel an MTDT student can pick; MTDT kull 2024 at 26h is gated behind
+ * "Valg av studieretning"; BSPL kull 2026 behind a campus choice coded
+ * "BSPL26-V-GJØVIK".
  */
 
 const courseRows = (page: Page) => page.locator("#planner-course-rows .planner-course-row");
 
 /**
- * Opens a course's settings the way the UI now does it: a bar in the week
- * opens the READ popover for that session, and its one verb is the way through
- * to the editor (REWORK-2026-07-29f). Clicking a bar no longer opens the modal
- * directly. The verb is targeted by class, not by text: it names its outcome
- * for the layer the clicked session belongs to ("Velg parallell" / "Velg
- * gruppe" / "Endre emnet"), so which word it is depends on the course.
+ * Opens a course's settings the way the UI does: a bar opens the READ popover,
+ * and its one verb is the way through to the editor. The verb is targeted by
+ * class, not by text — it names its outcome for the clicked session's layer, so
+ * which word it is depends on the course.
  */
 async function settingsFromBlock(page: Page, block = gridBlocks(page).first()): Promise<void> {
   await block.click();
@@ -61,11 +39,9 @@ const courseSettingsBtn = (page: Page, code: string) =>
 const gridBlocks = (page: Page) => page.locator("#planner-grid-frame .planner-block");
 
 /**
- * The planner names the plan in its own title now, so the topbar chip is not
- * rendered there (REWORK-2026-07-30b) — `#planner-title` is where "whose plan
- * is this" is asserted on this page, and `#planner-edit-plan` is the one
- * control that opens studieinfo from it. The chip is still the assertion on
- * every other page, where it is the only thing naming the plan.
+ * The planner names the plan in its own title, so there is no topbar chip
+ * there: `#planner-title` is where "whose plan is this" is asserted on this
+ * page. The chip is still the assertion on every other page.
  */
 const planTitle = (page: Page) => page.locator("#planner-title");
 const editPlan = (page: Page) => page.locator("#planner-edit-plan");
@@ -73,16 +49,13 @@ const editPlanLabel = (page: Page) => page.locator("#planner-edit-plan-label");
 
 /**
  * Waits for `#planner-grid-status` to settle and returns it, failing loudly if
- * the plan's own data never arrived.
+ * the plan's data never arrived.
  *
- * The verdict has THREE states since pc-3: a clash count, the green clean
- * state, and a muted "kan ikke sjekkes — mangler timeplan for N emne(r)" when a
- * course's timetable fetch failed or was never made. That third state is the
- * fix — the line used to print "ingen kollisjoner" over a week missing a
- * course — but it means an upstream flake no longer shows up as a wrong
- * verdict, it shows up as a *missing* one. A test matching only
- * `/\d+ kollisjon/` would then time out and report the clash engine as broken.
- * So the wait is explicit and the upstream case gets its own message.
+ * The verdict has THREE states: a clash count, the green clean state, and a
+ * muted "kan ikke sjekkes" when a timetable fetch failed. That third state
+ * means an upstream flake shows up as a *missing* verdict rather than a wrong
+ * one — a test matching only `/\d+ kollisjon/` would time out and report the
+ * clash engine as broken.
  */
 async function settledVerdict(page: Page, timeout = 45_000): Promise<string> {
   const status = page.locator("#planner-grid-status");
@@ -166,18 +139,16 @@ test("share: the hash reproduces the plan in a fresh context", async ({ page, br
 });
 
 test("share: a program-less link clears the profile chip", async ({ page }) => {
-  // Finding 2: an MTDT plan writes np:profile. A program-less shared link opened
-  // in the SAME context (localStorage persists that profile) must clear it —
-  // savePlan can only ever WRITE np:profile, never clear it, so without
-  // removeProgram the header chip kept naming MTDT while the planner showed none.
+  // A program-less shared link opened in the SAME context must clear the stored
+  // profile — savePlan can only ever WRITE np:profile, never clear it, so
+  // without removeProgram the header chip kept naming the old programme.
   await page.goto("/planlegger/#26h;MTDT.2026;");
   await expect(courseRows(page)).toHaveCount(5, { timeout: 30_000 });
   await expect(planTitle(page)).toContainText("MTDT", { timeout: 30_000 });
 
   // A different-path hop first guarantees a real document load, so the initial
-  // hash-load path runs. The landing page states nothing about the plan since
-  // the chip was deleted, so the proof that the profile is genuinely stored
-  // rather than held in memory is the planner reading it back after the hop.
+  // hash-load path runs. The proof the profile is genuinely stored rather than
+  // held in memory is the planner reading it back after the hop.
   await page.goto("/");
   await expect(page.locator("#studieinfo-chip")).toHaveCount(0);
 
@@ -197,17 +168,16 @@ test("overlap: two colliding courses stack, both full width and readable", async
   await expect(courseRows(page)).toHaveCount(6, { timeout: 30_000 });
   await expect(gridBlocks(page).first()).toBeVisible({ timeout: 30_000 });
 
-  // `\d+ kollisjon` (never a bare /kollisjon/, which "ingen kollisjoner" also
-  // matches): assert the verdict actually counts a clash, not its clean state.
-  // `settledVerdict` separates that from the third state ("kan ikke sjekkes"),
-  // which means the data never arrived and says nothing about the engine.
+  // `\d+ kollisjon`, never a bare /kollisjon/ which "ingen kollisjoner" also
+  // matches. `settledVerdict` separates that from "kan ikke sjekkes", which
+  // says nothing about the engine.
   expect(await settledVerdict(page)).toMatch(/\d+ kollisjon/);
 
   // Only the two colliding blocks carry "kolliderer med" in their aria-label.
   const clashBlocks = page.locator('.planner-block[aria-label*="kolliderer med"]');
   await expect(clashBlocks).toHaveCount(2, { timeout: 30_000 });
 
-  // REWORK-2026-07-29b D1: they no longer split a column between them — they
+  // they no longer split a column between them — they
   // take a lane each and keep their full width, which is their duration. The
   // old assertion was `--planner-col-count === "2"`, i.e. "each got half".
   const blocks = await clashBlocks.all();
@@ -230,14 +200,11 @@ test("overlap: two colliding courses stack, both full width and readable", async
 test("verdict: a failed timetable fetch refuses the check instead of clearing it", async ({
   page,
 }) => {
-  // pc-3, the audit's one blocker: with 4 of 5 timetables fine and TMA4400's
-  // 503, the week drew a normal grid and #planner-grid-status said "ingen
-  // kollisjoner" in Green-Means-Fits accent — a confident answer to PRODUCT
-  // §1's only question, computed over data it never had. The verdict now has a
-  // third state, and this is the only place the three are distinguishable.
-  // (`--verdict` green is the ONLY thing on the page still coloured by an
-  // outcome — REWORK-2026-07-30 moved every focus ring, fill and link to ink —
-  // so a false green here is now the single loudest lie the page can tell.)
+  // With 4 of 5 timetables fine and one 503, the week drew a normal grid and
+  // the status said "ingen kollisjoner" in Green-Means-Fits accent — a
+  // confident answer to PRODUCT §1's only question, computed over data it never
+  // had. `--verdict` green is the only thing on the page still coloured by an
+  // outcome, so a false green is the loudest lie it can tell.
   await page.route("**/api/course/TMA4400/timetable*", (route) =>
     route.fulfill({
       status: 503,
@@ -254,7 +221,7 @@ test("verdict: a failed timetable fetch refuses the check instead of clearing it
   await expect(gridBlocks(page).filter({ hasText: "TMA4400" })).toHaveCount(0);
 
   // The provenance line is the other half of refusing: it names WHICH course
-  // the check could not see. It is silent on a clean plan (REWORK-2026-07-30e),
+  // the check could not see. It is silent on a clean plan,
   // so its presence here is the assertion, not just its text.
   const provenance = page.locator("#planner-provenance");
   await expect(provenance).toBeVisible({ timeout: 45_000 });
@@ -301,22 +268,15 @@ test("groups: switching parallel updates the grid and survives the URL", async (
 });
 
 test("groups: a non-default parallel renders with a programme set", async ({ page }) => {
-  // Finding 1: with a programme set, the grid used to pre-narrow every course's
-  // timetable to that programme's own sections BEFORE the group filter ran, so
-  // an explicit pick of a parallel tagged for ANOTHER programme was stripped and
-  // the course's block vanished silently. TMA4400 partitions its lectures by
-  // programme cluster: MTDT sees "Forelesning 1 MTDT …" (Tue) and "Forelesning 2
-  // … MTDT" (Thu); "Forelesning 2 MTBYGG" (Wed 08:15) is tagged for MTBYGG only —
-  // exactly the cross-programme parallel the pre-narrow used to drop.
+  // With a programme set, the grid used to pre-narrow every timetable to that
+  // programme's sections BEFORE the group filter ran, so an explicit pick of a
+  // parallel tagged for ANOTHER programme was stripped and the block vanished
+  // silently. TMA4400's "Forelesning 2 MTBYGG" is exactly that parallel.
   const tmaBlocks = () => page.locator("#planner-grid-frame .planner-block").filter({ hasText: "TMA4400" });
-  // The picked session itself, addressed by its own aria-label rather than by
-  // position. `.first()` used to stand in for it and no longer can: since
-  // groups-2 a lecture pick answers only its own session family, so the week
-  // keeps "Forelesning 1 MTDT …" (tirsdag 10:15) and "Plenumsregning" (onsdag
-  // 14:15) beside the picked "Forelesning 2 MTBYGG" — and blocks are appended
-  // day-major, which makes `.first()` the TUESDAY block. blockAriaLabel emits
-  // "TMA4400, onsdag 08:15 til 10:00, uke 34 til 47", so the prefix pins the
-  // 08:15 session and never the 14:15 plenary.
+  // The picked session, addressed by its own aria-label rather than by
+  // position: since a lecture pick answers only its own session
+  // family, so the week keeps two other TMA4400 sessions and blocks are
+  // appended day-major, which makes `.first()` the Tuesday block.
   const mtbyggBlock = () =>
     page.locator('#planner-grid-frame .planner-block[aria-label^="TMA4400, onsdag 08:15"]');
 
@@ -340,7 +300,7 @@ test("groups: a non-default parallel renders with a programme set", async ({ pag
 
   // …and the student's OTHER Matematikk 1 sessions must survive it. A pick is
   // not an allow-list over the whole course: one tick used to delete every
-  // lecture whose group the student had not also named (groups-2).
+  // lecture whose group the student had not also named.
   expect(await tmaBlocks().count()).toBeGreaterThan(1);
 
   await page.reload();
@@ -349,10 +309,9 @@ test("groups: a non-default parallel renders with a programme set", async ({ pag
 });
 
 test("groups: the picker lists this semester's groups, not the whole year's", async ({ page }) => {
-  // groups-3/groups-4: EXPH0300 publishes 36 seminar groups and 5 lecture
-  // parallels across Trondheim, Gjøvik and Ålesund over a full year, and the
-  // picker listed all 44 — on a phone that put the popover's own Dropp and
-  // "Gå til emnesiden" ~1 000 px below the fold behind another city's seminars.
+  // EXPH0300 publishes 36 seminar groups and 5 lecture parallels across three
+  // cities over a full year, and the picker listed all 44 — on a phone that put
+  // its own actions ~1 000 px below the fold behind another city's seminars.
   await page.goto("/planlegger/#26h;MTDT.2026;");
   const exphBlock = gridBlocks(page).filter({ hasText: "EXPH0300" }).first();
   await expect(exphBlock).toBeVisible({ timeout: 45_000 });
@@ -361,37 +320,30 @@ test("groups: the picker lists this semester's groups, not the whole year's", as
   const settings = page.locator("#planner-course-settings");
   const groupRows = settings.locator(".course-settings-group-row");
 
-  // Every Ålesund session of this course — the five seminar groups and
-  // "Forelesningsparallell 3 Ålesund" — is taught in weeks 3-17, so none of it
-  // belongs to a Høst plan. The picker is built from the SEMESTER's entries now
-  // (the øving layer additionally narrowed to the programme's own sections).
+  // Every Ålesund session of this course is taught in weeks 3-17, so none of it
+  // belongs to a Høst plan. The picker is built from the SEMESTER's entries.
   await expect(
     settings.locator(".course-settings-group-row", { hasText: "Ålesund" }),
   ).toHaveCount(0);
-  // A bound, not an exact count: the audit measured 44 rows here, of which ~15
-  // were drawable. The number depends on live tagging, so this pins the order
-  // of magnitude — a revert to "every group the course publishes all year"
-  // fails it. The lower bound catches the other way this can go wrong: a pile
-  // (or a narrowing that ate the whole picker) has no group section at all.
+  // A bound, not an exact count: the number depends on live tagging, so this
+  // pins the order of magnitude — a revert to "every group the course publishes
+  // all year" fails it, and the lower bound catches a narrowing that ate the
+  // whole picker.
   const rowCount = await groupRows.count();
   expect(rowCount).toBeGreaterThan(0);
   expect(rowCount).toBeLessThan(30);
 
   // The LECTURE layer is deliberately NOT narrowed by programme: picking a
-  // parallel tagged for another programme or campus is a documented capability
-  // (groups.ts), and this picker is the only control that can exercise it.
-  // "Forelesningsparallell 3 Gjøvik" runs weeks 34-45, so it is a real autumn
-  // option for a Trondheim student who wants it.
+  // parallel tagged for another programme or campus is a documented capability,
+  // and this picker is the only control that can exercise it.
   await expect(
     settings.locator(".course-settings-group-row", { hasText: "Forelesningsparallell 3 Gjøvik" }),
   ).toHaveCount(1);
 });
 
 test("course settings: closes from its own button, not just Esc", async ({ page }) => {
-  // Inherited from the popover this replaced, where a non-modal <dialog> got
-  // no free dismissal at all. `showModal()` gives Esc and a backdrop back, but
-  // the × stays: on touch there is no Esc, and a backdrop tap is not a gesture
-  // a student should have to guess at.
+  // `showModal()` gives Esc and a backdrop back, but the × stays: on touch
+  // there is no Esc, and a backdrop tap is not a gesture to guess at.
   await page.goto("/planlegger/#26h;-;%2BTDT4110");
 
   await expect(gridBlocks(page)).toHaveCount(1, { timeout: 30_000 });
@@ -410,9 +362,8 @@ test("course settings: closes from its own button, not just Esc", async ({ page 
 
 test("course settings: never offers a picker with only one option", async ({ page }) => {
   // The group section used to be gated on `groups.length > 1` across BOTH
-  // kinds, so a course with one lecture parallel and two øving groups drew a
-  // lone dead radio. The invariant is per-kind and data-independent: a
-  // control the student cannot use to choose differently is never rendered.
+  // kinds, so a course with one parallel and two øving groups drew a lone dead
+  // radio. The invariant is per-kind and data-independent.
   const settings = page.locator("#planner-course-settings");
   const radios = settings.locator('.course-settings-group-row input[type="radio"]');
   const checkboxes = settings.locator('.course-settings-group-row input[type="checkbox"]');
@@ -429,7 +380,7 @@ test("course settings: never offers a picker with only one option", async ({ pag
     // Zero (nothing to choose) or two-plus (a real choice) — never one.
     expect(await radios.count()).not.toBe(1);
     expect(await checkboxes.count()).not.toBe(1);
-    // The surface is a real modal now (REWORK-2026-07-29 D1), so its backdrop
+    // The surface is a real modal now, so its backdrop
     // owns every pointer event until it closes — the next block is not
     // clickable through it the way it was through the old non-modal popover.
     await page.keyboard.press("Escape");
@@ -446,11 +397,10 @@ test("course settings: never offers a picker with only one option", async ({ pag
 test("course settings: complementary lecture sessions are not offered as a choice", async ({
   page,
 }) => {
-  // TMA4401 publishes "Forelesning" (mandag + onsdag) and "Plenumsregning"
-  // (fredag): two complementary weekly sessions, both classified as lectures,
-  // both drawn. The count-only gate made them two checkboxes, inviting the
-  // student to untick teaching they attend. The gate is now "is there anything
-  // to switch TO", which is also why TMA4400 above keeps its picker.
+  // TMA4401 publishes two complementary weekly sessions, both classified as
+  // lectures, both drawn. The count-only gate made them two checkboxes,
+  // inviting the student to untick teaching they attend. The gate is now "is
+  // there anything to switch TO".
   await page.goto("/planlegger/#26h;-;%2BTMA4401");
   await expect(gridBlocks(page).first()).toBeVisible({ timeout: 45_000 });
 
@@ -463,11 +413,9 @@ test("course settings: complementary lecture sessions are not offered as a choic
 });
 
 test("one control opens studieinfo, and semester lives only inside it", async ({ page }) => {
-  // The page used to carry three permanent openers for one modal — the
-  // topbar chip, a banner "Endre" button, and the page title (silently a
-  // button) — plus a "Bytt semester" disclosure duplicating the modal's own
-  // semester select. Since REWORK-2026-07-30b the chip is not on this page at
-  // all and "endre" in the hint line is the one that remains.
+  // The page used to carry three permanent openers for one modal plus a "Bytt
+  // semester" disclosure duplicating the modal's own select. "endre" in the
+  // hint line is the one that remains.
   await page.goto("/planlegger/#26h;MTDT.2026;");
   await expect(courseRows(page).first()).toBeVisible({ timeout: 30_000 });
 
@@ -475,10 +423,8 @@ test("one control opens studieinfo, and semester lives only inside it", async ({
   await expect(page.locator("#planner-semester")).toHaveCount(0);
   await expect(page.locator("#planner-title button")).toHaveCount(0);
 
-  // The banner still STATES the term; it just no longer switches it. It is
-  // part of the TITLE now — the plan is one string, in the notation a student
-  // writes on a timetable — with the programme's own name demoted to the hint
-  // beside "endre".
+  // The banner still STATES the term; it just no longer switches it. It is part
+  // of the TITLE now, with the programme's own name demoted to the hint.
   await expect(planTitle(page)).toHaveText("MTDT Kull 26 H26");
   await expect(page.locator("#planner-context-line")).toContainText("Datateknologi");
 
@@ -524,10 +470,9 @@ test("week: three overlapping lectures stack into three lanes, no pile", async (
 
   await page.goto(`/planlegger/#26h;-;${codes.map((c) => `%2B${c}`).join(",")}`);
 
-  // REWORK-2026-07-29b D1: transposing the axes deletes the pile rather than
-  // managing it. Three simultaneous lectures are three full-width bars stacked
-  // in three lanes of Monday's row — vertical space is free, and a bar's width
-  // is its duration rather than its share of a 150 px column.
+  // Transposing the axes deletes the pile rather than managing it: three
+  // simultaneous lectures are three full-width bars in three lanes of Monday's
+  // row — vertical space is free.
   await expect(page.locator("#planner-grid-frame .planner-block")).toHaveCount(3, {
     timeout: 30_000,
   });
@@ -568,10 +513,10 @@ test("session popover: the card names the building, the length and the collision
   page,
   context,
 }) => {
-  // The four facts the card used to leave out (REWORK-2026-07-30 "Kvittering"):
-  // how long the session runs, which building the room is in, which minutes it
-  // shares with what, and a button that says what pressing it does.
-  // Stubbed, because all four have to be true of one specific slot.
+  // The four facts the card used to leave out: how long the session runs, which
+  // building the room is in, which minutes it shares with what, and a button
+  // that says what pressing it does. Stubbed, because all four have to be true
+  // of one specific slot.
   const lecture = (
     code: string,
     start: string,
@@ -644,7 +589,7 @@ test("week: Rader, Kolonner and Liste show the same week three ways", async ({ p
   const bars = await gridBlocks(page).count();
   expect(bars).toBeGreaterThan(0);
 
-  // Kolonner: the same sessions, turned 90° (REWORK-2026-07-30h). Same plan,
+  // Kolonner: the same sessions, turned 90°. Same plan,
   // same group narrowing, same layer toggle — so the same count, exactly as
   // the list owes the grid below.
   await page.click("#planner-view-kolonner");
@@ -713,13 +658,10 @@ test("week: Rader, Kolonner and Liste show the same week three ways", async ({ p
 });
 
 test("kolonner: the week is dealt out in whole days at every width", async ({ page }) => {
-  // THE WIDTH LAW's third clause. `minmax(daymin, 1fr)` alone got the two ends
-  // right and the middle wrong: it overflowed by whatever it happened to
-  // overflow by, so between "all five fit" and "the week is properly a scroller"
-  // the frame closed mid-column and a strip of Friday hung past the edge —
-  // which is a forgotten `overflow`, not a decision, and reads like one. The
-  // count of days is floored now, so the visible width is always a whole number
-  // of days and the scroll only ever hides whole ones.
+  // THE WIDTH LAW's third clause. `minmax(daymin, 1fr)` got the two ends right
+  // and the middle wrong: between "all five fit" and "properly a scroller" the
+  // frame closed mid-column and a strip of Friday hung past the edge. The count
+  // of days is floored now, so the scroll only ever hides whole ones.
   await page.goto("/planlegger/#26h;MTDT.2026;");
   await expect(gridBlocks(page).first()).toBeVisible({ timeout: 45_000 });
   await page.click("#planner-view-kolonner");
@@ -729,11 +671,9 @@ test("kolonner: the week is dealt out in whole days at every width", async ({ pa
    * Where every day column sits against the visible day region, at one scroll
    * offset and one week depth.
    *
-   * `--planner-lanes-max` is forced rather than seeded with a plan deep enough
-   * to need it, for two reasons: it is the only input the law has (the law is a
-   * function of the token, not of who is teaching what), and MTDT's own autumn
-   * is one lane deep — so a live-data test would ask the question only on a
-   * phone and would stop asking it the term NTNU moves a lecture.
+   * `--planner-lanes-max` is forced rather than seeded with a deep enough plan:
+   * it is the only input the law has, and MTDT's own autumn is one lane deep, so
+   * live data would ask the question only on a phone.
    */
   const measure = (toEnd: boolean, lanes: number) =>
     page.evaluate(
@@ -765,10 +705,9 @@ test("kolonner: the week is dealt out in whole days at every width", async ({ pa
     );
 
   // Wide enough for the whole week down to a phone, crossing every quantum
-  // boundary on the way — the widths BETWEEN the breakpoints are the ones the
-  // old law got wrong. Each at three week depths, because the depth is what
-  // decides where those boundaries fall: a 3-deep week wants ~210 px per day
-  // and stops fitting on a laptop, not on a phone.
+  // boundary — the widths BETWEEN the breakpoints are the ones the old law got
+  // wrong. Each at three week depths, because the depth decides where those
+  // boundaries fall.
   const widths = [1400, 1180, 1040, 960, 880, 820, 760, 700, 640, 560, 480, 414, 360];
   for (const width of widths) {
     await page.setViewportSize({ width, height: 900 });
@@ -804,13 +743,11 @@ test("kolonner: the week is dealt out in whole days at every width", async ({ pa
 });
 
 test("kolonner: an open øvingsvindu names itself, opens, and stacks", async ({ page }) => {
-  // The strip shipped as 8 px of colour and nothing else: five slivers down the
-  // week that named nothing, answered nothing and could not be opened, and two
-  // windows on one day drew one exactly on top of the other.
-  //
-  // Live 2026 facts: TDT4120's Øvingsveiledning is Mon–Fri 08:15–14:00 and
-  // TDT4110's Ferdighetstrening is Mon–Thu 08:00–18:00 — both over the five-hour
-  // drop-in threshold, both on the same days, so every weekday carries two.
+  // The strip shipped as 8 px of colour and nothing else: five slivers that
+  // named nothing and could not be opened, and two windows on one day drew one
+  // exactly on top of the other. Live 2026: two courses publish drop-in windows
+  // over the five-hour threshold on the same days, so every weekday carries
+  // two.
   await page.goto(
     "/planlegger/#26h;-;%2BTDT4120~%C3%B8vingsveiledning,%2BTDT4110~ferdighetstrening",
   );
@@ -842,11 +779,9 @@ test("kolonner: an open øvingsvindu names itself, opens, and stacks", async ({ 
   await expect(popover).toContainText("08:15–14:00");
   await page.keyboard.press("Escape");
 
-  // The strip is IN the week's one strike order, not beside it: it used to
-  // carry no `--planner-strike` at all, which is not "no stagger" but step
-  // zero — every strip in the week fired on the first frame and the sessions
-  // trickled in behind them. Day 1's strip goes first, then day 1's sessions,
-  // then day 2's strip: one order, capped so a deep week still lands.
+  // The strip is IN the week's one strike order, not beside it: with no
+  // `--planner-strike` at all it took step zero, so every strip fired on the
+  // first frame and the sessions trickled in behind them.
   await page.click("#planner-view-uke");
   await page.click("#planner-view-kolonner");
   const steps = await page
@@ -865,10 +800,9 @@ test("kolonner: an open øvingsvindu names itself, opens, and stacks", async ({ 
     expect(steps[i]?.step).toBe((steps[i - 1]?.step ?? 0) + 1);
   }
 
-  // Every element gets its OWN moment, all the way to the last — the interval
-  // squeezes on a long week, it does not cap. A ceiling on the index is what
-  // made the tail of the sequence land on one frame, and since the sequence
-  // runs day by day, that tail was a whole weekday arriving at once.
+  // Every element gets its OWN moment — the interval squeezes on a long week,
+  // it does not cap. A ceiling on the index made the tail land on one frame,
+  // and since the sequence runs day by day that tail was a whole weekday.
   const delays = steps.map((s) => Number.parseFloat(s.delay));
   expect(new Set(delays).size).toBe(delays.length);
   // …and the whole thing still lands inside the budget.
@@ -878,13 +812,8 @@ test("kolonner: an open øvingsvindu names itself, opens, and stacks", async ({ 
 test("liste: the collision marks the two sessions, not the day around them", async ({ page }) => {
   // The mark used to be a bracket on a wrapper every row of the day was
   // appended to, so one afternoon overlap drew a rule down the side of that
-  // morning's lecture too — the marker claimed the day when it meant two
-  // sessions.
-  //
-  // Friday, from live 2026 data: TDT4110's default parallel at 08:15–10:00
-  // (clean), TDT4120's Forelesning at 12:15–15:00 and TMA4401's Plenumsregning
-  // at 14:15–16:00 (the overlap). Monday and Wednesday carry TMA4401's two
-  // Forelesning slots, so the week has five lecture rows and exactly one
+  // morning's lecture too. Friday from live 2026 data carries one clean lecture
+  // and one overlapping pair, so the week has five lecture rows and exactly one
   // collision.
   await page.goto("/planlegger/#26h;-;%2BTDT4110,%2BTDT4120,%2BTMA4401");
   await expect(gridBlocks(page).first()).toBeVisible({ timeout: 45_000 });
@@ -912,11 +841,9 @@ test("liste: the collision marks the two sessions, not the day around them", asy
 });
 
 test("modals: a click on the backdrop dismisses every one of them", async ({ page }) => {
-  // Owner's call, 2026-07-30, reversing modals-7 — which had reasoned only
-  // that no browser light-dismisses a showModal() dialog *by default*. The
-  // implementation is `closedby="any"` on all three, so this is really a test
-  // that the attribute is set and that nothing inside the card is sitting in
-  // the dialog's own box swallowing the click.
+  // The implementation is `closedby="any"` on all three, so this is really a
+  // test that the attribute is set and that nothing inside the card sits in the
+  // dialog's own box swallowing the click.
   await page.goto("/planlegger/#26h;-;%2BTDT4110");
   await expect(gridBlocks(page).first()).toBeVisible({ timeout: 45_000 });
 
@@ -940,10 +867,9 @@ test("modals: a click on the backdrop dismisses every one of them", async ({ pag
 });
 
 test("add dialog: the search field holds still while the results change", async ({ page }) => {
-  // Centred (`margin: auto`), the card re-centred on every keystroke: empty
-  // query → one status line, "tma" → twelve rows, "tma41" → three, and the
-  // caret travelled up and down the screen while the student was still typing
-  // into it. The dialog is pinned near the top instead, so it grows downward.
+  // Centred, the card re-centred on every keystroke as the result list changed
+  // length, so the caret travelled up and down the screen while the student was
+  // still typing. It is pinned near the top instead.
   await page.goto("/planlegger/");
   await page.click("#planner-add-course-btn");
   const dialog = page.locator("#planner-add-dialog");
@@ -964,7 +890,7 @@ test("add dialog: the search field holds still while the results change", async 
 });
 
 test("landing page: Nå answers with the room, not a course count", async ({ page }) => {
-  // REWORK-2026-07-29b D3. The plan is seeded through the planner (the store is
+  //. The plan is seeded through the planner (the store is
   // per-origin localStorage), then the landing page is asked what it shows.
   await page.goto("/planlegger/#26h;MTDT.2026;");
   await expect(gridBlocks(page).first()).toBeVisible({ timeout: 45_000 });
@@ -1027,20 +953,20 @@ test("week: the øving layer shows picked groups, not the whole cohort's", async
 });
 
 test("week: the øving toggle moves the layer and leaves nothing behind", async ({ page }) => {
-  // REWORK-2026-07-29g. The toggle used to tear the week down and rebuild it
-  // on one frame; it now travels what stays, strikes in what arrives and wipes
-  // out what leaves. What can actually break in the field is the scaffolding:
-  // a stuck `is-settling` freezes every bar's geometry mid-transition, and an
-  // orphaned ghost is a bar that is not in the plan.
+  // The toggle travels what stays, strikes in what arrives and wipes out what
+  // leaves. What can break in the field is the scaffolding: a stuck
+  // `is-settling` freezes every bar's geometry mid-transition, and an orphaned
+  // ghost is a bar that is not in the plan.
   await page.goto("/planlegger/#26h;MTDT.2026;");
   const grid = page.locator("#planner-grid-frame .planner-grid");
   await expect(page.locator("#planner-grid-frame .planner-block").first()).toBeVisible({
     timeout: 45_000,
   });
-  // Settled, not merely painted: the bundles land one by one and the bar
-  // count is still climbing on the frame the first one appears.
+  // Settled, not merely painted: the bundles land one by one and the bar count
+  // is still climbing on the frame the first one appears. The verdict is the
+  // signal for that — it stays "henter timeplan …" until every bundle is in.
   await expect(page.locator(".planner-grid-spine").first()).toBeVisible();
-  await page.waitForTimeout(2_000);
+  await settledVerdict(page);
 
   const hosts = {
     uke: grid,
@@ -1080,7 +1006,7 @@ test("course page: the grade figure renders from DBH", async ({ page }) => {
   await expect(first).toContainText("kandidater");
   expect(await first.locator(".grades-bar").count()).toBeGreaterThan(1);
 
-  // course-4: the figure was 39 % of the mobile page. At most three charts are
+  // the figure was 39 % of the mobile page. At most three charts are
   // on screen; everything older stacks inside a collapsed disclosure, so the
   // section stops pushing credits and vurderingsform below y=2438.
   expect(await charts.count()).toBeLessThanOrEqual(3);
@@ -1096,15 +1022,11 @@ test("course page: the grade figure renders from DBH", async ({ page }) => {
 });
 
 test("catalog: a course that is not taught this year is grouped, not offered", async ({ page }) => {
-  // crawler-3: TMA4100 and 702 others exist only in last year's catalog. Adding
-  // one contributed nothing to the week and left the planner showing a raw
-  // English "fikk ikke hentet detaljer: Not found". The page still exists — the
-  // two-year union is why — so the row keeps its link and loses its verb.
-  //
-  // They now fold into one labelled group instead of interleaving: on
-  // "matematikk" they took six of the first twelve rows and were
-  // indistinguishable from addable ones. The group opens on its own when
-  // there is nothing else to show, which is this query's case.
+  // TMA4100 and 702 others exist only in last year's catalog. Adding one
+  // contributed nothing to the week and left the planner showing a raw English
+  // "Not found". The page still exists, so the row keeps its link and loses its
+  // verb. They fold into one labelled group instead of interleaving; the group
+  // opens itself when there is nothing else to show, which is this query's case.
   await page.goto("/emner/?q=TMA4100");
   const fold = page.locator(".emner-fold-btn");
   await expect(fold).toBeVisible({ timeout: 15_000 });
@@ -1242,12 +1164,10 @@ test("BSPL: a campus choice whose own code contains Ø survives a reload (B10)",
   await page.click("#studieinfo-save");
   await expect(dialog).toBeHidden();
 
-  // The city answer resolves its own courses (EXPH0400, SYG1000, SYG1001) and
-  // opens the NEXT waypoint — BSPL26-V-GJØVIK nests "valg av praksisløp,
-  // Gjøvik" underneath itself, and since plan-1 `classifyPeriod` descends into
-  // it instead of stopping one level down. So the week fills AND keeps asking;
-  // the old `expect(question).toBeHidden()` here asserted the one-level
-  // behaviour that finding removed.
+  // The city answer resolves its own courses and opens the NEXT waypoint —
+  // BSPL26-V-GJØVIK nests a praksisløp choice underneath itself, and
+  // `classifyPeriod` descends into it instead of stopping one level down. So
+  // the week fills AND keeps asking.
   await expect(courseRows(page).first()).toBeVisible({ timeout: 30_000 });
   await expect(gridBlocks(page).first()).toBeVisible({ timeout: 30_000 });
 
@@ -1267,7 +1187,7 @@ test("drop and restore a programme course", async ({ page }) => {
 
   const code = (await gridBlocks(page).first().locator(".planner-block-code").textContent())?.trim() ?? "";
   expect(code).not.toBe("");
-  // REWORK-2026-07-29 D3: the row IS the control, and the verb is inside the
+  // the row IS the control, and the verb is inside the
   // settings modal it opens — two taps, which the user explicitly allowed in
   // place of §0.3's one.
   const settings = page.locator("#planner-course-settings");
@@ -1291,11 +1211,9 @@ test("drop and restore a programme course", async ({ page }) => {
 });
 
 test("dropping from a block's settings keeps focus in the document", async ({ page }) => {
-  // a11y-3, re-aimed: "Dropp" destroys the block that opened the surface, and
-  // the old non-modal popover then called focus() on a detached node — a
-  // silent no-op that dropped focus to <body> with nothing to catch it, so the
-  // next Tab restarted at the skip link. `showModal()` restores focus to the
-  // invoker itself, so the fix is now the platform's; this guards the outcome.
+  // "Dropp" destroys the block that opened the surface, and the old non-modal
+  // popover then called focus() on a detached node — a silent no-op that
+  // dropped focus to <body>, so the next Tab restarted at the skip link.
   await page.goto("/planlegger/#26h;MTDT.2026;");
   await expect(courseRows(page)).toHaveCount(5, { timeout: 30_000 });
   await expect(gridBlocks(page).first()).toBeVisible({ timeout: 45_000 });
@@ -1308,10 +1226,9 @@ test("dropping from a block's settings keeps focus in the document", async ({ pa
   await settings.locator(".course-settings-action", { hasText: "Dropp" }).click();
   await expect(settings).toBeHidden();
 
-  // Whatever opened the dialog is gone — the bar was replaced by the re-render
-  // and the popover it opened was closed on the way through — so the browser's
-  // own restore is a no-op. The course's own row is where focus lands, on the
-  // settings button that reopens the dialog, so the undo is one keystroke away.
+  // Whatever opened the dialog is gone, so the browser's own restore is a
+  // no-op. Focus lands on the course row's settings button, which reopens the
+  // dialog, so the undo is one keystroke away.
   const row = courseRows(page).filter({ hasText: code }).first();
   await expect(row).toHaveClass(/is-dropped/);
   await expect(courseSettingsBtn(page, code)).toBeFocused();
@@ -1319,9 +1236,8 @@ test("dropping from a block's settings keeps focus in the document", async ({ pa
 });
 
 test("add dialog: one Escape from the search field closes it", async ({ page }) => {
-  // modals-7: the field was `type="search"`, and Chrome's search input eats the
-  // first Escape to clear itself, cancelling the dialog's close request — so
-  // the dismissal gesture read as broken until the second press. Typing first
+  // The field was `type="search"`, and Chrome's search input eats the first
+  // Escape to clear itself, cancelling the dialog's close request. Typing first
   // is the point: an empty search input has nothing to clear and would pass
   // even with the bug.
   await page.goto("/planlegger/");
@@ -1338,12 +1254,10 @@ test("add dialog: one Escape from the search field closes it", async ({ page }) 
 });
 
 /**
- * The clock (REWORK-2026-07-30). A planner is a page people leave open, and
- * everything below is invisible to every other kind of test: the assertions
- * are about what the page says an hour or a day after it was rendered.
- *
- * Europe/Oslo is pinned because the fixtures below are wall-clock times in
- * NTNU's own timezone, and the CI container runs in UTC.
+ * The clock. A planner is a page people leave open, and everything below is
+ * invisible to every other kind of test: the assertions are about what the page
+ * says an hour or a day after it was rendered. Europe/Oslo is pinned because
+ * the fixtures are wall-clock times in NTNU's timezone and CI runs in UTC.
  */
 test.describe("time passing", () => {
   test.use({ timezoneId: "Europe/Oslo" });
@@ -1366,13 +1280,16 @@ test.describe("time passing", () => {
     await page.clock.runFor("00:05:00");
     expect(await bar?.evaluate((el) => el.isConnected)).toBe(true);
 
-    // Left open overnight. This kept Wednesday's spine at full ink and
-    // Wednesday's row tinted while the now line had already stepped down into
-    // Thursday — so the marker read as misplaced, because the highlight is
-    // the louder signal and it was pointing at the wrong day.
-    await page.clock.runFor("24:00:00");
+    // `fastForward`, not `runFor`: the assertions below are about the day
+    // ROLLING, and runFor fires all 1 440 intervening minute ticks one by one —
+    // 6 s of simulated no-ops per call. That the ordinary minute does not
+    // re-render is already asserted by the 5-minute runFor above.
+    // Left open overnight: this kept yesterday's spine at full ink and its row
+    // tinted while the now line had stepped into today, so the marker read as
+    // misplaced — the highlight is the louder signal.
+    await page.clock.fastForward("24:00:00");
     await expect(today).toHaveAttribute("data-day", "4");
-    // The needle is on today's row or nowhere (REWORK-2026-07-30f), so its
+    // The needle is on today's row or nowhere, so its
     // being visible at all is the assertion that it followed the day.
     await expect(marker).toBeVisible();
     const rowTop = await page
@@ -1389,7 +1306,7 @@ test.describe("time passing", () => {
     const days = (text: string | null) => Number(text?.match(/\d+/)?.[0] ?? Number.NaN);
     const after = days(await away.textContent());
     expect(Number.isFinite(after)).toBe(true);
-    await page.clock.runFor("24:00:00");
+    await page.clock.fastForward("24:00:00");
     await expect(away).not.toHaveText(new RegExp(`\\b${after}\\b`));
     expect(days(await away.textContent())).toBe(after - 1);
   });
@@ -1421,11 +1338,9 @@ test.describe("the exam list on a phone", () => {
   test.use({ viewport: { width: 390, height: 844 } });
 
   test("no exam row is taller than its neighbours", async ({ page }) => {
-    // The countdown used to be a third cell of the row. At 390 px there is no
-    // third column for it, so it dropped to a second grid row under the date:
-    // exactly one row in the list stood two lines tall with a hole beside it
-    // where the course would have been. It is a segment on the rule now — the
-    // first link in the same chain the reading-day connectors continue.
+    // As a third cell of the row the countdown had no column at 390 px, so it
+    // dropped to a second grid row and made one row two lines tall with a hole
+    // beside it. It is a segment on the rule now.
     await page.goto("/planlegger/#26h;MTDT.2026;");
     const rows = page.locator(".exam-list .exam-row");
     await expect(rows.first()).toBeVisible({ timeout: 45_000 });
@@ -1452,20 +1367,16 @@ test.describe("the exam list on a phone", () => {
 });
 
 test("ett navn: the plan is named once, and the switch is not a third toggle", async ({ page }) => {
-  // REWORK-2026-07-30b. Two faults, one test, because they share a cause —
-  // controls and facts that looked like each other:
-  //   01 the plan was named twice, 100 px apart (topbar chip + page title);
-  //   02 Rutenett/Liste (a radio group) and Øvinger (a checkbox) were three
-  //      identical uppercase mono `.np-toggle`s in a row.
+  // Two faults, one test, because they share a cause — controls and facts that
+  // looked like each other: the plan was named twice 100 px apart, and a radio
+  // group and a checkbox were three identical uppercase mono toggles in a row.
   await page.goto("/planlegger/#26h;MTDT.2026;");
   await expect(gridBlocks(page).first()).toBeVisible({ timeout: 45_000 });
 
   await expect(planTitle(page)).toHaveText("MTDT Kull 26 H26");
   await expect(page.locator("#studieinfo-chip")).toHaveCount(0);
-  // Three topbar children on every page now (the ThemeToggle ships a <script>
-  // beside its button, which is not one): wordmark, nav, toggle. The chip that
-  // used to be the fourth, and to truncate against the wordmark at 390 px, is
-  // deleted.
+  // Three topbar children on every page (the ThemeToggle ships a <script>
+  // beside its button, which is not one): wordmark, nav, toggle.
   await expect(page.locator(".site-topbar > *:not(script)")).toHaveCount(3);
 
   // The switch carries no fill and no box — its whole state is the rule under
@@ -1480,7 +1391,7 @@ test("ett navn: the plan is named once, and the switch is not a third toggle", a
   expect(Number.parseFloat(atGrid.w)).toBeGreaterThan(0);
   // At the first tab, so at the container's own inline start (the tab carries
   // a negative inline margin, which is how its 24px target is bought without
-  // widening the head — see a11y-8).
+  // widening the head).
   expect(Number.parseFloat(atGrid.x)).toBeLessThanOrEqual(0);
 
   await page.click("#planner-view-kolonner");
@@ -1508,10 +1419,8 @@ test("ett navn: the plan is named once, and the switch is not a third toggle", a
 test.describe("target sizes", () => {
   /**
    * WCAG 2.5.8 Target Size (Minimum), AA: every pointer target is at least
-   * 24x24 CSS px. It shipped with six controls under it — the view switch and
-   * the layer tickbox at 21px tall, "endre" at 22, the margin notes at 21, the
-   * modal's course-page link at 21 and the footer's catalog link at 18 — and
-   * nothing could see them (a11y-8). This can.
+   * 24x24 CSS px. It shipped with six controls under it — 18 to 22 px tall —
+   * and nothing could see them. This can.
    */
   const MIN = 24;
 
@@ -1556,27 +1465,18 @@ test.describe("target sizes", () => {
   }
 });
 
-test("a clean plan says nothing about provenance", async ({ page }) => {
-  // The counterpart to the failure test above. This line used to read
-  // "Timeplan hentet direkte fra NTNU nå · eksamensdatoer fra katalogen
-  // (hentet 28. jul 2026) · studieplan for kull 2026. Uoffisiell." on every
-  // render — under a week that visibly worked, on a page whose footer already
-  // carries the crawl date and the caveat. DR-8 asks the join to admit its
-  // gaps, not to announce that it has none (REWORK-2026-07-30e).
-  await page.goto("/planlegger/#26h;MTDT.2026;");
-  await expect(gridBlocks(page).first()).toBeVisible({ timeout: 45_000 });
-  await expect(settledVerdict(page)).resolves.toMatch(/kollisjon/);
-  await expect(page.locator("#planner-provenance")).toBeHidden();
-});
+// The clean-plan half of DR-8 ("the join admits its gaps, and says nothing
+// when it has none") is asserted against the same element and the same render
+// path by tests/planner/plannerApp.test.ts. The failure half stays here,
+// because only the browser can show the week still drawing around the gap.
 
 test.describe("nålen", () => {
   test.use({ timezoneId: "Europe/Oslo" });
 
   test("is on today's row inside the drawn hours, and nowhere else", async ({ page }) => {
-    // REWORK-2026-07-30f. Two states, not four: on the row at a minute, or
-    // absent. The faint week-wide hairline it replaces was a 1px line among
-    // 1px hour rules — the same KIND of mark as the ruling it crossed — so on
-    // any day that was not today it could not be found at all.
+    // Two states, not four: on the row at a minute, or absent. The faint
+    // week-wide hairline it replaces was the same KIND of mark as the 1px hour
+    // rules it crossed, so off today it could not be found at all.
     const marker = page.locator("#planner-grid-frame .planner-grid-now");
 
     // Tuesday of teaching week 36, inside EXPH0300's 08:15 lecture.
@@ -1608,10 +1508,9 @@ test.describe("nålen", () => {
 
   test("every bar is centred in its row", async ({ page }) => {
     // `--planner-lane-h` is a stride (bar + gap), so N lanes occupy N strides
-    // LESS one trailing gap. Without that subtraction a one-lane row measured
-    // 46px around a 28px bar sitting 6px down: 6 above, 12 below, every row in
-    // the week off-centre — and the row's real height is max(spine, field),
-    // which the spine won, so no amount of padding could have fixed it.
+    // LESS one trailing gap. Without that subtraction every row in the week was
+    // off-centre — and the row's real height is max(spine, field), which the
+    // spine won, so no amount of padding could have fixed it.
     await page.goto("/planlegger/#26h;MTDT.2026;");
     await expect(gridBlocks(page).first()).toBeVisible({ timeout: 45_000 });
 
@@ -1642,11 +1541,10 @@ test.describe("nålen", () => {
 });
 
 test("the layer leaves in the reverse of the order it arrived in", async ({ page }) => {
-  // REWORK-2026-07-30g. The sequence was already mirrored — space opens, then
-  // bars arrive; bars leave, then space closes — but the STAGGER was not:
-  // arrivals struck in one after another in reading order while departures all
-  // vanished on the same frame. That is not the reverse of an order, it is the
-  // absence of one.
+  // The sequence was already mirrored — space opens, then bars arrive; bars
+  // leave, then space closes — but the STAGGER was not: departures all vanished
+  // on the same frame, which is not the reverse of an order but the absence of
+  // one.
   await page.goto("/planlegger/#26h;MTDT.2026;");
   await expect(gridBlocks(page).first()).toBeVisible({ timeout: 45_000 });
 
@@ -1675,14 +1573,11 @@ test("the layer leaves in the reverse of the order it arrived in", async ({ page
 });
 
 test("the row height animates with the layer instead of snapping", async ({ page }) => {
-  // REWORK-2026-07-30h. `--planner-bands` feeds the field's min-height and was
-  // never added to the motion snapshot, so a row whose height changed only
-  // because a drop-in strip appeared or left had nothing rewound: the new
-  // height was already in place before the transition was switched on. The row
-  // snapped on the first frame while every bar around it animated.
-  //
-  // TDT4120 publishes Øvingsveiledning 08:15-14:00 every weekday, which is
-  // exactly that case: revealing the layer adds a strip and grows the row.
+  // `--planner-bands` feeds the field's min-height and was never added to the
+  // motion snapshot, so a row whose height changed only because a drop-in strip
+  // appeared had nothing rewound and snapped on the first frame while every bar
+  // around it animated. TDT4120's weekday-long Øvingsveiledning is exactly that
+  // case.
   await page.goto("/planlegger/#26h;-;%2BTDT4120,%2BTMA4412");
   await expect(gridBlocks(page).first()).toBeVisible({ timeout: 45_000 });
   await page.locator("#planner-others-toggle").click();
@@ -1722,12 +1617,10 @@ test("the row height animates with the layer instead of snapping", async ({ page
 });
 
 test("the list's own height animates too, so nothing under it jumps", async ({ page }) => {
-  // REWORK-2026-07-30i. The week animates `min-height` per row, so its total
-  // height follows. A list has no such property: rows are in normal flow, so
-  // removing them makes the container short on the frame the render lands, and
-  // the exam list and the course list underneath jump before a single row has
-  // moved. FLIP cannot carry it — a translated row still occupies its original
-  // box as far as layout is concerned.
+  // The week animates `min-height` per row, so its total height follows. A
+  // list's rows are in normal flow, so removing them makes the container short
+  // on the frame the render lands and everything underneath jumps. FLIP cannot
+  // carry it — a translated row still occupies its original box.
   await page.goto("/planlegger/#26h;MTDT.2026;");
   await expect(gridBlocks(page).first()).toBeVisible({ timeout: 45_000 });
   await page.locator("#planner-view-tavle").click();
@@ -1766,11 +1659,10 @@ test.describe("the banner's pair", () => {
   test.use({ viewport: { width: 390, height: 844 } });
 
   test("the code and the programme name stay adjacent on a phone", async ({ page }) => {
-    // REWORK-2026-07-30j. `MTDT · 2026 · Høst 2026` and `Datateknologi –
-    // master (5-årig)` are one statement said twice, short then long. The
-    // wrapping flex row put the verdict and the Endre button between them, so
-    // the plan's name was separated from its own code by a green sentence and
-    // a button. Grid areas keep the pair together at every width.
+    // The code line and the long programme name are one statement said twice.
+    // The wrapping flex row put the verdict and the Endre button between them,
+    // separating the plan's name from its own code. Grid areas keep the pair
+    // together at every width.
     await page.goto("/planlegger/#26h;MTDT.2026;");
     await expect(gridBlocks(page).first()).toBeVisible({ timeout: 45_000 });
 
@@ -1786,9 +1678,7 @@ test.describe("the banner's pair", () => {
     const banner = await box(".planner-banner");
 
     // Nothing fits between them: the gap is smaller than a line of text at any
-    // step on the page's scale, so no sentence can have got in there. It is
-    // wider than it was (8 px of grid gap plus the slack a 44 px control leaves
-    // around a 22 px title) and still nothing fits.
+    // step on the page's scale, so no sentence can have got in there.
     expect(hint.top - title.bottom).toBeLessThan(20);
     // The two things that used to break the pair up are still not inside it —
     // and neither costs a row of its own any more: the edit control shares the
@@ -1820,11 +1710,9 @@ test.describe("the phone's week", () => {
   test.use({ viewport: { width: 390, height: 844 } });
 
   test("a room is printed whole or not printed", async ({ page }) => {
-    // `TFY4345 KJL…` for a room called KJL2: one ellipsis standing in for one
-    // character, because the room and the activity name shared a box. They are
-    // two boxes now and `fitBlockLabels` drops whichever the bar cannot hold —
-    // the room whole or not at all, the activity only while a cut still leaves
-    // something to read.
+    // One ellipsis standing in for one character, because the room and the
+    // activity name shared a box. They are two boxes now and `fitBlockLabels`
+    // drops whichever the bar cannot hold — the room whole or not at all.
     await page.goto("/planlegger/#26h;MTDT.2026;");
     await expect(gridBlocks(page).first()).toBeVisible({ timeout: 45_000 });
 
@@ -1842,10 +1730,8 @@ test.describe("the phone's week", () => {
 
   test("the days stay put while the week is dragged", async ({ page }) => {
     // Five days and eight hours do not fit a phone, so the axis scrolls — and
-    // the one thing that may not scroll with it is the column that says which
-    // row you are reading. Dragged to the right edge, `.planner-grid-spine`
-    // measured x = −162: the gesture the page asks for was the gesture that
-    // took the weekday labels off the screen.
+    // the one thing that may not scroll with it is the column saying which row
+    // you are reading. Dragged to the right edge the spine measured x = −162.
     await page.goto("/planlegger/#26h;MTDT.2026;");
     await expect(gridBlocks(page).first()).toBeVisible({ timeout: 45_000 });
 

@@ -1,0 +1,455 @@
+{
+  "url": "http://127.0.0.1:8788/api/course/EXPH0300",
+  "status": 200,
+  "contentType": "application/json; charset=utf-8",
+  "body": {
+    "courseCode": "EXPH0300",
+    "courseName": "Examen philosophicum for naturvitenskap og teknologi",
+    "credits": 7.5,
+    "level": "Examen philosophicum",
+    "teachingStart": "Høst 2026 / Vår 2027",
+    "teachingDuration": "1 semester",
+    "teachingLanguage": "Norsk",
+    "location": "Gjøvik, Ålesund og Trondheim",
+    "assessmentScheme": "Skriftlig skoleeksamen",
+    "gradeRule": "Bokstavkarakterer",
+    "facts": [
+      {
+        "label": "Studiepoeng",
+        "value": "7,5"
+      },
+      {
+        "label": "Nivå",
+        "value": "Examen philosophicum"
+      },
+      {
+        "label": "Undervisningsstart",
+        "value": "Høst 2026 / Vår 2027"
+      },
+      {
+        "label": "Varighet",
+        "value": "1 semester"
+      },
+      {
+        "label": "Undervisningsspråk",
+        "value": "Norsk"
+      },
+      {
+        "label": "Sted",
+        "value": "Gjøvik, Ålesund og Trondheim"
+      },
+      {
+        "label": "Vurderingsordning",
+        "value": "Skriftlig skoleeksamen"
+      }
+    ],
+    "content": "Emnet gir en introduksjon til problemstillinger innen kunnskaps- og vitenskapsteori, etikk og politisk filosofi. Ulike syn på natur, menneske og teknologi tas opp til drøfting, i tillegg til spørsmål om relasjonen mellom individ og samfunn. Emnet skal gi kunnskap om perspektiver på vitenskap og fremme et reflektert forhold til vitenskapelig virksomhet og anvendelse av vitenskapelig kunnskap. Gjennom dialog- og diskusjonsbasert undervisning oppøves evnen til kritisk tenkning, samt ferdigheter i praktisk argumentasjon og faglig samarbeid. Emnet skal dessuten gi trening i å forholde seg kritisk til kilder, og til å skrive strukturert og systematisk.\nExamen philosophicum for naturvitenskap og teknologi legger vekt på temaer og problemstillinger av spesiell relevans for matematisk-naturvitenskapelige fag og teknologi, med særlig søkelys på bærekraft. Det er et viktig mål at emnet skal bidra til ferdigheter i å tenke kritisk om en bærekraftig samfunnsutvikling.",
+    "learningOutcome": "Kunnskap\nKandidaten har kunnskap om\nanalyse og vurdering av argumentasjon, samt om sentrale begreper fra argumentasjonsteori\nsentrale teorier om viten, og hva som avgrenser vitenskapelig kunnskap fra andre kunnskapsformer\nutvalgte vitenskapsteoretiske temaer av spesiell relevans for matematisk-naturvitenskapelige fag og teknologi\nbærekraft som premiss for et godt samfunn i dag og i fremtiden, samt vitenskapens og teknologiens rolle i denne sammenhengen\nulike teorier og perspektiv på menneske, kultur og natur\nulike syn på forholdet mellom individ og fellesskap, samt organiseringen av samfunnet\nhovedtyper av etisk tenkning\netiske og samfunnsmessige problemstillinger relatert til naturvitenskapelig forskning og teknologiutvikling, herunder temaer innen forskningsetikk og forskningspolitikk\nFerdigheter\nKandidaten kan\nidentifisere og diskutere problemstillinger relatert til eget fag- eller profesjonsområde i lys av ulike syn på kunnskap, vitenskap, etikk og politikk\nreflektere kritisk over bærekraft som en kompleks samfunnsutfordring og dilemmaer som en bærekraftig utvikling fører med seg\nargumentere selvstendig, saklig og systematisk om temaer som behandles i emnet utfra prinsipper for kritisk kildebruk\nGenerell kompetanse\nKandidaten kan\nforholde seg til og anvende vitenskapelig kunnskap kritisk og konstruktivt\nreflektere over vitenskapenes samfunnsrolle\nbidra til godt og reflektert samarbeid\nformulere seg presist, strukturert og argumenterende",
+    "learningMethods": "Undervisningen består i en kombinasjon av forelesninger og seminar/øvingstimer. Forelesningene tar for seg de store linjene i pensum og gir et overblikk over de sentrale temaene i emnet. Seminarene/øvingstimene er basert på arbeid i mindre grupper veiledet av faglærer.\nObligatoriske aktiviteter: For å kunne gå opp til eksamen kreves 80% deltakelse på seminar, samt godkjenning av inntil to innleveringer, hvorav minst en er en gruppeinnlevering.\nAll obligatorisk aktivitet må bestås samlet i samme semester. Det er ikke mulig å ta med deler av obligatorisk aktivitet.\nHvis all obligatorisk aktivitet har blitt godkjent i EXPH0300 et tidligere semester, kan den godkjennes av instituttet.\nMerk at NTNU har flere ulike exphil-varianter. Det er ikke mulig å ta eksamen i en annen variant/emnekode enn den man har godkjent obligatorisk aktivitet i.\nFor nærmere opplysninger om obligatorisk aktivitet, se emnets Canvassider.",
+    "mandatoryActivities": [
+      "Obligatoriske aktiviteter"
+    ],
+    "assessmentDetails": "4 timers skriftlig skoleeksamen under tilsyn.\nIngen hjelpemidler tillatt.\nMerk at vurderingsordningen er ny fra høst 2026. Tidligere avlagte vurderinger og/eller vurderingsdeler i emnet kan ikke kombineres med den nye vurderingsordningen.",
+    "specialConditions": "Krever opptak til studieprogram:\nBiologi (BBI)\nBiomarin innovasjon (298BMI)\nBioteknologi (427BT)\nBioteknologi (MBIOT5)\nBygg og infrastruktur (MTBYGG)\nCybersikkerhet og datakommunikasjon (MTKOM)\nDatateknologi (MTDT)\nDigital forretningsutvikling (ITBAITBEDR)\nDigital infrastruktur og cybersikkerhet (BDIGSEC)\nElektronisk systemdesign og innovasjon (MTELSYS)\nEnergi og miljø (MTENERG)\nFysikk (BFY)\nFysikk og matematikk (MTFYMA)\nGeologi (BGEOL)\nHavbruk - Ingeniørfag (BIHAV)\nIndustriell kjemi og bioteknologi (MTKJ)\nIndustriell økonomi og teknologiledelse (MTIØT)\nInformatikk (BIT)\nIngeniørvitenskap og IKT (MTING)\nKjemi (BKJ)\nKjemi og materialteknologi - Ingeniørfag (BIKOM)\nKybernetikk og robotikk (MTTK)\nLektorutdanning i realfag for trinn 8 – 13 (MLREAL)\nMarin teknikk (MTMART)\nMatematiske fag (BMAT)\nMaterialteknologi (MTMT)\nMatvitenskap, teknologi og bærekraft (MTMAT)\nMedisinske og biologiske fag (184BG)\nNanoteknologi (MTNANO)\nNautikk (353MN)\nNautikk (353YV)\nProduktdesign og teknologi (BTEKD)\nProduktdesign og teknologi (ÅRTEK)\nProgrammering (BPROG)\nShipping management (432SM)",
+    "requiredKnowledge": "Krever opptak til bestemte studieprogram ved NTNU.",
+    "recommendedKnowledge": "Ingen",
+    "courseMaterials": "Pensumliste finnes i pensumarkivet på examen philosophicums nettside ( http://www.ntnu.no/exphil ) på emnets Canvasside.",
+    "creditReductions": [
+      {
+        "courseCode": "EXPH0001",
+        "reduction": "7,5 sp",
+        "fromTerm": "Høst 2019"
+      },
+      {
+        "courseCode": "EXPH0002",
+        "reduction": "7,5 sp",
+        "fromTerm": "Høst 2019"
+      },
+      {
+        "courseCode": "EXPH0003",
+        "reduction": "7,5 sp",
+        "fromTerm": "Høst 2019"
+      },
+      {
+        "courseCode": "EXPH0004",
+        "reduction": "7,5 sp",
+        "fromTerm": "Høst 2019"
+      },
+      {
+        "courseCode": "EXPH0005",
+        "reduction": "7,5 sp",
+        "fromTerm": "Høst 2019"
+      },
+      {
+        "courseCode": "EXPH0006",
+        "reduction": "7,5 sp",
+        "fromTerm": "Høst 2019"
+      },
+      {
+        "courseCode": "EXPH6001",
+        "reduction": "7,5 sp",
+        "fromTerm": "Høst 2019"
+      },
+      {
+        "courseCode": "EXPH0100",
+        "reduction": "7,5 sp",
+        "fromTerm": "Høst 2019"
+      },
+      {
+        "courseCode": "EXPH0200",
+        "reduction": "7,5 sp",
+        "fromTerm": "Høst 2019"
+      },
+      {
+        "courseCode": "EXPH0400",
+        "reduction": "7,5 sp",
+        "fromTerm": "Høst 2019"
+      },
+      {
+        "courseCode": "EXPH0500",
+        "reduction": "7,5 sp",
+        "fromTerm": "Høst 2019"
+      },
+      {
+        "courseCode": "EXPH0350",
+        "reduction": "7,5 sp",
+        "fromTerm": "Høst 2021"
+      },
+      {
+        "courseCode": "EXPH0550",
+        "reduction": "7,5 sp",
+        "fromTerm": "Høst 2021"
+      },
+      {
+        "courseCode": "EXPH0600",
+        "reduction": "7,5 sp",
+        "fromTerm": "Høst 2023"
+      },
+      {
+        "courseCode": "EXPH0650",
+        "reduction": "7,5 sp",
+        "fromTerm": "Høst 2024"
+      },
+      {
+        "courseCode": "EXPH0450",
+        "reduction": "7,5 sp",
+        "fromTerm": "Høst 2025"
+      }
+    ],
+    "subjectAreas": [
+      "Examen philosophicum"
+    ],
+    "studyPrograms": [
+      {
+        "code": "BBI",
+        "name": "Biologi"
+      },
+      {
+        "code": "298BMI",
+        "name": "Biomarin innovasjon"
+      },
+      {
+        "code": "427BT",
+        "name": "Bioteknologi"
+      },
+      {
+        "code": "MBIOT5",
+        "name": "Bioteknologi"
+      },
+      {
+        "code": "MTBYGG",
+        "name": "Bygg og infrastruktur"
+      },
+      {
+        "code": "MTKOM",
+        "name": "Cybersikkerhet og datakommunikasjon"
+      },
+      {
+        "code": "MTDT",
+        "name": "Datateknologi"
+      },
+      {
+        "code": "ITBAITBEDR",
+        "name": "Digital forretningsutvikling"
+      },
+      {
+        "code": "BDIGSEC",
+        "name": "Digital infrastruktur og cybersikkerhet"
+      },
+      {
+        "code": "MTELSYS",
+        "name": "Elektronisk systemdesign og innovasjon"
+      },
+      {
+        "code": "MTENERG",
+        "name": "Energi og miljø"
+      },
+      {
+        "code": "BFY",
+        "name": "Fysikk"
+      },
+      {
+        "code": "MTFYMA",
+        "name": "Fysikk og matematikk"
+      },
+      {
+        "code": "BGEOL",
+        "name": "Geologi"
+      },
+      {
+        "code": "BIHAV",
+        "name": "Havbruk - Ingeniørfag"
+      },
+      {
+        "code": "MTKJ",
+        "name": "Industriell kjemi og bioteknologi"
+      },
+      {
+        "code": "MTIØT",
+        "name": "Industriell økonomi og teknologiledelse"
+      },
+      {
+        "code": "BIT",
+        "name": "Informatikk"
+      },
+      {
+        "code": "MTING",
+        "name": "Ingeniørvitenskap og IKT"
+      },
+      {
+        "code": "BKJ",
+        "name": "Kjemi"
+      },
+      {
+        "code": "BIKOM",
+        "name": "Kjemi og materialteknologi - Ingeniørfag"
+      },
+      {
+        "code": "MTTK",
+        "name": "Kybernetikk og robotikk"
+      },
+      {
+        "code": "MLREAL",
+        "name": "Lektorutdanning i realfag for trinn 8 – 13"
+      },
+      {
+        "code": "MTMART",
+        "name": "Marin teknikk"
+      },
+      {
+        "code": "BMAT",
+        "name": "Matematiske fag"
+      },
+      {
+        "code": "MTMT",
+        "name": "Materialteknologi"
+      },
+      {
+        "code": "MTMAT",
+        "name": "Matvitenskap, teknologi og bærekraft"
+      },
+      {
+        "code": "184BG",
+        "name": "Medisinske og biologiske fag"
+      },
+      {
+        "code": "MTNANO",
+        "name": "Nanoteknologi"
+      },
+      {
+        "code": "353MN",
+        "name": "Nautikk"
+      },
+      {
+        "code": "353YV",
+        "name": "Nautikk"
+      },
+      {
+        "code": "BTEKD",
+        "name": "Produktdesign og teknologi"
+      },
+      {
+        "code": "ÅRTEK",
+        "name": "Produktdesign og teknologi"
+      },
+      {
+        "code": "BPROG",
+        "name": "Programmering"
+      },
+      {
+        "code": "432SM",
+        "name": "Shipping management"
+      }
+    ],
+    "contacts": [
+      {
+        "role": "Emneansvarlig/koordinator",
+        "persons": [
+          {
+            "name": "Kjetil Mangset Skjerve",
+            "url": "https://www.ntnu.no/ansatte/kjetil.m.skjerve"
+          }
+        ]
+      }
+    ],
+    "department": "Institutt for filosofi og religionsvitenskap",
+    "exams": [
+      {
+        "occasion": "Ordinær eksamen",
+        "season": "Høst 2026",
+        "form": "Skriftlig skoleeksamen",
+        "weighting": "100/100",
+        "aidCode": "Kode E",
+        "aidCodeDescription": "E: Ingen hjelpemidler tillatt.",
+        "date": "2026-12-07",
+        "dateText": "07.12.2026",
+        "time": "09:00",
+        "timeText": "09:00",
+        "duration": "4 timer",
+        "system": "Inspera Assessment",
+        "rooms": [
+          {
+            "building": "Ankeret/Hovedbygget",
+            "room": "C218",
+            "candidates": 18
+          },
+          {
+            "building": "Mustad, Inngang A",
+            "room": "M433-Eksamensrom 4.etg",
+            "candidates": 80
+          },
+          {
+            "building": "Mustad, Inngang D",
+            "room": "M438 Eksamensrom 4.etg, Inngang D",
+            "candidates": 46
+          },
+          {
+            "building": "Sluppenvegen 14",
+            "room": "SL110 hvit sone",
+            "candidates": 64
+          },
+          {
+            "building": "Sluppenvegen 14",
+            "room": "SL110 lilla sone",
+            "candidates": 64
+          },
+          {
+            "building": "Sluppenvegen 14",
+            "room": "SL110 turkis sone",
+            "candidates": 80
+          },
+          {
+            "building": "Sluppenvegen 14",
+            "room": "SL111 blå sone",
+            "candidates": 36
+          },
+          {
+            "building": "Sluppenvegen 14",
+            "room": "SL111 brun sone",
+            "candidates": 81
+          },
+          {
+            "building": "Sluppenvegen 14",
+            "room": "SL111 grønn sone",
+            "candidates": 50
+          },
+          {
+            "building": "Sluppenvegen 14",
+            "room": "SL111 lyseblå sone",
+            "candidates": 72
+          },
+          {
+            "building": "Sluppenvegen 14",
+            "room": "SL111 orange sone",
+            "candidates": 60
+          },
+          {
+            "building": "Sluppenvegen 14",
+            "room": "SL310 blå sone",
+            "candidates": 48
+          },
+          {
+            "building": "Sluppenvegen 14",
+            "room": "SL310 hvit sone",
+            "candidates": 46
+          },
+          {
+            "building": "Sluppenvegen 14",
+            "room": "SL310 lilla sone",
+            "candidates": 80
+          },
+          {
+            "building": "Sluppenvegen 14",
+            "room": "SL311 brun sone",
+            "candidates": 57
+          },
+          {
+            "building": "Sluppenvegen 14",
+            "room": "SL410 blå sone",
+            "candidates": 51
+          },
+          {
+            "building": "Sluppenvegen 14",
+            "room": "SL410 orange sone",
+            "candidates": 58
+          },
+          {
+            "building": "Sluppenvegen 14",
+            "room": "SL430",
+            "candidates": 54
+          }
+        ]
+      },
+      {
+        "occasion": "Ordinær eksamen",
+        "season": "Vår 2027",
+        "form": "Skriftlig skoleeksamen",
+        "weighting": "100/100",
+        "aidCode": "Kode E",
+        "aidCodeDescription": "E: Ingen hjelpemidler tillatt.",
+        "date": null,
+        "dateText": null,
+        "time": null,
+        "timeText": null,
+        "duration": "4 timer",
+        "system": "Inspera Assessment",
+        "rooms": []
+      },
+      {
+        "occasion": "Utsatt eksamen",
+        "season": "Sommer 2027",
+        "form": "Skriftlig skoleeksamen",
+        "weighting": "100/100",
+        "aidCode": "Kode E",
+        "aidCodeDescription": "E: Ingen hjelpemidler tillatt.",
+        "date": null,
+        "dateText": null,
+        "time": null,
+        "timeText": null,
+        "duration": "4 timer",
+        "system": "Inspera Assessment",
+        "rooms": []
+      }
+    ],
+    "studyYear": 2026,
+    "availableYears": [
+      2026,
+      2025,
+      2024,
+      2023,
+      2022,
+      2021,
+      2020,
+      2019
+    ],
+    "notices": [
+      "Vurdering og obligatoriske aktiviteter kan bli endret frem til 20. september."
+    ],
+    "courseLinks": [
+      {
+        "label": "Faglærers emneside",
+        "url": "http://www.ntnu.no/exphil"
+      }
+    ]
+  }
+}

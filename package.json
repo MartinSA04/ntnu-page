@@ -17,7 +17,9 @@
     "test:e2e": "playwright test",
     "typecheck": "astro check && tsc -p worker/tsconfig.json && tsc -p tsconfig.test.json",
     "lint": "biome check .",
-    "fmt": "biome check --write ."
+    "fmt": "biome check --write .",
+    "e2e:record": "E2E_RECORD=1 playwright test",
+    "e2e:live": "E2E_LIVE=1 playwright test"
   },
   "dependencies": {
     "astro": "^6.3.7",

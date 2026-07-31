@@ -1,0 +1,263 @@
+{
+  "url": "http://127.0.0.1:8788/api/course/TDT4109",
+  "status": 200,
+  "contentType": "application/json; charset=utf-8",
+  "body": {
+    "courseCode": "TDT4109",
+    "courseName": "Informasjonsteknologi, grunnkurs",
+    "credits": 7.5,
+    "level": "Grunnleggende emner, nivå I",
+    "teachingStart": "Høst 2026",
+    "teachingDuration": "1 semester",
+    "teachingLanguage": "Norsk",
+    "location": "Trondheim",
+    "assessmentScheme": "Skriftlig skoleeksamen",
+    "gradeRule": "Bokstavkarakterer",
+    "facts": [
+      {
+        "label": "Studiepoeng",
+        "value": "7,5"
+      },
+      {
+        "label": "Nivå",
+        "value": "Grunnleggende emner, nivå I"
+      },
+      {
+        "label": "Undervisningsstart",
+        "value": "Høst 2026"
+      },
+      {
+        "label": "Varighet",
+        "value": "1 semester"
+      },
+      {
+        "label": "Undervisningsspråk",
+        "value": "Norsk"
+      },
+      {
+        "label": "Sted",
+        "value": "Trondheim"
+      },
+      {
+        "label": "Vurderingsordning",
+        "value": "Skriftlig skoleeksamen"
+      }
+    ],
+    "content": "Emnet består av grunnleggende prosedyreorientert programmering i Python.\nTema:\nVariabler og datatyper.\nInput og output.\nKontrollstrukturer: Sekvens, valg, og repetisjon.\nAlgoritmer. - Strukturering og oppdeling av programmer; funksjoner og moduler.\nBruk av biblioteker og rammeverk.\nDatastrukturer: Lister, tabeller, tekststrenger, mengder, tupler og poster (dictionary).\nFilbehandling, persistent lagring av informasjon, og unntak (exception).\nRekursjon, sortering og søking.\nFormulering av algoritmer i pseudokode og flytskjema.\nBasis bruk av Numpy og Matplotlib.\nPython som programmeringsomgivelse.\nGrunnleggende strategier for testing og debugging.\nVersjonskontroll ved bruk av git.",
+    "learningOutcome": "Kunnskaper:\nHa grunnleggende kunnskap om prosedyreorientert programmering.\nHa grunnleggende kunnskap om prosessen fra problem til fungerende program.\nHa kjennskap til objektorientert programmering.\nHa kjennskapet til basis bruk av versjonskontroll ved git.\nKan forklare noen vanlige måter å bruke KI på innen programmering.\nFerdigheter:\nKan anvende grunnelementene i praktisk, prosedyreorientert programmering.\nKan anvende objektorienterte biblioteker og tilhørende metode-kall.\nKan bruke relevante programmeringsverktøy, som Thonny eller andre syntaksdrevne editorer med semantisk feilmarkering og trinnvis utførelse med inspeksjon av variabler.\nKan for små-skala problem benytte prosessen med analyse, finne en algoritme formulert som pseudokode eller flytskjema, og deretter programmere en løsning for så å teste om den fungerer i Python.\nKan gjennomføre mindre programmeringsprosjekter med noen hundre linjer kode.\nKan forklare egen kode for andre og KI (virkemåte, tankegang) og gi konstruktive tilbakemeldinger på andres kode.\nKan reflektere over hva som er hensiktsmessig og mindre hensiktsmessig bruk av KI som et hjelpeverktøy for å skrive kode og for læring.",
+    "learningMethods": "Gruppeaktiviteter, øvingsforelesninger og obligatoriske øvinger.",
+    "mandatoryActivities": [
+      "Øvinger"
+    ],
+    "assessmentDetails": "Ved utsatt eksamen (kontinuasjonseksamen) kan skriftlig eksamen bli endret til muntlig eksamen. Kontinuasjonseksamen foregår i august påfølgende år.",
+    "specialConditions": null,
+    "requiredKnowledge": null,
+    "recommendedKnowledge": "Ingen.",
+    "courseMaterials": "Oppgis ved semesterstart.",
+    "creditReductions": [
+      {
+        "courseCode": "TDT4105",
+        "reduction": "7,5 sp",
+        "fromTerm": "Høst 2019"
+      },
+      {
+        "courseCode": "TDT4110",
+        "reduction": "7,5 sp",
+        "fromTerm": "Høst 2019"
+      },
+      {
+        "courseCode": "TDT4127",
+        "reduction": "5 sp",
+        "fromTerm": "Høst 2019"
+      },
+      {
+        "courseCode": "TDT4111",
+        "reduction": "5 sp",
+        "fromTerm": "Høst 2022"
+      },
+      {
+        "courseCode": "IT1001",
+        "reduction": "7,5 sp",
+        "fromTerm": "Høst 2023"
+      },
+      {
+        "courseCode": "INGT1002",
+        "reduction": "2,5 sp",
+        "fromTerm": "Høst 2023"
+      },
+      {
+        "courseCode": "INGA1002",
+        "reduction": "2,5 sp",
+        "fromTerm": "Høst 2023"
+      },
+      {
+        "courseCode": "INGG1002",
+        "reduction": "2,5 sp",
+        "fromTerm": "Høst 2023"
+      },
+      {
+        "courseCode": "INFT1010",
+        "reduction": "7,5 sp",
+        "fromTerm": "Høst 2024"
+      },
+      {
+        "courseCode": "PROG1001",
+        "reduction": "7,5 sp",
+        "fromTerm": "Høst 2026"
+      }
+    ],
+    "subjectAreas": [
+      "Teknologiske fag"
+    ],
+    "studyPrograms": [
+      {
+        "code": "MTKOM",
+        "name": "Cybersikkerhet og datakommunikasjon"
+      },
+      {
+        "code": "MTDT",
+        "name": "Datateknologi"
+      },
+      {
+        "code": "MTIØT",
+        "name": "Industriell økonomi og teknologiledelse"
+      },
+      {
+        "code": "BIT",
+        "name": "Informatikk"
+      },
+      {
+        "code": "MTING",
+        "name": "Ingeniørvitenskap og IKT"
+      },
+      {
+        "code": "MLREAL",
+        "name": "Lektorutdanning i realfag for trinn 8 – 13"
+      },
+      {
+        "code": "BMUST",
+        "name": "Musikkteknologi"
+      }
+    ],
+    "contacts": [
+      {
+        "role": "Emneansvarlig/koordinator",
+        "persons": [
+          {
+            "name": "Børge Haugset",
+            "url": "https://www.ntnu.no/ansatte/borgeha"
+          }
+        ]
+      }
+    ],
+    "department": "Institutt for datateknologi og informatikk",
+    "exams": [
+      {
+        "occasion": "Ordinær eksamen",
+        "season": "Høst 2026",
+        "form": "Skriftlig skoleeksamen",
+        "weighting": "100/100",
+        "aidCode": "Kode D",
+        "aidCodeDescription": "D: Ingen trykte eller håndskrevne hjelpemidler tillatt. Bestemt, enkel kalkulator tillatt.",
+        "date": "2027-01-09",
+        "dateText": "09.01.2027",
+        "time": "09:00",
+        "timeText": "09:00",
+        "duration": "4 timer",
+        "system": "Inspera Assessment",
+        "rooms": [
+          {
+            "building": "Sluppenvegen 14",
+            "room": "SL110 hvit sone",
+            "candidates": 64
+          },
+          {
+            "building": "Sluppenvegen 14",
+            "room": "SL110 lilla sone",
+            "candidates": 64
+          },
+          {
+            "building": "Sluppenvegen 14",
+            "room": "SL110 turkis sone",
+            "candidates": 80
+          },
+          {
+            "building": "Sluppenvegen 14",
+            "room": "SL111 blå sone",
+            "candidates": 36
+          },
+          {
+            "building": "Sluppenvegen 14",
+            "room": "SL111 brun sone",
+            "candidates": 81
+          },
+          {
+            "building": "Sluppenvegen 14",
+            "room": "SL111 lyseblå sone",
+            "candidates": 72
+          },
+          {
+            "building": "Sluppenvegen 14",
+            "room": "SL111 orange sone",
+            "candidates": 60
+          },
+          {
+            "building": "Sluppenvegen 14",
+            "room": "SL410 blå sone",
+            "candidates": 51
+          },
+          {
+            "building": "Sluppenvegen 14",
+            "room": "SL410 orange sone",
+            "candidates": 47
+          }
+        ]
+      },
+      {
+        "occasion": "Utsatt eksamen",
+        "season": "Sommer 2027",
+        "form": "Skriftlig skoleeksamen",
+        "weighting": "100/100",
+        "aidCode": "Kode D",
+        "aidCodeDescription": "D: Ingen trykte eller håndskrevne hjelpemidler tillatt. Bestemt, enkel kalkulator tillatt.",
+        "date": null,
+        "dateText": null,
+        "time": null,
+        "timeText": null,
+        "duration": "4 timer",
+        "system": "Inspera Assessment",
+        "rooms": []
+      }
+    ],
+    "studyYear": 2026,
+    "availableYears": [
+      2026,
+      2025,
+      2024,
+      2023,
+      2022,
+      2021,
+      2020,
+      2019
+    ],
+    "notices": [],
+    "courseLinks": [
+      {
+        "label": "Blackboard - HØST-2024",
+        "url": "https://ntnu.blackboard.com/webapps/login?action=guest_login&new_loc=/webapps/blackboard/execute/courseMain?course_id=_49373_1"
+      },
+      {
+        "label": "Blackboard - HØST-2022",
+        "url": "https://ntnu.blackboard.com/webapps/login?action=guest_login&new_loc=/webapps/blackboard/execute/courseMain?course_id=_38314_1"
+      },
+      {
+        "label": "Blackboard - HØST-2021",
+        "url": "https://ntnu.blackboard.com/webapps/login?action=guest_login&new_loc=/webapps/blackboard/execute/courseMain?course_id=_29642_1"
+      },
+      {
+        "label": "Blackboard - HØST-2019",
+        "url": "https://ntnu.blackboard.com/webapps/login?action=guest_login&new_loc=/webapps/blackboard/execute/courseMain?course_id=_17850_1"
+      }
+    ]
+  }
+}

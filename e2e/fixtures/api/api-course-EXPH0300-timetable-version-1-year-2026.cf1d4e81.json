@@ -1,0 +1,2871 @@
+{
+  "url": "http://127.0.0.1:8788/api/course/EXPH0300/timetable?year=2026&version=1",
+  "status": 200,
+  "contentType": "application/json; charset=utf-8",
+  "body": [
+    {
+      "courseCode": "EXPH0300",
+      "courseName": {
+        "nob": "Examen philosophicum for naturvitenskap og teknologi",
+        "nno": "Examen philosophicum for naturvitskap og teknologi",
+        "eng": "Examen philosophicum for Science and Technology"
+      },
+      "acronym": "DISAM-P",
+      "term": "2026_VÅR",
+      "termNumber": 1,
+      "name": "Dialog- og samarbeidsbasert undervisning",
+      "title": "Seminargruppe 14 Trondheim",
+      "dayNumber": 1,
+      "startTime": "10:15",
+      "endTime": "12:00",
+      "weeks": [
+        "4-5",
+        "7-10",
+        "13",
+        "16-17"
+      ],
+      "rooms": [
+        {
+          "id": "194_337_1-200.4",
+          "building": "Byggteknisk",
+          "room": "Galleri 4",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=337-1-200.4"
+        }
+      ],
+      "studyProgramKeys": [
+        "MTGEORT"
+      ]
+    },
+    {
+      "courseCode": "EXPH0300",
+      "courseName": {
+        "nob": "Examen philosophicum for naturvitenskap og teknologi",
+        "nno": "Examen philosophicum for naturvitskap og teknologi",
+        "eng": "Examen philosophicum for Science and Technology"
+      },
+      "acronym": "DISAM-P",
+      "term": "2026_VÅR",
+      "termNumber": 1,
+      "name": "Dialog- og samarbeidsbasert undervisning",
+      "title": "Seminargruppe 21 Trondheim",
+      "dayNumber": 1,
+      "startTime": "10:15",
+      "endTime": "12:00",
+      "weeks": [
+        "4-5",
+        "7-10",
+        "13",
+        "16-17"
+      ],
+      "rooms": [
+        {
+          "id": "194_301_129",
+          "building": "Hovedbygningen",
+          "room": "H2",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=301-129"
+        }
+      ],
+      "studyProgramKeys": [
+        "MTENERG"
+      ]
+    },
+    {
+      "courseCode": "EXPH0300",
+      "courseName": {
+        "nob": "Examen philosophicum for naturvitenskap og teknologi",
+        "nno": "Examen philosophicum for naturvitskap og teknologi",
+        "eng": "Examen philosophicum for Science and Technology"
+      },
+      "acronym": "DISAM-P",
+      "term": "2026_VÅR",
+      "termNumber": 1,
+      "name": "Dialog- og samarbeidsbasert undervisning",
+      "title": "Seminargruppe 21 Trondheim",
+      "dayNumber": 1,
+      "startTime": "10:15",
+      "endTime": "12:00",
+      "weeks": [
+        "4-5",
+        "7-10",
+        "13",
+        "16-17"
+      ],
+      "rooms": [
+        {
+          "id": "194_358_521",
+          "building": "Tapirbygget",
+          "room": "H3 521 Sprokkit",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=358-521"
+        }
+      ],
+      "studyProgramKeys": [
+        "MTENERG"
+      ]
+    },
+    {
+      "courseCode": "EXPH0300",
+      "courseName": {
+        "nob": "Examen philosophicum for naturvitenskap og teknologi",
+        "nno": "Examen philosophicum for naturvitskap og teknologi",
+        "eng": "Examen philosophicum for Science and Technology"
+      },
+      "acronym": "DISAM-P",
+      "term": "2026_VÅR",
+      "termNumber": 1,
+      "name": "Dialog- og samarbeidsbasert undervisning",
+      "title": "Seminargruppe 20 Trondheim",
+      "dayNumber": 1,
+      "startTime": "12:15",
+      "endTime": "14:00",
+      "weeks": [
+        "4-5",
+        "7-10",
+        "13",
+        "16-17"
+      ],
+      "rooms": [
+        {
+          "id": "194_360_D5-171",
+          "building": "Realfagbygget",
+          "room": "R10",
+          "url": "https://link.mazemap.com/XDnQ5pFN"
+        }
+      ],
+      "studyProgramKeys": [
+        "MTMAT"
+      ]
+    },
+    {
+      "courseCode": "EXPH0300",
+      "courseName": {
+        "nob": "Examen philosophicum for naturvitenskap og teknologi",
+        "nno": "Examen philosophicum for naturvitskap og teknologi",
+        "eng": "Examen philosophicum for Science and Technology"
+      },
+      "acronym": "DISAM-P",
+      "term": "2026_VÅR",
+      "termNumber": 1,
+      "name": "Dialog- og samarbeidsbasert undervisning",
+      "title": "Seminargruppe 20 Trondheim",
+      "dayNumber": 1,
+      "startTime": "12:15",
+      "endTime": "14:00",
+      "weeks": [
+        "4-5",
+        "7-10",
+        "13",
+        "16-17"
+      ],
+      "rooms": [
+        {
+          "id": "194_301_326",
+          "building": "Hovedbygningen",
+          "room": "326",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=301-326"
+        }
+      ],
+      "studyProgramKeys": [
+        "MTMAT"
+      ]
+    },
+    {
+      "courseCode": "EXPH0300",
+      "courseName": {
+        "nob": "Examen philosophicum for naturvitenskap og teknologi",
+        "nno": "Examen philosophicum for naturvitskap og teknologi",
+        "eng": "Examen philosophicum for Science and Technology"
+      },
+      "acronym": "DISAM-P",
+      "term": "2026_VÅR",
+      "termNumber": 1,
+      "name": "Dialog- og samarbeidsbasert undervisning",
+      "title": "Seminargruppe 15 Trondheim",
+      "dayNumber": 1,
+      "startTime": "12:15",
+      "endTime": "14:00",
+      "weeks": [
+        "4-5",
+        "7-10",
+        "13",
+        "16-17"
+      ],
+      "rooms": [
+        {
+          "id": "194_337_1-200.4",
+          "building": "Byggteknisk",
+          "room": "Galleri 4",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=337-1-200.4"
+        }
+      ],
+      "studyProgramKeys": [
+        "MTENERG"
+      ]
+    },
+    {
+      "courseCode": "EXPH0300",
+      "courseName": {
+        "nob": "Examen philosophicum for naturvitenskap og teknologi",
+        "nno": "Examen philosophicum for naturvitskap og teknologi",
+        "eng": "Examen philosophicum for Science and Technology"
+      },
+      "acronym": "DISAM-P",
+      "term": "2026_VÅR",
+      "termNumber": 1,
+      "name": "Dialog- og samarbeidsbasert undervisning",
+      "title": "Seminargruppe 1 Trondheim",
+      "dayNumber": 1,
+      "startTime": "15:15",
+      "endTime": "17:00",
+      "weeks": [
+        "4-5",
+        "7-10",
+        "13",
+        "16-17"
+      ],
+      "rooms": [
+        {
+          "id": "194_360_BU2-117",
+          "building": "Realfagbygget",
+          "room": "R23",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=360-BU2-117"
+        }
+      ],
+      "studyProgramKeys": [
+        "MTMASKIN"
+      ]
+    },
+    {
+      "courseCode": "EXPH0300",
+      "courseName": {
+        "nob": "Examen philosophicum for naturvitenskap og teknologi",
+        "nno": "Examen philosophicum for naturvitskap og teknologi",
+        "eng": "Examen philosophicum for Science and Technology"
+      },
+      "acronym": "DISAM-P",
+      "term": "2026_VÅR",
+      "termNumber": 1,
+      "name": "Dialog- og samarbeidsbasert undervisning",
+      "title": "Seminargruppe 11 Trondheim",
+      "dayNumber": 1,
+      "startTime": "08:15",
+      "endTime": "10:00",
+      "weeks": [
+        "4-5",
+        "7-10",
+        "13",
+        "16-17"
+      ],
+      "rooms": [
+        {
+          "id": "194_337_1-200.4",
+          "building": "Byggteknisk",
+          "room": "Galleri 4",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=337-1-200.4"
+        }
+      ],
+      "studyProgramKeys": [
+        "MLREAL"
+      ]
+    },
+    {
+      "courseCode": "EXPH0300",
+      "courseName": {
+        "nob": "Examen philosophicum for naturvitenskap og teknologi",
+        "nno": "Examen philosophicum for naturvitskap og teknologi",
+        "eng": "Examen philosophicum for Science and Technology"
+      },
+      "acronym": "DISAM-P",
+      "term": "2026_VÅR",
+      "termNumber": 1,
+      "name": "Dialog- og samarbeidsbasert undervisning",
+      "title": "Seminargruppe 18 Trondheim",
+      "dayNumber": 1,
+      "startTime": "08:15",
+      "endTime": "10:00",
+      "weeks": [
+        "4-5",
+        "7-10",
+        "13",
+        "16-17"
+      ],
+      "rooms": [
+        {
+          "id": "194_301_129",
+          "building": "Hovedbygningen",
+          "room": "H2",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=301-129"
+        }
+      ],
+      "studyProgramKeys": [
+        "MTMART"
+      ]
+    },
+    {
+      "courseCode": "EXPH0300",
+      "courseName": {
+        "nob": "Examen philosophicum for naturvitenskap og teknologi",
+        "nno": "Examen philosophicum for naturvitskap og teknologi",
+        "eng": "Examen philosophicum for Science and Technology"
+      },
+      "acronym": "DISAM-P",
+      "term": "2026_VÅR",
+      "termNumber": 1,
+      "name": "Dialog- og samarbeidsbasert undervisning",
+      "title": "Seminargruppe 18 Trondheim",
+      "dayNumber": 1,
+      "startTime": "08:15",
+      "endTime": "10:00",
+      "weeks": [
+        "4-5",
+        "7-10",
+        "13",
+        "16-17"
+      ],
+      "rooms": [
+        {
+          "id": "194_360_BU2-153",
+          "building": "Realfagbygget",
+          "room": "R22",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=360-BU2-153"
+        }
+      ],
+      "studyProgramKeys": [
+        "MTMART"
+      ]
+    },
+    {
+      "courseCode": "EXPH0300",
+      "courseName": {
+        "nob": "Examen philosophicum for naturvitenskap og teknologi",
+        "nno": "Examen philosophicum for naturvitskap og teknologi",
+        "eng": "Examen philosophicum for Science and Technology"
+      },
+      "acronym": "FORM-P",
+      "term": "2026_VÅR",
+      "termNumber": 1,
+      "name": "Formidling",
+      "title": "Forelesningsparallell 4 Gjøvik",
+      "dayNumber": 2,
+      "startTime": "10:15",
+      "endTime": "12:00",
+      "weeks": [
+        "3-13",
+        "16"
+      ],
+      "rooms": [
+        {
+          "id": "194_502_K102",
+          "building": "Kobolt",
+          "room": "K102",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=502-K102"
+        }
+      ],
+      "studyProgramKeys": [
+        "EX.PHIL GJØVIK",
+        "ÅRTEK",
+        "BTEKD"
+      ]
+    },
+    {
+      "courseCode": "EXPH0300",
+      "courseName": {
+        "nob": "Examen philosophicum for naturvitenskap og teknologi",
+        "nno": "Examen philosophicum for naturvitskap og teknologi",
+        "eng": "Examen philosophicum for Science and Technology"
+      },
+      "acronym": "FORM-P",
+      "term": "2026_VÅR",
+      "termNumber": 1,
+      "name": "Formidling",
+      "title": "Forelesningsparallell 4 Gjøvik",
+      "dayNumber": 2,
+      "startTime": "10:15",
+      "endTime": "12:00",
+      "weeks": [
+        "3-13",
+        "16"
+      ],
+      "rooms": [
+        {
+          "id": "194_505_F126B",
+          "building": "Helvin",
+          "room": "1/3 Eureka",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=505-F126B"
+        }
+      ],
+      "studyProgramKeys": [
+        "EX.PHIL GJØVIK",
+        "ÅRTEK",
+        "BTEKD"
+      ]
+    },
+    {
+      "courseCode": "EXPH0300",
+      "courseName": {
+        "nob": "Examen philosophicum for naturvitenskap og teknologi",
+        "nno": "Examen philosophicum for naturvitskap og teknologi",
+        "eng": "Examen philosophicum for Science and Technology"
+      },
+      "acronym": "DISAM-P",
+      "term": "2026_VÅR",
+      "termNumber": 1,
+      "name": "Dialog- og samarbeidsbasert undervisning",
+      "title": "Seminargruppe 16 Trondheim",
+      "dayNumber": 2,
+      "startTime": "10:15",
+      "endTime": "12:00",
+      "weeks": [
+        "4-5",
+        "7-10",
+        "13",
+        "16-17"
+      ],
+      "rooms": [
+        {
+          "id": "194_337_1-200.4",
+          "building": "Byggteknisk",
+          "room": "Galleri 4",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=337-1-200.4"
+        }
+      ],
+      "studyProgramKeys": [
+        "MTIØT"
+      ]
+    },
+    {
+      "courseCode": "EXPH0300",
+      "courseName": {
+        "nob": "Examen philosophicum for naturvitenskap og teknologi",
+        "nno": "Examen philosophicum for naturvitskap og teknologi",
+        "eng": "Examen philosophicum for Science and Technology"
+      },
+      "acronym": "FORM-P",
+      "term": "2026_VÅR",
+      "termNumber": 1,
+      "name": "Formidling",
+      "title": "Forelesningsparallell 1 Trondheim",
+      "dayNumber": 2,
+      "startTime": "10:15",
+      "endTime": "12:00",
+      "weeks": [
+        "3-13",
+        "16"
+      ],
+      "rooms": [
+        {
+          "id": "194_360_CU1-101",
+          "building": "Realfagbygget",
+          "room": "R1",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=360-CU1-101"
+        }
+      ],
+      "studyProgramKeys": [
+        "MTNANO",
+        "BFY",
+        "MBIOT5",
+        "MTMART",
+        "EX.PHIL ÅLESUND",
+        "MTKOM",
+        "MTFYMA",
+        "MTENERG",
+        "MTMASKIN"
+      ]
+    },
+    {
+      "courseCode": "EXPH0300",
+      "courseName": {
+        "nob": "Examen philosophicum for naturvitenskap og teknologi",
+        "nno": "Examen philosophicum for naturvitskap og teknologi",
+        "eng": "Examen philosophicum for Science and Technology"
+      },
+      "acronym": "DISAM-P",
+      "term": "2026_VÅR",
+      "termNumber": 1,
+      "name": "Dialog- og samarbeidsbasert undervisning",
+      "title": "Seminargruppe 5 Trondheim",
+      "dayNumber": 2,
+      "startTime": "14:15",
+      "endTime": "16:00",
+      "weeks": [
+        "4-5",
+        "7-10",
+        "13",
+        "16-17"
+      ],
+      "rooms": [
+        {
+          "id": "194_337_1-200.4",
+          "building": "Byggteknisk",
+          "room": "Galleri 4",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=337-1-200.4"
+        }
+      ],
+      "studyProgramKeys": [
+        "BGEOL"
+      ]
+    },
+    {
+      "courseCode": "EXPH0300",
+      "courseName": {
+        "nob": "Examen philosophicum for naturvitenskap og teknologi",
+        "nno": "Examen philosophicum for naturvitskap og teknologi",
+        "eng": "Examen philosophicum for Science and Technology"
+      },
+      "acronym": "DISAM-P",
+      "term": "2026_VÅR",
+      "termNumber": 1,
+      "name": "Dialog- og samarbeidsbasert undervisning",
+      "title": "Seminargruppe 33 Gjøvik",
+      "dayNumber": 2,
+      "startTime": "14:15",
+      "endTime": "16:00",
+      "weeks": [
+        "4-5",
+        "7-10",
+        "13",
+        "16-17"
+      ],
+      "rooms": [
+        {
+          "id": "194_510_S411",
+          "building": "Smaragd",
+          "room": "S411",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=510-S411"
+        }
+      ],
+      "studyProgramKeys": [
+        "EX.PHIL GJØVIK",
+        "ÅRTEK",
+        "BTEKD"
+      ]
+    },
+    {
+      "courseCode": "EXPH0300",
+      "courseName": {
+        "nob": "Examen philosophicum for naturvitenskap og teknologi",
+        "nno": "Examen philosophicum for naturvitskap og teknologi",
+        "eng": "Examen philosophicum for Science and Technology"
+      },
+      "acronym": "DISAM-P",
+      "term": "2026_VÅR",
+      "termNumber": 1,
+      "name": "Dialog- og samarbeidsbasert undervisning",
+      "title": "Seminargruppe 30 Ålesund",
+      "dayNumber": 2,
+      "startTime": "14:15",
+      "endTime": "16:00",
+      "weeks": [
+        "4-5",
+        "7-10",
+        "13",
+        "16-17"
+      ],
+      "rooms": [
+        {
+          "id": "194_702_B228",
+          "building": "Ankeret",
+          "room": "B228",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=702-B228"
+        }
+      ],
+      "studyProgramKeys": [
+        "EX.PHIL ÅLESUND",
+        "432SM"
+      ]
+    },
+    {
+      "courseCode": "EXPH0300",
+      "courseName": {
+        "nob": "Examen philosophicum for naturvitenskap og teknologi",
+        "nno": "Examen philosophicum for naturvitskap og teknologi",
+        "eng": "Examen philosophicum for Science and Technology"
+      },
+      "acronym": "DISAM-P",
+      "term": "2026_VÅR",
+      "termNumber": 1,
+      "name": "Dialog- og samarbeidsbasert undervisning",
+      "title": "Seminargruppe 12 Trondheim",
+      "dayNumber": 2,
+      "startTime": "12:15",
+      "endTime": "14:00",
+      "weeks": [
+        "4-5",
+        "7-10",
+        "13",
+        "16-17"
+      ],
+      "rooms": [
+        {
+          "id": "194_337_1-200.4",
+          "building": "Byggteknisk",
+          "room": "Galleri 4",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=337-1-200.4"
+        }
+      ],
+      "studyProgramKeys": [
+        "MTFYMA"
+      ]
+    },
+    {
+      "courseCode": "EXPH0300",
+      "courseName": {
+        "nob": "Examen philosophicum for naturvitenskap og teknologi",
+        "nno": "Examen philosophicum for naturvitskap og teknologi",
+        "eng": "Examen philosophicum for Science and Technology"
+      },
+      "acronym": "DISAM-P",
+      "term": "2026_VÅR",
+      "termNumber": 1,
+      "name": "Dialog- og samarbeidsbasert undervisning",
+      "title": "Seminargruppe 29 Ålesund",
+      "dayNumber": 2,
+      "startTime": "12:15",
+      "endTime": "14:00",
+      "weeks": [
+        "4-5",
+        "7-10",
+        "13",
+        "16-17"
+      ],
+      "rooms": [
+        {
+          "id": "194_702_B228",
+          "building": "Ankeret",
+          "room": "B228",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=702-B228"
+        }
+      ],
+      "studyProgramKeys": [
+        "EX.PHIL ÅLESUND",
+        "353MN",
+        "353YV",
+        "432SM"
+      ]
+    },
+    {
+      "courseCode": "EXPH0300",
+      "courseName": {
+        "nob": "Examen philosophicum for naturvitenskap og teknologi",
+        "nno": "Examen philosophicum for naturvitskap og teknologi",
+        "eng": "Examen philosophicum for Science and Technology"
+      },
+      "acronym": "DISAM-P",
+      "term": "2026_VÅR",
+      "termNumber": 1,
+      "name": "Dialog- og samarbeidsbasert undervisning",
+      "title": "Seminargruppe 23 Trondheim",
+      "dayNumber": 2,
+      "startTime": "08:15",
+      "endTime": "10:00",
+      "weeks": [
+        "4-5",
+        "7-10",
+        "13",
+        "16-17"
+      ],
+      "rooms": [
+        {
+          "id": "194_301_129",
+          "building": "Hovedbygningen",
+          "room": "H2",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=301-129"
+        }
+      ],
+      "studyProgramKeys": [
+        "MTNANO"
+      ]
+    },
+    {
+      "courseCode": "EXPH0300",
+      "courseName": {
+        "nob": "Examen philosophicum for naturvitenskap og teknologi",
+        "nno": "Examen philosophicum for naturvitskap og teknologi",
+        "eng": "Examen philosophicum for Science and Technology"
+      },
+      "acronym": "DISAM-P",
+      "term": "2026_VÅR",
+      "termNumber": 1,
+      "name": "Dialog- og samarbeidsbasert undervisning",
+      "title": "Seminargruppe 23 Trondheim",
+      "dayNumber": 2,
+      "startTime": "08:15",
+      "endTime": "10:00",
+      "weeks": [
+        "4-5",
+        "7-10",
+        "13",
+        "16-17"
+      ],
+      "rooms": [
+        {
+          "id": "194_360_A3-125",
+          "building": "Realfagbygget",
+          "room": "A3-125",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=360-A3-125"
+        }
+      ],
+      "studyProgramKeys": [
+        "MTNANO"
+      ]
+    },
+    {
+      "courseCode": "EXPH0300",
+      "courseName": {
+        "nob": "Examen philosophicum for naturvitenskap og teknologi",
+        "nno": "Examen philosophicum for naturvitskap og teknologi",
+        "eng": "Examen philosophicum for Science and Technology"
+      },
+      "acronym": "FORM-P",
+      "term": "2026_VÅR",
+      "termNumber": 1,
+      "name": "Formidling",
+      "title": "Forelesningsparallell 3 Ålesund",
+      "dayNumber": 2,
+      "startTime": "08:15",
+      "endTime": "10:00",
+      "weeks": [
+        "3-13",
+        "16"
+      ],
+      "rooms": [
+        {
+          "id": "194_702_D210",
+          "building": "Ankeret",
+          "room": "Fogdegården",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=702-D210"
+        }
+      ],
+      "studyProgramKeys": [
+        "EX.PHIL ÅLESUND",
+        "353MN",
+        "353YV",
+        "432SM",
+        "298BMI",
+        "427BT"
+      ]
+    },
+    {
+      "courseCode": "EXPH0300",
+      "courseName": {
+        "nob": "Examen philosophicum for naturvitenskap og teknologi",
+        "nno": "Examen philosophicum for naturvitskap og teknologi",
+        "eng": "Examen philosophicum for Science and Technology"
+      },
+      "acronym": "DISAM-P",
+      "term": "2026_VÅR",
+      "termNumber": 1,
+      "name": "Dialog- og samarbeidsbasert undervisning",
+      "title": "Seminargruppe 10 Trondheim",
+      "dayNumber": 2,
+      "startTime": "08:15",
+      "endTime": "10:00",
+      "weeks": [
+        "4-5",
+        "7-10",
+        "13",
+        "16-17"
+      ],
+      "rooms": [
+        {
+          "id": "194_337_1-200.4",
+          "building": "Byggteknisk",
+          "room": "Galleri 4",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=337-1-200.4"
+        }
+      ],
+      "studyProgramKeys": [
+        "MTENERG"
+      ]
+    },
+    {
+      "courseCode": "EXPH0300",
+      "courseName": {
+        "nob": "Examen philosophicum for naturvitenskap og teknologi",
+        "nno": "Examen philosophicum for naturvitskap og teknologi",
+        "eng": "Examen philosophicum for Science and Technology"
+      },
+      "acronym": "DISAM-P",
+      "term": "2026_VÅR",
+      "termNumber": 1,
+      "name": "Dialog- og samarbeidsbasert undervisning",
+      "title": "Seminargruppe 3 Trondheim",
+      "dayNumber": 3,
+      "startTime": "14:15",
+      "endTime": "16:00",
+      "weeks": [
+        "4-5",
+        "7-10",
+        "13",
+        "16-17"
+      ],
+      "rooms": [
+        {
+          "id": "194_307_245",
+          "building": "Verkstedteknisk",
+          "room": "VE20",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=307-245"
+        }
+      ],
+      "studyProgramKeys": [
+        "MBIOT5"
+      ]
+    },
+    {
+      "courseCode": "EXPH0300",
+      "courseName": {
+        "nob": "Examen philosophicum for naturvitenskap og teknologi",
+        "nno": "Examen philosophicum for naturvitskap og teknologi",
+        "eng": "Examen philosophicum for Science and Technology"
+      },
+      "acronym": "DISAM-P",
+      "term": "2026_VÅR",
+      "termNumber": 1,
+      "name": "Dialog- og samarbeidsbasert undervisning",
+      "title": "Seminargruppe 3 Trondheim",
+      "dayNumber": 3,
+      "startTime": "14:15",
+      "endTime": "16:00",
+      "weeks": [
+        "4-5",
+        "7-10",
+        "13",
+        "16-17"
+      ],
+      "rooms": [
+        {
+          "id": "194_301_316",
+          "building": "Hovedbygningen",
+          "room": "316",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=301-316"
+        }
+      ],
+      "studyProgramKeys": [
+        "MBIOT5"
+      ]
+    },
+    {
+      "courseCode": "EXPH0300",
+      "courseName": {
+        "nob": "Examen philosophicum for naturvitenskap og teknologi",
+        "nno": "Examen philosophicum for naturvitskap og teknologi",
+        "eng": "Examen philosophicum for Science and Technology"
+      },
+      "acronym": "FORM-P",
+      "term": "2026_VÅR",
+      "termNumber": 1,
+      "name": "Formidling",
+      "title": "Forelesningsparallell 2 Trondheim",
+      "dayNumber": 3,
+      "startTime": "12:15",
+      "endTime": "14:00",
+      "weeks": [
+        "3-13",
+        "16"
+      ],
+      "rooms": [
+        {
+          "id": "194_318_152",
+          "building": "IT-bygget, sydfløy",
+          "room": "F1",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=318-152"
+        }
+      ],
+      "studyProgramKeys": [
+        "BIHAV",
+        "MTINGGEO",
+        "ÅRTEK",
+        "MTGEORT",
+        "MLREAL",
+        "MTBYGG",
+        "MTTK",
+        "MTIØT",
+        "MTENERG",
+        "BGEOL"
+      ]
+    },
+    {
+      "courseCode": "EXPH0300",
+      "courseName": {
+        "nob": "Examen philosophicum for naturvitenskap og teknologi",
+        "nno": "Examen philosophicum for naturvitskap og teknologi",
+        "eng": "Examen philosophicum for Science and Technology"
+      },
+      "acronym": "DISAM-P",
+      "term": "2026_VÅR",
+      "termNumber": 1,
+      "name": "Dialog- og samarbeidsbasert undervisning",
+      "title": "Seminargruppe 36 Ålesund",
+      "dayNumber": 3,
+      "startTime": "12:15",
+      "endTime": "14:00",
+      "weeks": [
+        "4-5",
+        "7-10",
+        "13",
+        "16-17"
+      ],
+      "rooms": [
+        {
+          "id": "194_702_B333",
+          "building": "Ankeret",
+          "room": "B333",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=702-B333"
+        }
+      ],
+      "studyProgramKeys": [
+        "298BMI"
+      ]
+    },
+    {
+      "courseCode": "EXPH0300",
+      "courseName": {
+        "nob": "Examen philosophicum for naturvitenskap og teknologi",
+        "nno": "Examen philosophicum for naturvitskap og teknologi",
+        "eng": "Examen philosophicum for Science and Technology"
+      },
+      "acronym": "DISAM-P",
+      "term": "2026_VÅR",
+      "termNumber": 1,
+      "name": "Dialog- og samarbeidsbasert undervisning",
+      "title": "Seminargruppe 31 Ålesund",
+      "dayNumber": 3,
+      "startTime": "08:15",
+      "endTime": "10:00",
+      "weeks": [
+        "4-5",
+        "7-10",
+        "13",
+        "16-17"
+      ],
+      "rooms": [
+        {
+          "id": "194_702_B228",
+          "building": "Ankeret",
+          "room": "B228",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=702-B228"
+        }
+      ],
+      "studyProgramKeys": [
+        "EX.PHIL ÅLESUND",
+        "353MN",
+        "353YV"
+      ]
+    },
+    {
+      "courseCode": "EXPH0300",
+      "courseName": {
+        "nob": "Examen philosophicum for naturvitenskap og teknologi",
+        "nno": "Examen philosophicum for naturvitskap og teknologi",
+        "eng": "Examen philosophicum for Science and Technology"
+      },
+      "acronym": "DISAM-P",
+      "term": "2026_VÅR",
+      "termNumber": 1,
+      "name": "Dialog- og samarbeidsbasert undervisning",
+      "title": "Seminargruppe 34 Gjøvik",
+      "dayNumber": 3,
+      "startTime": "10:15",
+      "endTime": "12:00",
+      "weeks": [
+        "4-5",
+        "7-10",
+        "13",
+        "16-17"
+      ],
+      "rooms": [
+        {
+          "id": "194_510_S415",
+          "building": "Smaragd",
+          "room": "S415",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=510-S415"
+        }
+      ],
+      "studyProgramKeys": [
+        "EX.PHIL GJØVIK",
+        "ÅRTEK",
+        "BTEKD"
+      ]
+    },
+    {
+      "courseCode": "EXPH0300",
+      "courseName": {
+        "nob": "Examen philosophicum for naturvitenskap og teknologi",
+        "nno": "Examen philosophicum for naturvitskap og teknologi",
+        "eng": "Examen philosophicum for Science and Technology"
+      },
+      "acronym": "DISAM-P",
+      "term": "2026_VÅR",
+      "termNumber": 1,
+      "name": "Dialog- og samarbeidsbasert undervisning",
+      "title": "Seminargruppe 32 Ålesund",
+      "dayNumber": 3,
+      "startTime": "10:15",
+      "endTime": "12:00",
+      "weeks": [
+        "4-5",
+        "7-10",
+        "13",
+        "16-17"
+      ],
+      "rooms": [
+        {
+          "id": "194_702_B228",
+          "building": "Ankeret",
+          "room": "B228",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=702-B228"
+        }
+      ],
+      "studyProgramKeys": [
+        "EX.PHIL ÅLESUND",
+        "298BMI"
+      ]
+    },
+    {
+      "courseCode": "EXPH0300",
+      "courseName": {
+        "nob": "Examen philosophicum for naturvitenskap og teknologi",
+        "nno": "Examen philosophicum for naturvitskap og teknologi",
+        "eng": "Examen philosophicum for Science and Technology"
+      },
+      "acronym": "DISAM-P",
+      "term": "2026_VÅR",
+      "termNumber": 1,
+      "name": "Dialog- og samarbeidsbasert undervisning",
+      "title": "Seminargruppe 22 Trondheim",
+      "dayNumber": 4,
+      "startTime": "08:15",
+      "endTime": "10:00",
+      "weeks": [
+        "4-5",
+        "7-10",
+        "13",
+        "16-17"
+      ],
+      "rooms": [
+        {
+          "id": "194_360_D5-171",
+          "building": "Realfagbygget",
+          "room": "R10",
+          "url": "https://link.mazemap.com/XDnQ5pFN"
+        }
+      ],
+      "studyProgramKeys": [
+        "MTMAT"
+      ]
+    },
+    {
+      "courseCode": "EXPH0300",
+      "courseName": {
+        "nob": "Examen philosophicum for naturvitenskap og teknologi",
+        "nno": "Examen philosophicum for naturvitskap og teknologi",
+        "eng": "Examen philosophicum for Science and Technology"
+      },
+      "acronym": "DISAM-P",
+      "term": "2026_VÅR",
+      "termNumber": 1,
+      "name": "Dialog- og samarbeidsbasert undervisning",
+      "title": "Seminargruppe 22 Trondheim",
+      "dayNumber": 4,
+      "startTime": "08:15",
+      "endTime": "10:00",
+      "weeks": [
+        "4-5",
+        "7-10",
+        "13",
+        "16-17"
+      ],
+      "rooms": [
+        {
+          "id": "194_360_BU2-117",
+          "building": "Realfagbygget",
+          "room": "R23",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=360-BU2-117"
+        }
+      ],
+      "studyProgramKeys": [
+        "MTMAT"
+      ]
+    },
+    {
+      "courseCode": "EXPH0300",
+      "courseName": {
+        "nob": "Examen philosophicum for naturvitenskap og teknologi",
+        "nno": "Examen philosophicum for naturvitskap og teknologi",
+        "eng": "Examen philosophicum for Science and Technology"
+      },
+      "acronym": "DISAM-P",
+      "term": "2026_VÅR",
+      "termNumber": 1,
+      "name": "Dialog- og samarbeidsbasert undervisning",
+      "title": "Seminargruppe 19 Trondheim",
+      "dayNumber": 4,
+      "startTime": "12:15",
+      "endTime": "14:00",
+      "weeks": [
+        "4-5",
+        "7-10",
+        "13",
+        "16-17"
+      ],
+      "rooms": [
+        {
+          "id": "194_301_129",
+          "building": "Hovedbygningen",
+          "room": "H2",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=301-129"
+        }
+      ],
+      "studyProgramKeys": [
+        "MBIOT5"
+      ]
+    },
+    {
+      "courseCode": "EXPH0300",
+      "courseName": {
+        "nob": "Examen philosophicum for naturvitenskap og teknologi",
+        "nno": "Examen philosophicum for naturvitskap og teknologi",
+        "eng": "Examen philosophicum for Science and Technology"
+      },
+      "acronym": "DISAM-P",
+      "term": "2026_VÅR",
+      "termNumber": 1,
+      "name": "Dialog- og samarbeidsbasert undervisning",
+      "title": "Seminargruppe 19 Trondheim",
+      "dayNumber": 4,
+      "startTime": "12:15",
+      "endTime": "14:00",
+      "weeks": [
+        "4-5",
+        "7-10",
+        "13",
+        "16-17"
+      ],
+      "rooms": [
+        {
+          "id": "194_360_BU2-117",
+          "building": "Realfagbygget",
+          "room": "R23",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=360-BU2-117"
+        }
+      ],
+      "studyProgramKeys": [
+        "MBIOT5"
+      ]
+    },
+    {
+      "courseCode": "EXPH0300",
+      "courseName": {
+        "nob": "Examen philosophicum for naturvitenskap og teknologi",
+        "nno": "Examen philosophicum for naturvitskap og teknologi",
+        "eng": "Examen philosophicum for Science and Technology"
+      },
+      "acronym": "DISAM-P",
+      "term": "2026_VÅR",
+      "termNumber": 1,
+      "name": "Dialog- og samarbeidsbasert undervisning",
+      "title": "Seminargruppe 7 Trondheim",
+      "dayNumber": 4,
+      "startTime": "12:15",
+      "endTime": "14:00",
+      "weeks": [
+        "4-5",
+        "7-10",
+        "13",
+        "16-17"
+      ],
+      "rooms": [
+        {
+          "id": "194_337_1-200.4",
+          "building": "Byggteknisk",
+          "room": "Galleri 4",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=337-1-200.4"
+        }
+      ],
+      "studyProgramKeys": [
+        "MTGEORT"
+      ]
+    },
+    {
+      "courseCode": "EXPH0300",
+      "courseName": {
+        "nob": "Examen philosophicum for naturvitenskap og teknologi",
+        "nno": "Examen philosophicum for naturvitskap og teknologi",
+        "eng": "Examen philosophicum for Science and Technology"
+      },
+      "acronym": "DISAM-P",
+      "term": "2026_VÅR",
+      "termNumber": 1,
+      "name": "Dialog- og samarbeidsbasert undervisning",
+      "title": "Seminargruppe 27 Trondheim",
+      "dayNumber": 4,
+      "startTime": "10:15",
+      "endTime": "12:00",
+      "weeks": [
+        "4-5",
+        "7-10",
+        "13",
+        "16-17"
+      ],
+      "rooms": [
+        {
+          "id": "194_301_129",
+          "building": "Hovedbygningen",
+          "room": "H2",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=301-129"
+        }
+      ],
+      "studyProgramKeys": [
+        "MTENERG"
+      ]
+    },
+    {
+      "courseCode": "EXPH0300",
+      "courseName": {
+        "nob": "Examen philosophicum for naturvitenskap og teknologi",
+        "nno": "Examen philosophicum for naturvitskap og teknologi",
+        "eng": "Examen philosophicum for Science and Technology"
+      },
+      "acronym": "DISAM-P",
+      "term": "2026_VÅR",
+      "termNumber": 1,
+      "name": "Dialog- og samarbeidsbasert undervisning",
+      "title": "Seminargruppe 27 Trondheim",
+      "dayNumber": 4,
+      "startTime": "10:15",
+      "endTime": "12:00",
+      "weeks": [
+        "4-5",
+        "7-10",
+        "13",
+        "16-17"
+      ],
+      "rooms": [
+        {
+          "id": "194_380_3088",
+          "building": "Adolf Øien-bygget",
+          "room": "U36",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=380-3088"
+        }
+      ],
+      "studyProgramKeys": [
+        "MTENERG"
+      ]
+    },
+    {
+      "courseCode": "EXPH0300",
+      "courseName": {
+        "nob": "Examen philosophicum for naturvitenskap og teknologi",
+        "nno": "Examen philosophicum for naturvitskap og teknologi",
+        "eng": "Examen philosophicum for Science and Technology"
+      },
+      "acronym": "DISAM-P",
+      "term": "2026_VÅR",
+      "termNumber": 1,
+      "name": "Dialog- og samarbeidsbasert undervisning",
+      "title": "Seminargruppe 36 Ålesund",
+      "dayNumber": 4,
+      "startTime": "10:15",
+      "endTime": "12:00",
+      "weeks": [
+        "4-5",
+        "7-10",
+        "13",
+        "16-17"
+      ],
+      "rooms": [
+        {
+          "id": "194_702_B228",
+          "building": "Ankeret",
+          "room": "B228",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=702-B228"
+        }
+      ],
+      "studyProgramKeys": [
+        "298BMI"
+      ]
+    },
+    {
+      "courseCode": "EXPH0300",
+      "courseName": {
+        "nob": "Examen philosophicum for naturvitenskap og teknologi",
+        "nno": "Examen philosophicum for naturvitskap og teknologi",
+        "eng": "Examen philosophicum for Science and Technology"
+      },
+      "acronym": "DISAM-P",
+      "term": "2026_VÅR",
+      "termNumber": 1,
+      "name": "Dialog- og samarbeidsbasert undervisning",
+      "title": "Seminargruppe 28 Trondheim",
+      "dayNumber": 4,
+      "startTime": "14:15",
+      "endTime": "16:00",
+      "weeks": [
+        "4-5",
+        "7-10",
+        "13",
+        "16-17"
+      ],
+      "rooms": [
+        {
+          "id": "194_301_129",
+          "building": "Hovedbygningen",
+          "room": "H2",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=301-129"
+        }
+      ],
+      "studyProgramKeys": [
+        "MTMAT"
+      ]
+    },
+    {
+      "courseCode": "EXPH0300",
+      "courseName": {
+        "nob": "Examen philosophicum for naturvitenskap og teknologi",
+        "nno": "Examen philosophicum for naturvitskap og teknologi",
+        "eng": "Examen philosophicum for Science and Technology"
+      },
+      "acronym": "DISAM-P",
+      "term": "2026_VÅR",
+      "termNumber": 1,
+      "name": "Dialog- og samarbeidsbasert undervisning",
+      "title": "Seminargruppe 28 Trondheim",
+      "dayNumber": 4,
+      "startTime": "14:15",
+      "endTime": "16:00",
+      "weeks": [
+        "4-5",
+        "7-10",
+        "13",
+        "16-17"
+      ],
+      "rooms": [
+        {
+          "id": "194_322_255B",
+          "building": "Sentralbygg 2",
+          "room": "S21",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=322-255"
+        }
+      ],
+      "studyProgramKeys": [
+        "MTMAT"
+      ]
+    },
+    {
+      "courseCode": "EXPH0300",
+      "courseName": {
+        "nob": "Examen philosophicum for naturvitenskap og teknologi",
+        "nno": "Examen philosophicum for naturvitskap og teknologi",
+        "eng": "Examen philosophicum for Science and Technology"
+      },
+      "acronym": "DISAM-P",
+      "term": "2026_VÅR",
+      "termNumber": 1,
+      "name": "Dialog- og samarbeidsbasert undervisning",
+      "title": "Seminargruppe 13 Trondheim",
+      "dayNumber": 4,
+      "startTime": "14:15",
+      "endTime": "16:00",
+      "weeks": [
+        "4-5",
+        "7-10",
+        "13",
+        "16-17"
+      ],
+      "rooms": [
+        {
+          "id": "194_337_1-200.4",
+          "building": "Byggteknisk",
+          "room": "Galleri 4",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=337-1-200.4"
+        }
+      ],
+      "studyProgramKeys": [
+        "MLREAL"
+      ]
+    },
+    {
+      "courseCode": "EXPH0300",
+      "courseName": {
+        "nob": "Examen philosophicum for naturvitenskap og teknologi",
+        "nno": "Examen philosophicum for naturvitskap og teknologi",
+        "eng": "Examen philosophicum for Science and Technology"
+      },
+      "acronym": "DISAM-P",
+      "term": "2026_VÅR",
+      "termNumber": 1,
+      "name": "Dialog- og samarbeidsbasert undervisning",
+      "title": "Seminargruppe 8 Trondheim",
+      "dayNumber": 5,
+      "startTime": "14:15",
+      "endTime": "16:00",
+      "weeks": [
+        "4-5",
+        "7-10",
+        "13",
+        "16-17"
+      ],
+      "rooms": [
+        {
+          "id": "194_337_1-200.4",
+          "building": "Byggteknisk",
+          "room": "Galleri 4",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=337-1-200.4"
+        }
+      ],
+      "studyProgramKeys": [
+        "MTBYGG"
+      ]
+    },
+    {
+      "courseCode": "EXPH0300",
+      "courseName": {
+        "nob": "Examen philosophicum for naturvitenskap og teknologi",
+        "nno": "Examen philosophicum for naturvitskap og teknologi",
+        "eng": "Examen philosophicum for Science and Technology"
+      },
+      "acronym": "DISAM-P",
+      "term": "2026_VÅR",
+      "termNumber": 1,
+      "name": "Dialog- og samarbeidsbasert undervisning",
+      "title": "Seminargruppe 2 Trondheim",
+      "dayNumber": 5,
+      "startTime": "10:15",
+      "endTime": "12:00",
+      "weeks": [
+        "4-5",
+        "7-10",
+        "13",
+        "16-17"
+      ],
+      "rooms": [
+        {
+          "id": "194_337_1-200.4",
+          "building": "Byggteknisk",
+          "room": "Galleri 4",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=337-1-200.4"
+        }
+      ],
+      "studyProgramKeys": [
+        "BIHAV"
+      ]
+    },
+    {
+      "courseCode": "EXPH0300",
+      "courseName": {
+        "nob": "Examen philosophicum for naturvitenskap og teknologi",
+        "nno": "Examen philosophicum for naturvitskap og teknologi",
+        "eng": "Examen philosophicum for Science and Technology"
+      },
+      "acronym": "DISAM-P",
+      "term": "2026_VÅR",
+      "termNumber": 1,
+      "name": "Dialog- og samarbeidsbasert undervisning",
+      "title": "Seminargruppe 9 Trondheim",
+      "dayNumber": 5,
+      "startTime": "10:15",
+      "endTime": "12:00",
+      "weeks": [
+        "4-5",
+        "7-10",
+        "13",
+        "16-17"
+      ],
+      "rooms": [
+        {
+          "id": "194_360_A3-125",
+          "building": "Realfagbygget",
+          "room": "A3-125",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=360-A3-125"
+        }
+      ],
+      "studyProgramKeys": [
+        "MTTK"
+      ]
+    },
+    {
+      "courseCode": "EXPH0300",
+      "courseName": {
+        "nob": "Examen philosophicum for naturvitenskap og teknologi",
+        "nno": "Examen philosophicum for naturvitskap og teknologi",
+        "eng": "Examen philosophicum for Science and Technology"
+      },
+      "acronym": "DISAM-P",
+      "term": "2026_VÅR",
+      "termNumber": 1,
+      "name": "Dialog- og samarbeidsbasert undervisning",
+      "title": "Seminargruppe 9 Trondheim",
+      "dayNumber": 5,
+      "startTime": "10:15",
+      "endTime": "12:00",
+      "weeks": [
+        "4-5",
+        "7-10",
+        "13",
+        "16-17"
+      ],
+      "rooms": [
+        {
+          "id": "194_301_129",
+          "building": "Hovedbygningen",
+          "room": "H2",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=301-129"
+        }
+      ],
+      "studyProgramKeys": [
+        "MTTK"
+      ]
+    },
+    {
+      "courseCode": "EXPH0300",
+      "courseName": {
+        "nob": "Examen philosophicum for naturvitenskap og teknologi",
+        "nno": "Examen philosophicum for naturvitskap og teknologi",
+        "eng": "Examen philosophicum for Science and Technology"
+      },
+      "acronym": "DISAM-P",
+      "term": "2026_VÅR",
+      "termNumber": 1,
+      "name": "Dialog- og samarbeidsbasert undervisning",
+      "title": "Seminargruppe 26 Trondheim",
+      "dayNumber": 5,
+      "startTime": "08:15",
+      "endTime": "10:00",
+      "weeks": [
+        "4-5",
+        "7-10",
+        "13",
+        "16-17"
+      ],
+      "rooms": [
+        {
+          "id": "194_301_129",
+          "building": "Hovedbygningen",
+          "room": "H2",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=301-129"
+        }
+      ],
+      "studyProgramKeys": [
+        "MTINGGEO"
+      ]
+    },
+    {
+      "courseCode": "EXPH0300",
+      "courseName": {
+        "nob": "Examen philosophicum for naturvitenskap og teknologi",
+        "nno": "Examen philosophicum for naturvitskap og teknologi",
+        "eng": "Examen philosophicum for Science and Technology"
+      },
+      "acronym": "DISAM-P",
+      "term": "2026_VÅR",
+      "termNumber": 1,
+      "name": "Dialog- og samarbeidsbasert undervisning",
+      "title": "Seminargruppe 26 Trondheim",
+      "dayNumber": 5,
+      "startTime": "08:15",
+      "endTime": "10:00",
+      "weeks": [
+        "4-5",
+        "7-10",
+        "13",
+        "16-17"
+      ],
+      "rooms": [
+        {
+          "id": "194_360_A3-125",
+          "building": "Realfagbygget",
+          "room": "A3-125",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=360-A3-125"
+        }
+      ],
+      "studyProgramKeys": [
+        "MTINGGEO"
+      ]
+    },
+    {
+      "courseCode": "EXPH0300",
+      "courseName": {
+        "nob": "Examen philosophicum for naturvitenskap og teknologi",
+        "nno": "Examen philosophicum for naturvitskap og teknologi",
+        "eng": "Examen philosophicum for Science and Technology"
+      },
+      "acronym": "DISAM-P",
+      "term": "2026_VÅR",
+      "termNumber": 1,
+      "name": "Dialog- og samarbeidsbasert undervisning",
+      "title": "Seminargruppe 25 Trondheim",
+      "dayNumber": 5,
+      "startTime": "08:15",
+      "endTime": "10:00",
+      "weeks": [
+        "4-5",
+        "7-10",
+        "13",
+        "16-17"
+      ],
+      "rooms": [
+        {
+          "id": "194_380_3082",
+          "building": "Adolf Øien-bygget",
+          "room": "U33",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=380-3082"
+        }
+      ],
+      "studyProgramKeys": [
+        "MTMAT"
+      ]
+    },
+    {
+      "courseCode": "EXPH0300",
+      "courseName": {
+        "nob": "Examen philosophicum for naturvitenskap og teknologi",
+        "nno": "Examen philosophicum for naturvitskap og teknologi",
+        "eng": "Examen philosophicum for Science and Technology"
+      },
+      "acronym": "DISAM-P",
+      "term": "2026_VÅR",
+      "termNumber": 1,
+      "name": "Dialog- og samarbeidsbasert undervisning",
+      "title": "Seminargruppe 24 Trondheim",
+      "dayNumber": 5,
+      "startTime": "12:15",
+      "endTime": "14:00",
+      "weeks": [
+        "4-5",
+        "7-10",
+        "13",
+        "16-17"
+      ],
+      "rooms": [
+        {
+          "id": "194_360_A3-125",
+          "building": "Realfagbygget",
+          "room": "A3-125",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=360-A3-125"
+        }
+      ],
+      "studyProgramKeys": [
+        "MTMAT"
+      ]
+    },
+    {
+      "courseCode": "EXPH0300",
+      "courseName": {
+        "nob": "Examen philosophicum for naturvitenskap og teknologi",
+        "nno": "Examen philosophicum for naturvitskap og teknologi",
+        "eng": "Examen philosophicum for Science and Technology"
+      },
+      "acronym": "DISAM-P",
+      "term": "2026_VÅR",
+      "termNumber": 1,
+      "name": "Dialog- og samarbeidsbasert undervisning",
+      "title": "Seminargruppe 24 Trondheim",
+      "dayNumber": 5,
+      "startTime": "12:15",
+      "endTime": "14:00",
+      "weeks": [
+        "4-5",
+        "7-10",
+        "13",
+        "16-17"
+      ],
+      "rooms": [
+        {
+          "id": "194_301_316",
+          "building": "Hovedbygningen",
+          "room": "316",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=301-316"
+        }
+      ],
+      "studyProgramKeys": [
+        "MTMAT"
+      ]
+    },
+    {
+      "courseCode": "EXPH0300",
+      "courseName": {
+        "nob": "Examen philosophicum for naturvitenskap og teknologi",
+        "nno": "Examen philosophicum for naturvitskap og teknologi",
+        "eng": "Examen philosophicum for Science and Technology"
+      },
+      "acronym": "DISAM-P",
+      "term": "2026_VÅR",
+      "termNumber": 1,
+      "name": "Dialog- og samarbeidsbasert undervisning",
+      "title": "Seminargruppe 6 Trondheim",
+      "dayNumber": 5,
+      "startTime": "12:15",
+      "endTime": "14:00",
+      "weeks": [
+        "4-5",
+        "7-10",
+        "13",
+        "16-17"
+      ],
+      "rooms": [
+        {
+          "id": "194_337_1-200.4",
+          "building": "Byggteknisk",
+          "room": "Galleri 4",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=337-1-200.4"
+        }
+      ],
+      "studyProgramKeys": [
+        "BFY"
+      ]
+    },
+    {
+      "courseCode": "EXPH0300",
+      "courseName": {
+        "nob": "Examen philosophicum for naturvitenskap og teknologi",
+        "nno": "Examen philosophicum for naturvitskap og teknologi",
+        "eng": "Examen philosophicum for Science and Technology"
+      },
+      "acronym": "FORM-P",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Formidling",
+      "title": "Forelesningsparallell 2 Trondheim",
+      "dayNumber": 1,
+      "startTime": "10:15",
+      "endTime": "12:00",
+      "weeks": [
+        "34-45"
+      ],
+      "rooms": [
+        {
+          "id": "194_360_CU1-101",
+          "building": "Realfagbygget",
+          "room": "R1",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=360-CU1-101"
+        }
+      ],
+      "studyProgramKeys": [
+        "BKJ",
+        "BMAT",
+        "MTKOM",
+        "MLREAL",
+        "MTELSYS",
+        "ITBAITBEDR"
+      ]
+    },
+    {
+      "courseCode": "EXPH0300",
+      "courseName": {
+        "nob": "Examen philosophicum for naturvitenskap og teknologi",
+        "nno": "Examen philosophicum for naturvitskap og teknologi",
+        "eng": "Examen philosophicum for Science and Technology"
+      },
+      "acronym": "FORM-P",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Formidling",
+      "title": "Forelesningsparallell 3 Gjøvik",
+      "dayNumber": 1,
+      "startTime": "10:15",
+      "endTime": "12:00",
+      "weeks": [
+        "34-45"
+      ],
+      "rooms": [
+        {
+          "id": "194_502_K105",
+          "building": "Kobolt",
+          "room": "K105",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=502-K105"
+        }
+      ],
+      "studyProgramKeys": [
+        "EX.PHIL GJØVIK",
+        "BDIGSEC",
+        "BPROG"
+      ]
+    },
+    {
+      "courseCode": "EXPH0300",
+      "courseName": {
+        "nob": "Examen philosophicum for naturvitenskap og teknologi",
+        "nno": "Examen philosophicum for naturvitskap og teknologi",
+        "eng": "Examen philosophicum for Science and Technology"
+      },
+      "acronym": "DISAM-P",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Dialog- og samarbeidsbasert undervisning",
+      "title": "Seminargruppe 6 Trondheim",
+      "dayNumber": 1,
+      "startTime": "12:15",
+      "endTime": "14:00",
+      "weeks": [
+        "35-36",
+        "38-42",
+        "45-46"
+      ],
+      "rooms": [
+        {
+          "id": "194_360_D5-171",
+          "building": "Realfagbygget",
+          "room": "R10",
+          "url": "https://link.mazemap.com/XDnQ5pFN"
+        }
+      ],
+      "studyProgramKeys": [
+        "BMAT",
+        "MLREAL",
+        "MTELSYS",
+        "MTTK",
+        "BDIGSEC",
+        "ITBAITBEDR"
+      ]
+    },
+    {
+      "courseCode": "EXPH0300",
+      "courseName": {
+        "nob": "Examen philosophicum for naturvitenskap og teknologi",
+        "nno": "Examen philosophicum for naturvitskap og teknologi",
+        "eng": "Examen philosophicum for Science and Technology"
+      },
+      "acronym": "DISAM-P",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Dialog- og samarbeidsbasert undervisning",
+      "title": "Seminargruppe 12 Trondheim",
+      "dayNumber": 1,
+      "startTime": "12:15",
+      "endTime": "14:00",
+      "weeks": [
+        "35-36",
+        "38-42",
+        "45-46"
+      ],
+      "rooms": [
+        {
+          "id": "194_337_1-200.4",
+          "building": "Byggteknisk",
+          "room": "Galleri 4",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=337-1-200.4"
+        }
+      ],
+      "studyProgramKeys": []
+    },
+    {
+      "courseCode": "EXPH0300",
+      "courseName": {
+        "nob": "Examen philosophicum for naturvitenskap og teknologi",
+        "nno": "Examen philosophicum for naturvitskap og teknologi",
+        "eng": "Examen philosophicum for Science and Technology"
+      },
+      "acronym": "DISAM-P",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Dialog- og samarbeidsbasert undervisning",
+      "title": "Seminargruppe 9 Trondheim",
+      "dayNumber": 1,
+      "startTime": "08:15",
+      "endTime": "10:00",
+      "weeks": [
+        "35-36",
+        "38-42",
+        "45-46"
+      ],
+      "rooms": [
+        {
+          "id": "194_322_212",
+          "building": "Sentralbygg 2",
+          "room": "Smia",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=322-212"
+        }
+      ],
+      "studyProgramKeys": [
+        "BMAT",
+        "MTKOM",
+        "MLREAL",
+        "BPROG",
+        "BIT",
+        "MTING"
+      ]
+    },
+    {
+      "courseCode": "EXPH0300",
+      "courseName": {
+        "nob": "Examen philosophicum for naturvitenskap og teknologi",
+        "nno": "Examen philosophicum for naturvitskap og teknologi",
+        "eng": "Examen philosophicum for Science and Technology"
+      },
+      "acronym": "DISAM-P",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Dialog- og samarbeidsbasert undervisning",
+      "title": "Seminargruppe 14 Trondheim",
+      "dayNumber": 1,
+      "startTime": "15:15",
+      "endTime": "17:00",
+      "weeks": [
+        "35-36",
+        "38-42",
+        "45-46"
+      ],
+      "rooms": [
+        {
+          "id": "194_322_212",
+          "building": "Sentralbygg 2",
+          "room": "Smia",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=322-212"
+        }
+      ],
+      "studyProgramKeys": []
+    },
+    {
+      "courseCode": "EXPH0300",
+      "courseName": {
+        "nob": "Examen philosophicum for naturvitenskap og teknologi",
+        "nno": "Examen philosophicum for naturvitskap og teknologi",
+        "eng": "Examen philosophicum for Science and Technology"
+      },
+      "acronym": "DISAM-P",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Dialog- og samarbeidsbasert undervisning",
+      "title": "Seminargruppe 13 Trondheim",
+      "dayNumber": 1,
+      "startTime": "15:15",
+      "endTime": "17:00",
+      "weeks": [
+        "35-36",
+        "38-42",
+        "45-46"
+      ],
+      "rooms": [
+        {
+          "id": "194_337_1-200.4",
+          "building": "Byggteknisk",
+          "room": "Galleri 4",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=337-1-200.4"
+        }
+      ],
+      "studyProgramKeys": [
+        "MBIOT5",
+        "MTKOM",
+        "MLREAL",
+        "MTTK",
+        "BDIGSEC",
+        "MTMASKIN",
+        "MTING"
+      ]
+    },
+    {
+      "courseCode": "EXPH0300",
+      "courseName": {
+        "nob": "Examen philosophicum for naturvitenskap og teknologi",
+        "nno": "Examen philosophicum for naturvitskap og teknologi",
+        "eng": "Examen philosophicum for Science and Technology"
+      },
+      "acronym": "DISAM-P",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Dialog- og samarbeidsbasert undervisning",
+      "title": "Seminargruppe 29 Gjøvik",
+      "dayNumber": 2,
+      "startTime": "16:15",
+      "endTime": "18:00",
+      "weeks": [
+        "35-36",
+        "38-42",
+        "45-46"
+      ],
+      "rooms": [
+        {
+          "id": "194_510_S415",
+          "building": "Smaragd",
+          "room": "S415",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=510-S415"
+        }
+      ],
+      "studyProgramKeys": [
+        "EX.PHIL GJØVIK",
+        "BDIGSEC",
+        "BPROG"
+      ]
+    },
+    {
+      "courseCode": "EXPH0300",
+      "courseName": {
+        "nob": "Examen philosophicum for naturvitenskap og teknologi",
+        "nno": "Examen philosophicum for naturvitskap og teknologi",
+        "eng": "Examen philosophicum for Science and Technology"
+      },
+      "acronym": "DISAM-P",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Dialog- og samarbeidsbasert undervisning",
+      "title": "Seminargruppe 24 Trondheim",
+      "dayNumber": 2,
+      "startTime": "10:15",
+      "endTime": "12:00",
+      "weeks": [
+        "35-36",
+        "38-42",
+        "45-46"
+      ],
+      "rooms": [
+        {
+          "id": "194_337_1-200.4",
+          "building": "Byggteknisk",
+          "room": "Galleri 4",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=337-1-200.4"
+        }
+      ],
+      "studyProgramKeys": []
+    },
+    {
+      "courseCode": "EXPH0300",
+      "courseName": {
+        "nob": "Examen philosophicum for naturvitenskap og teknologi",
+        "nno": "Examen philosophicum for naturvitskap og teknologi",
+        "eng": "Examen philosophicum for Science and Technology"
+      },
+      "acronym": "DISAM-P",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Dialog- og samarbeidsbasert undervisning",
+      "title": "Seminargruppe 27 Gjøvik",
+      "dayNumber": 2,
+      "startTime": "10:15",
+      "endTime": "12:00",
+      "weeks": [
+        "35-36",
+        "38-42",
+        "45-46"
+      ],
+      "rooms": [
+        {
+          "id": "194_510_S415",
+          "building": "Smaragd",
+          "room": "S415",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=510-S415"
+        }
+      ],
+      "studyProgramKeys": [
+        "EX.PHIL GJØVIK",
+        "BDIGSEC",
+        "BPROG"
+      ]
+    },
+    {
+      "courseCode": "EXPH0300",
+      "courseName": {
+        "nob": "Examen philosophicum for naturvitenskap og teknologi",
+        "nno": "Examen philosophicum for naturvitskap og teknologi",
+        "eng": "Examen philosophicum for Science and Technology"
+      },
+      "acronym": "DISAM-P",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Dialog- og samarbeidsbasert undervisning",
+      "title": "Seminargruppe 1 Trondheim",
+      "dayNumber": 2,
+      "startTime": "10:15",
+      "endTime": "12:00",
+      "weeks": [
+        "35-36",
+        "38-42",
+        "45-46"
+      ],
+      "rooms": [
+        {
+          "id": "194_360_BU2-153",
+          "building": "Realfagbygget",
+          "room": "R22",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=360-BU2-153"
+        }
+      ],
+      "studyProgramKeys": [
+        "MLREAL",
+        "MTELSYS",
+        "MTMASKIN",
+        "MTING"
+      ]
+    },
+    {
+      "courseCode": "EXPH0300",
+      "courseName": {
+        "nob": "Examen philosophicum for naturvitenskap og teknologi",
+        "nno": "Examen philosophicum for naturvitskap og teknologi",
+        "eng": "Examen philosophicum for Science and Technology"
+      },
+      "acronym": "DISAM-P",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Dialog- og samarbeidsbasert undervisning",
+      "title": "Seminargruppe 28 Gjøvik",
+      "dayNumber": 2,
+      "startTime": "14:15",
+      "endTime": "16:00",
+      "weeks": [
+        "35-36",
+        "38-42",
+        "45-46"
+      ],
+      "rooms": [
+        {
+          "id": "194_510_S415",
+          "building": "Smaragd",
+          "room": "S415",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=510-S415"
+        }
+      ],
+      "studyProgramKeys": [
+        "EX.PHIL GJØVIK",
+        "BDIGSEC"
+      ]
+    },
+    {
+      "courseCode": "EXPH0300",
+      "courseName": {
+        "nob": "Examen philosophicum for naturvitenskap og teknologi",
+        "nno": "Examen philosophicum for naturvitskap og teknologi",
+        "eng": "Examen philosophicum for Science and Technology"
+      },
+      "acronym": "DISAM-P",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Dialog- og samarbeidsbasert undervisning",
+      "title": "Seminargruppe 8 Trondheim",
+      "dayNumber": 2,
+      "startTime": "14:15",
+      "endTime": "16:00",
+      "weeks": [
+        "35-36",
+        "38-42",
+        "45-46"
+      ],
+      "rooms": [
+        {
+          "id": "194_337_1-200.4",
+          "building": "Byggteknisk",
+          "room": "Galleri 4",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=337-1-200.4"
+        }
+      ],
+      "studyProgramKeys": [
+        "MTDT",
+        "MLREAL",
+        "MTELSYS",
+        "MTTK",
+        "BIT",
+        "MTMASKIN",
+        "ITBAITBEDR",
+        "MTING"
+      ]
+    },
+    {
+      "courseCode": "EXPH0300",
+      "courseName": {
+        "nob": "Examen philosophicum for naturvitenskap og teknologi",
+        "nno": "Examen philosophicum for naturvitskap og teknologi",
+        "eng": "Examen philosophicum for Science and Technology"
+      },
+      "acronym": "FORM-P",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Formidling",
+      "title": "Forelesningsparallell 1 Trondheim",
+      "dayNumber": 2,
+      "startTime": "08:15",
+      "endTime": "10:00",
+      "weeks": [
+        "34-45"
+      ],
+      "rooms": [
+        {
+          "id": "194_360_CU1-101",
+          "building": "Realfagbygget",
+          "room": "R1",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=360-CU1-101"
+        }
+      ],
+      "studyProgramKeys": [
+        "MTDT",
+        "MBIOT5",
+        "MTTK",
+        "BDIGSEC",
+        "BIT",
+        "MTMASKIN",
+        "MTING"
+      ]
+    },
+    {
+      "courseCode": "EXPH0300",
+      "courseName": {
+        "nob": "Examen philosophicum for naturvitenskap og teknologi",
+        "nno": "Examen philosophicum for naturvitskap og teknologi",
+        "eng": "Examen philosophicum for Science and Technology"
+      },
+      "acronym": "DISAM-P",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Dialog- og samarbeidsbasert undervisning",
+      "title": "Seminargruppe 26 Trondheim",
+      "dayNumber": 2,
+      "startTime": "12:15",
+      "endTime": "14:00",
+      "weeks": [
+        "35-36",
+        "38-42",
+        "45-46"
+      ],
+      "rooms": [
+        {
+          "id": "194_337_1-200.4",
+          "building": "Byggteknisk",
+          "room": "Galleri 4",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=337-1-200.4"
+        }
+      ],
+      "studyProgramKeys": [
+        "MLREAL",
+        "MTING"
+      ]
+    },
+    {
+      "courseCode": "EXPH0300",
+      "courseName": {
+        "nob": "Examen philosophicum for naturvitenskap og teknologi",
+        "nno": "Examen philosophicum for naturvitskap og teknologi",
+        "eng": "Examen philosophicum for Science and Technology"
+      },
+      "acronym": "DISAM-P",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Dialog- og samarbeidsbasert undervisning",
+      "title": "Seminargruppe 22 Trondheim",
+      "dayNumber": 3,
+      "startTime": "08:15",
+      "endTime": "10:00",
+      "weeks": [
+        "35-36",
+        "38-42",
+        "45-46"
+      ],
+      "rooms": [
+        {
+          "id": "194_322_207",
+          "building": "Sentralbygg 2",
+          "room": "Lise",
+          "url": "https://link.mazemap.com/asCYCDpW"
+        }
+      ],
+      "studyProgramKeys": []
+    },
+    {
+      "courseCode": "EXPH0300",
+      "courseName": {
+        "nob": "Examen philosophicum for naturvitenskap og teknologi",
+        "nno": "Examen philosophicum for naturvitskap og teknologi",
+        "eng": "Examen philosophicum for Science and Technology"
+      },
+      "acronym": "DISAM-P",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Dialog- og samarbeidsbasert undervisning",
+      "title": "Seminargruppe 18 Trondheim",
+      "dayNumber": 3,
+      "startTime": "08:15",
+      "endTime": "10:00",
+      "weeks": [
+        "35-36",
+        "38-42",
+        "45-46"
+      ],
+      "rooms": [
+        {
+          "id": "194_322_212",
+          "building": "Sentralbygg 2",
+          "room": "Smia",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=322-212"
+        }
+      ],
+      "studyProgramKeys": [
+        "BMAT",
+        "MBIOT5",
+        "MLREAL",
+        "MTELSYS",
+        "MTTK",
+        "BDIGSEC",
+        "BIT",
+        "MTMASKIN",
+        "ITBAITBEDR"
+      ]
+    },
+    {
+      "courseCode": "EXPH0300",
+      "courseName": {
+        "nob": "Examen philosophicum for naturvitenskap og teknologi",
+        "nno": "Examen philosophicum for naturvitskap og teknologi",
+        "eng": "Examen philosophicum for Science and Technology"
+      },
+      "acronym": "DISAM-P",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Dialog- og samarbeidsbasert undervisning",
+      "title": "Seminargruppe 7 Trondheim",
+      "dayNumber": 3,
+      "startTime": "10:15",
+      "endTime": "12:00",
+      "weeks": [
+        "35-36",
+        "38-42",
+        "45-46"
+      ],
+      "rooms": [
+        {
+          "id": "194_322_212",
+          "building": "Sentralbygg 2",
+          "room": "Smia",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=322-212"
+        }
+      ],
+      "studyProgramKeys": [
+        "MTDT",
+        "MLREAL",
+        "MTELSYS",
+        "BDIGSEC",
+        "ITBAITBEDR"
+      ]
+    },
+    {
+      "courseCode": "EXPH0300",
+      "courseName": {
+        "nob": "Examen philosophicum for naturvitenskap og teknologi",
+        "nno": "Examen philosophicum for naturvitskap og teknologi",
+        "eng": "Examen philosophicum for Science and Technology"
+      },
+      "acronym": "DISAM-P",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Dialog- og samarbeidsbasert undervisning",
+      "title": "Seminargruppe 11 Trondheim",
+      "dayNumber": 3,
+      "startTime": "10:15",
+      "endTime": "12:00",
+      "weeks": [
+        "35-36",
+        "38-42",
+        "45-46"
+      ],
+      "rooms": [
+        {
+          "id": "194_360_E4-103",
+          "building": "Realfagbygget",
+          "room": "R73",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=360-E4-103"
+        }
+      ],
+      "studyProgramKeys": []
+    },
+    {
+      "courseCode": "EXPH0300",
+      "courseName": {
+        "nob": "Examen philosophicum for naturvitenskap og teknologi",
+        "nno": "Examen philosophicum for naturvitskap og teknologi",
+        "eng": "Examen philosophicum for Science and Technology"
+      },
+      "acronym": "DISAM-P",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Dialog- og samarbeidsbasert undervisning",
+      "title": "Seminargruppe 3 Trondheim",
+      "dayNumber": 3,
+      "startTime": "16:15",
+      "endTime": "18:00",
+      "weeks": [
+        "35-36",
+        "38-42",
+        "45-46"
+      ],
+      "rooms": [
+        {
+          "id": "194_360_D5-171",
+          "building": "Realfagbygget",
+          "room": "R10",
+          "url": "https://link.mazemap.com/XDnQ5pFN"
+        }
+      ],
+      "studyProgramKeys": [
+        "BKJ",
+        "BMAT",
+        "MTKOM",
+        "MLREAL",
+        "BIT",
+        "MTDT",
+        "MBIOT5",
+        "MTELSYS",
+        "MTTK",
+        "BDIGSEC",
+        "BPROG",
+        "MTMASKIN",
+        "ITBAITBEDR",
+        "MTING"
+      ]
+    },
+    {
+      "courseCode": "EXPH0300",
+      "courseName": {
+        "nob": "Examen philosophicum for naturvitenskap og teknologi",
+        "nno": "Examen philosophicum for naturvitskap og teknologi",
+        "eng": "Examen philosophicum for Science and Technology"
+      },
+      "acronym": "DISAM-P",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Dialog- og samarbeidsbasert undervisning",
+      "title": "Seminargruppe 2 Trondheim",
+      "dayNumber": 3,
+      "startTime": "12:15",
+      "endTime": "14:00",
+      "weeks": [
+        "35-36",
+        "38-42",
+        "45-46"
+      ],
+      "rooms": [
+        {
+          "id": "194_360_D5-171",
+          "building": "Realfagbygget",
+          "room": "R10",
+          "url": "https://link.mazemap.com/XDnQ5pFN"
+        }
+      ],
+      "studyProgramKeys": [
+        "BMAT",
+        "MTKOM",
+        "MLREAL",
+        "BDIGSEC",
+        "ITBAITBEDR"
+      ]
+    },
+    {
+      "courseCode": "EXPH0300",
+      "courseName": {
+        "nob": "Examen philosophicum for naturvitenskap og teknologi",
+        "nno": "Examen philosophicum for naturvitskap og teknologi",
+        "eng": "Examen philosophicum for Science and Technology"
+      },
+      "acronym": "DISAM-P",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Dialog- og samarbeidsbasert undervisning",
+      "title": "Seminargruppe 30 Gjøvik",
+      "dayNumber": 3,
+      "startTime": "12:15",
+      "endTime": "14:00",
+      "weeks": [
+        "35-36",
+        "38-42",
+        "45-46"
+      ],
+      "rooms": [
+        {
+          "id": "194_510_S415",
+          "building": "Smaragd",
+          "room": "S415",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=510-S415"
+        }
+      ],
+      "studyProgramKeys": [
+        "EX.PHIL GJØVIK",
+        "BDIGSEC",
+        "BPROG"
+      ]
+    },
+    {
+      "courseCode": "EXPH0300",
+      "courseName": {
+        "nob": "Examen philosophicum for naturvitenskap og teknologi",
+        "nno": "Examen philosophicum for naturvitskap og teknologi",
+        "eng": "Examen philosophicum for Science and Technology"
+      },
+      "acronym": "DISAM-P",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Dialog- og samarbeidsbasert undervisning",
+      "title": "Seminargruppe 4 Trondheim",
+      "dayNumber": 3,
+      "startTime": "12:15",
+      "endTime": "14:00",
+      "weeks": [
+        "35-36",
+        "38-42",
+        "45-46"
+      ],
+      "rooms": [
+        {
+          "id": "194_360_BU2-153",
+          "building": "Realfagbygget",
+          "room": "R22",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=360-BU2-153"
+        }
+      ],
+      "studyProgramKeys": []
+    },
+    {
+      "courseCode": "EXPH0300",
+      "courseName": {
+        "nob": "Examen philosophicum for naturvitenskap og teknologi",
+        "nno": "Examen philosophicum for naturvitskap og teknologi",
+        "eng": "Examen philosophicum for Science and Technology"
+      },
+      "acronym": "DISAM-P",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Dialog- og samarbeidsbasert undervisning",
+      "title": "Seminargruppe 19 Trondheim",
+      "dayNumber": 3,
+      "startTime": "14:15",
+      "endTime": "16:00",
+      "weeks": [
+        "35-36",
+        "38-42",
+        "45-46"
+      ],
+      "rooms": [
+        {
+          "id": "194_337_1-200.4",
+          "building": "Byggteknisk",
+          "room": "Galleri 4",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=337-1-200.4"
+        }
+      ],
+      "studyProgramKeys": [
+        "MTKOM",
+        "MLREAL",
+        "MTTK",
+        "BIT",
+        "MTMASKIN"
+      ]
+    },
+    {
+      "courseCode": "EXPH0300",
+      "courseName": {
+        "nob": "Examen philosophicum for naturvitenskap og teknologi",
+        "nno": "Examen philosophicum for naturvitskap og teknologi",
+        "eng": "Examen philosophicum for Science and Technology"
+      },
+      "acronym": "DISAM-P",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Dialog- og samarbeidsbasert undervisning",
+      "title": "Seminargruppe 10 Trondheim",
+      "dayNumber": 4,
+      "startTime": "12:15",
+      "endTime": "14:00",
+      "weeks": [
+        "35-36",
+        "38-42",
+        "45-46"
+      ],
+      "rooms": [
+        {
+          "id": "194_322_212",
+          "building": "Sentralbygg 2",
+          "room": "Smia",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=322-212"
+        }
+      ],
+      "studyProgramKeys": [
+        "BKJ",
+        "BMAT",
+        "MBIOT5",
+        "MTKOM",
+        "MLREAL",
+        "MTELSYS",
+        "BPROG",
+        "BIT",
+        "MTMASKIN",
+        "ITBAITBEDR",
+        "MTING"
+      ]
+    },
+    {
+      "courseCode": "EXPH0300",
+      "courseName": {
+        "nob": "Examen philosophicum for naturvitenskap og teknologi",
+        "nno": "Examen philosophicum for naturvitskap og teknologi",
+        "eng": "Examen philosophicum for Science and Technology"
+      },
+      "acronym": "DISAM-P",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Dialog- og samarbeidsbasert undervisning",
+      "title": "Seminargruppe 23 Trondheim",
+      "dayNumber": 4,
+      "startTime": "12:15",
+      "endTime": "14:00",
+      "weeks": [
+        "35-36",
+        "38-42",
+        "45-46"
+      ],
+      "rooms": [
+        {
+          "id": "194_322_207",
+          "building": "Sentralbygg 2",
+          "room": "Lise",
+          "url": "https://link.mazemap.com/asCYCDpW"
+        }
+      ],
+      "studyProgramKeys": []
+    },
+    {
+      "courseCode": "EXPH0300",
+      "courseName": {
+        "nob": "Examen philosophicum for naturvitenskap og teknologi",
+        "nno": "Examen philosophicum for naturvitskap og teknologi",
+        "eng": "Examen philosophicum for Science and Technology"
+      },
+      "acronym": "DISAM-P",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Dialog- og samarbeidsbasert undervisning",
+      "title": "Seminargruppe 17 Trondheim",
+      "dayNumber": 4,
+      "startTime": "10:15",
+      "endTime": "12:00",
+      "weeks": [
+        "35-36",
+        "38-42",
+        "45-46"
+      ],
+      "rooms": [
+        {
+          "id": "194_337_1-200.4",
+          "building": "Byggteknisk",
+          "room": "Galleri 4",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=337-1-200.4"
+        }
+      ],
+      "studyProgramKeys": [
+        "MLREAL",
+        "BDIGSEC"
+      ]
+    },
+    {
+      "courseCode": "EXPH0300",
+      "courseName": {
+        "nob": "Examen philosophicum for naturvitenskap og teknologi",
+        "nno": "Examen philosophicum for naturvitskap og teknologi",
+        "eng": "Examen philosophicum for Science and Technology"
+      },
+      "acronym": "DISAM-P",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Dialog- og samarbeidsbasert undervisning",
+      "title": "Seminargruppe 20 Trondheim",
+      "dayNumber": 4,
+      "startTime": "10:15",
+      "endTime": "12:00",
+      "weeks": [
+        "35-36",
+        "38-42",
+        "45-46"
+      ],
+      "rooms": [
+        {
+          "id": "194_322_207",
+          "building": "Sentralbygg 2",
+          "room": "Lise",
+          "url": "https://link.mazemap.com/asCYCDpW"
+        }
+      ],
+      "studyProgramKeys": []
+    },
+    {
+      "courseCode": "EXPH0300",
+      "courseName": {
+        "nob": "Examen philosophicum for naturvitenskap og teknologi",
+        "nno": "Examen philosophicum for naturvitskap og teknologi",
+        "eng": "Examen philosophicum for Science and Technology"
+      },
+      "acronym": "DISAM-P",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Dialog- og samarbeidsbasert undervisning",
+      "title": "Seminargruppe 15 Trondheim",
+      "dayNumber": 4,
+      "startTime": "08:15",
+      "endTime": "10:00",
+      "weeks": [
+        "35-36",
+        "38-42",
+        "45-46"
+      ],
+      "rooms": [
+        {
+          "id": "194_301_316",
+          "building": "Hovedbygningen",
+          "room": "316",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=301-316"
+        }
+      ],
+      "studyProgramKeys": [
+        "BMAT",
+        "MTDT",
+        "MLREAL",
+        "BDIGSEC",
+        "BIT",
+        "MTMASKIN"
+      ]
+    },
+    {
+      "courseCode": "EXPH0300",
+      "courseName": {
+        "nob": "Examen philosophicum for naturvitenskap og teknologi",
+        "nno": "Examen philosophicum for naturvitskap og teknologi",
+        "eng": "Examen philosophicum for Science and Technology"
+      },
+      "acronym": "DISAM-P",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Dialog- og samarbeidsbasert undervisning",
+      "title": "Seminargruppe 25 Trondheim",
+      "dayNumber": 4,
+      "startTime": "14:15",
+      "endTime": "16:00",
+      "weeks": [
+        "35-36",
+        "38-42",
+        "45-46"
+      ],
+      "rooms": [
+        {
+          "id": "194_337_1-200.4",
+          "building": "Byggteknisk",
+          "room": "Galleri 4",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=337-1-200.4"
+        }
+      ],
+      "studyProgramKeys": [
+        "BMAT",
+        "MTKOM",
+        "MLREAL",
+        "MTELSYS",
+        "BIT",
+        "MTMASKIN",
+        "ITBAITBEDR",
+        "MTING"
+      ]
+    },
+    {
+      "courseCode": "EXPH0300",
+      "courseName": {
+        "nob": "Examen philosophicum for naturvitenskap og teknologi",
+        "nno": "Examen philosophicum for naturvitskap og teknologi",
+        "eng": "Examen philosophicum for Science and Technology"
+      },
+      "acronym": "DISAM-P",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Dialog- og samarbeidsbasert undervisning",
+      "title": "Seminargruppe 16 Trondheim",
+      "dayNumber": 5,
+      "startTime": "08:15",
+      "endTime": "10:00",
+      "weeks": [
+        "35-36",
+        "38-42",
+        "45-46"
+      ],
+      "rooms": [
+        {
+          "id": "194_322_212",
+          "building": "Sentralbygg 2",
+          "room": "Smia",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=322-212"
+        }
+      ],
+      "studyProgramKeys": [
+        "MTDT",
+        "MBIOT5",
+        "MTKOM",
+        "MLREAL",
+        "MTELSYS",
+        "BPROG",
+        "BIT",
+        "MTMASKIN"
+      ]
+    },
+    {
+      "courseCode": "EXPH0300",
+      "courseName": {
+        "nob": "Examen philosophicum for naturvitenskap og teknologi",
+        "nno": "Examen philosophicum for naturvitskap og teknologi",
+        "eng": "Examen philosophicum for Science and Technology"
+      },
+      "acronym": "DISAM-P",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Dialog- og samarbeidsbasert undervisning",
+      "title": "Seminargruppe 5 Trondheim",
+      "dayNumber": 5,
+      "startTime": "12:15",
+      "endTime": "14:00",
+      "weeks": [
+        "35-36",
+        "38-42",
+        "45-46"
+      ],
+      "rooms": [
+        {
+          "id": "194_360_BU2-117",
+          "building": "Realfagbygget",
+          "room": "R23",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=360-BU2-117"
+        }
+      ],
+      "studyProgramKeys": [
+        "BMAT",
+        "MBIOT5",
+        "MLREAL",
+        "MTELSYS",
+        "BPROG",
+        "MTMASKIN",
+        "ITBAITBEDR"
+      ]
+    },
+    {
+      "courseCode": "EXPH0300",
+      "courseName": {
+        "nob": "Examen philosophicum for naturvitenskap og teknologi",
+        "nno": "Examen philosophicum for naturvitskap og teknologi",
+        "eng": "Examen philosophicum for Science and Technology"
+      },
+      "acronym": "DISAM-P",
+      "term": "2026_HØST",
+      "termNumber": 1,
+      "name": "Dialog- og samarbeidsbasert undervisning",
+      "title": "Seminargruppe 21 Trondheim",
+      "dayNumber": 5,
+      "startTime": "10:15",
+      "endTime": "12:00",
+      "weeks": [
+        "35-36",
+        "38-42",
+        "45-46"
+      ],
+      "rooms": [
+        {
+          "id": "194_322_212",
+          "building": "Sentralbygg 2",
+          "room": "Smia",
+          "url": "http://use.mazemap.com/?v=1&campuses=ntnu&sharepoitype=identifier&sharepoi=322-212"
+        }
+      ],
+      "studyProgramKeys": [
+        "MTDT",
+        "MLREAL",
+        "BIT",
+        "MTMASKIN",
+        "MTING"
+      ]
+    }
+  ]
+}

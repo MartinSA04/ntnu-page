@@ -1,0 +1,2186 @@
+{
+  "url": "http://127.0.0.1:8788/api/program/MTI%C3%98T/plan?year=2024",
+  "status": 200,
+  "contentType": "application/json; charset=utf-8",
+  "body": {
+    "code": "MTIØT",
+    "name": "Industriell økonomi og teknologiledelse - master",
+    "year": 2024,
+    "startTerm": "HØST",
+    "updated": "12-05-2026 at 04:48:43",
+    "periods": [
+      {
+        "periodNumber": 1,
+        "direction": {
+          "code": null,
+          "name": null,
+          "courseGroups": [
+            {
+              "code": "SIVING-ARBERFARING24",
+              "name": "Krav om arbeidslivserfaring (praksis)",
+              "description": "Alle studenter ved NTNU som går studieprogram som gir tilleggsbetegnelsen sivilingeniør på vitnemålet må ha oppfylt kravet om arbeidslivserfaring før de kan begynne på masteroppgaven. Les mer om kravet i \"Forskrift om arbeidslivserfaring for sivilingeniørutdanningen ved NTNU\", https://i.ntnu.no/wiki/-/wiki/Norsk/Praksis+og+arbeidslivserfaring+under+studiet.\n\nKravet er godkjent når det er grønn hake der det står \"Gjennomført krav om arbeidslivserfaring\".\n\nGodkjent krav om arbeidslivserfaring vil også være markert i selve utdanningsplanen med \"Godkjent\".",
+              "courses": [
+                {
+                  "code": "SIVINGPRA",
+                  "version": null,
+                  "name": "Gjennomført krav om arbeidslivserfaring",
+                  "credits": 0,
+                  "planElement": true,
+                  "studyChoice": {
+                    "code": "O",
+                    "name": "Obligatorisk emne",
+                    "description": null
+                  }
+                }
+              ]
+            }
+          ],
+          "waypoints": [
+            {
+              "code": "MTIØTVEIVALG24",
+              "name": "Valg av teknologiretning",
+              "description": null,
+              "deadlineDate": "2024-09-15",
+              "directions": [
+                {
+                  "code": "MTIØTD-24",
+                  "name": "Datateknologi",
+                  "courseGroups": [
+                    {
+                      "code": "MTIØTD-EMNER-ÅR1-24",
+                      "name": "Obligatoriske og valgbare emner - 1. år",
+                      "description": null,
+                      "courses": [
+                        {
+                          "code": "EXPH0300",
+                          "version": "1",
+                          "name": "Examen philosophicum for naturvitenskap og teknologi",
+                          "credits": 7.5,
+                          "planElement": false,
+                          "studyChoice": {
+                            "code": "O",
+                            "name": "Obligatorisk emne",
+                            "description": "Obligatorisk emne"
+                          }
+                        },
+                        {
+                          "code": "TDT4109",
+                          "version": "1",
+                          "name": "Informasjonsteknologi, grunnkurs",
+                          "credits": 7.5,
+                          "planElement": false,
+                          "studyChoice": {
+                            "code": "O",
+                            "name": "Obligatorisk emne",
+                            "description": "Obligatorisk emne"
+                          }
+                        },
+                        {
+                          "code": "TMA4100",
+                          "version": "1",
+                          "name": "Matematikk 1",
+                          "credits": 7.5,
+                          "planElement": false,
+                          "studyChoice": {
+                            "code": "O",
+                            "name": "Obligatorisk emne",
+                            "description": "Obligatorisk emne"
+                          }
+                        },
+                        {
+                          "code": "TMA4140",
+                          "version": "1",
+                          "name": "Diskret matematikk",
+                          "credits": 7.5,
+                          "planElement": false,
+                          "studyChoice": {
+                            "code": "O",
+                            "name": "Obligatorisk emne",
+                            "description": "Obligatorisk emne"
+                          }
+                        }
+                      ]
+                    }
+                  ],
+                  "waypoints": []
+                },
+                {
+                  "code": "MTIØTEM-24",
+                  "name": "Energi og miljø",
+                  "courseGroups": [
+                    {
+                      "code": "MTIØTEM-EMNER-ÅR1-24",
+                      "name": "Obligatoriske og valgbare emner - 1. år",
+                      "description": null,
+                      "courses": [
+                        {
+                          "code": "EXPH0300",
+                          "version": "1",
+                          "name": "Examen philosophicum for naturvitenskap og teknologi",
+                          "credits": 7.5,
+                          "planElement": false,
+                          "studyChoice": {
+                            "code": "O",
+                            "name": "Obligatorisk emne",
+                            "description": "Obligatorisk emne"
+                          }
+                        },
+                        {
+                          "code": "HMS0002",
+                          "version": "1",
+                          "name": "HMS-kurs for 1. årsstudenter",
+                          "credits": 0,
+                          "planElement": false,
+                          "studyChoice": {
+                            "code": "O",
+                            "name": "Obligatorisk emne",
+                            "description": "Obligatorisk emne"
+                          }
+                        },
+                        {
+                          "code": "TDT4110",
+                          "version": "1",
+                          "name": "Informasjonsteknologi, grunnkurs",
+                          "credits": 7.5,
+                          "planElement": false,
+                          "studyChoice": {
+                            "code": "O",
+                            "name": "Obligatorisk emne",
+                            "description": "Obligatorisk emne"
+                          }
+                        },
+                        {
+                          "code": "TEP4225",
+                          "version": "1",
+                          "name": "Energi og miljø",
+                          "credits": 7.5,
+                          "planElement": false,
+                          "studyChoice": {
+                            "code": "O",
+                            "name": "Obligatorisk emne",
+                            "description": "Obligatorisk emne"
+                          }
+                        },
+                        {
+                          "code": "TMA4100",
+                          "version": "1",
+                          "name": "Matematikk 1",
+                          "credits": 7.5,
+                          "planElement": false,
+                          "studyChoice": {
+                            "code": "O",
+                            "name": "Obligatorisk emne",
+                            "description": "Obligatorisk emne"
+                          }
+                        }
+                      ]
+                    }
+                  ],
+                  "waypoints": []
+                },
+                {
+                  "code": "MTIØTM-24",
+                  "name": "Marin teknikk",
+                  "courseGroups": [
+                    {
+                      "code": "MTIØTM-EMNER-ÅR1-24",
+                      "name": "Obligatoriske og valgbare emner - 1. år",
+                      "description": null,
+                      "courses": [
+                        {
+                          "code": "TDT4110",
+                          "version": "1",
+                          "name": "Informasjonsteknologi, grunnkurs",
+                          "credits": 7.5,
+                          "planElement": false,
+                          "studyChoice": {
+                            "code": "O",
+                            "name": "Obligatorisk emne",
+                            "description": "Obligatorisk emne"
+                          }
+                        },
+                        {
+                          "code": "TKT4118",
+                          "version": "1",
+                          "name": "Mekanikk 1",
+                          "credits": 7.5,
+                          "planElement": false,
+                          "studyChoice": {
+                            "code": "O",
+                            "name": "Obligatorisk emne",
+                            "description": "Obligatorisk emne"
+                          }
+                        },
+                        {
+                          "code": "TMA4100",
+                          "version": "1",
+                          "name": "Matematikk 1",
+                          "credits": 7.5,
+                          "planElement": false,
+                          "studyChoice": {
+                            "code": "O",
+                            "name": "Obligatorisk emne",
+                            "description": "Obligatorisk emne"
+                          }
+                        },
+                        {
+                          "code": "TMR4105",
+                          "version": "1",
+                          "name": "Marin teknikk 1 - Grunnlag",
+                          "credits": 7.5,
+                          "planElement": false,
+                          "studyChoice": {
+                            "code": "O",
+                            "name": "Obligatorisk emne",
+                            "description": "Obligatorisk emne"
+                          }
+                        }
+                      ]
+                    }
+                  ],
+                  "waypoints": []
+                },
+                {
+                  "code": "MTIØTPP-24",
+                  "name": "Maskin- og energiteknologi",
+                  "courseGroups": [
+                    {
+                      "code": "MTIØTPP-EMNER-ÅR1-24",
+                      "name": "Obligatoriske og valgbare emner - 1. år",
+                      "description": null,
+                      "courses": [
+                        {
+                          "code": "TDT4110",
+                          "version": "1",
+                          "name": "Informasjonsteknologi, grunnkurs",
+                          "credits": 7.5,
+                          "planElement": false,
+                          "studyChoice": {
+                            "code": "O",
+                            "name": "Obligatorisk emne",
+                            "description": "Obligatorisk emne"
+                          }
+                        },
+                        {
+                          "code": "TEP4111",
+                          "version": "1",
+                          "name": "Energi og bærekraft",
+                          "credits": 7.5,
+                          "planElement": false,
+                          "studyChoice": {
+                            "code": "O",
+                            "name": "Obligatorisk emne",
+                            "description": "Obligatorisk emne"
+                          }
+                        },
+                        {
+                          "code": "TMA4100",
+                          "version": "1",
+                          "name": "Matematikk 1",
+                          "credits": 7.5,
+                          "planElement": false,
+                          "studyChoice": {
+                            "code": "O",
+                            "name": "Obligatorisk emne",
+                            "description": "Obligatorisk emne"
+                          }
+                        },
+                        {
+                          "code": "TPK4100",
+                          "version": "1",
+                          "name": "Produksjonsledelse",
+                          "credits": 7.5,
+                          "planElement": false,
+                          "studyChoice": {
+                            "code": "O",
+                            "name": "Obligatorisk emne",
+                            "description": "Obligatorisk emne"
+                          }
+                        }
+                      ]
+                    }
+                  ],
+                  "waypoints": []
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "periodNumber": 2,
+        "direction": {
+          "code": null,
+          "name": null,
+          "courseGroups": [],
+          "waypoints": [
+            {
+              "code": "MTIØTVEIVALG24",
+              "name": "Valg av teknologiretning",
+              "description": null,
+              "deadlineDate": "2024-09-15",
+              "directions": [
+                {
+                  "code": "MTIØTD-24",
+                  "name": "Datateknologi",
+                  "courseGroups": [
+                    {
+                      "code": "MTIØTD-EMNER-ÅR1-24",
+                      "name": "Obligatoriske og valgbare emner - 1. år",
+                      "description": null,
+                      "courses": [
+                        {
+                          "code": "TDT4100",
+                          "version": "1",
+                          "name": "Objektorientert programmering",
+                          "credits": 7.5,
+                          "planElement": false,
+                          "studyChoice": {
+                            "code": "O",
+                            "name": "Obligatorisk emne",
+                            "description": "Obligatorisk emne"
+                          }
+                        },
+                        {
+                          "code": "TDT4180",
+                          "version": "1",
+                          "name": "Menneske–maskin-interaksjon",
+                          "credits": 7.5,
+                          "planElement": false,
+                          "studyChoice": {
+                            "code": "O",
+                            "name": "Obligatorisk emne",
+                            "description": "Obligatorisk emne"
+                          }
+                        },
+                        {
+                          "code": "TIØ4105",
+                          "version": "1",
+                          "name": "Industriell økonomisk styring",
+                          "credits": 7.5,
+                          "planElement": false,
+                          "studyChoice": {
+                            "code": "O",
+                            "name": "Obligatorisk emne",
+                            "description": "Obligatorisk emne"
+                          }
+                        },
+                        {
+                          "code": "TMA4115",
+                          "version": "1",
+                          "name": "Matematikk 3",
+                          "credits": 7.5,
+                          "planElement": false,
+                          "studyChoice": {
+                            "code": "O",
+                            "name": "Obligatorisk emne",
+                            "description": "Obligatorisk emne"
+                          }
+                        }
+                      ]
+                    }
+                  ],
+                  "waypoints": []
+                },
+                {
+                  "code": "MTIØTEM-24",
+                  "name": "Energi og miljø",
+                  "courseGroups": [
+                    {
+                      "code": "MTIØTEM-EMNER-ÅR1-24",
+                      "name": "Obligatoriske og valgbare emner - 1. år",
+                      "description": null,
+                      "courses": [
+                        {
+                          "code": "TIØ4105",
+                          "version": "1",
+                          "name": "Industriell økonomisk styring",
+                          "credits": 7.5,
+                          "planElement": false,
+                          "studyChoice": {
+                            "code": "O",
+                            "name": "Obligatorisk emne",
+                            "description": "Obligatorisk emne"
+                          }
+                        },
+                        {
+                          "code": "TMA4105",
+                          "version": "1",
+                          "name": "Matematikk 2",
+                          "credits": 7.5,
+                          "planElement": false,
+                          "studyChoice": {
+                            "code": "O",
+                            "name": "Obligatorisk emne",
+                            "description": "Obligatorisk emne"
+                          }
+                        },
+                        {
+                          "code": "TMA4115",
+                          "version": "1",
+                          "name": "Matematikk 3",
+                          "credits": 7.5,
+                          "planElement": false,
+                          "studyChoice": {
+                            "code": "O",
+                            "name": "Obligatorisk emne",
+                            "description": "Obligatorisk emne"
+                          }
+                        },
+                        {
+                          "code": "TTT4203",
+                          "version": "1",
+                          "name": "Innføring i analog og digital elektronikk",
+                          "credits": 7.5,
+                          "planElement": false,
+                          "studyChoice": {
+                            "code": "O",
+                            "name": "Obligatorisk emne",
+                            "description": "Obligatorisk emne"
+                          }
+                        }
+                      ]
+                    }
+                  ],
+                  "waypoints": []
+                },
+                {
+                  "code": "MTIØTM-24",
+                  "name": "Marin teknikk",
+                  "courseGroups": [
+                    {
+                      "code": "MTIØTM-EMNER-ÅR1-24",
+                      "name": "Obligatoriske og valgbare emner - 1. år",
+                      "description": null,
+                      "courses": [
+                        {
+                          "code": "TIØ4105",
+                          "version": "1",
+                          "name": "Industriell økonomisk styring",
+                          "credits": 7.5,
+                          "planElement": false,
+                          "studyChoice": {
+                            "code": "O",
+                            "name": "Obligatorisk emne",
+                            "description": "Obligatorisk emne"
+                          }
+                        },
+                        {
+                          "code": "TKT4123",
+                          "version": "1",
+                          "name": "Mekanikk 2",
+                          "credits": 7.5,
+                          "planElement": false,
+                          "studyChoice": {
+                            "code": "O",
+                            "name": "Obligatorisk emne",
+                            "description": "Obligatorisk emne"
+                          }
+                        },
+                        {
+                          "code": "TMA4105",
+                          "version": "1",
+                          "name": "Matematikk 2",
+                          "credits": 7.5,
+                          "planElement": false,
+                          "studyChoice": {
+                            "code": "O",
+                            "name": "Obligatorisk emne",
+                            "description": "Obligatorisk emne"
+                          }
+                        },
+                        {
+                          "code": "TMA4115",
+                          "version": "1",
+                          "name": "Matematikk 3",
+                          "credits": 7.5,
+                          "planElement": false,
+                          "studyChoice": {
+                            "code": "O",
+                            "name": "Obligatorisk emne",
+                            "description": "Obligatorisk emne"
+                          }
+                        }
+                      ]
+                    }
+                  ],
+                  "waypoints": []
+                },
+                {
+                  "code": "MTIØTPP-24",
+                  "name": "Maskin- og energiteknologi",
+                  "courseGroups": [
+                    {
+                      "code": "MTIØTPP-EMNER-ÅR1-24",
+                      "name": "Obligatoriske og valgbare emner - 1. år",
+                      "description": null,
+                      "courses": [
+                        {
+                          "code": "TIØ4105",
+                          "version": "1",
+                          "name": "Industriell økonomisk styring",
+                          "credits": 7.5,
+                          "planElement": false,
+                          "studyChoice": {
+                            "code": "O",
+                            "name": "Obligatorisk emne",
+                            "description": "Obligatorisk emne"
+                          }
+                        },
+                        {
+                          "code": "TKT4116",
+                          "version": "1",
+                          "name": "Mekanikk 1",
+                          "credits": 7.5,
+                          "planElement": false,
+                          "studyChoice": {
+                            "code": "O",
+                            "name": "Obligatorisk emne",
+                            "description": "Obligatorisk emne"
+                          }
+                        },
+                        {
+                          "code": "TMA4105",
+                          "version": "1",
+                          "name": "Matematikk 2",
+                          "credits": 7.5,
+                          "planElement": false,
+                          "studyChoice": {
+                            "code": "O",
+                            "name": "Obligatorisk emne",
+                            "description": "Obligatorisk emne"
+                          }
+                        },
+                        {
+                          "code": "TPK4190",
+                          "version": "1",
+                          "name": "Produksjonsteknologi",
+                          "credits": 7.5,
+                          "planElement": false,
+                          "studyChoice": {
+                            "code": "O",
+                            "name": "Obligatorisk emne",
+                            "description": "Obligatorisk emne"
+                          }
+                        }
+                      ]
+                    }
+                  ],
+                  "waypoints": []
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "periodNumber": 3,
+        "direction": {
+          "code": null,
+          "name": null,
+          "courseGroups": [],
+          "waypoints": [
+            {
+              "code": "MTIØTVEIVALG24",
+              "name": "Valg av teknologiretning",
+              "description": null,
+              "deadlineDate": "2024-09-15",
+              "directions": [
+                {
+                  "code": "MTIØTD-24",
+                  "name": "Datateknologi",
+                  "courseGroups": [
+                    {
+                      "code": "MTIØTDÅR2-24",
+                      "name": "Datateknologi - 2. år",
+                      "description": null,
+                      "courses": [
+                        {
+                          "code": "TDT4120",
+                          "version": "1",
+                          "name": "Algoritmer og datastrukturer",
+                          "credits": 7.5,
+                          "planElement": false,
+                          "studyChoice": {
+                            "code": "O",
+                            "name": "Obligatorisk emne",
+                            "description": "Obligatorisk emne"
+                          }
+                        },
+                        {
+                          "code": "TDT4160",
+                          "version": "1",
+                          "name": "Datamaskiner",
+                          "credits": 7.5,
+                          "planElement": false,
+                          "studyChoice": {
+                            "code": "O",
+                            "name": "Obligatorisk emne",
+                            "description": "Obligatorisk emne"
+                          }
+                        },
+                        {
+                          "code": "TFY4107",
+                          "version": "1",
+                          "name": "Fysikk",
+                          "credits": 7.5,
+                          "planElement": false,
+                          "studyChoice": {
+                            "code": "O",
+                            "name": "Obligatorisk emne",
+                            "description": "Obligatorisk emne"
+                          }
+                        },
+                        {
+                          "code": "TMA4135",
+                          "version": "1",
+                          "name": "Matematikk 4D",
+                          "credits": 7.5,
+                          "planElement": false,
+                          "studyChoice": {
+                            "code": "O",
+                            "name": "Obligatorisk emne",
+                            "description": "Obligatorisk emne"
+                          }
+                        }
+                      ]
+                    }
+                  ],
+                  "waypoints": []
+                },
+                {
+                  "code": "MTIØTEM-24",
+                  "name": "Energi og miljø",
+                  "courseGroups": [
+                    {
+                      "code": "MTIØTEMÅR2-24",
+                      "name": "Energi og miljø - 2. år",
+                      "description": null,
+                      "courses": [
+                        {
+                          "code": "TEP4120",
+                          "version": "1",
+                          "name": "Termodynamikk 1",
+                          "credits": 7.5,
+                          "planElement": false,
+                          "studyChoice": {
+                            "code": "O",
+                            "name": "Obligatorisk emne",
+                            "description": "Obligatorisk emne"
+                          }
+                        },
+                        {
+                          "code": "TET4100",
+                          "version": "1",
+                          "name": "Kretsanalyse",
+                          "credits": 7.5,
+                          "planElement": false,
+                          "studyChoice": {
+                            "code": "O",
+                            "name": "Obligatorisk emne",
+                            "description": "Obligatorisk emne"
+                          }
+                        },
+                        {
+                          "code": "TFY4107",
+                          "version": "1",
+                          "name": "Fysikk",
+                          "credits": 7.5,
+                          "planElement": false,
+                          "studyChoice": {
+                            "code": "O",
+                            "name": "Obligatorisk emne",
+                            "description": "Obligatorisk emne"
+                          }
+                        },
+                        {
+                          "code": "TMA4130",
+                          "version": "1",
+                          "name": "Matematikk 4N",
+                          "credits": 7.5,
+                          "planElement": false,
+                          "studyChoice": {
+                            "code": "O",
+                            "name": "Obligatorisk emne",
+                            "description": "Obligatorisk emne"
+                          }
+                        }
+                      ]
+                    }
+                  ],
+                  "waypoints": []
+                },
+                {
+                  "code": "MTIØTM-24",
+                  "name": "Marin teknikk",
+                  "courseGroups": [
+                    {
+                      "code": "MTIØTMÅR2-24",
+                      "name": "Marin - 2. år",
+                      "description": null,
+                      "courses": [
+                        {
+                          "code": "EXPH0300",
+                          "version": "1",
+                          "name": "Examen philosophicum for naturvitenskap og teknologi",
+                          "credits": 7.5,
+                          "planElement": false,
+                          "studyChoice": {
+                            "code": "O",
+                            "name": "Obligatorisk emne",
+                            "description": "Obligatorisk emne"
+                          }
+                        },
+                        {
+                          "code": "TEP4110",
+                          "version": "1",
+                          "name": "Fluidmekanikk",
+                          "credits": 7.5,
+                          "planElement": false,
+                          "studyChoice": {
+                            "code": "O",
+                            "name": "Obligatorisk emne",
+                            "description": "Obligatorisk emne"
+                          }
+                        },
+                        {
+                          "code": "TFY4107",
+                          "version": "1",
+                          "name": "Fysikk",
+                          "credits": 7.5,
+                          "planElement": false,
+                          "studyChoice": {
+                            "code": "O",
+                            "name": "Obligatorisk emne",
+                            "description": "Obligatorisk emne"
+                          }
+                        },
+                        {
+                          "code": "TMR4167",
+                          "version": "1",
+                          "name": "Marin teknikk 2 - Konstruksjoner",
+                          "credits": 7.5,
+                          "planElement": false,
+                          "studyChoice": {
+                            "code": "O",
+                            "name": "Obligatorisk emne",
+                            "description": "Obligatorisk emne"
+                          }
+                        }
+                      ]
+                    }
+                  ],
+                  "waypoints": []
+                },
+                {
+                  "code": "MTIØTPP-24",
+                  "name": "Maskin- og energiteknologi",
+                  "courseGroups": [
+                    {
+                      "code": "MTIØTPPÅR2-24",
+                      "name": "Maskin- og energiteknologi - 2. år",
+                      "description": null,
+                      "courses": [
+                        {
+                          "code": "TEP4120",
+                          "version": "1",
+                          "name": "Termodynamikk 1",
+                          "credits": 7.5,
+                          "planElement": false,
+                          "studyChoice": {
+                            "code": "O",
+                            "name": "Obligatorisk emne",
+                            "description": "Obligatorisk emne"
+                          }
+                        },
+                        {
+                          "code": "TFY4107",
+                          "version": "1",
+                          "name": "Fysikk",
+                          "credits": 7.5,
+                          "planElement": false,
+                          "studyChoice": {
+                            "code": "O",
+                            "name": "Obligatorisk emne",
+                            "description": "Obligatorisk emne"
+                          }
+                        },
+                        {
+                          "code": "TMA4110",
+                          "version": "1",
+                          "name": "Matematikk 3",
+                          "credits": 7.5,
+                          "planElement": false,
+                          "studyChoice": {
+                            "code": "O",
+                            "name": "Obligatorisk emne",
+                            "description": "Obligatorisk emne"
+                          }
+                        },
+                        {
+                          "code": "TMA4240",
+                          "version": "1",
+                          "name": "Statistikk",
+                          "credits": 7.5,
+                          "planElement": false,
+                          "studyChoice": {
+                            "code": "O",
+                            "name": "Obligatorisk emne",
+                            "description": "Obligatorisk emne"
+                          }
+                        }
+                      ]
+                    }
+                  ],
+                  "waypoints": []
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "periodNumber": 4,
+        "direction": {
+          "code": null,
+          "name": null,
+          "courseGroups": [],
+          "waypoints": [
+            {
+              "code": "MTIØTVEIVALG24",
+              "name": "Valg av teknologiretning",
+              "description": null,
+              "deadlineDate": "2024-09-15",
+              "directions": [
+                {
+                  "code": "MTIØTD-24",
+                  "name": "Datateknologi",
+                  "courseGroups": [
+                    {
+                      "code": "MTIØTDÅR2-24",
+                      "name": "Datateknologi - 2. år",
+                      "description": null,
+                      "courses": [
+                        {
+                          "code": "TDT4140",
+                          "version": "1",
+                          "name": "Programvareutvikling",
+                          "credits": 7.5,
+                          "planElement": false,
+                          "studyChoice": {
+                            "code": "O",
+                            "name": "Obligatorisk emne",
+                            "description": "Obligatorisk emne"
+                          }
+                        },
+                        {
+                          "code": "TDT4145",
+                          "version": "1",
+                          "name": "Datamodellering og databasesystemer",
+                          "credits": 7.5,
+                          "planElement": false,
+                          "studyChoice": {
+                            "code": "O",
+                            "name": "Obligatorisk emne",
+                            "description": "Obligatorisk emne"
+                          }
+                        },
+                        {
+                          "code": "TIØ4102",
+                          "version": "1",
+                          "name": "Organisasjon og teknologi 1",
+                          "credits": 7.5,
+                          "planElement": false,
+                          "studyChoice": {
+                            "code": "O",
+                            "name": "Obligatorisk emne",
+                            "description": "Obligatorisk emne"
+                          }
+                        },
+                        {
+                          "code": "TTM4100",
+                          "version": "1",
+                          "name": "Kommunikasjon - Tjenester og nett",
+                          "credits": 7.5,
+                          "planElement": false,
+                          "studyChoice": {
+                            "code": "O",
+                            "name": "Obligatorisk emne",
+                            "description": "Obligatorisk emne"
+                          }
+                        }
+                      ]
+                    }
+                  ],
+                  "waypoints": []
+                },
+                {
+                  "code": "MTIØTEM-24",
+                  "name": "Energi og miljø",
+                  "courseGroups": [
+                    {
+                      "code": "MTIØTEMÅR2-24",
+                      "name": "Energi og miljø - 2. år",
+                      "description": null,
+                      "courses": [
+                        {
+                          "code": "TDT4114",
+                          "version": "1",
+                          "name": "Anvendt programmering",
+                          "credits": 7.5,
+                          "planElement": false,
+                          "studyChoice": {
+                            "code": "O",
+                            "name": "Obligatorisk emne",
+                            "description": "Obligatorisk emne"
+                          }
+                        },
+                        {
+                          "code": "TEP4100",
+                          "version": "1",
+                          "name": "Fluidmekanikk",
+                          "credits": 7.5,
+                          "planElement": false,
+                          "studyChoice": {
+                            "code": "O",
+                            "name": "Obligatorisk emne",
+                            "description": "Obligatorisk emne"
+                          }
+                        },
+                        {
+                          "code": "TFE4120",
+                          "version": "1",
+                          "name": "Elektromagnetisme",
+                          "credits": 7.5,
+                          "planElement": false,
+                          "studyChoice": {
+                            "code": "O",
+                            "name": "Obligatorisk emne",
+                            "description": "Obligatorisk emne"
+                          }
+                        },
+                        {
+                          "code": "TIØ4102",
+                          "version": "1",
+                          "name": "Organisasjon og teknologi 1",
+                          "credits": 7.5,
+                          "planElement": false,
+                          "studyChoice": {
+                            "code": "O",
+                            "name": "Obligatorisk emne",
+                            "description": "Obligatorisk emne"
+                          }
+                        }
+                      ]
+                    }
+                  ],
+                  "waypoints": []
+                },
+                {
+                  "code": "MTIØTM-24",
+                  "name": "Marin teknikk",
+                  "courseGroups": [
+                    {
+                      "code": "MTIØTMÅR2-24",
+                      "name": "Marin - 2. år",
+                      "description": null,
+                      "courses": [
+                        {
+                          "code": "TEP4123",
+                          "version": "1",
+                          "name": "Termodynamikk",
+                          "credits": 7.5,
+                          "planElement": false,
+                          "studyChoice": {
+                            "code": "O",
+                            "name": "Obligatorisk emne",
+                            "description": "Obligatorisk emne"
+                          }
+                        },
+                        {
+                          "code": "TIØ4102",
+                          "version": "1",
+                          "name": "Organisasjon og teknologi 1",
+                          "credits": 7.5,
+                          "planElement": false,
+                          "studyChoice": {
+                            "code": "O",
+                            "name": "Obligatorisk emne",
+                            "description": "Obligatorisk emne"
+                          }
+                        },
+                        {
+                          "code": "TMM4100",
+                          "version": "1",
+                          "name": "Materialteknikk",
+                          "credits": 7.5,
+                          "planElement": false,
+                          "studyChoice": {
+                            "code": "O",
+                            "name": "Obligatorisk emne",
+                            "description": "Obligatorisk emne"
+                          }
+                        },
+                        {
+                          "code": "TMR4247",
+                          "version": "1",
+                          "name": "Marin teknikk 3 - Hydrodynamikk",
+                          "credits": 7.5,
+                          "planElement": false,
+                          "studyChoice": {
+                            "code": "O",
+                            "name": "Obligatorisk emne",
+                            "description": "Obligatorisk emne"
+                          }
+                        }
+                      ]
+                    }
+                  ],
+                  "waypoints": []
+                },
+                {
+                  "code": "MTIØTPP-24",
+                  "name": "Maskin- og energiteknologi",
+                  "courseGroups": [
+                    {
+                      "code": "MTIØTPPÅR2-24",
+                      "name": "Maskin- og energiteknologi - 2. år",
+                      "description": null,
+                      "courses": [
+                        {
+                          "code": "EXPH0300",
+                          "version": "1",
+                          "name": "Examen philosophicum for naturvitenskap og teknologi",
+                          "credits": 7.5,
+                          "planElement": false,
+                          "studyChoice": {
+                            "code": "O",
+                            "name": "Obligatorisk emne",
+                            "description": "Obligatorisk emne"
+                          }
+                        },
+                        {
+                          "code": "TEP4100",
+                          "version": "1",
+                          "name": "Fluidmekanikk",
+                          "credits": 7.5,
+                          "planElement": false,
+                          "studyChoice": {
+                            "code": "O",
+                            "name": "Obligatorisk emne",
+                            "description": "Obligatorisk emne"
+                          }
+                        },
+                        {
+                          "code": "TIØ4102",
+                          "version": "1",
+                          "name": "Organisasjon og teknologi 1",
+                          "credits": 7.5,
+                          "planElement": false,
+                          "studyChoice": {
+                            "code": "O",
+                            "name": "Obligatorisk emne",
+                            "description": "Obligatorisk emne"
+                          }
+                        },
+                        {
+                          "code": "TMM4100",
+                          "version": "1",
+                          "name": "Materialteknikk",
+                          "credits": 7.5,
+                          "planElement": false,
+                          "studyChoice": {
+                            "code": "O",
+                            "name": "Obligatorisk emne",
+                            "description": "Obligatorisk emne"
+                          }
+                        }
+                      ]
+                    }
+                  ],
+                  "waypoints": []
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "periodNumber": 5,
+        "direction": {
+          "code": null,
+          "name": null,
+          "courseGroups": [],
+          "waypoints": [
+            {
+              "code": "MTIØTVEIVALG24",
+              "name": "Valg av teknologiretning",
+              "description": null,
+              "deadlineDate": "2024-09-15",
+              "directions": [
+                {
+                  "code": "MTIØTD-24",
+                  "name": "Datateknologi",
+                  "courseGroups": [],
+                  "waypoints": [
+                    {
+                      "code": "MTIØTDKÅR3VALG-24",
+                      "name": "Valg av fagretning",
+                      "description": null,
+                      "deadlineDate": "2026-05-15",
+                      "directions": [
+                        {
+                          "code": "MTIØTKI-24",
+                          "name": "Kunstig intelligens",
+                          "courseGroups": [
+                            {
+                              "code": "MTIØTKI-ÅR3-24",
+                              "name": "Obligatoriske og valgbare emner - 3. år",
+                              "description": "Valgbart emne på våren kan byttes med et annet relevant teknologiemne på samme nivå etter avtale med instituttet. Det forutsettes at det velges et emne som ikke gir kollisjon på eksamensplanen.",
+                              "courses": [
+                                {
+                                  "code": "TDT4172",
+                                  "version": "1",
+                                  "name": "Introduksjon til maskinlæring",
+                                  "credits": 7.5,
+                                  "planElement": false,
+                                  "studyChoice": {
+                                    "code": "O",
+                                    "name": "Obligatorisk emne",
+                                    "description": "Obligatorisk emne"
+                                  }
+                                },
+                                {
+                                  "code": "TIØ4118",
+                                  "version": "1",
+                                  "name": "Industriell økonomisk analyse",
+                                  "credits": 7.5,
+                                  "planElement": false,
+                                  "studyChoice": {
+                                    "code": "O",
+                                    "name": "Obligatorisk emne",
+                                    "description": "Obligatorisk emne"
+                                  }
+                                },
+                                {
+                                  "code": "TIØ4162",
+                                  "version": "1",
+                                  "name": "Organisasjon og teknologi 2",
+                                  "credits": 7.5,
+                                  "planElement": false,
+                                  "studyChoice": {
+                                    "code": "O",
+                                    "name": "Obligatorisk emne",
+                                    "description": "Obligatorisk emne"
+                                  }
+                                },
+                                {
+                                  "code": "TMA4240",
+                                  "version": "1",
+                                  "name": "Statistikk",
+                                  "credits": 7.5,
+                                  "planElement": false,
+                                  "studyChoice": {
+                                    "code": "O",
+                                    "name": "Obligatorisk emne",
+                                    "description": "Obligatorisk emne"
+                                  }
+                                }
+                              ]
+                            }
+                          ],
+                          "waypoints": []
+                        },
+                        {
+                          "code": "MTIØTPS-24",
+                          "name": "Programvaresystemer",
+                          "courseGroups": [
+                            {
+                              "code": "MTIØTPS-ÅR3-24",
+                              "name": "Obligatoriske og valgbare emner - 3. år",
+                              "description": "Valgbart emne på våren kan byttes med et annet relevant teknologiemne på samme nivå etter avtale med instituttet. Det forutsettes at det velges et emne som ikke gir kollisjon på eksamensplanen.",
+                              "courses": [
+                                {
+                                  "code": "TDT4175",
+                                  "version": "1",
+                                  "name": "Informasjonssystemer",
+                                  "credits": 7.5,
+                                  "planElement": false,
+                                  "studyChoice": {
+                                    "code": "O",
+                                    "name": "Obligatorisk emne",
+                                    "description": "Obligatorisk emne"
+                                  }
+                                },
+                                {
+                                  "code": "TIØ4118",
+                                  "version": "1",
+                                  "name": "Industriell økonomisk analyse",
+                                  "credits": 7.5,
+                                  "planElement": false,
+                                  "studyChoice": {
+                                    "code": "O",
+                                    "name": "Obligatorisk emne",
+                                    "description": "Obligatorisk emne"
+                                  }
+                                },
+                                {
+                                  "code": "TIØ4162",
+                                  "version": "1",
+                                  "name": "Organisasjon og teknologi 2",
+                                  "credits": 7.5,
+                                  "planElement": false,
+                                  "studyChoice": {
+                                    "code": "O",
+                                    "name": "Obligatorisk emne",
+                                    "description": "Obligatorisk emne"
+                                  }
+                                },
+                                {
+                                  "code": "TMA4240",
+                                  "version": "1",
+                                  "name": "Statistikk",
+                                  "credits": 7.5,
+                                  "planElement": false,
+                                  "studyChoice": {
+                                    "code": "O",
+                                    "name": "Obligatorisk emne",
+                                    "description": "Obligatorisk emne"
+                                  }
+                                }
+                              ]
+                            }
+                          ],
+                          "waypoints": []
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "code": "MTIØTEM-24",
+                  "name": "Energi og miljø",
+                  "courseGroups": [],
+                  "waypoints": [
+                    {
+                      "code": "MTIØTEMÅR3VALG-24",
+                      "name": "Valg av fagretning",
+                      "description": null,
+                      "deadlineDate": "2026-05-15",
+                      "directions": [
+                        {
+                          "code": "MTIØTEE-24",
+                          "name": "Elektrisk energiteknikk",
+                          "courseGroups": [
+                            {
+                              "code": "MTIØTEE-ÅR3-24",
+                              "name": "Obligatoriske og valgbare emner - 3. år",
+                              "description": "De valgbare emnene på våren kan byttes i andre relevante teknologiemner på samme nivå etter avtale med instituttet. Det forutsettes at det velges emner som ikke gir kollisjon på eksamensplanen.Emnet TDT4102 (vår) anbefales for studenter som tar sikte på å ta fordypning innen Anvendt økonomi og optimering eller Investering, finans og økonomistyring.",
+                              "courses": [
+                                {
+                                  "code": "TET4105",
+                                  "version": "1",
+                                  "name": "Elektriske kraftsystemer 1",
+                                  "credits": 7.5,
+                                  "planElement": false,
+                                  "studyChoice": {
+                                    "code": "O",
+                                    "name": "Obligatorisk emne",
+                                    "description": "Obligatorisk emne"
+                                  }
+                                },
+                                {
+                                  "code": "TIØ4118",
+                                  "version": "1",
+                                  "name": "Industriell økonomisk analyse",
+                                  "credits": 7.5,
+                                  "planElement": false,
+                                  "studyChoice": {
+                                    "code": "O",
+                                    "name": "Obligatorisk emne",
+                                    "description": "Obligatorisk emne"
+                                  }
+                                },
+                                {
+                                  "code": "TIØ4162",
+                                  "version": "1",
+                                  "name": "Organisasjon og teknologi 2",
+                                  "credits": 7.5,
+                                  "planElement": false,
+                                  "studyChoice": {
+                                    "code": "O",
+                                    "name": "Obligatorisk emne",
+                                    "description": "Obligatorisk emne"
+                                  }
+                                },
+                                {
+                                  "code": "TMA4240",
+                                  "version": "1",
+                                  "name": "Statistikk",
+                                  "credits": 7.5,
+                                  "planElement": false,
+                                  "studyChoice": {
+                                    "code": "O",
+                                    "name": "Obligatorisk emne",
+                                    "description": "Obligatorisk emne"
+                                  }
+                                }
+                              ]
+                            }
+                          ],
+                          "waypoints": []
+                        },
+                        {
+                          "code": "MTIØTEPT-24",
+                          "name": "Energi- og prosessteknikk",
+                          "courseGroups": [
+                            {
+                              "code": "MTIØTVEPÅR3-24",
+                              "name": "Obligatoriske og valgbare emner - 3. år",
+                              "description": null,
+                              "courses": [
+                                {
+                                  "code": "TEP4135",
+                                  "version": "1",
+                                  "name": "Fluidmekanikk 2",
+                                  "credits": 7.5,
+                                  "planElement": false,
+                                  "studyChoice": {
+                                    "code": "O",
+                                    "name": "Obligatorisk emne",
+                                    "description": "Obligatorisk emne"
+                                  }
+                                },
+                                {
+                                  "code": "TIØ4118",
+                                  "version": "1",
+                                  "name": "Industriell økonomisk analyse",
+                                  "credits": 7.5,
+                                  "planElement": false,
+                                  "studyChoice": {
+                                    "code": "O",
+                                    "name": "Obligatorisk emne",
+                                    "description": "Obligatorisk emne"
+                                  }
+                                },
+                                {
+                                  "code": "TIØ4162",
+                                  "version": "1",
+                                  "name": "Organisasjon og teknologi 2",
+                                  "credits": 7.5,
+                                  "planElement": false,
+                                  "studyChoice": {
+                                    "code": "O",
+                                    "name": "Obligatorisk emne",
+                                    "description": "Obligatorisk emne"
+                                  }
+                                },
+                                {
+                                  "code": "TMA4240",
+                                  "version": "1",
+                                  "name": "Statistikk",
+                                  "credits": 7.5,
+                                  "planElement": false,
+                                  "studyChoice": {
+                                    "code": "O",
+                                    "name": "Obligatorisk emne",
+                                    "description": "Obligatorisk emne"
+                                  }
+                                }
+                              ]
+                            }
+                          ],
+                          "waypoints": []
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "code": "MTIØTM-24",
+                  "name": "Marin teknikk",
+                  "courseGroups": [
+                    {
+                      "code": "MTIØTMÅR3-24",
+                      "name": "Marin - 3. år",
+                      "description": null,
+                      "courses": [
+                        {
+                          "code": "TIØ4118",
+                          "version": "1",
+                          "name": "Industriell økonomisk analyse",
+                          "credits": 7.5,
+                          "planElement": false,
+                          "studyChoice": {
+                            "code": "O",
+                            "name": "Obligatorisk emne",
+                            "description": "Obligatorisk emne"
+                          }
+                        },
+                        {
+                          "code": "TIØ4162",
+                          "version": "1",
+                          "name": "Organisasjon og teknologi 2",
+                          "credits": 7.5,
+                          "planElement": false,
+                          "studyChoice": {
+                            "code": "O",
+                            "name": "Obligatorisk emne",
+                            "description": "Obligatorisk emne"
+                          }
+                        },
+                        {
+                          "code": "TMA4130",
+                          "version": "1",
+                          "name": "Matematikk 4N",
+                          "credits": 7.5,
+                          "planElement": false,
+                          "studyChoice": {
+                            "code": "O",
+                            "name": "Obligatorisk emne",
+                            "description": "Obligatorisk emne"
+                          }
+                        },
+                        {
+                          "code": "TMR4335",
+                          "version": "1",
+                          "name": "Marin teknikk 4 - Propulsjonssystemer, sikkerhet og miljø",
+                          "credits": 7.5,
+                          "planElement": false,
+                          "studyChoice": {
+                            "code": "O",
+                            "name": "Obligatorisk emne",
+                            "description": "Obligatorisk emne"
+                          }
+                        }
+                      ]
+                    }
+                  ],
+                  "waypoints": []
+                },
+                {
+                  "code": "MTIØTPP-24",
+                  "name": "Maskin- og energiteknologi",
+                  "courseGroups": [],
+                  "waypoints": [
+                    {
+                      "code": "MTIØTPPÅR3VALG-24",
+                      "name": "Valg av fagretning",
+                      "description": null,
+                      "deadlineDate": "2026-05-15",
+                      "directions": [
+                        {
+                          "code": "MTIØTPK-24",
+                          "name": "Industriell ledelse og systemfag",
+                          "courseGroups": [
+                            {
+                              "code": "MTIØTPKÅR3-24",
+                              "name": "Obligatoriske og valgbare emner - 3. år",
+                              "description": null,
+                              "courses": [
+                                {
+                                  "code": "TIØ4118",
+                                  "version": "1",
+                                  "name": "Industriell økonomisk analyse",
+                                  "credits": 7.5,
+                                  "planElement": false,
+                                  "studyChoice": {
+                                    "code": "O",
+                                    "name": "Obligatorisk emne",
+                                    "description": "Obligatorisk emne"
+                                  }
+                                },
+                                {
+                                  "code": "TIØ4162",
+                                  "version": "1",
+                                  "name": "Organisasjon og teknologi 2",
+                                  "credits": 7.5,
+                                  "planElement": false,
+                                  "studyChoice": {
+                                    "code": "O",
+                                    "name": "Obligatorisk emne",
+                                    "description": "Obligatorisk emne"
+                                  }
+                                },
+                                {
+                                  "code": "TMA4130",
+                                  "version": "1",
+                                  "name": "Matematikk 4N",
+                                  "credits": 7.5,
+                                  "planElement": false,
+                                  "studyChoice": {
+                                    "code": "O",
+                                    "name": "Obligatorisk emne",
+                                    "description": "Obligatorisk emne"
+                                  }
+                                },
+                                {
+                                  "code": "TPK5100",
+                                  "version": "1",
+                                  "name": "Praktisk prosjektledelse",
+                                  "credits": 7.5,
+                                  "planElement": false,
+                                  "studyChoice": {
+                                    "code": "O",
+                                    "name": "Obligatorisk emne",
+                                    "description": "Obligatorisk emne"
+                                  }
+                                }
+                              ]
+                            }
+                          ],
+                          "waypoints": []
+                        },
+                        {
+                          "code": "MTIØTPPEPT-24",
+                          "name": "Energi- og prosessteknikk",
+                          "courseGroups": [
+                            {
+                              "code": "MTIØTPPEPÅR3-24",
+                              "name": "Obligatoriske og valgbare emner - 3. år",
+                              "description": null,
+                              "courses": [
+                                {
+                                  "code": "TEP4135",
+                                  "version": "1",
+                                  "name": "Fluidmekanikk 2",
+                                  "credits": 7.5,
+                                  "planElement": false,
+                                  "studyChoice": {
+                                    "code": "O",
+                                    "name": "Obligatorisk emne",
+                                    "description": "Obligatorisk emne"
+                                  }
+                                },
+                                {
+                                  "code": "TIØ4118",
+                                  "version": "1",
+                                  "name": "Industriell økonomisk analyse",
+                                  "credits": 7.5,
+                                  "planElement": false,
+                                  "studyChoice": {
+                                    "code": "O",
+                                    "name": "Obligatorisk emne",
+                                    "description": "Obligatorisk emne"
+                                  }
+                                },
+                                {
+                                  "code": "TIØ4162",
+                                  "version": "1",
+                                  "name": "Organisasjon og teknologi 2",
+                                  "credits": 7.5,
+                                  "planElement": false,
+                                  "studyChoice": {
+                                    "code": "O",
+                                    "name": "Obligatorisk emne",
+                                    "description": "Obligatorisk emne"
+                                  }
+                                },
+                                {
+                                  "code": "TMA4130",
+                                  "version": "1",
+                                  "name": "Matematikk 4N",
+                                  "credits": 7.5,
+                                  "planElement": false,
+                                  "studyChoice": {
+                                    "code": "O",
+                                    "name": "Obligatorisk emne",
+                                    "description": "Obligatorisk emne"
+                                  }
+                                }
+                              ]
+                            }
+                          ],
+                          "waypoints": []
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "periodNumber": 6,
+        "direction": {
+          "code": null,
+          "name": null,
+          "courseGroups": [],
+          "waypoints": [
+            {
+              "code": "MTIØTVEIVALG24",
+              "name": "Valg av teknologiretning",
+              "description": null,
+              "deadlineDate": "2024-09-15",
+              "directions": [
+                {
+                  "code": "MTIØTD-24",
+                  "name": "Datateknologi",
+                  "courseGroups": [],
+                  "waypoints": [
+                    {
+                      "code": "MTIØTDKÅR3VALG-24",
+                      "name": "Valg av fagretning",
+                      "description": null,
+                      "deadlineDate": "2026-05-15",
+                      "directions": [
+                        {
+                          "code": "MTIØTKI-24",
+                          "name": "Kunstig intelligens",
+                          "courseGroups": [
+                            {
+                              "code": "MTIØTKI-ÅR3-24",
+                              "name": "Obligatoriske og valgbare emner - 3. år",
+                              "description": "Valgbart emne på våren kan byttes med et annet relevant teknologiemne på samme nivå etter avtale med instituttet. Det forutsettes at det velges et emne som ikke gir kollisjon på eksamensplanen.",
+                              "courses": [
+                                {
+                                  "code": "TDT4171",
+                                  "version": "1",
+                                  "name": "Metoder i kunstig intelligens",
+                                  "credits": 7.5,
+                                  "planElement": false,
+                                  "studyChoice": {
+                                    "code": "O",
+                                    "name": "Obligatorisk emne",
+                                    "description": "Obligatorisk emne"
+                                  }
+                                },
+                                {
+                                  "code": "TIØ4126",
+                                  "version": "1",
+                                  "name": "Optimering og beslutningsstøtte for teknisk-økonomisk planlegging",
+                                  "credits": 7.5,
+                                  "planElement": false,
+                                  "studyChoice": {
+                                    "code": "O",
+                                    "name": "Obligatorisk emne",
+                                    "description": "Obligatorisk emne"
+                                  }
+                                },
+                                {
+                                  "code": "TIØ4165",
+                                  "version": "1",
+                                  "name": "Markedsføringsledelse for teknologibedrifter",
+                                  "credits": 7.5,
+                                  "planElement": false,
+                                  "studyChoice": {
+                                    "code": "O",
+                                    "name": "Obligatorisk emne",
+                                    "description": "Obligatorisk emne"
+                                  }
+                                },
+                                {
+                                  "code": "TDT4237",
+                                  "version": "1",
+                                  "name": "Programvaresikkerhet og personvern",
+                                  "credits": 7.5,
+                                  "planElement": false,
+                                  "studyChoice": {
+                                    "code": "VA",
+                                    "name": "Valgbart emne - Legges kollisjonsfritt",
+                                    "description": "Valgbart emne - Legges kollisjonsfritt på time- og eksamensplanen"
+                                  }
+                                },
+                                {
+                                  "code": "TDT4300",
+                                  "version": "1",
+                                  "name": "Datavarehus og datagruvedrift",
+                                  "credits": 7.5,
+                                  "planElement": false,
+                                  "studyChoice": {
+                                    "code": "VA",
+                                    "name": "Valgbart emne - Legges kollisjonsfritt",
+                                    "description": "Valgbart emne - Legges kollisjonsfritt på time- og eksamensplanen"
+                                  }
+                                }
+                              ]
+                            }
+                          ],
+                          "waypoints": []
+                        },
+                        {
+                          "code": "MTIØTPS-24",
+                          "name": "Programvaresystemer",
+                          "courseGroups": [
+                            {
+                              "code": "MTIØTPS-ÅR3-24",
+                              "name": "Obligatoriske og valgbare emner - 3. år",
+                              "description": "Valgbart emne på våren kan byttes med et annet relevant teknologiemne på samme nivå etter avtale med instituttet. Det forutsettes at det velges et emne som ikke gir kollisjon på eksamensplanen.",
+                              "courses": [
+                                {
+                                  "code": "TDT4240",
+                                  "version": "1",
+                                  "name": "Programvarearkitektur",
+                                  "credits": 7.5,
+                                  "planElement": false,
+                                  "studyChoice": {
+                                    "code": "O",
+                                    "name": "Obligatorisk emne",
+                                    "description": "Obligatorisk emne"
+                                  }
+                                },
+                                {
+                                  "code": "TIØ4126",
+                                  "version": "1",
+                                  "name": "Optimering og beslutningsstøtte for teknisk-økonomisk planlegging",
+                                  "credits": 7.5,
+                                  "planElement": false,
+                                  "studyChoice": {
+                                    "code": "O",
+                                    "name": "Obligatorisk emne",
+                                    "description": "Obligatorisk emne"
+                                  }
+                                },
+                                {
+                                  "code": "TIØ4165",
+                                  "version": "1",
+                                  "name": "Markedsføringsledelse for teknologibedrifter",
+                                  "credits": 7.5,
+                                  "planElement": false,
+                                  "studyChoice": {
+                                    "code": "O",
+                                    "name": "Obligatorisk emne",
+                                    "description": "Obligatorisk emne"
+                                  }
+                                },
+                                {
+                                  "code": "TDT4237",
+                                  "version": "1",
+                                  "name": "Programvaresikkerhet og personvern",
+                                  "credits": 7.5,
+                                  "planElement": false,
+                                  "studyChoice": {
+                                    "code": "VA",
+                                    "name": "Valgbart emne - Legges kollisjonsfritt",
+                                    "description": "Valgbart emne - Legges kollisjonsfritt på time- og eksamensplanen"
+                                  }
+                                },
+                                {
+                                  "code": "TDT4300",
+                                  "version": "1",
+                                  "name": "Datavarehus og datagruvedrift",
+                                  "credits": 7.5,
+                                  "planElement": false,
+                                  "studyChoice": {
+                                    "code": "VA",
+                                    "name": "Valgbart emne - Legges kollisjonsfritt",
+                                    "description": "Valgbart emne - Legges kollisjonsfritt på time- og eksamensplanen"
+                                  }
+                                }
+                              ]
+                            }
+                          ],
+                          "waypoints": []
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "code": "MTIØTEM-24",
+                  "name": "Energi og miljø",
+                  "courseGroups": [],
+                  "waypoints": [
+                    {
+                      "code": "MTIØTEMÅR3VALG-24",
+                      "name": "Valg av fagretning",
+                      "description": null,
+                      "deadlineDate": "2026-05-15",
+                      "directions": [
+                        {
+                          "code": "MTIØTEE-24",
+                          "name": "Elektrisk energiteknikk",
+                          "courseGroups": [
+                            {
+                              "code": "MTIØTEE-ÅR3-24",
+                              "name": "Obligatoriske og valgbare emner - 3. år",
+                              "description": "De valgbare emnene på våren kan byttes i andre relevante teknologiemner på samme nivå etter avtale med instituttet. Det forutsettes at det velges emner som ikke gir kollisjon på eksamensplanen.Emnet TDT4102 (vår) anbefales for studenter som tar sikte på å ta fordypning innen Anvendt økonomi og optimering eller Investering, finans og økonomistyring.",
+                              "courses": [
+                                {
+                                  "code": "TET4135",
+                                  "version": "1",
+                                  "name": "Energiplanlegging",
+                                  "credits": 7.5,
+                                  "planElement": false,
+                                  "studyChoice": {
+                                    "code": "O",
+                                    "name": "Obligatorisk emne",
+                                    "description": "Obligatorisk emne"
+                                  }
+                                },
+                                {
+                                  "code": "TIØ4126",
+                                  "version": "1",
+                                  "name": "Optimering og beslutningsstøtte for teknisk-økonomisk planlegging",
+                                  "credits": 7.5,
+                                  "planElement": false,
+                                  "studyChoice": {
+                                    "code": "O",
+                                    "name": "Obligatorisk emne",
+                                    "description": "Obligatorisk emne"
+                                  }
+                                },
+                                {
+                                  "code": "TIØ4165",
+                                  "version": "1",
+                                  "name": "Markedsføringsledelse for teknologibedrifter",
+                                  "credits": 7.5,
+                                  "planElement": false,
+                                  "studyChoice": {
+                                    "code": "O",
+                                    "name": "Obligatorisk emne",
+                                    "description": "Obligatorisk emne"
+                                  }
+                                },
+                                {
+                                  "code": "TET4110",
+                                  "version": "1",
+                                  "name": "Elektriske maskiner og elektromagnetisk energiomforming",
+                                  "credits": 7.5,
+                                  "planElement": false,
+                                  "studyChoice": {
+                                    "code": "VA",
+                                    "name": "Valgbart emne - Legges kollisjonsfritt",
+                                    "description": "Valgbart emne - Legges kollisjonsfritt på time- og eksamensplanen"
+                                  }
+                                },
+                                {
+                                  "code": "TTK4105",
+                                  "version": "1",
+                                  "name": "Reguleringsteknikk",
+                                  "credits": 7.5,
+                                  "planElement": false,
+                                  "studyChoice": {
+                                    "code": "VA",
+                                    "name": "Valgbart emne - Legges kollisjonsfritt",
+                                    "description": "Valgbart emne - Legges kollisjonsfritt på time- og eksamensplanen"
+                                  }
+                                },
+                                {
+                                  "code": "TET4190",
+                                  "version": "2",
+                                  "name": "Kraftelektronikk",
+                                  "credits": 7.5,
+                                  "planElement": false,
+                                  "studyChoice": {
+                                    "code": "VB",
+                                    "name": "Valgbart emne - Kan kollidere",
+                                    "description": "Valgbart emne - Kan kollidere på time- og eksamensplanen"
+                                  }
+                                }
+                              ]
+                            }
+                          ],
+                          "waypoints": []
+                        },
+                        {
+                          "code": "MTIØTEPT-24",
+                          "name": "Energi- og prosessteknikk",
+                          "courseGroups": [
+                            {
+                              "code": "MTIØTVEPÅR3-24",
+                              "name": "Obligatoriske og valgbare emner - 3. år",
+                              "description": null,
+                              "courses": [
+                                {
+                                  "code": "TEP4130",
+                                  "version": "1",
+                                  "name": "Varme- og massetransport",
+                                  "credits": 7.5,
+                                  "planElement": false,
+                                  "studyChoice": {
+                                    "code": "O",
+                                    "name": "Obligatorisk emne",
+                                    "description": "Obligatorisk emne"
+                                  }
+                                },
+                                {
+                                  "code": "TIØ4126",
+                                  "version": "1",
+                                  "name": "Optimering og beslutningsstøtte for teknisk-økonomisk planlegging",
+                                  "credits": 7.5,
+                                  "planElement": false,
+                                  "studyChoice": {
+                                    "code": "O",
+                                    "name": "Obligatorisk emne",
+                                    "description": "Obligatorisk emne"
+                                  }
+                                },
+                                {
+                                  "code": "TIØ4165",
+                                  "version": "1",
+                                  "name": "Markedsføringsledelse for teknologibedrifter",
+                                  "credits": 7.5,
+                                  "planElement": false,
+                                  "studyChoice": {
+                                    "code": "O",
+                                    "name": "Obligatorisk emne",
+                                    "description": "Obligatorisk emne"
+                                  }
+                                },
+                                {
+                                  "code": "TEP4125",
+                                  "version": "1",
+                                  "name": "Termodynamikk 2",
+                                  "credits": 7.5,
+                                  "planElement": false,
+                                  "studyChoice": {
+                                    "code": "VA",
+                                    "name": "Valgbart emne - Legges kollisjonsfritt",
+                                    "description": "Valgbart emne - Legges kollisjonsfritt på time- og eksamensplanen"
+                                  }
+                                },
+                                {
+                                  "code": "TEP4295",
+                                  "version": "1",
+                                  "name": "Bærekraftig ingeniørfag",
+                                  "credits": 7.5,
+                                  "planElement": false,
+                                  "studyChoice": {
+                                    "code": "VA",
+                                    "name": "Valgbart emne - Legges kollisjonsfritt",
+                                    "description": "Valgbart emne - Legges kollisjonsfritt på time- og eksamensplanen"
+                                  }
+                                }
+                              ]
+                            }
+                          ],
+                          "waypoints": []
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "code": "MTIØTM-24",
+                  "name": "Marin teknikk",
+                  "courseGroups": [
+                    {
+                      "code": "MTIØTMÅR3-24",
+                      "name": "Marin - 3. år",
+                      "description": null,
+                      "courses": [
+                        {
+                          "code": "TIØ4126",
+                          "version": "1",
+                          "name": "Optimering og beslutningsstøtte for teknisk-økonomisk planlegging",
+                          "credits": 7.5,
+                          "planElement": false,
+                          "studyChoice": {
+                            "code": "O",
+                            "name": "Obligatorisk emne",
+                            "description": "Obligatorisk emne"
+                          }
+                        },
+                        {
+                          "code": "TIØ4165",
+                          "version": "1",
+                          "name": "Markedsføringsledelse for teknologibedrifter",
+                          "credits": 7.5,
+                          "planElement": false,
+                          "studyChoice": {
+                            "code": "O",
+                            "name": "Obligatorisk emne",
+                            "description": "Obligatorisk emne"
+                          }
+                        },
+                        {
+                          "code": "TMA4245",
+                          "version": "1",
+                          "name": "Statistikk",
+                          "credits": 7.5,
+                          "planElement": false,
+                          "studyChoice": {
+                            "code": "O",
+                            "name": "Obligatorisk emne",
+                            "description": "Obligatorisk emne"
+                          }
+                        },
+                        {
+                          "code": "TMR4256",
+                          "version": "1",
+                          "name": "Marin teknikk 6 - Design av marine systemer",
+                          "credits": 7.5,
+                          "planElement": false,
+                          "studyChoice": {
+                            "code": "O",
+                            "name": "Obligatorisk emne",
+                            "description": "Obligatorisk emne"
+                          }
+                        }
+                      ]
+                    }
+                  ],
+                  "waypoints": []
+                },
+                {
+                  "code": "MTIØTPP-24",
+                  "name": "Maskin- og energiteknologi",
+                  "courseGroups": [],
+                  "waypoints": [
+                    {
+                      "code": "MTIØTPPÅR3VALG-24",
+                      "name": "Valg av fagretning",
+                      "description": null,
+                      "deadlineDate": "2026-05-15",
+                      "directions": [
+                        {
+                          "code": "MTIØTPK-24",
+                          "name": "Industriell ledelse og systemfag",
+                          "courseGroups": [
+                            {
+                              "code": "MTIØTPKÅR3-24",
+                              "name": "Obligatoriske og valgbare emner - 3. år",
+                              "description": null,
+                              "courses": [
+                                {
+                                  "code": "TDT4102",
+                                  "version": "1",
+                                  "name": "Prosedyre- og objektorientert programmering",
+                                  "credits": 7.5,
+                                  "planElement": false,
+                                  "studyChoice": {
+                                    "code": "O",
+                                    "name": "Obligatorisk emne",
+                                    "description": "Obligatorisk emne"
+                                  }
+                                },
+                                {
+                                  "code": "TIØ4126",
+                                  "version": "1",
+                                  "name": "Optimering og beslutningsstøtte for teknisk-økonomisk planlegging",
+                                  "credits": 7.5,
+                                  "planElement": false,
+                                  "studyChoice": {
+                                    "code": "O",
+                                    "name": "Obligatorisk emne",
+                                    "description": "Obligatorisk emne"
+                                  }
+                                },
+                                {
+                                  "code": "TIØ4165",
+                                  "version": "1",
+                                  "name": "Markedsføringsledelse for teknologibedrifter",
+                                  "credits": 7.5,
+                                  "planElement": false,
+                                  "studyChoice": {
+                                    "code": "O",
+                                    "name": "Obligatorisk emne",
+                                    "description": "Obligatorisk emne"
+                                  }
+                                },
+                                {
+                                  "code": "TPK5160",
+                                  "version": "1",
+                                  "name": "Risikoanalyse",
+                                  "credits": 7.5,
+                                  "planElement": false,
+                                  "studyChoice": {
+                                    "code": "O",
+                                    "name": "Obligatorisk emne",
+                                    "description": "Obligatorisk emne"
+                                  }
+                                }
+                              ]
+                            }
+                          ],
+                          "waypoints": []
+                        },
+                        {
+                          "code": "MTIØTPPEPT-24",
+                          "name": "Energi- og prosessteknikk",
+                          "courseGroups": [
+                            {
+                              "code": "MTIØTPPEPÅR3-24",
+                              "name": "Obligatoriske og valgbare emner - 3. år",
+                              "description": null,
+                              "courses": [
+                                {
+                                  "code": "TDT4102",
+                                  "version": "1",
+                                  "name": "Prosedyre- og objektorientert programmering",
+                                  "credits": 7.5,
+                                  "planElement": false,
+                                  "studyChoice": {
+                                    "code": "O",
+                                    "name": "Obligatorisk emne",
+                                    "description": "Obligatorisk emne"
+                                  }
+                                },
+                                {
+                                  "code": "TEP4130",
+                                  "version": "1",
+                                  "name": "Varme- og massetransport",
+                                  "credits": 7.5,
+                                  "planElement": false,
+                                  "studyChoice": {
+                                    "code": "O",
+                                    "name": "Obligatorisk emne",
+                                    "description": "Obligatorisk emne"
+                                  }
+                                },
+                                {
+                                  "code": "TIØ4126",
+                                  "version": "1",
+                                  "name": "Optimering og beslutningsstøtte for teknisk-økonomisk planlegging",
+                                  "credits": 7.5,
+                                  "planElement": false,
+                                  "studyChoice": {
+                                    "code": "O",
+                                    "name": "Obligatorisk emne",
+                                    "description": "Obligatorisk emne"
+                                  }
+                                },
+                                {
+                                  "code": "TIØ4165",
+                                  "version": "1",
+                                  "name": "Markedsføringsledelse for teknologibedrifter",
+                                  "credits": 7.5,
+                                  "planElement": false,
+                                  "studyChoice": {
+                                    "code": "O",
+                                    "name": "Obligatorisk emne",
+                                    "description": "Obligatorisk emne"
+                                  }
+                                }
+                              ]
+                            }
+                          ],
+                          "waypoints": []
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      }
+    ],
+    "publishedYears": [
+      2026,
+      2025,
+      2024,
+      2023,
+      2022,
+      2021,
+      2020,
+      2019,
+      2018,
+      2017,
+      2016,
+      2015,
+      2014,
+      2013,
+      2012,
+      2011,
+      2010,
+      2009,
+      2008,
+      2007
+    ]
+  }
+}

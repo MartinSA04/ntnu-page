@@ -1,0 +1,309 @@
+{
+  "url": "http://127.0.0.1:8788/api/course/TDT4120",
+  "status": 200,
+  "contentType": "application/json; charset=utf-8",
+  "body": {
+    "courseCode": "TDT4120",
+    "courseName": "Algoritmer og datastrukturer",
+    "credits": 7.5,
+    "level": "Videregående emner, nivå II",
+    "teachingStart": "Høst 2026",
+    "teachingDuration": "1 semester",
+    "teachingLanguage": "Norsk",
+    "location": "Trondheim",
+    "assessmentScheme": "Skriftlig skoleeksamen",
+    "gradeRule": "Bokstavkarakterer",
+    "facts": [
+      {
+        "label": "Studiepoeng",
+        "value": "7,5"
+      },
+      {
+        "label": "Nivå",
+        "value": "Videregående emner, nivå II"
+      },
+      {
+        "label": "Undervisningsstart",
+        "value": "Høst 2026"
+      },
+      {
+        "label": "Varighet",
+        "value": "1 semester"
+      },
+      {
+        "label": "Undervisningsspråk",
+        "value": "Norsk"
+      },
+      {
+        "label": "Sted",
+        "value": "Trondheim"
+      },
+      {
+        "label": "Vurderingsordning",
+        "value": "Skriftlig skoleeksamen"
+      }
+    ],
+    "content": "Metoder for å analysere effektiviteten av algoritmer, splitt-og-hersk-teknikker, rekursive løsningsmetoder. Metoder for ordning, søking i og sortering av datamengder. Datastrukturer for effektiv gjenfinning av data, dynamisk programmering og grådighetsalgoritmer. Datastrukturer for etablering av grafer og nettverk, samt metoder for gjennomløping og leting. Algoritmer for å finne beste vei(er) og koplinger (matchinger), spenntrær og maksimal flyt. Teori for problemkompleksitet. Algoritmene uttrykkes mest mulig språkuavhengig.",
+    "learningOutcome": "Kunnskaper: Kandidaten skal ha kunnskap om (1) et bredt spekter av etablerte algoritmer og datastrukturer med nytteverdi på tvers av mange fagområder, (2) klassiske algoritmiske problemer med kjente effektive løsninger og (3) komplekse problemer uten kjente effektive løsninger.\nFerdigheter: Kandidaten skal kunne (1) analysere algoritmers effektivitet for å oppnå best mulig løsning på et gitt problem, (2) formulere et problem så det rasjonelt kan løses av en algoritme og (3) bruke kjente designmetoder for å konstruere nye effektive algoritmer.\nGenerell kompetanse: Kandidaten skal være i stand til å (1) bruke kjente algoritmer og tilgjengelige programmoduler på nye problemstillinger og (2) utvikle og realisere nye datatekniske løsninger på komplekse problemstillinger med rot i en praktisk virkelighet.",
+    "learningMethods": "Forelesninger og individuelle øvinger.",
+    "mandatoryActivities": [
+      "Øvinger"
+    ],
+    "assessmentDetails": "Ved utsatt eksamen (kontinuasjonseksamen) i august kan skriftlig eksamen bli endret til muntlig eksamen.",
+    "specialConditions": null,
+    "requiredKnowledge": null,
+    "recommendedKnowledge": "Studentene forutsettes å kunne programmere på et grunnleggende nivå, inkludert bruk av pekere og enkle datastrukturer som tabeller og lister, og å ha en god forståelse for rekursjon.\nStudentene forutsettes også å ha kunnskaper om grunnleggende matematisk notation, funksjoner, monotonitet, logaritmer, polynomer, grensebetraktninger, mengder, relasjoner, ordninger, grafer, trær, permutasjoner og kombinasjoner, induksjonsbevis, rekker og elementær sannsynlighetsregning.",
+    "courseMaterials": "Cormen, Leiserson, Rivest, Stein: Introduction to Algorithms, fjerde utgave. (Det tas forbehold om endringer.)",
+    "creditReductions": [
+      {
+        "courseCode": "SIF8010",
+        "reduction": "7,5 sp",
+        "fromTerm": null
+      },
+      {
+        "courseCode": "IT1105",
+        "reduction": "7,5 sp",
+        "fromTerm": null
+      },
+      {
+        "courseCode": "MNFIT115",
+        "reduction": "7,5 sp",
+        "fromTerm": null
+      },
+      {
+        "courseCode": "MNFIT112",
+        "reduction": "7,5 sp",
+        "fromTerm": null
+      },
+      {
+        "courseCode": "IDATA2302",
+        "reduction": "7,5 sp",
+        "fromTerm": "Høst 2020"
+      },
+      {
+        "courseCode": "IDATT2101",
+        "reduction": "7,5 sp",
+        "fromTerm": null
+      },
+      {
+        "courseCode": "TDT4121",
+        "reduction": "7,5 sp",
+        "fromTerm": "Høst 2022"
+      },
+      {
+        "courseCode": "IDATG2102",
+        "reduction": "7,5 sp",
+        "fromTerm": "Høst 2026"
+      }
+    ],
+    "subjectAreas": [
+      "Teknologiske fag"
+    ],
+    "studyPrograms": [
+      {
+        "code": "MTKOM",
+        "name": "Cybersikkerhet og datakommunikasjon"
+      },
+      {
+        "code": "MTDT",
+        "name": "Datateknologi"
+      },
+      {
+        "code": "BIELDIG",
+        "name": "Elektrifisering og digitalisering - Ingeniørfag"
+      },
+      {
+        "code": "MTELSYS",
+        "name": "Elektronisk systemdesign og innovasjon"
+      },
+      {
+        "code": "MTFYMA",
+        "name": "Fysikk og matematikk"
+      },
+      {
+        "code": "MTIØT",
+        "name": "Industriell økonomi og teknologiledelse"
+      },
+      {
+        "code": "BIT",
+        "name": "Informatikk"
+      },
+      {
+        "code": "MTING",
+        "name": "Ingeniørvitenskap og IKT"
+      },
+      {
+        "code": "MTTK",
+        "name": "Kybernetikk og robotikk"
+      },
+      {
+        "code": "MLREAL",
+        "name": "Lektorutdanning i realfag for trinn 8 – 13"
+      }
+    ],
+    "contacts": [
+      {
+        "role": "Emneansvarlig/koordinator",
+        "persons": [
+          {
+            "name": "Magnus Lie Hetland",
+            "url": "https://www.ntnu.no/ansatte/mlh"
+          }
+        ]
+      },
+      {
+        "role": "Faglærere",
+        "persons": [
+          {
+            "name": "Magnus Lie Hetland",
+            "url": "https://www.ntnu.no/ansatte/mlh"
+          }
+        ]
+      }
+    ],
+    "department": "Institutt for datateknologi og informatikk",
+    "exams": [
+      {
+        "occasion": "Ordinær eksamen",
+        "season": "Høst 2026",
+        "form": "Skriftlig skoleeksamen",
+        "weighting": "100/100",
+        "aidCode": "Kode E",
+        "aidCodeDescription": "E: Ingen hjelpemidler tillatt.",
+        "date": "2026-12-09",
+        "dateText": "09.12.2026",
+        "time": "15:00",
+        "timeText": "15:00",
+        "duration": "4 timer",
+        "system": "Inspera Assessment",
+        "rooms": [
+          {
+            "building": "Sluppenvegen 14",
+            "room": "SL110 hvit sone",
+            "candidates": 64
+          },
+          {
+            "building": "Sluppenvegen 14",
+            "room": "SL110 lilla sone",
+            "candidates": 64
+          },
+          {
+            "building": "Sluppenvegen 14",
+            "room": "SL110 turkis sone",
+            "candidates": 80
+          },
+          {
+            "building": "Sluppenvegen 14",
+            "room": "SL111 blå sone",
+            "candidates": 36
+          },
+          {
+            "building": "Sluppenvegen 14",
+            "room": "SL111 brun sone",
+            "candidates": 81
+          },
+          {
+            "building": "Sluppenvegen 14",
+            "room": "SL111 grønn sone",
+            "candidates": 50
+          },
+          {
+            "building": "Sluppenvegen 14",
+            "room": "SL111 lyseblå sone",
+            "candidates": 72
+          },
+          {
+            "building": "Sluppenvegen 14",
+            "room": "SL111 orange sone",
+            "candidates": 60
+          },
+          {
+            "building": "Sluppenvegen 14",
+            "room": "SL310 blå sone",
+            "candidates": 48
+          },
+          {
+            "building": "Sluppenvegen 14",
+            "room": "SL310 hvit sone",
+            "candidates": 46
+          },
+          {
+            "building": "Sluppenvegen 14",
+            "room": "SL310 lilla sone",
+            "candidates": 80
+          },
+          {
+            "building": "Sluppenvegen 14",
+            "room": "SL311 brun sone",
+            "candidates": 82
+          },
+          {
+            "building": "Sluppenvegen 14",
+            "room": "SL311 orange sone",
+            "candidates": 24
+          },
+          {
+            "building": "Sluppenvegen 14",
+            "room": "SL410 blå sone",
+            "candidates": 51
+          },
+          {
+            "building": "Sluppenvegen 14",
+            "room": "SL410 orange sone",
+            "candidates": 58
+          },
+          {
+            "building": "Sluppenvegen 14",
+            "room": "SL430",
+            "candidates": 54
+          }
+        ]
+      },
+      {
+        "occasion": "Utsatt eksamen",
+        "season": "Sommer 2027",
+        "form": "Skriftlig skoleeksamen",
+        "weighting": "100/100",
+        "aidCode": "Kode E",
+        "aidCodeDescription": "E: Ingen hjelpemidler tillatt.",
+        "date": null,
+        "dateText": null,
+        "time": null,
+        "timeText": null,
+        "duration": "4 timer",
+        "system": "Inspera Assessment",
+        "rooms": []
+      }
+    ],
+    "studyYear": 2026,
+    "availableYears": [
+      2026,
+      2025,
+      2024,
+      2023,
+      2022,
+      2021,
+      2020,
+      2019,
+      2018,
+      2017,
+      2016,
+      2015,
+      2014,
+      2013,
+      2012,
+      2011,
+      2010,
+      2009,
+      2008,
+      2007
+    ],
+    "notices": [],
+    "courseLinks": [
+      {
+        "label": "Faglærers emneside",
+        "url": "https://algdat.idi.ntnu.no/"
+      }
+    ]
+  }
+}

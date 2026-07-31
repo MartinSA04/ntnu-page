@@ -1,0 +1,383 @@
+{
+  "url": "http://127.0.0.1:8788/api/course/EXPH0400",
+  "status": 200,
+  "contentType": "application/json; charset=utf-8",
+  "body": {
+    "courseCode": "EXPH0400",
+    "courseName": "Examen philosophicum for medisin og helsefag",
+    "credits": 7.5,
+    "level": "Examen philosophicum",
+    "teachingStart": "Høst 2026",
+    "teachingDuration": "1 semester",
+    "teachingLanguage": "Norsk",
+    "location": "Gjøvik, Ålesund og Trondheim",
+    "assessmentScheme": "Skriftlig skoleeksamen",
+    "gradeRule": "Bokstavkarakterer",
+    "facts": [
+      {
+        "label": "Studiepoeng",
+        "value": "7,5"
+      },
+      {
+        "label": "Nivå",
+        "value": "Examen philosophicum"
+      },
+      {
+        "label": "Undervisningsstart",
+        "value": "Høst 2026"
+      },
+      {
+        "label": "Varighet",
+        "value": "1 semester"
+      },
+      {
+        "label": "Undervisningsspråk",
+        "value": "Norsk"
+      },
+      {
+        "label": "Sted",
+        "value": "Gjøvik, Ålesund og Trondheim"
+      },
+      {
+        "label": "Vurderingsordning",
+        "value": "Skriftlig skoleeksamen"
+      }
+    ],
+    "content": "Emnet gir en introduksjon til problemstillinger innen kunnskaps- og vitenskapsteori, etikk og politisk filosofi. Ulike syn på natur, menneske og teknologi tas opp til drøfting, i tillegg til spørsmål om relasjonen mellom individ og samfunn. Emnet skal gi kunnskap om perspektiver på vitenskap og fremme et reflektert forhold til vitenskapelig virksomhet og anvendelse av vitenskapelig kunnskap. Gjennom dialog- og diskusjonsbasert undervisning oppøves evnen til kritisk tenkning, samt ferdigheter i praktisk argumentasjon og faglig samarbeid. Emnet skal dessuten gi trening i å forholde seg kritisk til kilder, og til å skrive strukturert og systematisk.\nExamen philosophicum for medisin og helsefag skal fremme en kritisk holdning til helsefaglig praksis og ulike oppfatninger av sentrale begreper i helsefagene, slik som helse og sykdom. Gjennom en innføring i etisk analyse og argumentasjon skal studentene lære å identifisere og diskutere etiske problemstillinger knyttet til sentrale samfunnsutfordringer, teknologisk utvikling, og egen fag- eller profesjonsutøvelse.",
+    "learningOutcome": "Kunnskap\nKandidaten har kunnskap om\nanalyse og vurdering av argumentasjon, samt om sentrale begreper fra argumentasjonsteori\nsentrale teorier om viten, og hva som avgrenser vitenskapelig kunnskap fra andre kunnskapsformer\nsentrale vitenskapsteoretiske og metodologiske spørsmål innen medisin og helsevitenskap\nulike vitenskapers egenart\nulike teorier og perspektiv på menneske, kultur og natur\nulike syn på forholdet mellom individ og fellesskap, samt organiseringen av samfunnet\nhovedtyper av etisk tenkning\netiske og samfunnsmessige problemstillinger relatert til utvikling og bruk av teknologi, og til utøvelsen av eget fag eller egen profesjon\nsentrale profesjons-, behandlings- og forskningsetiske prinsipper innen medisin og helse\nFerdigheter\nKandidaten kan\ndiskutere problemstillinger i lys av ulike syn på kunnskap, vitenskap, etikk og politikk\nreflektere kritisk over ulike verdi- og menneskesyn og relatere dette til eget fag og profesjonsutøvelse\nidentifisere og diskutere etiske utfordringer relatert til medisinsk og helsefaglig praksis\nargumentere selvstendig, saklig og systematisk om temaer som behandles i emnet utfra prinsipper for kritisk kildebruk\nGenerell kompetanse\nKandidaten kan\nforholde seg til og anvende vitenskapelig kunnskap kritisk og konstruktivt\nreflektere over vitenskapenes samfunnsrolle\nbidra til godt og reflektert samarbeid\nformulere seg presist, strukturert og argumenterende",
+    "learningMethods": "Undervisningen består i en kombinasjon av forelesninger og seminar/øvingstimer. Forelesningene tar for seg de store linjene i pensum og gir et overblikk over de sentrale temaene i emnet. Seminarene/øvingstimene er basert på arbeid i mindre grupper veiledet av faglærer.\nObligatoriske aktiviteter: For å kunne gå opp til eksamen kreves 80% deltakelse på seminar, samt godkjenning av inntil to innleveringer, hvorav minst en er en gruppeinnlevering.\nAll obligatorisk aktivitet må bestås samlet i samme semester. Det er ikke mulig å ta med deler av obligatorisk aktivitet.\nHvis all obligatorisk aktivitet har blitt godkjent i EXPH0400 et tidligere semester, kan den godkjennes av instituttet.\nMerk at NTNU har flere ulike exphil-varianter. Det er ikke mulig å ta eksamen i en annen variant/emnekode enn den man har godkjent obligatorisk aktivitet i.\nFor nærmere opplysninger om obligatorisk aktivitet, se emnets Canvassider.",
+    "mandatoryActivities": [
+      "Obligatoriske aktiviteter"
+    ],
+    "assessmentDetails": "4 timers skriftlig skoleeksamen under tilsyn.\nIngen hjelpemidler tillatt.\nMerk at vurderingsordningen er ny fra høst 2026. Tidligere avlagte vurderinger og/eller vurderingsdeler i emnet kan ikke kombineres med den nye vurderingsordningen.",
+    "specialConditions": "Krever opptak til studieprogram:\nAudiologi (HSGAUB)\nBevegelsesvitenskap (BBEV)\nBioingeniørfag (BBIOING)\nErgoterapi (BERGO)\nFysioterapi (HSGFTB)\nMedisinstudiet (CMED)\nParamedisin (BPARAMED)\nRadiografi (BRADIO)\nSykepleie (BSPL)\nVernepleie (HSGVEB)",
+    "requiredKnowledge": "Krever opptak til bestemte studieprogram ved NTNU.",
+    "recommendedKnowledge": "Ingen",
+    "courseMaterials": "Pensumliste finnes i pensumarkivet på examen philosophicums nettside ( http://www.ntnu.no/exphil ) og på emnets Canvasside.",
+    "creditReductions": [
+      {
+        "courseCode": "EXPH0001",
+        "reduction": "7,5 sp",
+        "fromTerm": "Høst 2019"
+      },
+      {
+        "courseCode": "EXPH0002",
+        "reduction": "7,5 sp",
+        "fromTerm": "Høst 2019"
+      },
+      {
+        "courseCode": "EXPH0003",
+        "reduction": "7,5 sp",
+        "fromTerm": "Høst 2019"
+      },
+      {
+        "courseCode": "EXPH0004",
+        "reduction": "7,5 sp",
+        "fromTerm": "Høst 2019"
+      },
+      {
+        "courseCode": "EXPH0005",
+        "reduction": "7,5 sp",
+        "fromTerm": "Høst 2019"
+      },
+      {
+        "courseCode": "EXPH0006",
+        "reduction": "7,5 sp",
+        "fromTerm": "Høst 2019"
+      },
+      {
+        "courseCode": "EXPH6001",
+        "reduction": "7,5 sp",
+        "fromTerm": "Høst 2019"
+      },
+      {
+        "courseCode": "EXPH0100",
+        "reduction": "7,5 sp",
+        "fromTerm": "Høst 2019"
+      },
+      {
+        "courseCode": "EXPH0200",
+        "reduction": "7,5 sp",
+        "fromTerm": "Høst 2019"
+      },
+      {
+        "courseCode": "EXPH0300",
+        "reduction": "7,5 sp",
+        "fromTerm": "Høst 2019"
+      },
+      {
+        "courseCode": "EXPH0500",
+        "reduction": "7,5 sp",
+        "fromTerm": "Høst 2019"
+      },
+      {
+        "courseCode": "EXPH0350",
+        "reduction": "7,5 sp",
+        "fromTerm": "Høst 2021"
+      },
+      {
+        "courseCode": "EXPH0550",
+        "reduction": "7,5 sp",
+        "fromTerm": "Høst 2021"
+      },
+      {
+        "courseCode": "EXPH0600",
+        "reduction": "7,5 sp",
+        "fromTerm": "Høst 2023"
+      },
+      {
+        "courseCode": "EXPH0650",
+        "reduction": "7,5 sp",
+        "fromTerm": "Høst 2024"
+      },
+      {
+        "courseCode": "EXPH0450",
+        "reduction": "7,5 sp",
+        "fromTerm": "Høst 2025"
+      }
+    ],
+    "subjectAreas": [
+      "Examen philosophicum"
+    ],
+    "studyPrograms": [
+      {
+        "code": "HSGAUB",
+        "name": "Audiologi"
+      },
+      {
+        "code": "BBEV",
+        "name": "Bevegelsesvitenskap"
+      },
+      {
+        "code": "BBIOING",
+        "name": "Bioingeniørfag"
+      },
+      {
+        "code": "BERGO",
+        "name": "Ergoterapi"
+      },
+      {
+        "code": "HSGFTB",
+        "name": "Fysioterapi"
+      },
+      {
+        "code": "CMED",
+        "name": "Medisinstudiet"
+      },
+      {
+        "code": "BPARAMED",
+        "name": "Paramedisin"
+      },
+      {
+        "code": "BRADIO",
+        "name": "Radiografi"
+      },
+      {
+        "code": "BSPL",
+        "name": "Sykepleie"
+      },
+      {
+        "code": "HSGVEB",
+        "name": "Vernepleie"
+      }
+    ],
+    "contacts": [
+      {
+        "role": "Emneansvarlig/koordinator",
+        "persons": [
+          {
+            "name": "Dag Hallvard Haavelmoen Nestby",
+            "url": "https://www.ntnu.no/ansatte/dag.nestby"
+          }
+        ]
+      }
+    ],
+    "department": "Institutt for filosofi og religionsvitenskap",
+    "exams": [
+      {
+        "occasion": "Ordinær eksamen",
+        "season": "Høst 2026",
+        "form": "Skriftlig skoleeksamen",
+        "weighting": "100/100",
+        "aidCode": "Kode E",
+        "aidCodeDescription": "E: Ingen hjelpemidler tillatt.",
+        "date": "2026-12-03",
+        "dateText": "03.12.2026",
+        "time": "09:00",
+        "timeText": "09:00",
+        "duration": "4 timer",
+        "system": "Inspera Assessment",
+        "rooms": [
+          {
+            "building": "Ametyst",
+            "room": "A-atriet-2/3 (A-160)",
+            "candidates": 60
+          },
+          {
+            "building": "Ankeret/Hovedbygget",
+            "room": "C218",
+            "candidates": 40
+          },
+          {
+            "building": "Ankeret/Hovedbygget",
+            "room": "C225",
+            "candidates": 15
+          },
+          {
+            "building": "Gnisten/Fagskolen",
+            "room": "G325",
+            "candidates": 30
+          },
+          {
+            "building": "Gnisten/Fagskolen",
+            "room": "G326",
+            "candidates": 36
+          },
+          {
+            "building": "Gnisten/Fagskolen",
+            "room": "G328A",
+            "candidates": 18
+          },
+          {
+            "building": "Gnisten/Fagskolen",
+            "room": "G331",
+            "candidates": 36
+          },
+          {
+            "building": "Mustad, Inngang A",
+            "room": "M433-Eksamensrom 4.etg",
+            "candidates": null
+          },
+          {
+            "building": "Mustad, Inngang D",
+            "room": "M438 Eksamensrom 4.etg, Inngang D",
+            "candidates": 90
+          },
+          {
+            "building": "Sluppenvegen 14",
+            "room": "SL110 hvit sone",
+            "candidates": 64
+          },
+          {
+            "building": "Sluppenvegen 14",
+            "room": "SL110 lilla sone",
+            "candidates": 64
+          },
+          {
+            "building": "Sluppenvegen 14",
+            "room": "SL110 turkis sone",
+            "candidates": 80
+          },
+          {
+            "building": "Sluppenvegen 14",
+            "room": "SL111 blå sone",
+            "candidates": 36
+          },
+          {
+            "building": "Sluppenvegen 14",
+            "room": "SL111 brun sone",
+            "candidates": 81
+          },
+          {
+            "building": "Sluppenvegen 14",
+            "room": "SL111 grønn sone",
+            "candidates": 50
+          },
+          {
+            "building": "Sluppenvegen 14",
+            "room": "SL111 lyseblå sone",
+            "candidates": 72
+          },
+          {
+            "building": "Sluppenvegen 14",
+            "room": "SL111 orange sone",
+            "candidates": 60
+          },
+          {
+            "building": "Sluppenvegen 14",
+            "room": "SL310 blå sone",
+            "candidates": 48
+          },
+          {
+            "building": "Sluppenvegen 14",
+            "room": "SL310 hvit sone",
+            "candidates": 46
+          },
+          {
+            "building": "Sluppenvegen 14",
+            "room": "SL310 lilla sone",
+            "candidates": 80
+          },
+          {
+            "building": "Sluppenvegen 14",
+            "room": "SL311 brun sone",
+            "candidates": 30
+          },
+          {
+            "building": "Sluppenvegen 14",
+            "room": "SL410 blå sone",
+            "candidates": 51
+          },
+          {
+            "building": "Sluppenvegen 14",
+            "room": "SL410 orange sone",
+            "candidates": 58
+          },
+          {
+            "building": "Sluppenvegen 14",
+            "room": "SL430",
+            "candidates": 54
+          },
+          {
+            "building": "Smaragd",
+            "room": "S206",
+            "candidates": 50
+          },
+          {
+            "building": "Smaragd",
+            "room": "S411",
+            "candidates": 29
+          },
+          {
+            "building": "Smaragd",
+            "room": "S415",
+            "candidates": 10
+          }
+        ]
+      },
+      {
+        "occasion": "Ordinær eksamen",
+        "season": "Vår 2027",
+        "form": "Skriftlig skoleeksamen",
+        "weighting": "100/100",
+        "aidCode": "Kode E",
+        "aidCodeDescription": "E: Ingen hjelpemidler tillatt.",
+        "date": null,
+        "dateText": null,
+        "time": null,
+        "timeText": null,
+        "duration": "4 timer",
+        "system": "Inspera Assessment",
+        "rooms": []
+      }
+    ],
+    "studyYear": 2026,
+    "availableYears": [
+      2026,
+      2025,
+      2024,
+      2023,
+      2022,
+      2021,
+      2020,
+      2019
+    ],
+    "notices": [],
+    "courseLinks": [
+      {
+        "label": "Faglærers emneside",
+        "url": "http://www.ntnu.no/exphil"
+      }
+    ]
+  }
+}

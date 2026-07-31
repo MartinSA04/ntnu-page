@@ -1,0 +1,238 @@
+{
+  "url": "http://127.0.0.1:8788/api/course/TMA4412",
+  "status": 200,
+  "contentType": "application/json; charset=utf-8",
+  "body": {
+    "courseCode": "TMA4412",
+    "courseName": "Matematikk 2C: Diskret matematikk",
+    "credits": 7.5,
+    "level": "Grunnleggende emner, nivå I",
+    "teachingStart": "Høst 2026",
+    "teachingDuration": "1 semester",
+    "teachingLanguage": "Norsk",
+    "location": "Trondheim",
+    "assessmentScheme": "Skriftlig skoleeksamen",
+    "gradeRule": "Bokstavkarakterer",
+    "facts": [
+      {
+        "label": "Studiepoeng",
+        "value": "7,5"
+      },
+      {
+        "label": "Nivå",
+        "value": "Grunnleggende emner, nivå I"
+      },
+      {
+        "label": "Undervisningsstart",
+        "value": "Høst 2026"
+      },
+      {
+        "label": "Varighet",
+        "value": "1 semester"
+      },
+      {
+        "label": "Undervisningsspråk",
+        "value": "Norsk"
+      },
+      {
+        "label": "Sted",
+        "value": "Trondheim"
+      },
+      {
+        "label": "Vurderingsordning",
+        "value": "Skriftlig skoleeksamen"
+      }
+    ],
+    "content": "Emnet gir en innføring i matematisk logikk og mengdelære, elementær tallteori med modulær aritmetikk, og kryptologi, inkludert RSA og diskret logaritmer. Andre sentrale tema er: Følger, rekurrensrelasjoner, matematisk induksjon og kombinatoriske tellemetoder med anvendelser. I tillegg gis en innføring i teorien for relasjoner, grafer og trær, samt formelle språk og endelige automater.",
+    "learningOutcome": "1. Kunnskap: Studenten har grunnleggende kunnskaper innen matematisk logikk, mengdelære og kombinatoriske tellemetoder. Studenten har kjennskap til elementær tallteori, inkludert det kinesiske restteorem og Fermats lille teorem. Studenten vet hvordan tallteori anvendes i systmerer for kryptering og autentisering, som RSA og diskret log. Studenten har kunnskap om rekursjon og induksjon, samt om relasjoner, grafer og trær. Studenten har også grunnleggende kunnskaper om formelle språk, grammatikker og endelige tilstandsmaskiner.\n2. Ferdigheter: Studenten kan gjøre praktisk bruk av elementær logikk og mengdelære, kan bruke Euklids algoritme, og behersker modulær aritmetikk, og forstår hvordan man kan bruke tallteori til å kryptere meldinger. Studenten kan løse systemer av lineære kongruenser ved hjelp av det kinesiske restteorem, kan føre enkle induksjonsbevis og kan gjenkjenne, forstå og bruke begreper som relasjoner, grafer og trær i anvendelser, f.eks. innen informasjonsteknologi. Videre kan studenten anvende kombinatoriske tellemetoder til å løse praktiske problemer, og kan gjøre praktisk bruk av endelige tilstandsmaskiner",
+    "learningMethods": "Forelesninger og obligatoriske øvinger.",
+    "mandatoryActivities": [
+      "Obligatoriske øvinger"
+    ],
+    "assessmentDetails": "Karakter basert på avsluttende skriftlig eksamen. Ved utsatt eksamen (kontinuasjonseksamen) kan skriftlig eksamen bli endret til muntlig eksamen. Utsatt eksamen er i august.",
+    "specialConditions": null,
+    "requiredKnowledge": null,
+    "recommendedKnowledge": null,
+    "courseMaterials": "Oppgis ved kursstart.",
+    "creditReductions": [
+      {
+        "courseCode": "TMA4140",
+        "reduction": "7,5 sp",
+        "fromTerm": "Høst 2025"
+      },
+      {
+        "courseCode": "MA0301",
+        "reduction": "5 sp",
+        "fromTerm": "Høst 2025"
+      },
+      {
+        "courseCode": "IMAA2024",
+        "reduction": "3,5 sp",
+        "fromTerm": "Høst 2025"
+      },
+      {
+        "courseCode": "IMAG2024",
+        "reduction": "3,5 sp",
+        "fromTerm": "Høst 2025"
+      },
+      {
+        "courseCode": "IMAT2024",
+        "reduction": "3,5 sp",
+        "fromTerm": "Høst 2025"
+      },
+      {
+        "courseCode": "BMA1010",
+        "reduction": "7,5 sp",
+        "fromTerm": "Høst 2026"
+      },
+      {
+        "courseCode": "DCST1004",
+        "reduction": "7,5 sp",
+        "fromTerm": "Høst 2026"
+      }
+    ],
+    "subjectAreas": [
+      "Teknologiske fag"
+    ],
+    "studyPrograms": [
+      {
+        "code": "MTKOM",
+        "name": "Cybersikkerhet og datakommunikasjon"
+      },
+      {
+        "code": "MTDT",
+        "name": "Datateknologi"
+      },
+      {
+        "code": "BDIGSEC",
+        "name": "Digital infrastruktur og cybersikkerhet"
+      },
+      {
+        "code": "MTIØT",
+        "name": "Industriell økonomi og teknologiledelse"
+      },
+      {
+        "code": "MTING",
+        "name": "Ingeniørvitenskap og IKT"
+      },
+      {
+        "code": "MLREAL",
+        "name": "Lektorutdanning i realfag for trinn 8 – 13"
+      },
+      {
+        "code": "BMAT",
+        "name": "Matematiske fag"
+      },
+      {
+        "code": "ÅMATSTAT",
+        "name": "Matematiske fag"
+      }
+    ],
+    "contacts": [
+      {
+        "role": "Emneansvarlig/koordinator",
+        "persons": [
+          {
+            "name": "Aslak Bakke Buan",
+            "url": "https://www.ntnu.no/ansatte/aslak.buan"
+          },
+          {
+            "name": "Morten Rotvold Solberg",
+            "url": "https://www.ntnu.no/ansatte/mosolb"
+          }
+        ]
+      }
+    ],
+    "department": "Institutt for matematiske fag",
+    "exams": [
+      {
+        "occasion": "Ordinær eksamen",
+        "season": "Høst 2026",
+        "form": "Skriftlig skoleeksamen",
+        "weighting": "100/100",
+        "aidCode": "Kode D",
+        "aidCodeDescription": "D: Ingen trykte eller håndskrevne hjelpemidler tillatt. Bestemt, enkel kalkulator tillatt.",
+        "date": "2026-11-26",
+        "dateText": "26.11.2026",
+        "time": "09:00",
+        "timeText": "09:00",
+        "duration": "4 timer",
+        "system": "Inspera Assessment",
+        "rooms": [
+          {
+            "building": "Sluppenvegen 14",
+            "room": "SL110 hvit sone",
+            "candidates": 64
+          },
+          {
+            "building": "Sluppenvegen 14",
+            "room": "SL110 lilla sone",
+            "candidates": 64
+          },
+          {
+            "building": "Sluppenvegen 14",
+            "room": "SL110 turkis sone",
+            "candidates": 6
+          },
+          {
+            "building": "Sluppenvegen 14",
+            "room": "SL111 blå sone",
+            "candidates": 36
+          },
+          {
+            "building": "Sluppenvegen 14",
+            "room": "SL111 brun sone",
+            "candidates": 17
+          },
+          {
+            "building": "Sluppenvegen 14",
+            "room": "SL111 lyseblå sone",
+            "candidates": 72
+          },
+          {
+            "building": "Sluppenvegen 14",
+            "room": "SL111 orange sone",
+            "candidates": 60
+          },
+          {
+            "building": "Sluppenvegen 14",
+            "room": "SL410 blå sone",
+            "candidates": 51
+          },
+          {
+            "building": "Sluppenvegen 14",
+            "room": "SL410 orange sone",
+            "candidates": 49
+          }
+        ]
+      },
+      {
+        "occasion": "Utsatt eksamen",
+        "season": "Sommer 2027",
+        "form": "Skriftlig skoleeksamen",
+        "weighting": "100/100",
+        "aidCode": "Kode D",
+        "aidCodeDescription": "D: Ingen trykte eller håndskrevne hjelpemidler tillatt. Bestemt, enkel kalkulator tillatt.",
+        "date": null,
+        "dateText": null,
+        "time": null,
+        "timeText": null,
+        "duration": "4 timer",
+        "system": "Inspera Assessment",
+        "rooms": []
+      }
+    ],
+    "studyYear": 2026,
+    "availableYears": [
+      2026,
+      2025
+    ],
+    "notices": [],
+    "courseLinks": [
+      {
+        "label": "Faglærers emneside",
+        "url": "https://wiki.math.ntnu.no/tma4412"
+      }
+    ]
+  }
+}

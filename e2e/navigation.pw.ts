@@ -1,4 +1,5 @@
-import { expect, type Page, test } from "@playwright/test";
+import type { Page } from "@playwright/test";
+import { expect, test } from "./harness.js";
 
 /**
  * Client-side navigation is the failure mode this suite exists for.
@@ -9,22 +10,15 @@ import { expect, type Page, test } from "@playwright/test";
  * 1. `swapRootAttributes()` removes every attribute from `<html>` and restores
  *    only what the server rendered. `data-theme` is set on the client, so each
  *    navigation dropped it and the site snapped back to light.
- * 2. Hoisted page modules are evaluated once per URL. A module already
- *    evaluated is not re-run on a swap, so every page's mount code stopped
- *    firing after the first in-site navigation — the planner rendered an empty
- *    shell ("the plan is gone"), search returned nothing, course pages sat
- *    blank.
+ * 2. Hoisted page modules are evaluated once per URL, so every page's mount
+ *    code stopped firing after the first in-site navigation — the planner
+ *    rendered an empty shell, search returned nothing, course pages sat blank.
  *
  * The fixes are the `astro:after-swap` re-apply in `Layout.astro` and the
  * `onPage()` wrapper on every page script. These tests fail without them.
  *
- * The rework (2026-07-25) deleted `/studier/` and the plan strip: the site's
- * chrome now offers exactly two nav destinations (`/planlegger/`, `/emner/`)
- * and nothing else. The landing page's `#studieinfo-chip` went too
- * (2026-07-30): the topbar carries no plan state and no way into the
- * studieinfo modal, which only `/planlegger/` opens. The nav circuits below
- * only ever hop between the two real chrome links; `/studier/`'s own test is
- * now a 404 check, not a positive case.
+ * The site's chrome offers exactly two nav destinations and carries no plan
+ * state, so the circuits below only hop between those two.
  */
 
 const THEME_KEY = "np:theme";
@@ -40,13 +34,11 @@ const courseRows = (page: Page) => page.locator("#planner-course-rows .planner-c
 /**
  * Clicks a real in-site link to `href` and waits for the swap to settle.
  *
- * It has to be a *click on an anchor* — `page.goto()` would be a full document
- * load, which is precisely the case these tests do not care about and would
- * make the whole file pass against a broken ClientRouter.
+ * It has to be a *click on an anchor* — `page.goto()` is a full document load,
+ * which would make the whole file pass against a broken ClientRouter.
  *
- * The topbar nav and the footer are both sitewide chrome rendered by
- * `Layout.astro`; the selector spans both rather than hardcoding which one a
- * given route currently sits in.
+ * The selector spans the topbar nav and the footer rather than hardcoding
+ * which one a given route currently sits in.
  */
 async function navTo(page: Page, href: string): Promise<void> {
   const link = page.locator(`.site-nav a[href="${href}"], .site-footer a[href="${href}"]`).first();
@@ -64,10 +56,9 @@ async function seed(page: Page, entries: Record<string, string>): Promise<void> 
   }, entries);
 }
 
-// BIT kull 2025, period 3 (26h — a 2nd-year autumn): obligatory IT1901 +
-// TDT4120 + TDT4160, 7,5 sp each = 22,5 sp (verified live against the worker).
-// No manual courses stored — `np:plans` is left empty and the programme
-// prefill derives them itself, same as a real studieinfo Lagre would.
+// BIT kull 2025, period 3 (26h): obligatory IT1901 + TDT4120 + TDT4160, 7,5 sp
+// each = 22,5 sp (verified live). No manual courses stored — the programme
+// prefill derives them itself, as a real studieinfo Lagre would.
 const BIT_PROFILE = JSON.stringify({
   program: { code: "BIT", name: "Informatikk - bachelor", cohort: 2025 },
 });
@@ -160,14 +151,13 @@ test.describe("other pages keep working after navigation", () => {
   });
 
   test("the catalog query survives Back from a course page", async ({ page }) => {
-    // search-4: `?q=` was read on setup but never written, so Back from a
-    // course page restored /emner/ with an empty field, zero rows and "Skriv
-    // for å søke i 5470 emner." — comparing three candidates meant retyping the
-    // query three times.
+    // `?q=` was read on setup but never written, so Back from a course page
+    // restored /emner/ with an empty field and zero rows — comparing three
+    // candidates meant retyping the query three times.
     await page.goto("/emner/");
     await page.fill("#emner-search", "algoritmer");
     await expect(page.locator("#emner-results tr.emner-row").first()).toBeVisible({ timeout: 15_000 });
-    // The write is debounced behind the last keystroke (search-7/astro-6), so
+    // The write is debounced behind the last keystroke, so
     // this is a wait, not a read.
     await expect(page).toHaveURL(/\?q=algoritmer/, { timeout: 15_000 });
 
@@ -250,16 +240,10 @@ test("the footer states provenance and the caveat, and links nowhere", async ({ 
   await expect(footer.locator("a")).toHaveCount(0);
 });
 
-test("/studier/ is gone", async ({ page }) => {
-  const response = await page.goto("/studier/");
-  expect(response?.status()).toBe(404);
-});
-
 test("a lowercase course URL lands on the course page, not a 404 (astro-7)", async ({ page }) => {
-  // `getStaticPaths` emits the catalog's own casing, so /emne/tdt4100/ used to
-  // 404 on a page that exists one casing change away. The worker 301s to the
-  // uppercased path after ASSETS has said 404 — the redirect can never loop,
-  // uppercasing being idempotent.
+  // `getStaticPaths` emits the catalog's own casing, so /emne/tdt4100/ 404s on
+  // a page that exists one casing change away. The worker 301s to the uppercased
+  // path after ASSETS has said 404; uppercasing is idempotent, so no loop.
   const response = await page.goto("/emne/tdt4100/");
   expect(response?.status()).toBe(200);
   expect(page.url()).toMatch(/\/emne\/TDT4100\/$/);
