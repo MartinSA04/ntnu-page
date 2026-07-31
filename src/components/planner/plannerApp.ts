@@ -60,6 +60,7 @@ import {
 import { type AddCourseDeps, type AddCourseHandle, mountAddCourse } from "./addCourse.js";
 import { mountBlockPopover, type SessionChoice } from "./blockPopover.js";
 import { renderBoard } from "./board.js";
+import { renderColumnGrid, syncColumnNow } from "./columnGrid.js";
 import { type CourseSettingsContext, mountCourseSettings } from "./courseSettings.js";
 import { el, formatCreditNumber, formatCredits, formatShortDate, settingsIcon } from "./dom.js";
 import {
@@ -131,8 +132,14 @@ const FULL_LOAD_CREDITS = 30;
 /** The grid's hour rail, in px (`3rem` in the page's `.planner-grid`). Kept in view when scrolling to today. */
 const RAIL_WIDTH_PX = 48;
 
-/** The two week views (REWORK-2026-07-29b D2). */
-export type WeekView = "uke" | "tavle";
+/**
+ * The three week views: the transposed grid (days as rows, REWORK-2026-07-29b
+ * D1), the column grid (days as columns — the timetable shape, REWORK-2026-07-30h)
+ * and Tavla (no geometry, D2). Views of one plan, never three plans.
+ */
+export type WeekView = "uke" | "kolonner" | "tavle";
+
+const WEEK_VIEWS: readonly WeekView[] = ["uke", "kolonner", "tavle"];
 
 const WEEK_VIEW_KEY = "np:weekView";
 
@@ -147,7 +154,8 @@ const WEEK_VIEW_KEY = "np:weekView";
  */
 function loadWeekView(): WeekView {
   try {
-    return localStorage.getItem(WEEK_VIEW_KEY) === "tavle" ? "tavle" : "uke";
+    const stored = localStorage.getItem(WEEK_VIEW_KEY);
+    return WEEK_VIEWS.find((view) => view === stored) ?? "uke";
   } catch {
     return "uke";
   }
@@ -177,6 +185,7 @@ interface PlannerElements {
   directionButton: HTMLButtonElement;
   othersToggle: HTMLButtonElement;
   viewUke: HTMLButtonElement;
+  viewKolonner: HTMLButtonElement;
   viewTavle: HTMLButtonElement;
   scrollHint: HTMLElement;
   gridFrame: HTMLElement;
@@ -214,6 +223,7 @@ function getElements(): PlannerElements | null {
     directionButton: byId<HTMLButtonElement>("planner-direction-btn"),
     othersToggle: byId<HTMLButtonElement>("planner-others-toggle"),
     viewUke: byId<HTMLButtonElement>("planner-view-uke"),
+    viewKolonner: byId<HTMLButtonElement>("planner-view-kolonner"),
     viewTavle: byId<HTMLButtonElement>("planner-view-tavle"),
     scrollHint: byId<HTMLElement>("planner-scroll-hint"),
     gridFrame: byId<HTMLElement>("planner-grid-frame"),
@@ -1037,8 +1047,11 @@ export async function mountPlannerApp(
   function tickNow(): void {
     const stamp = todayStamp();
     if (stamp === dayStamp) {
-      // The ordinary minute: one element moves, nothing re-renders.
+      // The ordinary minute: one element moves, nothing re-renders. Both
+      // grids are asked; each does nothing when it is not the one on screen,
+      // which is cheaper than teaching the tick which view is drawn.
       syncNowMarker(elements.gridFrame);
+      syncColumnNow(elements.gridFrame);
       return;
     }
     dayStamp = stamp;
@@ -1061,6 +1074,7 @@ export async function mountPlannerApp(
 
   elements.editPlan.addEventListener("click", () => studieinfo.open(), { signal });
   elements.viewUke.addEventListener("click", () => setWeekView("uke"));
+  elements.viewKolonner.addEventListener("click", () => setWeekView("kolonner"));
   elements.viewTavle.addEventListener("click", () => setWeekView("tavle"));
   // The travelling rule is measured, so it has to be re-measured whenever the
   // measurement could change: a resize, and the frame after the webfont swaps
@@ -1068,10 +1082,10 @@ export async function mountPlannerApp(
   window.addEventListener("resize", renderViewTabs, { passive: true, signal });
   document.fonts?.ready.then(() => renderViewTabs());
 
-  // --- Uke ⇄ Tavla (REWORK-2026-07-29b D2) --------------------------------
+  // --- Rader ⇄ Kolonner ⇄ Liste (REWORK-2026-07-29b D2, -07-30h) ----------
 
   /**
-   * Switches which of the two views draws the week.
+   * Switches which of the three views draws the week.
    *
    * Only the week is re-rendered: the exam list, the credit line and the
    * course rows say the same thing in both views, and rebuilding them would
@@ -1089,8 +1103,8 @@ export async function mountPlannerApp(
   /**
    * The pressed state, and the rule that travels to it.
    *
-   * The offsets are measured rather than declared because "Rutenett" and
-   * "Liste" are different widths — in every face, at every zoom step, and
+   * The offsets are measured rather than declared because "Rader", "Kolonner"
+   * and "Liste" are different widths — in every face, at every zoom step, and
    * again once the webfont lands. A hard-coded 50 % is wrong at all of them.
    * `offsetLeft` is relative to the tabs container, which is the positioned
    * ancestor of the rule, so no further arithmetic is needed.
@@ -1103,6 +1117,7 @@ export async function mountPlannerApp(
     let active: HTMLElement | null = null;
     for (const [button, view] of [
       [elements.viewUke, "uke"],
+      [elements.viewKolonner, "kolonner"],
       [elements.viewTavle, "tavle"],
     ] as const) {
       const on = weekView === view;
@@ -1652,10 +1667,16 @@ export async function mountPlannerApp(
    */
   function syncGridScroll(): void {
     const frame = elements.gridFrame;
-    const grid = frame.querySelector<HTMLElement>(".planner-grid");
+    // Whichever week is mounted: the transposed grid or the column grid. Asking
+    // for `.planner-grid` alone left the column view with no edge mask, no
+    // `data-scroll` and a hint that stayed hidden — on the view that scrolls
+    // sideways by design, which is the one that needs all three.
+    const week =
+      frame.querySelector<HTMLElement>(".planner-grid") ??
+      frame.querySelector<HTMLElement>(".planner-cols");
     const maxScroll = frame.scrollWidth - frame.clientWidth;
-    // No grid mounted (a message or fallback card) — nothing to scroll to.
-    const hidden = grid ? grid.getBoundingClientRect().width - frame.clientWidth : 0;
+    // No week mounted (a message or fallback card) — nothing to scroll to.
+    const hidden = week ? week.getBoundingClientRect().width - frame.clientWidth : 0;
     if (hidden <= 1) {
       delete frame.dataset.scroll;
       elements.scrollHint.hidden = true;
@@ -1667,7 +1688,15 @@ export async function mountPlannerApp(
     elements.scrollHint.textContent = "Dra sidelengs for å se hele uken.";
   }
 
-  /** Once per mount: put today's column in view rather than always Monday's. */
+  /**
+   * Once per mount: put today's column in view rather than always Monday's.
+   *
+   * Only the column view has columns to scroll to. It queried
+   * `.planner-grid-day-header` — a class the transposed week stopped rendering
+   * in REWORK-2026-07-29b — and so did nothing at all for four weeks; it is
+   * pointed at the class that exists now, and no-ops in the other two views
+   * because they have no day headers to find.
+   */
   let didScrollToToday = false;
 
   function scrollToToday(): void {
@@ -1679,7 +1708,7 @@ export async function mountPlannerApp(
     if (dayNumber > 5) return;
     // `Array.from`, not a spread: this module is now reachable from the Node
     // typecheck pass (tsconfig.test.json), whose `lib` has no `DOM.Iterable`.
-    const headers = Array.from(frame.querySelectorAll<HTMLElement>(".planner-grid-day-header"));
+    const headers = Array.from(frame.querySelectorAll<HTMLElement>(".planner-cols-day-header"));
     const header = headers[dayNumber - 1];
     if (!header) return;
     didScrollToToday = true;
@@ -1915,6 +1944,44 @@ export async function mountPlannerApp(
           change.addEventListener("click", () => studieinfo.open());
           card.append(change);
         });
+      }
+    } else if (weekView === "kolonner") {
+      // The column grid draws into the same frame from the same states, on the
+      // same terms as Tavla below: `renderGrid` still owns the margin notes,
+      // the conflict count and the honest-verdict logic, because which courses
+      // we could not draw and which parallels are a guess are facts about the
+      // WEEK, not about which way round it is drawn.
+      gridResult = renderGrid(discardHost, elements.gridNotes, filteredStates, showOthers, {
+        loading: anyLoading,
+        pendingChoiceMessage: question?.weekMessage ?? null,
+      });
+      const columns = renderColumnGrid(
+        elements.gridFrame,
+        filteredStates,
+        currentSemester()?.teachingWeeks ?? [],
+        showOthers,
+        {
+          todayNumber: todayWeekday(),
+          animate: pendingViewAnimation,
+          onBlockClick: openBlockPopover,
+        },
+      );
+      // Nothing to draw is a message branch, not an empty frame. The messages
+      // (the loading skeleton, "Ingen timeplandata", an unanswered
+      // studieretning question) live in `renderGrid` and only there, so the
+      // fallback is to let it draw them into the real frame — it cannot draw a
+      // week here, because the guard is that it did not have one.
+      if (columns.blockCount === 0 && gridResult.state !== "grid") {
+        gridResult = renderGrid(
+          elements.gridFrame,
+          elements.gridNotes,
+          filteredStates,
+          showOthers,
+          {
+            loading: anyLoading,
+            pendingChoiceMessage: question?.weekMessage ?? null,
+          },
+        );
       }
     } else if (weekView === "tavle") {
       // Tavla renders into the same frame from the same states — it is a view

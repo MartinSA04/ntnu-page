@@ -23,6 +23,7 @@ import { applyGroupSelection, entryGroupKey } from "../../lib/planner/groups.js"
 import { entriesInSemester, parseWeeks, type ScheduleEntry } from "../../lib/planner/schedule.js";
 import { dayName, dot, el, weekLabel } from "./dom.js";
 import { type BlockDetail, blockDetailFor, buildingLabel, visibleLayer } from "./grid.js";
+import { staggerStep } from "./layerMotion.js";
 import type { PlanCourseState } from "./types.js";
 
 export interface BoardRenderOptions {
@@ -39,7 +40,14 @@ export interface BoardRenderResult {
   rowCount: number;
 }
 
-interface BoardEntry extends ScheduleEntry {
+/**
+ * One session of the plan's week, after the student's group selection.
+ *
+ * Exported because Tavla is no longer the only view built from it: the column
+ * grid (`columnGrid.ts`) reads the same rows through `collectSessions` below,
+ * so there is exactly one answer to "what is in this week" behind both.
+ */
+export interface SessionEntry extends ScheduleEntry {
   hueVar: string;
   courseName: string;
   /** The activity/group label. */
@@ -86,10 +94,16 @@ export function isRoomCode(room: string): boolean {
 /**
  * The sessions this semester's week actually contains, per course, after the
  * student's own group selection — the identical narrowing `renderGrid` does,
- * so the two views can never disagree about what is in the week.
+ * so the views can never disagree about what is in the week.
+ *
+ * Exported for `columnGrid.ts`, which needs precisely these rows and must not
+ * grow a third copy of this pipeline.
  */
-function collect(courses: PlanCourseState[], teachingWeeks: number[]): BoardEntry[] {
-  const out: BoardEntry[] = [];
+export function collectSessions(
+  courses: PlanCourseState[],
+  teachingWeeks: number[],
+): SessionEntry[] {
+  const out: SessionEntry[] = [];
   for (const state of courses) {
     const timetable = state.bundle?.timetable;
     if (!timetable) continue;
@@ -131,7 +145,7 @@ function collect(courses: PlanCourseState[], teachingWeeks: number[]): BoardEntr
 
 /** One collision incident within a day: the sessions in it and the codes involved. */
 interface ClashSegment {
-  members: Set<BoardEntry>;
+  members: Set<SessionEntry>;
   /** Distinct course codes, in the order the sessions start. */
   codes: string[];
 }
@@ -150,7 +164,7 @@ interface ClashSegment {
  * collapses a course's parallel sections before the engine sees them, so a
  * single-code segment would be a course reported as colliding with itself.
  */
-function clashSegments(items: BoardEntry[]): ClashSegment[] {
+function clashSegments(items: SessionEntry[]): ClashSegment[] {
   const clashing = items
     .filter((e) => e.clash !== null)
     .sort((a, b) => (a.clash?.window.start ?? 0) - (b.clash?.window.start ?? 0));
@@ -189,7 +203,7 @@ export function renderBoard(
   // same function. Listing every published lab group because this view has
   // room for them would make the two views disagree about what the week is —
   // 57 rows against 7 bars, which is what shipped for exactly one build.
-  const entries = visibleLayer(collect(courses, teachingWeeks), showOthers).shown;
+  const entries = visibleLayer(collectSessions(courses, teachingWeeks), showOthers).shown;
 
   // Collision marking runs through the SAME engine as the grid's — lecture ×
   // lecture only, touching boundaries excluded (conflicts.ts). A second
@@ -283,7 +297,7 @@ export function renderBoard(
     // rather than one note per day at the bottom: a day with two unrelated
     // overlaps had them concatenated into a single sentence naming four
     // courses, none of which actually clashed with all the others.
-    const noteAfter = new Map<BoardEntry, ClashSegment>();
+    const noteAfter = new Map<SessionEntry, ClashSegment>();
     for (const segment of segments) {
       const last = items.filter((e) => segment.members.has(e)).at(-1);
       if (last) noteAfter.set(last, segment);
@@ -309,13 +323,22 @@ export function renderBoard(
     }
   }
 
+  // The rhythm the rows strike in at, tightened on a long week so the list
+  // still lands inside the budget (`staggerStep`) — a 40-session list at a flat
+  // 45 ms a row is nearly two seconds of rows appearing.
+  board.style.setProperty("--planner-step", `${staggerStep(strike, 45)}ms`);
   host.append(board);
   return { rowCount: entries.length };
 }
 
 /**
- * The identity a row keeps across a re-render, so `layerMotion` can tell a
+ * The identity a session keeps across a re-render, so `layerMotion` can tell a
  * session that MOVED from one that arrived.
+ *
+ * Exported for `columnGrid.ts`, whose blocks need exactly this and cannot use
+ * the transposed grid's `GridEntry.ordinal` — it is assigned in a pipeline this
+ * view does not run. One definition of "the same session", or the two views
+ * disagree about what travelled.
  *
  * It has to be built from the session itself rather than from its position:
  * revealing the øving layer inserts rows between the lectures, so every index
@@ -324,7 +347,7 @@ export function renderBoard(
  * two identical parallels at the same hour — and is stable because the layer
  * filter removes rows without reordering them.
  */
-function motionKey(entry: BoardEntry, seen: Map<string, number>): string {
+export function motionKey(entry: SessionEntry, seen: Map<string, number>): string {
   const base = [
     entry.courseCode,
     entry.dayNumber,
@@ -338,7 +361,7 @@ function motionKey(entry: BoardEntry, seen: Map<string, number>): string {
 }
 
 function buildRow(
-  entry: BoardEntry,
+  entry: SessionEntry,
   strike: number,
   key: string,
   onBlockClick?: BoardRenderOptions["onBlockClick"],

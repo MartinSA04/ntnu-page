@@ -103,16 +103,30 @@ const programOptionsJson = JSON.stringify(programOptions).replaceAll("<", "\\u00
             grid of weekdays with an hour ruler over it does not need to be
             told it is a week (REWORK-2026-07-30j). */}
         <h2 class="planner-section-name sr-only" id="planner-week-heading">Uke</h2>
-        {/* Two ways of looking at one week, and one layer you can add to it —
+        {/* Three ways of looking at one week, and one layer you can add to it —
             and they used to be three identical uppercase mono `.np-toggle`s in
             a row, so nothing in the form said that one PICKS and the other
-            ADDS. The switch is two words with a rule that slides between them;
+            ADDS. The switch is words with a rule that slides between them;
             the layer is a box you tick. Neither can be mistaken for the
-            other now (REWORK-2026-07-30b). */}
+            other now (REWORK-2026-07-30b).
+
+            The two grids are named by how the days are arranged, not by what
+            they are made of: "Rutenett" and "Kolonner" would both be grids and
+            neither label would say which. Rader = days as rows with time
+            across (the transposed week); Kolonner = days as columns with time
+            down (the timetable shape). */}
         <div class="planner-section-tools">
-          <div class="planner-view-tabs" role="group" aria-label="Vis uka som rutenett eller liste">
+          <div class="planner-view-tabs" role="group" aria-label="Velg hvordan uka vises">
             <button type="button" class="planner-view-tab" id="planner-view-uke" aria-pressed="true">
-              Rutenett
+              Rader
+            </button>
+            <button
+              type="button"
+              class="planner-view-tab"
+              id="planner-view-kolonner"
+              aria-pressed="false"
+            >
+              Kolonner
             </button>
             <button
               type="button"

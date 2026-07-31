@@ -77,6 +77,7 @@ import {
 import { type LayoutInput, layoutDay } from "../../lib/planner/layout.js";
 import { parseWeeks, type ScheduleEntry } from "../../lib/planner/schedule.js";
 import { dayName, dot, el, weekLabel } from "./dom.js";
+import { staggerStep } from "./layerMotion.js";
 import type { PlanCourseState } from "./types.js";
 
 const ROW_MINUTES = 15;
@@ -526,9 +527,29 @@ function durationMinutes(entry: GridEntry): number {
   return Math.max(0, timeToMinutes(entry.endTime) - timeToMinutes(entry.startTime));
 }
 
-/** An all-day drop-in window (08:00–18:00 lab). Never a lecture — see the module docs. */
+/**
+ * An all-day drop-in window (08:00–18:00 lab). Never a lecture — see the
+ * module docs.
+ *
+ * Exported because the column view (`columnGrid.ts`) has to make the same call
+ * and may not make it differently: a window that is a strip in one view and a
+ * lane in the other is two views disagreeing about what the week contains.
+ * Takes the three fields the rule actually reads, so the caller's own entry
+ * shape does not have to be a `GridEntry`.
+ */
+export function isDropIn(entry: {
+  isLecture: boolean;
+  startTime: string;
+  endTime: string;
+}): boolean {
+  return (
+    !entry.isLecture &&
+    Math.max(0, timeToMinutes(entry.endTime) - timeToMinutes(entry.startTime)) >= ALL_DAY_MINUTES
+  );
+}
+
 function isBandEntry(entry: GridEntry): boolean {
-  return !entry.isLecture && durationMinutes(entry) >= ALL_DAY_MINUTES;
+  return isDropIn(entry);
 }
 
 // --- Frame state ----------------------------------------------------------
@@ -1197,8 +1218,17 @@ export function renderGrid(
   const nodeByEntry = new Map<ScheduleEntry, HTMLElement>();
   const geometryBase = { minMinutes, span };
   let blockCount = 0;
-  /** Stagger index — one continuous count across the week, so the bars strike
-   *  in reading order rather than restarting on every row. */
+  /**
+   * Stagger index — ONE continuous count across the week, so the bars strike in
+   * in reading order rather than restarting on every row.
+   *
+   * Every drawn thing takes a number from it, drop-in strips included. They
+   * used to take none, which is not "no stagger" but `--planner-strike: 0`:
+   * five strips fired together on the first frame and the sessions then
+   * trickled in behind them, so the quietest thing in the week arrived first
+   * and loudest. A strip is part of the week printing, not a curtain raised
+   * before it.
+   */
   let strikeIndex = 0;
 
   for (let day = 1; day <= dayCount; day++) {
@@ -1217,9 +1247,15 @@ export function renderGrid(
     // 08:00–18:00 lab into a slab that pushes every real session down a row.
     // The row reserves height for that strip (`--planner-bands`), so unlike
     // the backdrop it replaces, nothing is ever drawn over its label.
+    //
+    // `--planner-bands` is the COUNT, and each strip carries its own index: a
+    // day with two open windows (TDT4120's øvingsveiledning and a lab's) used
+    // to draw both at the same offset, one exactly on top of the other, so the
+    // week silently lost a course. The row's height arithmetic was already
+    // written for a count — only this line was passing a boolean.
     const bands = dayEntries.filter(isBandEntry);
-    field.style.setProperty("--planner-bands", bands.length > 0 ? "1" : "0");
-    for (const entry of bands) {
+    field.style.setProperty("--planner-bands", String(bands.length));
+    bands.forEach((entry, index) => {
       const block = buildBlock(
         entry,
         { ...geometryBase, clashWindow: null },
@@ -1227,10 +1263,12 @@ export function renderGrid(
         [],
         options.onBlockClick,
       );
+      block.style.setProperty("--planner-band", String(index));
+      block.style.setProperty("--planner-strike", String(strikeIndex++));
       nodeByEntry.set(entry, block);
       field.append(block);
       blockCount++;
-    }
+    });
 
     // Everything else is lane-packed by layoutDay, uncapped: overlapping
     // sessions stack downward and every one of them stays full width and
@@ -1299,6 +1337,13 @@ export function renderGrid(
   // modal — see `GridRenderOptions.onBlockClick`); the conflict-note links
   // below are what drive `flash`, resolving each entry to its bar through
   // `nodeByEntry`.
+  // The rhythm the strike-in prints at, decided once the week's length is
+  // known: 55 ms a bar until a week is long enough that 55 ms a bar would run
+  // past the budget, then tighter (`staggerStep`). It is computed rather than
+  // fixed because the alternative — capping the INDEX — makes every bar past
+  // the ceiling land on one frame, and in a sequence that runs day by day that
+  // is a whole weekday arriving at once.
+  shell.element.style.setProperty("--planner-step", `${staggerStep(strikeIndex, 55)}ms`);
   frame.replaceChildren(shell.element);
   wirePointer(shell.element, minMinutes, span);
   syncNowMarker(frame);

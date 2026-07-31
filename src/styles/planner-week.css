@@ -75,6 +75,18 @@
   mask-image: linear-gradient(to right, transparent 0, #000 3rem);
 }
 
+/* The left ramp exists because the transposed week's hour rail scrolls away
+   with everything else. The COLUMN view pins its rail instead, so the same
+   ramp would fade the one thing that is deliberately still there — the clock
+   you read the blocks against. Only the right edge fades there. */
+.planner-grid-frame:has(.planner-cols)[data-scroll="middle"] {
+  mask-image: linear-gradient(to right, #000 calc(100% - 2rem), transparent 100%);
+}
+
+.planner-grid-frame:has(.planner-cols)[data-scroll="end"] {
+  mask-image: none;
+}
+
 /* The sentence that names what the mask is fading. Both surfaces render one
    (plannerApp.ts and courseTimetable.ts), so its spacing belongs beside the
    mask rather than in /planlegger/'s scoped block, where /emne/[code]/'s copy
@@ -302,11 +314,21 @@
    So it is a strip along the bottom of the row now, in its own reserved band
    — subordinate by size and position rather than by being hidden, and at full
    opacity, because nothing is drawn on top of it any more. */
+/* The strips are stacked from the bottom of the content block upward, in the
+   height the row already reserved for them (`--planner-bands` is their count):
+   the last one sits on the bottom edge, the one before it a strip higher. They
+   used to share a single offset, so a Monday with two open windows drew one
+   over the other and the week was a course short. */
 .planner-block.is-band {
   z-index: 0;
-  /* The last thing in the content block, so it measures from the same middle
-     as the lanes rather than from the row's own bottom edge. */
-  top: calc(50% + var(--planner-content-h) / 2 - var(--planner-band-h));
+  top: calc(
+    50% +
+    var(--planner-content-h) /
+    2 -
+    (var(--planner-bands, 1) - var(--planner-band, 0)) *
+    (var(--planner-band-h) + var(--planner-row-pad)) +
+    var(--planner-row-pad)
+  );
   bottom: auto;
   height: var(--planner-band-h);
 }
@@ -459,7 +481,7 @@
 .planner-grid.is-striking .planner-block,
 .planner-grid.is-striking .planner-clash-zone {
   animation: planner-strike calc(var(--dur) * 1.8) var(--ease) backwards;
-  animation-delay: calc(var(--planner-strike, 0) * 55ms);
+  animation-delay: calc(var(--planner-strike, 0) * var(--planner-step, 55ms));
 }
 
 /* --- The layer change (REWORK-2026-07-29g) -------------------------------- */
@@ -512,7 +534,11 @@
 .planner-grid.is-settling.is-closing .planner-grid-tick,
 .planner-grid.is-settling.is-closing .planner-grid-now,
 .planner-grid.is-settling.is-closing .planner-grid-field {
-  transition-delay: calc(var(--planner-departs, 0) * 32ms + var(--dur-fast));
+  transition-delay: calc(
+    var(--planner-departs, 0) *
+    var(--planner-motion-step, 32ms) +
+    var(--dur-fast)
+  );
 }
 
 /* The arriving layer, struck in with the view switch's own wipe — after the
@@ -528,9 +554,23 @@
 }
 
 .planner-grid .is-arriving,
+.planner-cols .is-arriving,
 .planner-board .is-arriving {
   animation: planner-arrive var(--dur) var(--ease) backwards;
-  animation-delay: calc(var(--dur) * 0.8 + var(--planner-arrive, 0) * 32ms);
+  animation-delay: calc(
+    var(--dur) *
+    0.8 +
+    var(--planner-arrive, 0) *
+    var(--planner-motion-step, 32ms)
+  );
+}
+
+/* A column's session strikes in DOWNWARD, the way its own axis runs — the
+   sideways wipe would cut across the time axis rather than along it. */
+.planner-cols .planner-cols-block.is-arriving,
+.planner-cols .planner-cols-band.is-arriving {
+  animation-name: planner-strike-down;
+  animation-duration: calc(var(--dur) * 1.6);
 }
 
 .planner-grid .planner-block.is-arriving,
@@ -556,6 +596,14 @@
    played the ENTRANCE on its way out. `layerMotion.ts` strips the mark now;
    this is the half that makes the collision impossible rather than merely
    avoided. */
+.planner-cols .planner-motion-ghost {
+  position: absolute;
+  margin: 0;
+  /* The entrance run backwards, along this view's own axis. */
+  animation: planner-strike-down var(--dur-fast) var(--ease) reverse forwards;
+  animation-delay: calc(var(--planner-depart, 0) * var(--planner-motion-step, 32ms));
+}
+
 .planner-grid .planner-motion-ghost,
 .planner-board .planner-motion-ghost {
   position: absolute;
@@ -564,7 +612,7 @@
   /* The same 32 ms step the arrivals use, counted backwards: the last bar to
      strike in is the first to wipe out. They used to leave on a single frame,
      which is not the reverse of an order, it is the absence of one. */
-  animation-delay: calc(var(--planner-depart, 0) * 32ms);
+  animation-delay: calc(var(--planner-depart, 0) * var(--planner-motion-step, 32ms));
 }
 
 /* --- Margin notes -------------------------------------------------------- */
@@ -614,6 +662,403 @@
   align-items: center;
   gap: var(--gap-2);
   text-decoration-color: color-mix(in srgb, var(--ui) 45%, transparent);
+}
+
+/* --- KOLONNER — the week as a timetable (REWORK-2026-07-30h) -------------- */
+
+/* Days across, time down: the shape every student already owns. Geometry
+   contract with `columnGrid.ts` — the module writes only what CSS cannot know
+   (`--planner-hours`, `--planner-lanes-max`, `--planner-bands-max`, and each
+   block's own percentages); everything below is arithmetic the browser does.
+
+   THE WIDTH LAW, and it is one declaration:
+
+     repeat(5, minmax(var(--planner-daymin), 1fr))
+
+   `1fr` is the fair share; the `minmax` minimum is what the deepest cluster in
+   the week needs to keep a course code whole. A grid track never shrinks below
+   that minimum, so when five days want more than the viewport has, the grid
+   overflows and `.planner-grid-frame` scrolls it sideways — the DAY grows
+   rather than the code getting cut. That is why this view needs no resize
+   listener and measures nothing: the law holds at every width, before paint.
+
+   The repeat() count is written out rather than `var(--planner-days)` on
+   purpose — the week is five days or six, so two literal templates cost
+   nothing and owe nothing to how a browser parses a custom property inside
+   repeat(). */
+.planner-cols {
+  --planner-rail: 3rem;
+  /* The floor a lane may never go under: seven characters of Spline Sans Mono
+     at --text-xs (~49 px for "TDT4120") plus the block's own padding and the
+     air that keeps it from reading as a label pressed against a wall. This is
+     the number the whole view is built on — lower it and the code breaks,
+     which is the regression the transposition was done to escape. */
+  --planner-lane-min: 4.25rem;
+  --planner-lane-gap: 3px;
+  /* Height is duration here. 4.5rem/hour puts a 45-minute session at ~54 px —
+     the code and the room — and a dobbelttime at ~126 px. */
+  --planner-hour-h: 4.5rem;
+  /* Wide enough for one line of --text-xs standing on its side, plus the air
+     that keeps it off both edges. The strip carries its own name now. */
+  --planner-band-w: 1.6rem;
+  --planner-band-gap: 2px;
+  --planner-band-space: calc(
+    var(--planner-bands-max, 0) *
+    (var(--planner-band-w) + var(--planner-band-gap))
+  );
+  --planner-daymin: calc(
+    var(--planner-lanes-max, 1) *
+    var(--planner-lane-min) +
+    (var(--planner-lanes-max, 1) - 1) *
+    var(--planner-lane-gap) +
+    var(--planner-band-space)
+  );
+  display: grid;
+  grid-template-columns: var(--planner-rail) repeat(5, minmax(var(--planner-daymin), 1fr));
+  /* So the grid BOX grows with its tracks instead of letting them overflow a
+     frame-wide box — without it the columns spill past their own background. */
+  min-width: min-content;
+  /* The ghosts of a departing layer are hung back over this box at the
+     coordinates they held (`.planner-motion-ghosts`), so it has to be the
+     positioned ancestor they measure against. */
+  position: relative;
+}
+
+.planner-cols[data-days="6"] {
+  grid-template-columns: var(--planner-rail) repeat(6, minmax(var(--planner-daymin), 1fr));
+}
+
+/* The rail stays put while the week scrolls under it: a timetable you have
+   scrolled sideways off its own clock is two facts short of being a
+   timetable. The corner above it travels with it for the same reason. */
+.planner-cols-rail,
+.planner-cols-corner {
+  position: sticky;
+  left: 0;
+  z-index: 3;
+  background: var(--bg);
+  /* The frame clips at its PADDING box, so a column scrolled under the rail
+     keeps showing in the frame's own 24 px of padding, beside it. The slab
+     paints that gap in paper — cheaper and steadier than teaching the frame to
+     drop its padding for one view. */
+  box-shadow: calc(-1 * var(--cell)) 0 0 var(--bg);
+}
+
+.planner-cols-rail {
+  height: calc(var(--planner-hours, 8) * var(--planner-hour-h));
+}
+
+/* The figure sits ON its hour, straddling the line it names. */
+.planner-cols-hour {
+  position: absolute;
+  right: var(--gap-2);
+  top: var(--planner-y);
+  transform: translateY(-50%);
+  font-size: var(--text-xs);
+  color: var(--muted);
+}
+
+/* The weekday is still the week's typographic event — it just moved from the
+   row's spine to the head of its own column when the axes swapped. It is a
+   word, so it is the grotesk; Data-Is-Mono governs times and codes. */
+.planner-cols-day-header {
+  padding: 0 6px var(--space-2);
+  font-size: clamp(0.85rem, 1.6vw, 1.15rem);
+  font-weight: var(--weight-bold);
+  line-height: 1;
+  letter-spacing: -0.03em;
+  color: color-mix(in srgb, var(--fg) 34%, transparent);
+  white-space: nowrap;
+  overflow: hidden;
+  border-bottom: 1px solid var(--border-strong);
+}
+
+.planner-cols-day-header[data-today] {
+  color: var(--fg);
+}
+
+/* The hour ruling, back on the horizontal — it follows the time axis whichever
+   way it points, and it is still the only ruling the week has (DESIGN §4). */
+.planner-cols-day {
+  position: relative;
+  height: calc(var(--planner-hours, 8) * var(--planner-hour-h));
+  border-left: 1px solid var(--border);
+  background-image: linear-gradient(to bottom, var(--ruling-hour) 1px, transparent 1px);
+  background-size: 100% calc(100% / var(--planner-hours, 8));
+}
+
+.planner-cols-day:last-child {
+  border-right: 1px solid var(--border);
+}
+
+.planner-cols-day[data-today] {
+  background-color: color-mix(in srgb, var(--fg) 4%, transparent);
+}
+
+/* Lanes get the column minus the space the drop-in strips reserve — on EVERY
+   day, whether that day has a strip or not, because unequal lane widths across
+   the week is the comparison this view exists to protect. */
+.planner-cols-lanes {
+  position: absolute;
+  inset: 0;
+  left: var(--planner-band-space);
+}
+
+/* A block: printed colour with the code knocked out of it (D4), divided by its
+   own cluster rather than by the day's worst moment. */
+.planner-cols-block {
+  --planner-lane-w: calc(
+    (100% - (var(--planner-lanes, 1) - 1) * var(--planner-lane-gap)) /
+    var(--planner-lanes, 1)
+  );
+  position: absolute;
+  top: var(--planner-y);
+  height: var(--planner-h);
+  left: calc(var(--planner-lane, 0) * (var(--planner-lane-w) + var(--planner-lane-gap)));
+  width: var(--planner-lane-w);
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: 3px 6px;
+  overflow: hidden;
+  border: 0;
+  /* Instrument corners: a timetable block is a printed field, not a pill. */
+  border-radius: 0;
+  background: color-mix(in srgb, var(--dot) var(--block-mix), var(--block-base));
+  color: var(--on-block);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  z-index: 1;
+  transition: filter var(--dur-fast) var(--ease);
+}
+
+.planner-grid-frame[data-static] .planner-cols-block {
+  cursor: default;
+}
+
+.planner-grid-frame:not([data-static]) .planner-cols-block:hover {
+  filter: brightness(1.12);
+}
+
+/* DR-1's display layer reads quieter with less ink, never with red. */
+.planner-cols-block.is-muted {
+  background: color-mix(in srgb, var(--dot) var(--block-muted), var(--card));
+  color: var(--fg);
+}
+
+.planner-cols-code {
+  font-size: var(--text-xs);
+  font-weight: var(--weight-medium);
+  line-height: 1.15;
+  white-space: nowrap;
+}
+
+.planner-cols-sub {
+  font-size: var(--text-xs);
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: color-mix(in srgb, var(--on-block) 72%, transparent);
+}
+
+.planner-cols-block.is-muted .planner-cols-sub {
+  color: var(--muted);
+}
+
+/* One zone per incident, cut across every lane in the column — the only
+   element here that crosses lanes, which is exactly what a collision is. It is
+   drawn OVER the blocks, not behind them: two colliding lectures fill the
+   column between them, so a zone behind them would be invisible, and 16 % red
+   under a border is a mark rather than a tint on saturated ink. */
+.planner-cols-clash {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: var(--planner-y);
+  height: var(--planner-h);
+  background: color-mix(in srgb, var(--clash) 16%, transparent);
+  border: 2px solid var(--clash);
+  pointer-events: none;
+  z-index: 2;
+}
+
+/* A drop-in window is not a session you attend at a time, so it may not take a
+   lane and squeeze the sessions that are. It is a strip along the column's
+   edge, in its own reserved width — subordinate by size and position rather
+   than by being hidden.
+
+   It STANDS UP: the type turns 90° with the strip and reads down it. The strip
+   was 8 px of colour and nothing else, which is not a subordinate label but an
+   anonymous one — five slivers down the week naming nothing, answering nothing
+   and opening nothing. A window is five hours by definition, so the axis this
+   label runs along is the one it can never be short of.
+
+   `--block-muted`, not a 55 % wash: it is the øving layer, and DR-1's display
+   layer reads quieter with less ink everywhere else in the product. */
+.planner-cols-band {
+  position: absolute;
+  top: var(--planner-y);
+  height: var(--planner-h);
+  width: var(--planner-band-w);
+  /* Against the column's own opening border, not its far edge: a strip on the
+     right sits against the next day's border and reads as that day's. Under
+     the weekday name it is unambiguously this day's. */
+  left: calc(var(--planner-band, 0) * (var(--planner-band-w) + var(--planner-band-gap)));
+  display: flex;
+  align-items: center;
+  gap: var(--gap-2);
+  padding: 6px 0;
+  overflow: hidden;
+  border: 0;
+  border-radius: 0;
+  /* Top-to-bottom, glyphs turned with it — a spine label, the way a book's is.
+     `sideways-rl` would keep the letters upright and stack them one per line,
+     which is the character-per-line break this whole view exists to avoid. */
+  writing-mode: vertical-rl;
+  background: color-mix(in srgb, var(--dot) var(--block-muted), var(--card));
+  color: var(--fg);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  z-index: 0;
+  transition: filter var(--dur-fast) var(--ease);
+}
+
+.planner-grid-frame[data-static] .planner-cols-band {
+  cursor: default;
+}
+
+.planner-grid-frame:not([data-static]) .planner-cols-band:hover {
+  filter: brightness(0.96);
+}
+
+.planner-cols-band .planner-cols-sub {
+  color: var(--muted);
+}
+
+/* NÅLEN, turned with the axis: a 2 px rule across today's column with a head
+   on its left edge. Same reasoning as the transposed one — today only, hidden
+   outside the drawn hours, and no clock rides on it. */
+.planner-cols-now {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: var(--planner-y);
+  height: 2px;
+  background: var(--ui);
+  pointer-events: none;
+  z-index: 4;
+}
+
+.planner-cols-now[hidden] {
+  display: none;
+}
+
+.planner-cols-now::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 0;
+  height: 0;
+  border-block: 6px solid transparent;
+  border-left: 8px solid var(--ui);
+}
+
+/* The strike-in, turned 90° with everything else: the week prints downward. */
+@keyframes planner-strike-down {
+  from {
+    clip-path: inset(0 0 100% 0);
+  }
+  to {
+    clip-path: inset(0 0 0 0);
+  }
+}
+
+/* Strips included, and in their own place in the order: left out of this rule
+   they simply appeared, fully formed, while everything around them printed. */
+.planner-cols.is-striking .planner-cols-block,
+.planner-cols.is-striking .planner-cols-band,
+.planner-cols.is-striking .planner-cols-clash {
+  animation: planner-strike-down calc(var(--dur) * 1.8) var(--ease) backwards;
+  animation-delay: calc(var(--planner-strike, 0) * var(--planner-step, 45ms));
+}
+
+/* --- The layer change, turned with the axis (REWORK-2026-07-29g) ---------- */
+
+/* «Vis øvinger og labber» is one layer arriving or leaving, not a new week, so
+   it may not replay the strike-in: what stays TRAVELS, what arrives strikes in
+   after the room for it exists, what leaves wipes out first. `layerMotion.ts`
+   rewinds the properties; these are the transitions those properties feed.
+
+   Same exception to DESIGN §6 as the transposed week's, for the same reason: a
+   block's height IS its duration, so a transform-based FLIP would squash the
+   type inside it for the length of the move. */
+.planner-cols.is-settling .planner-cols-block,
+.planner-cols.is-settling .planner-cols-band,
+.planner-cols.is-settling .planner-cols-clash,
+.planner-cols.is-settling .planner-cols-hour,
+.planner-cols.is-settling .planner-cols-now {
+  transition:
+    top var(--dur) var(--ease),
+    height var(--dur) var(--ease),
+    left var(--dur) var(--ease),
+    width var(--dur) var(--ease),
+    filter var(--dur-fast) var(--ease);
+}
+
+/* The columns themselves: their height is `--planner-hours` × the hour token,
+   so revealing a layer that runs to 18:00 lengthens every column — and the day
+   would otherwise snap to its new length while the blocks inside it travelled.
+   `grid-template-columns` is here too, so a week that grows a lane widens
+   instead of jumping; where a browser will not interpolate the tracks it simply
+   lands on the new width with everything else. */
+.planner-cols.is-settling .planner-cols-day,
+.planner-cols.is-settling .planner-cols-rail {
+  transition: height var(--dur) var(--ease);
+}
+
+/* The lane box travels too: its inset IS the width the strips reserve, so a
+   day that gains its first drop-in window would otherwise shove every lecture
+   in the week sideways on one frame while they were all mid-travel. */
+.planner-cols.is-settling .planner-cols-lanes {
+  transition: left var(--dur) var(--ease);
+}
+
+.planner-cols.is-settling {
+  transition: grid-template-columns var(--dur) var(--ease);
+}
+
+/* Closing up waits for what is leaving to be GONE — all of it, not just the
+   first one (`--planner-departs` is the last departure's stagger index). */
+.planner-cols.is-settling.is-closing .planner-cols-block,
+.planner-cols.is-settling.is-closing .planner-cols-band,
+.planner-cols.is-settling.is-closing .planner-cols-clash,
+.planner-cols.is-settling.is-closing .planner-cols-hour,
+.planner-cols.is-settling.is-closing .planner-cols-now,
+.planner-cols.is-settling.is-closing .planner-cols-day,
+.planner-cols.is-settling.is-closing .planner-cols-rail,
+.planner-cols.is-settling.is-closing .planner-cols-lanes,
+.planner-cols.is-settling.is-closing {
+  transition-delay: calc(
+    var(--planner-departs, 0) *
+    var(--planner-motion-step, 32ms) +
+    var(--dur-fast)
+  );
+}
+
+/* The rail and the hour give way on a phone. `--planner-lane-min` does NOT:
+   it is the course code, the one measurement in this view that is not a taste,
+   and a phone is exactly where shaving it starts cutting codes. The week
+   scrolls instead — that is the trade this view makes everywhere. */
+@media (max-width: 40rem) {
+  .planner-cols {
+    --planner-rail: 2.5rem;
+    --planner-hour-h: 3.5rem;
+  }
 }
 
 /* --- TAVLA — the list view (REWORK-2026-07-29b D2) ------------------------ */
@@ -794,7 +1239,7 @@ button.planner-board-row:hover {
 
 .planner-board.is-striking .planner-board-row {
   animation: planner-strike calc(var(--dur) * 1.8) var(--ease) backwards;
-  animation-delay: calc(var(--planner-strike, 0) * 45ms);
+  animation-delay: calc(var(--planner-strike, 0) * var(--planner-step, 45ms));
 }
 
 /* The list is flow layout with no geometry in properties, so its half of the
@@ -812,7 +1257,11 @@ button.planner-board-row:hover {
 }
 
 .planner-board.is-settling.is-closing {
-  transition-delay: calc(var(--planner-departs, 0) * 32ms + var(--dur-fast));
+  transition-delay: calc(
+    var(--planner-departs, 0) *
+    var(--planner-motion-step, 32ms) +
+    var(--dur-fast)
+  );
 }
 
 .planner-board.is-settling [data-motion-key] {
@@ -824,7 +1273,11 @@ button.planner-board-row:hover {
 /* Same wait as the week's: the list closes up after the last row has wiped
    out, not after the first (`--planner-departs`, layerMotion.ts). */
 .planner-board.is-settling.is-closing [data-motion-key] {
-  transition-delay: calc(var(--planner-departs, 0) * 32ms + var(--dur-fast));
+  transition-delay: calc(
+    var(--planner-departs, 0) *
+    var(--planner-motion-step, 32ms) +
+    var(--dur-fast)
+  );
 }
 
 @media (max-width: 40rem) {

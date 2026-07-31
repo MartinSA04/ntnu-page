@@ -238,6 +238,7 @@ const IDS = [
   "planner-direction-btn",
   "planner-others-toggle",
   "planner-view-uke",
+  "planner-view-kolonner",
   "planner-view-tavle",
   "planner-scroll-hint",
   "planner-grid-frame",

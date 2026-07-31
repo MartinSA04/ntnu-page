@@ -36,23 +36,41 @@ export type SettleLayer = () => void;
 const NOTHING: SettleLayer = () => {};
 
 /**
- * How many arrivals get their own stagger step before they all share the last
- * one. A week can reveal thirty øving bars, and thirty × 35 ms is a second of
- * bars trickling in — which stops reading as one layer landing and starts
- * reading as a slow page load.
+ * The longest any stagger here may run, end to end.
+ *
+ * A week can reveal thirty bars, and thirty × 32 ms is a second of them
+ * trickling in — which stops reading as one layer landing and starts reading as
+ * a slow page load.
  */
-const STAGGER_CAP = 12;
+const STAGGER_BUDGET_MS = 620;
+
+/**
+ * The step a sequence of `count` things staggers by: its own rhythm, until the
+ * sequence is long enough that keeping it would outlast the budget — then the
+ * rhythm compresses so everything still lands in time.
+ *
+ * It replaces a CAP, which is where "Thursday and Friday come in at the same
+ * time" came from: capping the INDEX means everything past the ceiling shares
+ * one delay, and in a week whose sequence runs day by day that tail is a whole
+ * weekday landing on one frame. Squeezing the interval keeps every element's
+ * own moment — which is the entire point of a stagger — and bounds the total,
+ * which is what the cap was actually for.
+ */
+export function staggerStep(count: number, base: number): number {
+  if (count <= 1) return base;
+  return Math.round(Math.min(base, STAGGER_BUDGET_MS / (count - 1)) * 10) / 10;
+}
 
 /**
  * When the scaffolding comes down. The CSS owns the real timings (`--dur`);
  * this only has to outlast the longest of them — the last staggered arrival,
- * at roughly `0.8 × dur + cap × 32 ms + 1.6 × dur`.
+ * at roughly `0.8 × dur + STAGGER_BUDGET_MS + 1.6 × dur`.
  */
 const CLEANUP_MS = 1100;
 
 /**
  * How long a ghost lives: the last one's staggered wipe, plus a frame or two.
- * Roughly `cap × 32 ms + dur-fast` — see `.planner-motion-ghost`.
+ * Roughly `STAGGER_BUDGET_MS + dur-fast` — see `.planner-motion-ghost`.
  */
 const GHOST_MS = 700;
 
@@ -112,13 +130,9 @@ function layGhosts(
   // departures leave one after another in the REVERSE of it — the last bar to
   // land is the first to go. Without this they all vanished on the same frame,
   // which is not a reversed order, it is no order at all.
-  const last = Math.min(ghosts.length - 1, STAGGER_CAP);
-  host.style.setProperty("--planner-departs", String(last));
+  host.style.setProperty("--planner-departs", String(ghosts.length - 1));
   ghosts.forEach(({ node, box }, i) => {
-    node.style.setProperty(
-      "--planner-depart",
-      String(Math.min(ghosts.length - 1 - i, STAGGER_CAP)),
-    );
+    node.style.setProperty("--planner-depart", String(ghosts.length - 1 - i));
     // A bar that arrived on the LAST toggle still wears its arrival mark, and
     // that rule outranks the ghost's: the two bars revealed a moment ago
     // played the entrance again on their way out — clipped away for the first
@@ -144,7 +158,7 @@ function layGhosts(
  * just fades in behind them.
  */
 function markArrival(node: HTMLElement, index: number): void {
-  node.style.setProperty("--planner-arrive", String(Math.min(index, STAGGER_CAP)));
+  node.style.setProperty("--planner-arrive", String(index));
   node.classList.add("is-arriving");
 }
 
@@ -152,6 +166,22 @@ function markArrival(node: HTMLElement, index: number): void {
 function clearArrival(node: HTMLElement): void {
   node.classList.remove("is-arriving");
   node.style.removeProperty("--planner-arrive");
+}
+
+/**
+ * The interval this change's arrivals and departures step by.
+ *
+ * One property for both, from whichever side is longer: a change is one event,
+ * and two rhythms inside it would read as two. It is squeezed rather than
+ * capped for the reason `staggerStep` gives — a ceiling makes everything past
+ * it land together, which in a sequence that runs day by day is a whole
+ * weekday arriving on one frame.
+ */
+function setMotionStep(host: HTMLElement, arrivals: number, departures: number): void {
+  host.style.setProperty(
+    "--planner-motion-step",
+    `${staggerStep(Math.max(arrivals, departures), 32)}ms`,
+  );
 }
 
 /**
@@ -181,6 +211,7 @@ function release(
   setTimeout(() => {
     host.classList.remove("is-settling", "is-closing");
     host.style.removeProperty("--planner-departs");
+    host.style.removeProperty("--planner-motion-step");
     host.style.removeProperty("height");
     ghosts?.remove();
     for (const node of Array.from(host.querySelectorAll<HTMLElement>(".is-arriving")))
@@ -309,12 +340,136 @@ function beginWeekChange(frame: HTMLElement, grid: HTMLElement, change: LayerCha
       writeProps(node, old.values);
     }
 
-    const ghosts = layGhosts(
-      next,
-      [...before]
-        .filter(([key, entry]) => entry.box !== null && !after.has(key))
-        .map(([, entry]) => ({ node: entry.node, box: entry.box as Box })),
-    );
+    const departing = [...before]
+      .filter(([key, entry]) => entry.box !== null && !after.has(key))
+      .map(([, entry]) => ({ node: entry.node, box: entry.box as Box }));
+    const ghosts = layGhosts(next, departing);
+    setMotionStep(next, arriving, departing.length);
+
+    release(next, change, ghosts, () => {
+      for (const { node, values } of restore) writeProps(node, values);
+    });
+  };
+}
+
+// --- The columns ---------------------------------------------------------
+
+/**
+ * The column grid's geometry properties (`columnGrid.ts`). Time is the vertical
+ * axis here, so a session's place is `--planner-y`/`--planner-h` — percentages
+ * of the drawn span, exactly as the transposed week's are percentages the other
+ * way round — and its share of the column is `--planner-lane`/`--planner-lanes`.
+ */
+const COL_BLOCK_PROPS = ["--planner-y", "--planner-h", "--planner-lane", "--planner-lanes"];
+const COL_BAND_PROPS = ["--planner-y", "--planner-h", "--planner-band"];
+const COL_ZONE_PROPS = ["--planner-y", "--planner-h"];
+const COL_HOUR_PROPS = ["--planner-y"];
+const COL_NOW_PROPS = ["--planner-y"];
+/**
+ * Everything the COLUMN's own box is computed from: its height (hours × the
+ * hour token) and its minimum width (the week's deepest cluster plus the strips
+ * it reserves). Revealing the layer usually changes all three at once — a later
+ * axis, a deeper day, a new drop-in strip — and a property left out here is a
+ * dimension that snaps while everything around it travels.
+ */
+const COL_GRID_PROPS = ["--planner-hours", "--planner-lanes-max", "--planner-bands-max"];
+
+/**
+ * Every element in the column grid whose place can change, under a key that
+ * survives the re-render.
+ *
+ * A session's key is `data-motion-key` — `board.ts`'s `motionKey`, shared so the
+ * two views cannot disagree about what "the same session" is. The transposed
+ * week keys on `GridEntry.ordinal` instead, which this view has no access to.
+ */
+function keyColumns(grid: HTMLElement): Map<string, Keyed> {
+  const out = new Map<string, Keyed>();
+  out.set("grid", { node: grid, props: COL_GRID_PROPS, ghost: false });
+
+  const now = grid.querySelector<HTMLElement>(".planner-cols-now");
+  if (now) out.set("now", { node: now, props: COL_NOW_PROPS, ghost: false });
+
+  for (const hour of Array.from(grid.querySelectorAll<HTMLElement>(".planner-cols-hour")))
+    out.set(`hour-${hour.getAttribute("data-hour")}`, {
+      node: hour,
+      props: COL_HOUR_PROPS,
+      ghost: false,
+    });
+
+  for (const day of Array.from(grid.querySelectorAll<HTMLElement>(".planner-cols-day")))
+    out.set(`day-${day.getAttribute("data-day")}`, { node: day, props: [], ghost: false });
+
+  for (const zone of Array.from(grid.querySelectorAll<HTMLElement>(".planner-cols-clash")))
+    out.set(`${zone.getAttribute("data-motion-key")}`, {
+      node: zone,
+      props: COL_ZONE_PROPS,
+      ghost: false,
+    });
+
+  // ONE pass, in document order — which is the order the week is drawn in, so
+  // arrivals stagger the way the view prints: a day's strips, then its
+  // sessions, then the next day. Querying blocks and strips separately walked
+  // every session in the week before the first strip, and the layer landed in
+  // two waves that have nothing to do with the week's own reading order.
+  for (const session of Array.from(
+    grid.querySelectorAll<HTMLElement>(".planner-cols-block, .planner-cols-band"),
+  ))
+    out.set(`${session.getAttribute("data-motion-key")}`, {
+      node: session,
+      props: session.classList.contains("planner-cols-band") ? COL_BAND_PROPS : COL_BLOCK_PROPS,
+      ghost: true,
+    });
+
+  return out;
+}
+
+function beginColumnChange(
+  frame: HTMLElement,
+  grid: HTMLElement,
+  change: LayerChange,
+): SettleLayer {
+  const origin = grid.getBoundingClientRect();
+  const before = new Map<
+    string,
+    { node: HTMLElement; values: Map<string, string>; box: Box | null }
+  >();
+  for (const [key, { node, props, ghost }] of keyColumns(grid)) {
+    before.set(key, {
+      node,
+      values: readProps(node, props),
+      box: ghost ? boxIn(node, origin) : null,
+    });
+  }
+
+  return () => {
+    const next = frame.querySelector<HTMLElement>(".planner-cols");
+    if (!next) return;
+    const after = keyColumns(next);
+
+    const restore: { node: HTMLElement; values: Map<string, string> }[] = [];
+    let arriving = 0;
+    for (const [key, { node, props }] of after) {
+      const old = before.get(key);
+      if (!old) {
+        // Only sessions carry a meaningful order. An hour figure or a newly
+        // needed column is not a thing that arrives, it is room being made, and
+        // letting one take a stagger number pushes the actual arrivals a step
+        // later for nothing.
+        const session =
+          node.classList.contains("planner-cols-block") ||
+          node.classList.contains("planner-cols-band");
+        markArrival(node, session ? arriving++ : 0);
+        continue;
+      }
+      restore.push({ node, values: readProps(node, props) });
+      writeProps(node, old.values);
+    }
+
+    const departing = [...before]
+      .filter(([key, entry]) => entry.box !== null && !after.has(key))
+      .map(([, entry]) => ({ node: entry.node, box: entry.box as Box }));
+    const ghosts = layGhosts(next, departing);
+    setMotionStep(next, arriving, departing.length);
 
     release(next, change, ghosts, () => {
       for (const { node, values } of restore) writeProps(node, values);
@@ -368,12 +523,11 @@ function beginListChange(frame: HTMLElement, board: HTMLElement, change: LayerCh
       moved.push(node);
     }
 
-    const ghosts = layGhosts(
-      next,
-      [...before]
-        .filter(([key]) => !seen.has(key))
-        .map(([, entry]) => ({ node: entry.node, box: entry.box })),
-    );
+    const departing = [...before]
+      .filter(([key]) => !seen.has(key))
+      .map(([, entry]) => ({ node: entry.node, box: entry.box }));
+    const ghosts = layGhosts(next, departing);
+    setMotionStep(next, arriving, departing.length);
 
     // The list's own height, which FLIP cannot carry (REWORK-2026-07-30i).
     //
@@ -419,6 +573,8 @@ export function beginLayerChange(frame: HTMLElement, change: LayerChange): Settl
     stale.remove();
   const grid = frame.querySelector<HTMLElement>(".planner-grid");
   if (grid) return beginWeekChange(frame, grid, change);
+  const columns = frame.querySelector<HTMLElement>(".planner-cols");
+  if (columns) return beginColumnChange(frame, columns, change);
   const board = frame.querySelector<HTMLElement>(".planner-board");
   if (board) return beginListChange(frame, board, change);
   return NOTHING;
