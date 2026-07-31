@@ -8,7 +8,8 @@
  * price. It is a *view*: same `PlanCourseState[]`, same group narrowing
  * (`collectSessions`), same conflict engine, same popover.
  *
- * ## The law: the day grows, the code never shrinks
+ * ## The law: the day grows, the code never shrinks, and the week is dealt out
+ * in whole days
  *
  * Transposing solved the width problem by giving the day the whole page. Here
  * a day is a column again, so the pressure comes back — two overlapping
@@ -16,15 +17,22 @@
  * than the seven characters that identify the course. The rule this view is
  * built on is the opposite of squeezing:
  *
- *   `dagbredde = maks(likedel, dypeste klynge × banebredde)`
+ *   `dager = maks(1, min(ukedager, gulv(plass / dagminimum)))`
+ *   `dagbredde = maks(dagminimum, plass / dager)`
  *
- * — and it is expressed in **one line of CSS**, not in a measuring pass here:
- * `repeat(5, minmax(var(--planner-daymin), 1fr))`. A grid
- * track never shrinks below `minmax`'s minimum, so the week simply overflows
- * its frame and scrolls sideways when the days need more than the viewport
- * has. That is why there is no resize listener and no `getBoundingClientRect`
- * in this module: `1fr` is the fair-share half of the law and the browser
- * already knows how to compute it, at every width, before paint.
+ * — and it is expressed in **CSS**, not in a measuring pass here (see THE WIDTH
+ * LAW in `src/styles/planner-week.css` for the declarations). `dagminimum` is
+ * the deepest cluster's lanes at the width a course code needs; `plass` is the
+ * scrollport minus the hour rail. Flooring the count is what keeps the week
+ * honest at the edges: the days always divide the visible width exactly, so
+ * either the whole week is on screen or the days that are on screen are WHOLE
+ * and the rest are wholly off-frame — a strip of Friday hanging past the frame
+ * is an overflow someone forgot, and reads like one. A slightly narrower window
+ * therefore drops a whole day and makes the remaining ones wider.
+ *
+ * That is still arithmetic the browser does before paint, which is why there is
+ * no resize listener and no `getBoundingClientRect` in this module — the law
+ * holds at every width.
  *
  * What this module writes is only what CSS cannot know: how deep the week's
  * deepest cluster is (`--planner-lanes-max`), how many drop-in strips to

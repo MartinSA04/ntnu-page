@@ -40,6 +40,14 @@
    selector is unqualified now — do NOT re-add np-frame here without
    restoring the qualification with it. */
 .planner-grid-frame {
+  /* KOLONNER's hour rail, declared on the SCROLL CONTAINER rather than on
+     `.planner-cols` where the rest of that view's tokens live: the frame needs
+     it for `scroll-padding-inline-start` (a scrolled column has to come to rest
+     beside the rail, not under it) and a parent cannot read a child's custom
+     property. `.planner-cols` inherits it, so the width law and the snap offset
+     are still one number. Overridden for phones with the rest of the view's
+     tokens at the bottom of this file. */
+  --planner-rail: 3rem;
   padding: var(--cell);
   margin-bottom: var(--space-2);
   overflow-x: auto;
@@ -75,15 +83,21 @@
   mask-image: linear-gradient(to right, transparent 0, #000 3rem);
 }
 
-/* The left ramp exists because the transposed week's hour rail scrolls away
-   with everything else. The COLUMN view pins its rail instead, so the same
-   ramp would fade the one thing that is deliberately still there — the clock
-   you read the blocks against. Only the right edge fades there. */
-.planner-grid-frame:has(.planner-cols)[data-scroll="middle"] {
-  mask-image: linear-gradient(to right, #000 calc(100% - 2rem), transparent 100%);
-}
+/* KOLONNER does not fade at all, at either edge.
 
-.planner-grid-frame:has(.planner-cols)[data-scroll="end"] {
+   The left ramp was always wrong there: the transposed week's hour rail scrolls
+   away with everything else, but the column view PINS its rail, so the ramp
+   faded the one thing deliberately still on screen — the clock you read the
+   blocks against.
+
+   The right ramp went with it when the width law started dealing the week out
+   in whole days (see THE WIDTH LAW below). A fade means "this column is cut,
+   there is more"; under the law no column is ever cut, so all the ramp does is
+   wash out the right-hand edge of a day that is complete — reintroducing, as
+   decoration, exactly the "is my Thursday lecture clipped?" doubt it was added
+   to answer. What is off-frame is named in a sentence above the week
+   (`.planner-scroll-hint`) and its column heading is simply not there. */
+.planner-grid-frame:has(.planner-cols)[data-scroll] {
   mask-image: none;
 }
 
@@ -671,23 +685,43 @@
    (`--planner-hours`, `--planner-lanes-max`, `--planner-bands-max`, and each
    block's own percentages); everything below is arithmetic the browser does.
 
-   THE WIDTH LAW, and it is one declaration:
+   THE WIDTH LAW — the day grows, the code never shrinks, and the week is
+   dealt out in WHOLE DAYS:
 
-     repeat(5, minmax(var(--planner-daymin), 1fr))
+     dager som får plass = maks(1, min(ukedager, gulv(plass / dagminimum)))
+     dagbredde           = maks(dagminimum, plass / dager som får plass)
 
-   `1fr` is the fair share; the `minmax` minimum is what the deepest cluster in
-   the week needs to keep a course code whole. A grid track never shrinks below
-   that minimum, so when five days want more than the viewport has, the grid
-   overflows and `.planner-grid-frame` scrolls it sideways — the DAY grows
-   rather than the code getting cut. That is why this view needs no resize
-   listener and measures nothing: the law holds at every width, before paint.
+   `dagminimum` is what the week's deepest cluster needs to keep a course code
+   whole; `plass` is the scrollport minus the hour rail. The count is floored,
+   so the days always divide the visible width exactly: either every day is on
+   screen, or the ones that are are whole and the rest are wholly off-frame and
+   scrolled to. There is never a strip of Friday hanging past the edge — which
+   is a forgotten `overflow`, not a decision, and reads like one.
+
+   The naive `repeat(5, minmax(var(--planner-daymin), 1fr))` this replaces got
+   the two ends right and the middle wrong: `1fr` shares fairly while all five
+   fit, the minimum keeps the code whole once they do not, but between them the
+   grid overflows by whatever it happens to overflow by, and the frame clips
+   mid-column. The floor is the missing third: when the week no longer fits it
+   drops a WHOLE day and hands that day's width back to the ones that stayed.
+   So a slightly narrower window makes the remaining days WIDER, not thinner.
+
+   It is still arithmetic the browser does, before paint, with no resize
+   listener and no measuring pass — `round()` and container query units are
+   what make the floor expressible in CSS at all. `@supports` gates the whole
+   thing: substituting a custom property a browser cannot compute would make
+   `grid-template-columns` invalid at computed-value time, and that resolves to
+   `none` (every column auto, the week in one stack) rather than to the
+   declaration below it. So the minmax law stays as the fallback template and
+   is overridden, never merely shadowed by a token.
 
    The repeat() count is written out rather than `var(--planner-days)` on
    purpose — the week is five days or six, so two literal templates cost
    nothing and owe nothing to how a browser parses a custom property inside
-   repeat(). */
+   repeat(). `--planner-days` carries the same count as a plain number for the
+   clamp above, where a var() is unremarkable. */
 .planner-cols {
-  --planner-rail: 3rem;
+  --planner-days: 5;
   /* The floor a lane may never go under: seven characters of Spline Sans Mono
      at --text-xs (~49 px for "TDT4120") plus the block's own padding and the
      air that keeps it from reading as a label pressed against a wall. This is
@@ -725,7 +759,69 @@
 }
 
 .planner-cols[data-days="6"] {
+  --planner-days: 6;
   grid-template-columns: var(--planner-rail) repeat(6, minmax(var(--planner-daymin), 1fr));
+}
+
+/* The floor, and the two things the frame owes it (see THE WIDTH LAW above).
+   Gated together because they are one mechanism: without the container the
+   `cqw` in the law has nothing to measure, and without the law the frame would
+   give up its padding for nothing. */
+@supports (width: calc(round(down, 100cqw / 1rem, 1) * 1px)) {
+  .planner-grid-frame:has(.planner-cols) {
+    /* What `100cqw` below is a percentage OF. Scoped to the column view with
+       `:has()` so the transposed week — and /emne/[code]/, which only ever
+       renders that one — takes no containment it has no use for. */
+    container-type: inline-size;
+    /* The frame clips at its PADDING box, so its own 24 px of inline padding is
+       scrollable, visible day space that the content box the law measures does
+       not know about: at rest 24 px of the first day off-frame paints in the
+       right padding, and once you have scrolled, the sticky rail covers 24 px
+       of the day behind it instead. That is the sliver the law exists to
+       abolish, arriving by the back door — so for this view the scrollport IS
+       the content box. The block padding stays; it is air, not geometry, and
+       the week lines up with the page's own left rule without it. */
+    padding-inline: 0;
+    /* Dragging lands on whole days too, or the law would hold only until the
+       first swipe. The days divide the scrollport exactly, so every snap
+       position is reachable and the last one is exactly `maxScroll`. */
+    scroll-snap-type: x mandatory;
+    /* A column comes to rest beside the pinned rail, not under it. */
+    scroll-padding-inline-start: var(--planner-rail);
+  }
+
+  .planner-cols {
+    --planner-fit: max(
+      1,
+      min(
+        var(--planner-days),
+        round(down, (100cqw - var(--planner-rail)) / var(--planner-daymin), 1)
+      )
+    );
+    /* `max()`, not `clamp()`: below one day's minimum there is nothing left to
+       quantise, and the code still may not be cut — the day simply outgrows the
+       frame and the student scrolls within it. */
+    --planner-day: max(
+      var(--planner-daymin),
+      calc((100cqw - var(--planner-rail)) / var(--planner-fit))
+    );
+    /* A definite track, not `minmax(daymin, day)`: a grid only grows tracks
+       toward their maximum out of FREE space, and there is none here — the box
+       is `min-content` wide the moment the week overflows, which is exactly
+       when the quantisation matters. Under minmax every track would sit at
+       `daymin` and the week would go back to ending mid-column. */
+    grid-template-columns: var(--planner-rail) repeat(5, var(--planner-day));
+  }
+
+  .planner-cols[data-days="6"] {
+    grid-template-columns: var(--planner-rail) repeat(6, var(--planner-day));
+  }
+
+  /* The column body, not its header: the two share a track, so one snap point
+     per day is the whole set. */
+  .planner-cols-day {
+    scroll-snap-align: start;
+  }
 }
 
 /* The rail stays put while the week scrolls under it: a timetable you have
@@ -1055,8 +1151,14 @@
    and a phone is exactly where shaving it starts cutting codes. The week
    scrolls instead — that is the trade this view makes everywhere. */
 @media (max-width: 40rem) {
-  .planner-cols {
+  /* On the frame, where it is declared: set here on `.planner-cols` instead it
+     would win on that element and leave the frame's own `scroll-padding`
+     reading 3rem, so a snapped column would come to rest 8 px under the rail. */
+  .planner-grid-frame {
     --planner-rail: 2.5rem;
+  }
+
+  .planner-cols {
     --planner-hour-h: 3.5rem;
   }
 }

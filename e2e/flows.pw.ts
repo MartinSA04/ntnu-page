@@ -711,6 +711,97 @@ test("week: Rader, Kolonner and Liste show the same week three ways", async ({ p
   await expect(page.locator(".planner-board")).toHaveCount(0);
 });
 
+test("kolonner: the week is dealt out in whole days at every width", async ({ page }) => {
+  // THE WIDTH LAW's third clause. `minmax(daymin, 1fr)` alone got the two ends
+  // right and the middle wrong: it overflowed by whatever it happened to
+  // overflow by, so between "all five fit" and "the week is properly a scroller"
+  // the frame closed mid-column and a strip of Friday hung past the edge —
+  // which is a forgotten `overflow`, not a decision, and reads like one. The
+  // count of days is floored now, so the visible width is always a whole number
+  // of days and the scroll only ever hides whole ones.
+  await page.goto("/planlegger/#26h;MTDT.2026;");
+  await expect(gridBlocks(page).first()).toBeVisible({ timeout: 45_000 });
+  await page.click("#planner-view-kolonner");
+  await expect(page.locator("#planner-grid-frame .planner-cols")).toBeVisible();
+
+  /**
+   * Where every day column sits against the visible day region, at one scroll
+   * offset and one week depth.
+   *
+   * `--planner-lanes-max` is forced rather than seeded with a plan deep enough
+   * to need it, for two reasons: it is the only input the law has (the law is a
+   * function of the token, not of who is teaching what), and MTDT's own autumn
+   * is one lane deep — so a live-data test would ask the question only on a
+   * phone and would stop asking it the term NTNU moves a lecture.
+   */
+  const measure = (toEnd: boolean, lanes: number) =>
+    page.evaluate(
+      ([end, deep]: [boolean, number]) => {
+        const frame = document.getElementById("planner-grid-frame") as HTMLElement;
+        const cols = frame.querySelector(".planner-cols") as HTMLElement;
+        // Re-applied per measurement: crossing the 40 rem boundary re-renders
+        // the week, and the render writes this property itself.
+        cols.style.setProperty("--planner-lanes-max", String(deep));
+        // A fixed offset rather than whatever `scrollToToday` left behind: the
+        // law has to hold at rest AND scrolled, and those are two measurements.
+        frame.scrollTo({ left: end ? frame.scrollWidth : 0, behavior: "instant" });
+        const rail = frame.querySelector(".planner-cols-rail") as HTMLElement;
+        const box = frame.getBoundingClientRect();
+        // The rail is pinned, so the days are read in the space left of its
+        // right edge; `clientWidth` is the scrollport, which for this view IS
+        // the content box (the frame drops its inline padding — planner-week.css).
+        const region = {
+          left: box.left + rail.getBoundingClientRect().width,
+          right: box.left + frame.clientWidth,
+        };
+        const days = Array.from(frame.querySelectorAll(".planner-cols-day")).map((node) => {
+          const rect = node.getBoundingClientRect();
+          return { left: rect.left, right: rect.right, width: rect.width };
+        });
+        return { region, days, maxScroll: frame.scrollWidth - frame.clientWidth };
+      },
+      [toEnd, lanes] as [boolean, number],
+    );
+
+  // Wide enough for the whole week down to a phone, crossing every quantum
+  // boundary on the way — the widths BETWEEN the breakpoints are the ones the
+  // old law got wrong. Each at three week depths, because the depth is what
+  // decides where those boundaries fall: a 3-deep week wants ~210 px per day
+  // and stops fitting on a laptop, not on a phone.
+  const widths = [1400, 1180, 1040, 960, 880, 820, 760, 700, 640, 560, 480, 414, 360];
+  for (const width of widths) {
+    await page.setViewportSize({ width, height: 900 });
+    for (const lanes of [1, 2, 3]) {
+      for (const toEnd of [false, true]) {
+        const { region, days, maxScroll } = await measure(toEnd, lanes);
+        const at = `${width} px, ${lanes} lanes${toEnd ? ", scrolled to the end" : ""}`;
+        expect(days.length, at).toBeGreaterThan(0);
+
+        // Every day is the same width — the fair share of what is on screen,
+        // not of what the week would like.
+        const track = days[0]?.width ?? 0;
+        for (const day of days) expect(Math.abs(day.width - track), at).toBeLessThan(1);
+
+        // …and each one is either wholly inside the visible region or wholly
+        // out of it. A day straddling either edge is the regression.
+        for (const day of days) {
+          const cutRight = day.left < region.right - 1 && day.right > region.right + 1;
+          const cutLeft = day.right > region.left + 1 && day.left < region.left - 1;
+          expect(cutRight, `${at}: a day is cut by the frame's right edge`).toBe(false);
+          expect(cutLeft, `${at}: a day is cut off behind the hour rail`).toBe(false);
+        }
+
+        // The same fact stated from the scroll's side: what is hidden is a
+        // whole number of days, so there is no scroll at all until one drops.
+        const inDays = maxScroll / track;
+        expect(Math.abs(inDays - Math.round(inDays)), `${at}: ${maxScroll}px hidden`).toBeLessThan(
+          0.05,
+        );
+      }
+    }
+  }
+});
+
 test("kolonner: an open øvingsvindu names itself, opens, and stacks", async ({ page }) => {
   // The strip shipped as 8 px of colour and nothing else: five slivers down the
   // week that named nothing, answered nothing and could not be opened, and two
