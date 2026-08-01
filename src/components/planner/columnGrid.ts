@@ -15,7 +15,7 @@
  *
  * This module writes only what CSS cannot know: the deepest cluster
  * (`--planner-lanes-max`), how many drop-in strips to reserve
- * (`--planner-bands-max`), and each session's place on the time axis.
+ * (`--planner-allday-h`), and each session's place on the time axis.
  *
  * ## Kept from the transposed week, deliberately
  *
@@ -344,14 +344,15 @@ function buildBand(
 ): HTMLButtonElement {
   const band = sessionButton(entry, "planner-cols-band", geo, onBlockClick);
   band.style.setProperty("--planner-strike", String(strike));
-  // Its own place in the reserved strip margin, so a day with three open
-  // windows draws three strips instead of one on top of another.
-  band.style.setProperty("--planner-band", String(index));
+  // Two windows on one day stack in flow now rather than side by side in a
+  // reserved margin; the index survives only so a key can tell them apart.
+  band.setAttribute("data-band", String(index));
   band.append(el("span", "planner-cols-code np-data", entry.courseCode));
-  // Room before activity, the same order the bars use: where you have to walk
-  // is the fact you are reading the strip for.
-  const what = [entry.rooms, entry.label].filter(Boolean).join(" · ");
-  if (what) band.append(el("span", "planner-cols-sub", what));
+  // Room first, then the hours: this is the one session whose time the grid
+  // does NOT draw, so the chip has to say it — and where you have to walk is
+  // still the fact you opened the row for, so it is what survives the ellipsis.
+  const what = [entry.rooms, `${entry.startTime}–${entry.endTime}`].filter(Boolean).join(" · ");
+  band.append(el("span", "planner-cols-sub", what));
   return band;
 }
 
@@ -383,7 +384,6 @@ export function renderColumnGrid(
   grid.setAttribute("data-days", String(geo.dayCount));
   grid.style.setProperty("--planner-hours", String(geo.hours));
   grid.style.setProperty("--planner-lanes-max", String(geo.lanesMax));
-  grid.style.setProperty("--planner-bands-max", String(geo.bandsMax));
   // Read back by the now marker, which turns a clock into a percentage and
   // cannot re-derive the clamp this render chose.
   grid.setAttribute("data-min", String(geo.minMinutes));
@@ -413,6 +413,38 @@ export function renderColumnGrid(
     grid.append(header);
   }
 
+  // THE ALL-DAY ROW. A drop-in window is not an appointment at a time — it is
+  // 08:15–14:00 every weekday — so it does not belong on the time axis at all,
+  // and a six-hour block put in the lanes drags the whole day into one cluster
+  // and squeezes every real session to a quarter of its width. It used to be a
+  // rotated strip down the column's edge, which kept it out of the lane
+  // accounting but spent horizontal width the days need and set its own label
+  // sideways. This is the row every calendar reserves for exactly this.
+  let strike = 0;
+  let blockCount = 0;
+  // Occurrence counter behind `motionKey` — a session's identity has to outlive
+  // the re-render for the layer change to know what merely moved.
+  const keySeen = new Map<string, number>();
+
+  // ALWAYS drawn, even with nothing in it: its height is a custom property the
+  // layer change can travel (`--planner-allday-h`), and a row that is absent in
+  // one state and present in the next cannot animate at all — the whole grid
+  // under it would jump 34px on the frame the øvinger arrive.
+  grid.style.setProperty("--planner-allday-h", geo.bandsMax === 0 ? "0px" : "34px");
+  grid.append(el("div", "planner-cols-allday-corner"));
+  for (const day of geo.days) {
+    const cell = el("div", "planner-cols-allday");
+    cell.setAttribute("data-day", String(day.dayNumber));
+    if (day.dayNumber === options.todayNumber) cell.setAttribute("data-today", "");
+    day.bands.forEach((entry, index) => {
+      const band = buildBand(entry, index, geo, strike++, options.onBlockClick);
+      band.setAttribute("data-motion-key", motionKey(entry, keySeen));
+      cell.append(band);
+      blockCount++;
+    });
+    grid.append(cell);
+  }
+
   const rail = el("div", "planner-cols-rail");
   rail.setAttribute("aria-hidden", "true");
   for (let hour = Math.ceil(geo.minMinutes / 60); hour <= Math.floor(geo.maxMinutes / 60); hour++) {
@@ -426,31 +458,16 @@ export function renderColumnGrid(
   }
   grid.append(rail);
 
-  let blockCount = 0;
-  // One continuous count across the week, so the blocks strike in in reading
-  // order rather than restarting in every column.
-  let strike = 0;
-  // Occurrence counter behind `motionKey` — a session's identity has to outlive
-  // the re-render for the layer change to know what merely moved.
-  const keySeen = new Map<string, number>();
-
+  // `strike` runs on from the all-day row, so the week prints in reading order
+  // — the windows first, because they are the field the day's appointments are
+  // printed on, then the days themselves.
   for (const day of geo.days) {
     const column = el("div", "planner-cols-day");
     column.setAttribute("data-day", String(day.dayNumber));
     if (day.dayNumber === options.todayNumber) column.setAttribute("data-today", "");
 
-    // The strips go down FIRST and take the first numbers in the day's share of
-    // the strike order: an open window is the field the day's appointments are
-    // printed on. (Paint order is z-index's job, not this.)
-    day.bands.forEach((entry, index) => {
-      const band = buildBand(entry, index, geo, strike++, options.onBlockClick);
-      band.setAttribute("data-motion-key", motionKey(entry, keySeen));
-      column.append(band);
-      blockCount++;
-    });
-
-    // The lanes live in their own box, inset by the width the strips reserve,
-    // so a block's percentage is a percentage of the space it may actually use.
+    // The lanes still live in their own box: it is what a block's percentage is
+    // a percentage OF, and the clash marks have to share its coordinates.
     const lanes = el("div", "planner-cols-lanes");
     clashes
       .filter((c) => c.dayNumber === day.dayNumber)

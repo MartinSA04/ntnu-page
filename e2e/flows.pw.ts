@@ -768,7 +768,7 @@ test("kolonner: the week is dealt out in whole days at every width", async ({ pa
 });
 
 test("uke: an open øvingsvindu names itself, opens, and stacks", async ({ page }) => {
-  // The strip shipped as 8 px of colour and nothing else: five slivers that
+  // The window shipped as 8 px of colour and nothing else: five slivers that
   // named nothing and could not be opened, and two windows on one day drew one
   // exactly on top of the other. Live 2026: two courses publish drop-in windows
   // over the five-hour threshold on the same days, so every weekday carries
@@ -781,19 +781,30 @@ test("uke: an open øvingsvindu names itself, opens, and stacks", async ({ page 
 
   const strips = page.locator(".planner-cols-band");
   await expect(strips.first()).toBeVisible();
+  // OUT OF THE HOURS. A window is 08:15–14:00 every weekday, so it is not an
+  // appointment at a time and does not belong on the time axis at all — it is
+  // in the all-day row, above the grid, and the lanes below never see it.
+  await expect(page.locator('.planner-cols-allday[data-day="1"] .planner-cols-band')).toHaveCount(
+    2,
+  );
+  await expect(page.locator(".planner-cols-day .planner-cols-band")).toHaveCount(0);
   // It says what it is, and WHERE: a drop-in window you cannot find the room
-  // for is a window you cannot drop into.
+  // for is a window you cannot drop into. And its HOURS, because it is the one
+  // session in this view whose time the grid does not draw.
   await expect(strips.first()).toContainText("TDT4120");
   await expect(strips.first()).toContainText("A4-156");
-  await expect(strips.first()).toContainText("Øvingsveiledning");
+  await expect(strips.first()).toContainText("08:15–14:00");
+  // The activity is in the accessible name, not on the chip: at this width the
+  // room and the hours are what a chip can hold, and they are the two facts you
+  // opened the row for.
+  await expect(strips.first()).toHaveAttribute("aria-label", /Øvingsveiledning/);
 
-  // Two on Monday, side by side rather than one over the other.
-  const monday = page.locator('.planner-cols-day[data-day="1"] .planner-cols-band');
-  await expect(monday).toHaveCount(2);
-  const lefts = await monday.evaluateAll((nodes) =>
-    nodes.map((n) => Math.round(n.getBoundingClientRect().left)),
+  // Two on Monday, stacked rather than one over the other.
+  const monday = page.locator('.planner-cols-allday[data-day="1"] .planner-cols-band');
+  const tops = await monday.evaluateAll((nodes) =>
+    nodes.map((n) => Math.round(n.getBoundingClientRect().top)),
   );
-  expect(new Set(lefts).size).toBe(2);
+  expect(new Set(tops).size).toBe(2);
 
   // And it opens the same session card a block does — a window you can drop
   // into is a session you can ask about.
@@ -1598,14 +1609,14 @@ test("the layer leaves in the reverse of the order it arrived in", async ({ page
   expect(Math.max(...depart)).toBe(depart.length - 1);
 });
 
-test("the space the strips reserve animates with the layer instead of snapping", async ({
-  page,
-}) => {
-  // The lane box's inset IS the width the drop-in strips reserve
-  // (`--planner-band-space`), and a property the box is sized from that is not
-  // in the motion snapshot snaps on the first frame while every block around it
-  // animates — shoving a whole day's lectures sideways mid-travel. TDT4120's
-  // weekday-long Øvingsveiledning is exactly that case.
+test("the all-day row opens with the layer instead of snapping", async ({ page }) => {
+  // The week GAINS A WHOLE BAND above the hours when the øvinger arrive, and a
+  // property the grid's box is sized from that is not in the motion snapshot
+  // snaps on the first frame while every block below it animates — dropping the
+  // entire grid 34px mid-travel. `--planner-allday-h` is that property, which
+  // is also why the row is drawn at zero height rather than not drawn: a row
+  // that is absent in one state and present in the next cannot animate at all.
+  // TDT4120's weekday-long Øvingsveiledning is exactly this case.
   await page.goto("/planlegger/#26h;-;%2BTDT4120,%2BTMA4412");
   await expect(gridBlocks(page).first()).toBeVisible({ timeout: 45_000 });
   await page.locator("#planner-others-toggle").click();
@@ -1617,32 +1628,32 @@ test("the space the strips reserve animates with the layer instead of snapping",
   await page.keyboard.press("Escape");
   await page.waitForTimeout(1500);
 
-  const inset = () =>
+  const band = () =>
     page
-      .locator("#planner-grid-frame .planner-cols-lanes")
+      .locator("#planner-grid-frame .planner-cols-allday")
       .first()
-      .evaluate((el: HTMLElement) => Math.round(Number.parseFloat(getComputedStyle(el).left)));
+      .evaluate((el: HTMLElement) => Math.round(el.getBoundingClientRect().height));
 
-  const wide = await inset();
-  expect(wide).toBeGreaterThan(0);
+  const open = await band();
+  expect(open).toBeGreaterThan(0);
 
-  // Hiding: the strips' space must still be held while they are wiping out, and
-  // given back once everything has settled.
+  // Hiding: the row must still be open while the chips are wiping out, and
+  // closed once everything has settled.
   await page.locator("#planner-others-toggle").click();
   await page.waitForTimeout(120);
-  expect(await inset()).toBe(wide);
+  expect(await band()).toBe(open);
   await page.waitForTimeout(1200);
-  const none = await inset();
-  expect(none).toBeLessThan(wide);
+  const shut = await band();
+  expect(shut).toBeLessThan(open);
 
-  // Revealing: the space opens FIRST, so the inset is already growing at 60 ms
-  // — but it has not arrived, which is what proves it is a transition and not
-  // a snap.
+  // Revealing: the space opens FIRST, so the row is already growing at 60 ms —
+  // but it has not arrived, which is what proves it is a transition and not a
+  // snap.
   await page.locator("#planner-others-toggle").click();
   await page.waitForTimeout(60);
-  const midway = await inset();
-  expect(midway).toBeGreaterThan(none);
-  expect(midway).toBeLessThan(wide);
+  const midway = await band();
+  expect(midway).toBeGreaterThan(shut);
+  expect(midway).toBeLessThan(open);
 });
 
 test("the list's own height animates too, so nothing under it jumps", async ({ page }) => {

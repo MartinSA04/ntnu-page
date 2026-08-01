@@ -318,7 +318,10 @@ function beginWeekChange(frame: HTMLElement, grid: HTMLElement, change: LayerCha
  * `--planner-lane`/`--planner-lanes`.
  */
 const COL_BLOCK_PROPS = ["--planner-y", "--planner-h", "--planner-lane", "--planner-lanes"];
-const COL_BAND_PROPS = ["--planner-y", "--planner-h", "--planner-band"];
+/* A drop-in window is a chip in the all-day row now, laid out in normal flow —
+   it has no geometry properties of its own left to travel, so what moves it is
+   the plain FLIP every keyed node gets. */
+const COL_BAND_PROPS: string[] = [];
 const COL_ZONE_PROPS = ["--planner-y", "--planner-h"];
 const COL_HOUR_PROPS = ["--planner-y"];
 const COL_NOW_PROPS = ["--planner-y"];
@@ -327,7 +330,7 @@ const COL_NOW_PROPS = ["--planner-y"];
  * width. Revealing the layer usually changes all three at once, and a property
  * left out here is a dimension that snaps while everything around it travels.
  */
-const COL_GRID_PROPS = ["--planner-hours", "--planner-lanes-max", "--planner-bands-max"];
+const COL_GRID_PROPS = ["--planner-hours", "--planner-lanes-max", "--planner-allday-h"];
 
 /**
  * Every element in the column grid whose place can change, under a key that

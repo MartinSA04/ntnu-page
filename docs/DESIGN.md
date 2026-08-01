@@ -461,8 +461,37 @@ worlds. Landed in this pass:
   on it is gone: the same idea, turned the way the list runs.
 - **The load track marks 30 sp** when the plan has run past it.
 
+**2026-08-01, stage 4 — the week's own surface.** Stage 3 moved the page's
+structure and left the thing you actually look at alone.
+
+- **A block's edges are its facts** — left and right are the day, top and bottom
+  are the start and the end — so it carries no ring. The separation is real
+  air, and each side does a different job: 3px in from the left so the block
+  does not sit on the day's own rule, 6px of channel at the right so the hour
+  ruling runs unbroken past it, 2px off the bottom so the line a session *ends*
+  on is never covered. **4px of corner**: the old note beside `border-radius: 0`
+  was right about pills and wrong about zero — at zero two touching blocks fuse
+  into one column of ink.
+- **The øving layer is tinted, not printed**, with its label in the course hue
+  pulled toward ink — one treatment in both geometries. This is **the one
+  sanctioned exception to "course hues never color text"** and it is measured,
+  not assumed: `tokens.test.ts` checks both block pairs across all six hues in
+  both themes, and rejected 22 % and 15 % dark tints at 3.94:1 and 4.42:1.
+- **52px an hour, not 72.** A student reads a timetable for the *shape* of a
+  week; at 72 an eight-hour day was 576px of column. Plus a tick per hour on the
+  rail, because the ruling is painted behind the blocks as a calendar's is.
+- **Drop-in windows moved to an all-day row.** A window is 08:15–14:00 every
+  weekday — not an appointment at a time — so it has no honest place on the time
+  axis. It was a rotated strip down the column's edge, which kept it out of the
+  lane accounting but spent width the days need and set its label sideways. The
+  row is drawn **at zero height** when the plan has no window, because a row
+  that is absent in one state and present in the next cannot animate, and its
+  rule is an inset shadow so at zero it draws nothing.
+
 **Not yet done, and the doc must not pretend otherwise.** The session popover
 still leads with the clock as one large figure rather than the artifact's
 `Tid / Sted / Merk` definition list; it carries the collision sentence and the
 group-edit action, which the artifact's does not, and no rearrangement has been
-adjudicated. `.np-frame`'s printed fills in §4–§5 are otherwise as built.
+adjudicated. The artifact also dates its weekday headers (`MAN 14`); this
+planner draws a *pattern* week whose blocks span "uke 34–47", so a date numeral
+would claim a specific Monday the data does not support.

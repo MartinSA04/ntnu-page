@@ -863,7 +863,7 @@ html[data-view="tavle"] #planner-grid-frame[data-reserve] {
 
 /* Days across, time down. Geometry contract with `columnGrid.ts` — the module
    writes only what CSS cannot know (`--planner-hours`, `--planner-lanes-max`,
-   `--planner-bands-max`, each block's percentages); the rest is arithmetic the
+   `--planner-allday-h`, each block's percentages); the rest is arithmetic the
    browser does.
 
    THE WIDTH LAW — the day grows, the code never shrinks, and the week is dealt
@@ -900,18 +900,13 @@ html[data-view="tavle"] #planner-grid-frame[data-reserve] {
      frame reserves this view's height before this view exists.
 
      The band is wide enough for one line of --text-xs on its side, plus air. */
-  --planner-band-w: 1.6rem;
-  --planner-band-gap: 2px;
-  --planner-band-space: calc(
-    var(--planner-bands-max, 0) *
-    (var(--planner-band-w) + var(--planner-band-gap))
-  );
   /* Every lane carries its own 9px of air (3 left + 6 of channel right), so the
-     floor is per-lane rather than per-seam. */
+     floor is per-lane rather than per-seam. Drop-in windows no longer figure in
+     it at all: they left the time axis for the all-day row and stopped
+     competing with the sessions for the day's width. */
   --planner-daymin: calc(
     var(--planner-lanes-max, 1) *
-    (var(--planner-lane-min) + var(--planner-lane-gap)) +
-    var(--planner-band-space)
+    (var(--planner-lane-min) + var(--planner-lane-gap))
   );
   display: grid;
   grid-template-columns: var(--planner-rail) repeat(5, minmax(var(--planner-daymin), 1fr));
@@ -1084,7 +1079,7 @@ html[data-view="tavle"] #planner-grid-frame[data-reserve] {
 .planner-cols-lanes {
   position: absolute;
   inset: 0;
-  left: var(--planner-band-space);
+  left: 0;
 }
 
 /* AN EVENT. Printed colour with the code knocked out, divided by its own
@@ -1199,42 +1194,70 @@ html[data-view="tavle"] #planner-grid-frame[data-reserve] {
   z-index: 2;
 }
 
-/* A drop-in window may not take a lane and squeeze the sessions that do. It is
-   a strip along the column's edge, in its own reserved width.
-
-   It STANDS UP: the type turns 90° and reads down it. As 8 px of colour it was
-   an anonymous sliver naming nothing and opening nothing. A window is five
-   hours by definition, so this is the one axis the label cannot run short of.
-
-   `--block-muted`, not a 55 % wash: it is the øving layer, and DR-1's display
-   layer reads quieter with less ink everywhere else in the product. */
-.planner-cols-band {
-  position: absolute;
-  top: var(--planner-y);
-  height: var(--planner-h);
-  width: var(--planner-band-w);
-  /* Against the column's own opening border, not its far edge: a strip on the
-     right sits against the next day's border and reads as that day's. */
-  left: calc(var(--planner-band, 0) * (var(--planner-band-w) + var(--planner-band-gap)));
+/* --- The all-day row ------------------------------------------------------
+ *
+ * An open drop-in window is not an appointment at a time — it is 08:15–14:00
+ * every weekday — so it has no honest place on the time axis. Put in the lanes
+ * it drags a whole day into one cluster and squeezes every real session to a
+ * quarter of its width; put down the column's edge as a rotated strip (which is
+ * where it was) it stays out of that accounting but spends horizontal width the
+ * days need and sets its own label sideways.
+ *
+ * So it goes where every calendar puts exactly this: a band above the grid,
+ * outside the hours, one cell per day.
+ */
+/* Its own rule is an INSET shadow, not a border: an inset shadow is clipped to
+   the box, so at `--planner-allday-h: 0` the row draws nothing at all and the
+   week reads as if it had no all-day band — which, with no drop-in window in
+   the plan, it does not. A border would print a second hairline directly under
+   the weekday row's. */
+.planner-cols-allday {
   display: flex;
-  align-items: center;
+  flex-direction: column;
+  justify-content: center;
+  gap: 2px;
+  min-height: var(--planner-allday-h, 0px);
+  overflow: hidden;
+  border-left: 1px solid var(--border);
+  box-shadow: inset 0 -1px 0 var(--border);
+}
+
+.planner-cols-allday[data-today] {
+  background-color: color-mix(in srgb, var(--accent) 5%, transparent);
+}
+
+/* The corner is sticky with the rail under it, or the row's own cells scroll
+   out from under the hour column and the band loses its left edge. */
+.planner-cols-allday-corner {
+  position: sticky;
+  left: 0;
+  z-index: 3;
+  min-height: var(--planner-allday-h, 0px);
+  overflow: hidden;
+  background: var(--bg);
+  box-shadow:
+    calc(-1 * var(--cell)) 0 0 var(--bg),
+    inset 0 -1px 0 var(--border);
+}
+
+/* The chip. Tinted like the øving blocks below it, because it IS one — the
+   same layer, drawn where its shape belongs. It carries the hours as well as
+   the room: this is the one session whose time the grid does not draw. */
+.planner-cols-band {
+  display: flex;
+  align-items: baseline;
   gap: var(--gap-2);
-  padding: 6px 0;
+  min-width: 0;
+  padding: 3px 6px;
   overflow: hidden;
   border: 0;
-  /* Same corner as a block: a strip and a block are the same kind of thing
-     drawn on two axes, and only one of them being square said otherwise. */
   border-radius: 4px;
-  /* Top-to-bottom, glyphs turned with it. `sideways-rl` keeps the letters
-     upright and stacks them one per line — the break this view exists to
-     avoid. */
-  writing-mode: vertical-rl;
   background: color-mix(in srgb, var(--dot) var(--block-muted), var(--card));
   color: color-mix(in srgb, var(--dot) var(--block-ink-mix), var(--block-ink-base));
   font: inherit;
   text-align: left;
+  white-space: nowrap;
   cursor: pointer;
-  z-index: 0;
   transition: filter var(--dur-fast) var(--ease);
 }
 
@@ -1339,11 +1362,18 @@ html[data-view="tavle"] #planner-grid-frame[data-reserve] {
   transition: height var(--dur) var(--ease);
 }
 
-/* The lane box travels too: its inset IS the width the strips reserve, so a
-   day gaining its first drop-in window would shove every lecture sideways on
-   one frame while they were all mid-travel. */
-.planner-cols.is-settling .planner-cols-lanes {
-  transition: left var(--dur) var(--ease);
+/* The all-day row opens and closes with the layer: the week gains a whole band
+   above the hours when the øvinger arrive, and without this the grid below it
+   jumps a row height on one frame while every block inside was mid-travel. */
+.planner-cols.is-settling .planner-cols-allday,
+.planner-cols.is-settling .planner-cols-allday-corner {
+  transition: min-height var(--dur) var(--ease);
+}
+
+/* The chips fade with the row rather than being cut off by its own overflow. */
+.planner-cols-band {
+  padding-inline: 6px;
+  margin-inline: 4px;
 }
 
 .planner-cols.is-settling {
@@ -1358,7 +1388,7 @@ html[data-view="tavle"] #planner-grid-frame[data-reserve] {
 .planner-cols.is-settling.is-closing .planner-cols-now,
 .planner-cols.is-settling.is-closing .planner-cols-day,
 .planner-cols.is-settling.is-closing .planner-cols-rail,
-.planner-cols.is-settling.is-closing .planner-cols-lanes,
+.planner-cols.is-settling.is-closing .planner-cols-allday,
 .planner-cols.is-settling.is-closing {
   transition-delay: calc(
     var(--planner-departs, 0) *
