@@ -69,6 +69,39 @@ function contrast(a: string, b: string): number {
 
 const AA = 4.5;
 
+/** The six course hues, by token name. */
+const HUES = [
+  "--hue-blue",
+  "--hue-cyan",
+  "--hue-purple",
+  "--hue-magenta",
+  "--hue-orange",
+  "--hue-yellow",
+] as const;
+
+/** A percentage token (`26%`) as a 0–1 fraction. */
+function pct(theme: "light" | "dark", name: string): number {
+  const dark = theme === "dark";
+  const raw = (dark ? DARK.get(name) : undefined) ?? LIGHT.get(name);
+  if (!raw) throw new Error(`no ${name} in tokens.css`);
+  const m = /^(\d+(?:\.\d+)?)%$/.exec(raw.trim());
+  if (!m) throw new Error(`${name} is not a literal percentage: ${raw}`);
+  return Number(m[1]) / 100;
+}
+
+/**
+ * `color-mix(in srgb, a p%, b)` for two opaque colours, which is the plain
+ * per-channel interpolation the spec defines once alpha is 1 everywhere.
+ */
+function mix(a: string, b: string, p: number): string {
+  const ch = (color: string, i: number): number => Number.parseInt(color.slice(i, i + 2), 16);
+  const out = [1, 3, 5]
+    .map((i) => Math.round(ch(a, i) * p + ch(b, i) * (1 - p)))
+    .map((n) => n.toString(16).padStart(2, "0"))
+    .join("");
+  return `#${out}`;
+}
+
 describe("contrast: sanity of the ratio calculation", () => {
   it("matches the two reference values WCAG defines", () => {
     expect(contrast("#000000", "#ffffff")).toBeCloseTo(21, 5);
@@ -110,5 +143,24 @@ describe.each(["light", "dark"] as const)("contrast: %s theme", (theme) => {
   it.each(["--fg", "--muted"])("%s clears AA on --bg and --card", (ink) => {
     expect(contrast(hex(theme, ink), hex(theme, "--bg"))).toBeGreaterThanOrEqual(AA);
     expect(contrast(hex(theme, ink), hex(theme, "--card"))).toBeGreaterThanOrEqual(AA);
+  });
+
+  /* THE TINTED ØVING BLOCK, which is the one place a course hue is allowed to
+     colour text (§8's rule is otherwise absolute, and this is the exception it
+     names). Both sides of the pair are a color-mix of the SAME hue, so a hue
+     light enough to make a readable tint is exactly the hue whose label is
+     hardest to read on it — this has to be measured, never assumed. The hue set
+     straight on its own tint measures 2.75:1 for the lightest course. */
+  it.each(HUES)("a tinted %s block's own label clears AA", (hue) => {
+    const dot = hex(theme, hue);
+    const fill = mix(dot, hex(theme, "--card"), pct(theme, "--block-muted"));
+    const ink = mix(dot, hex(theme, "--block-ink-base"), pct(theme, "--block-ink-mix"));
+    expect(contrast(ink, fill)).toBeGreaterThanOrEqual(AA);
+  });
+
+  /* And the printed block it stands next to: knocked-out text on the full hue. */
+  it.each(HUES)("a printed %s block's knocked-out code clears AA", (hue) => {
+    const fill = mix(hex(theme, hue), hex(theme, "--block-base"), pct(theme, "--block-mix"));
+    expect(contrast(hex(theme, "--on-block"), fill)).toBeGreaterThanOrEqual(AA);
   });
 });

@@ -132,9 +132,20 @@
   --block-mix: 100%;
   --block-base: #1d1d1f;
   --on-block: #ffffff;
-  /* An øving/lab bar is the same colour at a fraction of the ink — reduced,
-     never red, per DR-1's display layer. */
-  --block-muted: 26%;
+  /* An øving/lab session is the same colour TINTED rather than printed —
+     reduced, never red, per DR-1's display layer. A calendar draws its quieter
+     events this way and its committed ones solid, so the difference is
+     legible before you have read a word of either.
+
+     `--block-ink-mix` pulls the hue toward `--block-ink-base` for the LABEL on
+     a tinted block. This is the one sanctioned exception to §8's "course hues
+     never color text", and it is bought rather than assumed: the hue set
+     straight on its own 14 % tint measures 2.75:1 for the lightest courses,
+     which is why the text is pulled 30 % toward ink in light and pushed to the
+     full hue on dark ground. `tokens.test.ts` is the authority. */
+  --block-muted: 14%;
+  --block-ink-mix: 70%;
+  --block-ink-base: #000000;
 
   /* The squared ruling (planning surfaces only). --ruling-hour is the heavier
      every-fourth-cell rule: at --cell = 15 minutes that is the hour line a real
@@ -300,7 +311,14 @@
   --block-mix: 100%;
   --block-base: #f2f2f5;
   --on-block: #16161a;
-  --block-muted: 30%;
+  /* The label is the hue at full strength: against #1e1e21 the palette is
+     already the LIGHT end of the pair, so pulling it toward anything takes
+     contrast away rather than adding it. Which means the tint is the only
+     thing left to move, and 13 % is where the whole palette clears AA — the
+     first values tried (22 % and 15 %) put magenta at 3.94 and 4.42. */
+  --block-muted: 13%;
+  --block-ink-mix: 100%;
+  --block-ink-base: #ffffff;
 
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.35);
   --shadow: 0 3px 10px rgba(0, 0, 0, 0.4), 0 1px 3px rgba(0, 0, 0, 0.3);

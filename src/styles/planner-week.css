@@ -46,8 +46,13 @@
      they have to agree or the row is not centred. */
   --planner-row-pad: 8px;
   /* KOLONNER's two, here for the same reason: the frame reserves that view's
-     height before that view exists. */
-  --planner-hour-h: 4.5rem;
+     height before that view exists.
+
+     52px an hour, not 72. A student reads a timetable to see the SHAPE of the
+     week, and at 72 an eight-hour day was 576px of column — taller than the
+     viewport it is supposed to be scanned in one look. This is the row height
+     the calendars the craft bar is set by actually use. */
+  --planner-hour-h: 3.25rem;
   /* A LABEL, not a heading. At `--text-md` this was section-title size for the
      word "man", and the row it sits in is vertical space the week's axis wants
      — worst on a phone, where the week already scrolls sideways. The
@@ -232,7 +237,7 @@ html[data-view="tavle"] #planner-grid-frame[data-reserve] {
     --planner-bar-h: 26px;
     --planner-band-h: 17px;
     --planner-row-pad: 6px;
-    --planner-hour-h: 3.5rem;
+    --planner-hour-h: 2.6rem;
   }
 
   /* TAVLE's rows wrap harder in a narrow column, so a different slope here. */
@@ -439,10 +444,12 @@ html[data-view="tavle"] #planner-grid-frame[data-reserve] {
 }
 
 /* DR-1's display layer reads quieter with less ink, never with red: an
-   øving/lab keeps its hue at a fraction of the fill. */
+   øving/lab is its hue TINTED rather than printed, with the label in that hue
+   pulled toward ink. One treatment for the øving layer in both geometries —
+   two would be the drift that makes the two weeks look like two products. */
 .planner-block.is-muted {
   background: color-mix(in srgb, var(--dot) var(--block-muted), var(--card));
-  color: var(--fg);
+  color: color-mix(in srgb, var(--dot) var(--block-ink-mix), var(--block-ink-base));
 }
 
 /* A drop-in window is not a session you attend at a time — 08:15–14:00 every
@@ -884,7 +891,10 @@ html[data-view="tavle"] #planner-grid-frame[data-reserve] {
      at --text-xs (~49 px) plus the block's padding and air. Lower it and the
      code breaks, which is the regression this view exists to escape. */
   --planner-lane-min: 4.25rem;
-  --planner-lane-gap: 3px;
+  /* The air EVERY lane carries: 3px in from its left and 6px of open channel at
+     its right, which is both the seam between two lanes and the gap the hour
+     ruling shows through. */
+  --planner-lane-gap: 9px;
   /* `--planner-hour-h` (height is duration here) and `--planner-cols-head-font`
      are declared on the FRAME for the same reason the rail and spine are: the
      frame reserves this view's height before this view exists.
@@ -896,11 +906,11 @@ html[data-view="tavle"] #planner-grid-frame[data-reserve] {
     var(--planner-bands-max, 0) *
     (var(--planner-band-w) + var(--planner-band-gap))
   );
+  /* Every lane carries its own 9px of air (3 left + 6 of channel right), so the
+     floor is per-lane rather than per-seam. */
   --planner-daymin: calc(
     var(--planner-lanes-max, 1) *
-    var(--planner-lane-min) +
-    (var(--planner-lanes-max, 1) - 1) *
-    var(--planner-lane-gap) +
+    (var(--planner-lane-min) + var(--planner-lane-gap)) +
     var(--planner-band-space)
   );
   display: grid;
@@ -995,6 +1005,19 @@ html[data-view="tavle"] #planner-grid-frame[data-reserve] {
   color: var(--muted);
 }
 
+/* A tick per hour, on the rail's own edge. The ruling inside the columns is
+   painted BEHIND the blocks, as a calendar's is, so on a full day half the
+   figures on the rail had no line left in view to be pointing at. */
+.planner-cols-hour::after {
+  content: "";
+  position: absolute;
+  right: calc(-1 * var(--gap-2));
+  top: 50%;
+  width: 6px;
+  height: 1px;
+  background: var(--border-strong);
+}
+
 /* The weekday names its column and then gets out of the way — the week's
    typographic event is the blocks. Three uppercase letters, tracked, at the
    label step: this is the one place in the system where tracked-out micro-type
@@ -1064,26 +1087,40 @@ html[data-view="tavle"] #planner-grid-frame[data-reserve] {
   left: var(--planner-band-space);
 }
 
-/* A block: printed colour with the code knocked out, divided by its own
-   cluster rather than by the day's worst moment. */
+/* AN EVENT. Printed colour with the code knocked out, divided by its own
+   cluster rather than by the day's worst moment.
+
+   ITS EDGES ARE ITS FACTS — left and right are the day, top and bottom are the
+   start and the end — so there is no ring around it: a border paints a block
+   outside its own boundaries, past the hour line it ends on and into the seam
+   with the next day. The separation is real air instead, and each side of it
+   is doing a different job:
+
+     3px in from the left   — the block does not sit on the day's own rule
+     6px left at the right  — an open channel, so the hour ruling behind the
+                              week runs unbroken past every block
+     2px off the bottom     — the line a session ENDS on is never covered by
+                              the session that ends on it
+
+   4px of corner. `--radius-xs` is 2 and the DESIGN note beside it says a
+   timetable block is a printed field and not a pill — which was right about
+   pills and wrong about 0: at 0 the blocks fuse into a single column of ink
+   the moment two of them touch, and every calendar a student already uses
+   rounds them just enough to be counted. */
 .planner-cols-block {
-  --planner-lane-w: calc(
-    (100% - (var(--planner-lanes, 1) - 1) * var(--planner-lane-gap)) /
-    var(--planner-lanes, 1)
-  );
+  --planner-lane-w: calc(100% / var(--planner-lanes, 1));
   position: absolute;
   top: var(--planner-y);
-  height: var(--planner-h);
-  left: calc(var(--planner-lane, 0) * (var(--planner-lane-w) + var(--planner-lane-gap)));
-  width: var(--planner-lane-w);
+  height: calc(var(--planner-h) - 2px);
+  left: calc(var(--planner-lane, 0) * var(--planner-lane-w) + 3px);
+  width: calc(var(--planner-lane-w) - 9px);
   display: flex;
   flex-direction: column;
   gap: 1px;
-  padding: 3px 6px;
+  padding: 4px 7px;
   overflow: hidden;
   border: 0;
-  /* Instrument corners: a timetable block is a printed field, not a pill. */
-  border-radius: 0;
+  border-radius: 4px;
   background: color-mix(in srgb, var(--dot) var(--block-mix), var(--block-base));
   color: var(--on-block);
   font: inherit;
@@ -1101,10 +1138,13 @@ html[data-view="tavle"] #planner-grid-frame[data-reserve] {
   filter: brightness(1.12);
 }
 
-/* DR-1's display layer reads quieter with less ink, never with red. */
+/* DR-1's display layer: the same colour TINTED rather than printed, never red.
+   A committed session is a solid field, an øving is a wash of the same hue with
+   its label in that hue pulled toward ink — which is how a calendar separates
+   "this is happening" from "this is available", before a word is read. */
 .planner-cols-block.is-muted {
   background: color-mix(in srgb, var(--dot) var(--block-muted), var(--card));
-  color: var(--fg);
+  color: color-mix(in srgb, var(--dot) var(--block-ink-mix), var(--block-ink-base));
 }
 
 .planner-cols-code {
@@ -1182,13 +1222,15 @@ html[data-view="tavle"] #planner-grid-frame[data-reserve] {
   padding: 6px 0;
   overflow: hidden;
   border: 0;
-  border-radius: 0;
+  /* Same corner as a block: a strip and a block are the same kind of thing
+     drawn on two axes, and only one of them being square said otherwise. */
+  border-radius: 4px;
   /* Top-to-bottom, glyphs turned with it. `sideways-rl` keeps the letters
      upright and stacks them one per line — the break this view exists to
      avoid. */
   writing-mode: vertical-rl;
   background: color-mix(in srgb, var(--dot) var(--block-muted), var(--card));
-  color: var(--fg);
+  color: color-mix(in srgb, var(--dot) var(--block-ink-mix), var(--block-ink-base));
   font: inherit;
   text-align: left;
   cursor: pointer;
@@ -1205,7 +1247,8 @@ html[data-view="tavle"] #planner-grid-frame[data-reserve] {
 }
 
 .planner-cols-band .planner-cols-sub {
-  color: var(--muted);
+  color: inherit;
+  opacity: 0.78;
 }
 
 /* NÅLEN, turned with the axis. Same reasoning as the transposed one — today
