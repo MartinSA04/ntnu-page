@@ -622,7 +622,12 @@ test("week: Uke and Liste show the same week two ways", async ({ page }) => {
   await expect(page.locator(".planner-grid")).toHaveCount(0);
   // Five weekday columns, each headed by its own day.
   await expect(page.locator(".planner-cols-day")).toHaveCount(5);
-  await expect(page.locator(".planner-cols-day-header").first()).toHaveText("mandag");
+  // Three letters on the page, the whole word in the accessibility tree: the
+  // column is too narrow for "mandag" and "man" is not a thing a screen reader
+  // can expand, so the header carries both.
+  const monHead = page.locator(".planner-cols-day-header").first();
+  await expect(monHead.locator(".planner-cols-dow")).toHaveText("man");
+  await expect(monHead.locator(".planner-cols-dow-long")).toHaveText("mandag");
 
   // THE WIDTH LAW: no block is ever narrower than the course code it carries.
   // This is the whole reason the view exists; a track that shrank below its
@@ -1389,8 +1394,8 @@ test("ett navn: the plan is named once, and the switch is not a third toggle", a
   // beside its button, which is not one): wordmark, nav, toggle.
   await expect(page.locator(".site-topbar > *:not(script)")).toHaveCount(3);
 
-  // The switch carries no fill and no box — its whole state is the rule under
-  // the live word, and that rule MOVES rather than cross-fading.
+  // The switch is a segmented control, and its whole state is which word the
+  // thumb is under — a thumb that TRAVELS rather than cross-fading.
   const tabs = page.locator(".planner-view-tabs");
   const ruleAt = () =>
     tabs.evaluate((el) => ({
@@ -1399,10 +1404,8 @@ test("ett navn: the plan is named once, and the switch is not a third toggle", a
     }));
   const atWeek = await ruleAt();
   expect(Number.parseFloat(atWeek.w)).toBeGreaterThan(0);
-  // At the first tab, so at the container's own inline start (the tab carries
-  // a negative inline margin, which is how its 24px target is bought without
-  // widening the head).
-  expect(Number.parseFloat(atWeek.x)).toBeLessThanOrEqual(0);
+  // At the first tab, so within the track's own 2px lip.
+  expect(Number.parseFloat(atWeek.x)).toBeLessThanOrEqual(2);
 
   await page.click("#planner-view-tavle");
   await expect(page.locator(".planner-board").first()).toBeVisible();
@@ -1685,10 +1688,10 @@ test.describe("the banner's pair", () => {
   test.use({ viewport: { width: 390, height: 844 } });
 
   test("the code and the programme name stay adjacent on a phone", async ({ page }) => {
-    // The code line and the long programme name are one statement said twice.
-    // The wrapping flex row put the verdict and the Endre button between them,
-    // separating the plan's name from its own code. Grid areas keep the pair
-    // together at every width.
+    // The code line and the long programme name are one statement said twice,
+    // and a wrapping row of controls used to get in between them. They share a
+    // box of their own now, so nothing CAN — which is a stronger guarantee than
+    // the grid areas it replaced, and it survives any control being added.
     await page.goto("/planlegger/#26h;MTDT.2026;");
     await expect(gridBlocks(page).first()).toBeVisible({ timeout: 45_000 });
 
@@ -1701,20 +1704,21 @@ test.describe("the banner's pair", () => {
     const hint = await box("#planner-context-line");
     const verdict = await box("#planner-grid-status");
     const edit = await box("#planner-edit-plan");
+    const tabs = await box(".planner-view-tabs");
     const banner = await box(".planner-banner");
 
     // Nothing fits between them: the gap is smaller than a line of text at any
     // step on the page's scale, so no sentence can have got in there.
     expect(hint.top - title.bottom).toBeLessThan(20);
-    // The two things that used to break the pair up are still not inside it —
-    // and neither costs a row of its own any more: the edit control shares the
-    // title's line, and a clean verdict is not printed here at all.
-    expect(edit.top).toBeLessThan(title.bottom);
-    expect(edit.left).toBeGreaterThan(title.right);
+    // Every control is below the whole name, never inside it.
+    expect(edit.top).toBeGreaterThanOrEqual(hint.bottom);
+    expect(tabs.top).toBeGreaterThanOrEqual(hint.bottom);
+    // A clean verdict is still not printed on a phone at all.
     expect(verdict.bottom - verdict.top).toBe(0);
-    // Two rows, not four. It was 138 px, which is 16 % of this screen spent
-    // naming a plan before any of it is drawn.
-    expect(banner.bottom - banner.top).toBeLessThan(100);
+    // The bar carries the view switch and the layer box now — they came UP out
+    // of the week's own section head, which is gone with them, so the page as a
+    // whole did not grow a row. This is what it costs before the week is drawn.
+    expect(banner.bottom - banner.top).toBeLessThan(150);
   });
 
   test("the verdict appears on a phone exactly when it has something to report", async ({

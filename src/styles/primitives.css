@@ -109,6 +109,20 @@
   color: var(--ui-contrast);
 }
 
+/* THE PRIMARY ACTION, and the only thing on a page allowed to wear it — that
+   is `--accent`'s one job (DESIGN §8). Ink-Before-Chrome is not broken here:
+   the rule is that STRUCTURE is tone and hairlines, while a control may carry
+   a fill, and this is the one control on the page that must be found first.
+   At most one per surface; a second turns the first back into decoration. */
+.np-btn--primary {
+  background: var(--accent);
+  color: var(--accent-contrast);
+}
+
+.np-btn--primary:hover {
+  background: color-mix(in srgb, var(--fg) 12%, var(--accent));
+}
+
 /* A fixed --control-h box, so nothing about it shrinks. `flex: none` is the
    load-bearing half: as a direct flex child of .site-topbar the theme toggle
    collapsed to a 7 px sliver at 360 px (its glyphs are grid-stacked <svg>s with

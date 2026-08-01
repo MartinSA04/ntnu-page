@@ -240,9 +240,19 @@ function dayFill(rows: ExamListRow[], hueByCode: Map<string, string>): string {
  */
 function examRow(row: ExamListRow, hueVar: string, scheme: string | null): HTMLLIElement {
   const item = el("li", "exam-row");
+  // THE DATE IS TYPOGRAPHY, NOT A BADGE: the day in full ink and weight, the
+  // month muted beside it. A student scanning this column is looking for a
+  // number, and every date in it shares a month with its neighbours.
   const date = el("span", "exam-date np-data");
-  date.append(el("span", "exam-weekday", row.weekday));
-  date.append(formatShortDate(row.date));
+  const short = formatShortDate(row.date);
+  const split = short.indexOf(" ");
+  if (split === -1) {
+    date.append(short);
+  } else {
+    date.append(el("b", "exam-day", short.slice(0, split)));
+    date.append(" ");
+    date.append(el("span", "exam-month", short.slice(split + 1)));
+  }
   item.append(date);
 
   const what = el("span", "exam-what");
@@ -250,6 +260,11 @@ function examRow(row: ExamListRow, hueVar: string, scheme: string | null): HTMLL
   what.append(el("span", "exam-code np-data", row.code));
   if (scheme) what.append(el("span", "exam-form", scheme));
   item.append(what);
+
+  // The weekday, at the far end. It used to sit in front of the date, where it
+  // pushed the one figure being scanned off the column's own edge — and "lør"
+  // matters most as an afterthought ("…that one's a Saturday"), not first.
+  item.append(el("span", "exam-weekday np-data", row.weekday));
 
   return item;
 }
@@ -270,7 +285,10 @@ function awayLine(row: ExamListRow): HTMLLIElement | null {
   if (row.daysFromToday === null) return null;
   // `is-away` and not `is-tight`: a distance from today is not a verdict on
   // how much revision room there is, and red here would claim one.
-  return el("li", "exam-gap is-away np-data", daysFromTodayText(row.daysFromToday));
+  const away = el("li", "exam-gap is-away np-data");
+  away.append(el("span", "exam-gap-text", daysFromTodayText(row.daysFromToday)));
+  away.append(el("i", "exam-gap-rule"));
+  return away;
 }
 
 /** "i dag" / "om 1 dag" / "om {n} dager" — the singular/plural split every
@@ -298,7 +316,14 @@ function examGap(row: ExamListRow): HTMLLIElement | null {
   // says the tight case outright, in the unit the reader cares about.
   const days = row.readingDays ?? 0;
   const text = days === 0 ? "ingen lesedager" : days === 1 ? "1 lesedag" : `${days} lesedager`;
-  const item = el("li", "exam-gap np-data", text);
+  // The distance drawn as distance: the words, then a hairline running out to
+  // the edge, so the row reads as the SPACE between two dates rather than as a
+  // third entry in the list. It replaced a vertical rule the exams hung off as
+  // knots — the same idea, turned the way the list actually runs, and one less
+  // line down a page whose whole structure is now type, hairlines and space.
+  const item = el("li", "exam-gap np-data");
+  item.append(el("span", "exam-gap-text", text));
+  item.append(el("i", "exam-gap-rule"));
   if (row.tight) item.classList.add("is-tight");
   return item;
 }

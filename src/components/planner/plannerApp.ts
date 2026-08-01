@@ -33,6 +33,7 @@ import {
   type PlannerIndexCourse,
   type TimetableEntry,
 } from "../../lib/planner/data.js";
+import { deadlineParts, registrationDeadline } from "../../lib/planner/deadline.js";
 import {
   applyGroupSelection,
   groupOptions,
@@ -55,10 +56,17 @@ import {
 import { syncPlanProbe } from "../../lib/planProbe.js";
 import { type AddCourseDeps, type AddCourseHandle, mountAddCourse } from "./addCourse.js";
 import { mountBlockPopover, type SessionChoice } from "./blockPopover.js";
-import { renderBoard } from "./board.js";
+import { renderBoard, syncBoardNow } from "./board.js";
 import { renderColumnGrid, syncColumnNow } from "./columnGrid.js";
 import { type CourseSettingsContext, mountCourseSettings } from "./courseSettings.js";
-import { el, formatCreditNumber, formatCredits, formatShortDate, settingsIcon } from "./dom.js";
+import {
+  el,
+  formatCreditNumber,
+  formatCredits,
+  formatShortDate,
+  icon,
+  settingsIcon,
+} from "./dom.js";
 import {
   collectExamInputs,
   type ExamRenderResult,
@@ -226,6 +234,7 @@ interface PlannerElements {
   editPlanLabel: HTMLElement;
   linkNote: HTMLElement;
   creditLine: HTMLElement;
+  deadline: HTMLElement;
   creditNote: HTMLElement;
   creditStrip: HTMLElement;
   direction: HTMLElement;
@@ -262,6 +271,7 @@ function getElements(): PlannerElements | null {
     editPlanLabel: byId<HTMLElement>("planner-edit-plan-label"),
     linkNote: byId<HTMLElement>("planner-link-note"),
     creditLine: byId<HTMLElement>("planner-credit-line"),
+    deadline: byId<HTMLElement>("planner-deadline"),
     creditNote: byId<HTMLElement>("planner-credit-note"),
     creditStrip: byId<HTMLElement>("planner-credit-strip"),
     direction: byId<HTMLElement>("planner-direction"),
@@ -915,6 +925,16 @@ export async function mountPlannerApp(
       rest.style.flexGrow = String(FULL_LOAD_CREDITS - total);
       track.append(rest);
     }
+    // Over a full load, the track no longer says where full IS: the segments
+    // fill it edge to edge whether the plan is 30 sp or 45. The mark is where
+    // 30 lands, so the overload is a length you can see rather than a number
+    // you have to subtract.
+    if (total > FULL_LOAD_CREDITS) {
+      const mark = el("span", "planner-load-mark");
+      mark.style.insetInlineStart = `${(FULL_LOAD_CREDITS / total) * 100}%`;
+      mark.title = `${FULL_LOAD_CREDITS} sp`;
+      track.append(mark);
+    }
     elements.creditStrip.append(track);
   }
 
@@ -1013,15 +1033,19 @@ export async function mountPlannerApp(
   function tickNow(): void {
     const stamp = todayStamp();
     if (stamp === dayStamp) {
-      // The ordinary minute: one element moves, nothing re-renders. Both grids
-      // are asked; each no-ops when it is not the one on screen.
+      // The ordinary minute: one element moves, nothing re-renders. All three
+      // views are asked; each no-ops when it is not the one on screen.
       syncNowMarker(elements.gridFrame);
       syncColumnNow(elements.gridFrame);
+      syncBoardNow(elements.gridFrame, todayWeekday());
       return;
     }
     dayStamp = stamp;
     // Both dates are read again inside, and this places the marker itself.
     renderGridAndExams();
+    // The countdown is a number of days, so the day rolling is exactly when it
+    // is wrong. A page left open over midnight said "45 dager igjen" forever.
+    renderDeadline();
   }
 
   const nowTimer = setInterval(tickNow, 60_000);
@@ -1649,27 +1673,90 @@ export async function mountPlannerApp(
   function renderVerdict(grid: GridRenderResult | null, loading: boolean): void {
     const host = elements.gridStatus;
     host.replaceChildren();
-    host.className = "planner-section-sub";
+    // `planner-verdict` is the layout class and must survive: this used to
+    // assign `className` outright, which meant the page's own rule for the
+    // element applied for exactly as long as it took the first render to run.
+    host.className = "planner-verdict";
     if (loading) {
-      host.textContent = "henter timeplan …";
+      host.append(el("span", "planner-chip", "henter timeplan …"));
       return;
     }
     if (grid?.state !== "grid") return;
     if (grid.incompleteCourses.length > 0) {
       const n = grid.incompleteCourses.length;
-      host.textContent = `kan ikke sjekkes, mangler timeplan for ${n} ${n === 1 ? "emne" : "emner"}`;
+      // A gap, not a clash: neither Green-Means-Fits nor Red-Is-Collision may
+      // be spent on "we do not know", so this chip carries no mark at all.
+      host.append(
+        el(
+          "span",
+          "planner-chip is-unknown",
+          `kan ikke sjekkes, mangler timeplan for ${n} ${n === 1 ? "emne" : "emner"}`,
+        ),
+      );
+      renderLoadChip(host);
       return;
     }
     // Anything still in flight (`partial` without an incomplete course).
     if (grid.partial) return;
     if (grid.conflictCount === 0) {
-      host.classList.add("is-clean");
-      host.textContent = "ingen kollisjoner";
+      const chip = el("span", "planner-chip is-clean");
+      chip.append(icon("circleCheck"));
+      chip.append("Ingen forelesninger kolliderer");
+      host.append(chip);
+      renderLoadChip(host);
       return;
     }
-    host.classList.add("np-note-clash");
-    host.append(el("span", "np-data", String(grid.conflictCount)));
-    host.append(grid.conflictCount === 1 ? " kollisjon denne uka" : " kollisjoner denne uka");
+    const chip = el("span", "planner-chip np-note-clash");
+    chip.append(icon("circleAlert"));
+    chip.append(el("span", "np-data", String(grid.conflictCount)));
+    chip.append(grid.conflictCount === 1 ? " kollisjon denne uka" : " kollisjoner denne uka");
+    host.append(chip);
+    renderLoadChip(host);
+  }
+
+  /**
+   * The load, said where the verdict is said.
+   *
+   * Only when it is over 30 sp: "37,5 av 30 sp" is a thing to look at, "22,5 av
+   * 30 sp" is not — a student mid-assembly does not need to be told on every
+   * render that they are not finished. The full figure lives under the load
+   * track in the Emner column either way, so nothing is only here.
+   */
+  function renderLoadChip(host: HTMLElement): void {
+    const summary = creditSummary();
+    // `creditSummary`, not a second sum: the strip, the foot line and this chip
+    // must never be able to disagree about what the load is, and DR-10's
+    // off-semester exclusion lives in there.
+    if (summary.loading || summary.total <= FULL_LOAD_CREDITS) return;
+    const chip = el("span", "planner-chip is-over");
+    chip.append(icon("circleAlert"));
+    chip.append(
+      el("span", "np-data", `${formatCreditNumber(summary.total)} av ${FULL_LOAD_CREDITS} sp`),
+    );
+    host.append(chip);
+  }
+
+  /**
+   * PRODUCT D13's deadline, which had been on screen in zero of the six flows.
+   *
+   * It is the whole positioning — "before the registration deadline" — and a
+   * standing NTNU date rather than a crawled one (`deadline.ts` says why). Past
+   * the date it says nothing at all rather than "utløpt": the page still plans
+   * the term you are in.
+   */
+  function renderDeadline(): void {
+    const host = elements.deadline;
+    host.replaceChildren();
+    const deadline = registrationDeadline(plan.semesterId);
+    if (!deadline) {
+      host.hidden = true;
+      return;
+    }
+    const parts = deadlineParts(deadline);
+    host.append(parts.before);
+    host.append(el("b", undefined, parts.date));
+    host.append(parts.after);
+    host.hidden = false;
   }
 
   /**
@@ -2150,6 +2237,7 @@ export async function mountPlannerApp(
     elements.linkNote.textContent = linkNote ?? "";
     elements.linkNote.hidden = linkNote === null;
     renderBanner();
+    renderDeadline();
     renderCreditLine();
     renderDirectionQuestion();
     renderCourseRows();

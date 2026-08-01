@@ -97,9 +97,11 @@
   `--plan-courses` and `data-plan` onto `<html>` from localStorage;
   `src/lib/planProbe.ts` keeps them true for the rest of the visit. Every
   reservation is `calc(var(--plan-courses) * …)`, so a failed read reserves
-  exactly nothing. `data-plan="program"` is also what picks the planner
-  title's *face* — that was an `.is-empty` class added at mount, one frame
-  after the server had painted the other face.
+  exactly nothing. `data-plan="program"` used to pick the planner title's
+  *face* as well; that rule is **deleted** — the title is one size and one
+  family now, so there is no swap left to hoist before paint. The attribute is
+  still read by `/emner/` and the homepage, and `--plan-courses` by every
+  reservation, so neither the probe nor the attribute is dead.
   (b) `.planner-grid-frame`'s `min-height` (`planner-week.css`) — the week's
   height, held from first paint. `renderSkeleton` already stops the
   loading→data reflow; this is the paint→mount half, and it was 0.52 of the

@@ -416,7 +416,53 @@ worlds. Landed in this pass:
   letter/digit shape test rejected `A4-156` for its hyphen and demoted a real
   room to the style meant for "Digital undervisning".
 
-**Not yet done, and the doc must not pretend otherwise.** §4 and §5 above
-still describe the printed fills and the frame as built. The list is not yet
-a departure board with the time and room as two numeral columns. Until that
-lands, those sections are accurate about the code and stale about the intent.
+**2026-08-01, stage 3 — the reference artifact, applied.**
+
+- **One bar at the top of the page.** The plan's name and every control that
+  acts on it share a row: the layer checkbox, the Uke/Liste switch, "Endre",
+  and the primary "Legg til emne". The switch and the checkbox came up out of
+  the week's own section head — a second bar 200 px lower saying the same kind
+  of thing — and that head is gone with them.
+- **The switch is a segmented control**, a recessed track with the live view
+  raised out of it on paper. The travelling rule was right when it lived in a
+  section head, where a hairline was the local idiom; in a bar beside two
+  buttons it read as a link.
+- **`.np-btn--primary` exists, and there is at most one per surface.** The
+  accent's one job (§8) had no button to be on.
+- **The title is a name, not a headline**: 1.25rem/600, down from `--text-xl`.
+  The probe-driven `html[data-plan="program"]` face swap is **deleted** — stage
+  1 aliased `--font-mono` to the system face, which killed the face half, and
+  one size kills the rest. `data-plan` is still load-bearing for
+  `--plan-courses` and the reservations.
+- **The verdict is a run of chips**, on its own line between the plan's name and
+  the week: a mark and a sentence, never a filled pill. The colour is in the
+  sign; the words stay ink. "Ingen forelesninger kolliderer" says which thing
+  DR-1 actually checked. An over-full load is a chip here too.
+- **The deadline is on screen (D13/c3-1).** `Oppmelding stenger 15. september —
+  45 dager igjen`, at the far end of the verdict line. The whole positioning is
+  "before the registration deadline" and it had been in zero of six flows.
+  `src/lib/planner/deadline.ts` holds NTNU's two standing dates and says why
+  they are not crawled; a passed deadline says nothing at all.
+- **Uke.** Weekday headers are three uppercase tracked letters with the full
+  word left in the accessibility tree; today's is the accent, over a column
+  washed in 5 % of it. Blocks carry **the course and the room, and nothing
+  else** — the clock is already drawn, and the room is the only fact position
+  cannot state, so it never drops out (the type shrinks instead). The needle is
+  the accent with a 1 px page-coloured halo and a dot at the rail.
+- **Liste.** The day head says when the day starts and ends (`08:15–17:00`)
+  rather than how many hours are in it. The row you are inside is washed in the
+  accent and carries a `nå` tag, placed on a timer by `syncBoardNow` — the same
+  contract as the needle: an ordinary minute may not rebuild the week.
+- **Under the week**: one rule between the week and what follows, two equal
+  columns divided by one hairline, and pane heads with no rule of their own.
+  The exam date is typography (`**21.** nov`) with the weekday at the far end,
+  and the reading-day gaps are the only rules in that list — each a hairline
+  running from its own words to the edge. The vertical rule with exams as knots
+  on it is gone: the same idea, turned the way the list runs.
+- **The load track marks 30 sp** when the plan has run past it.
+
+**Not yet done, and the doc must not pretend otherwise.** The session popover
+still leads with the clock as one large figure rather than the artifact's
+`Tid / Sted / Merk` definition list; it carries the collision sentence and the
+group-edit action, which the artifact's does not, and no rearrangement has been
+adjudicated. `.np-frame`'s printed fills in §4–§5 are otherwise as built.

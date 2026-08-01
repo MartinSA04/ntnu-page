@@ -170,6 +170,11 @@
 
   --weight-normal: 400;
   --weight-medium: 500;
+  /* The step the system face actually wants for a title or a code: 500 does not
+     separate from body text at 20px, and 700 is a shout. Every UI face in the
+     stack ships it, and the ones that do not synthesise it the same way they
+     synthesise 700. */
+  --weight-semibold: 600;
   --weight-bold: 700;
 
   --tracking: 0.04em;

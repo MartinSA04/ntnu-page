@@ -40,24 +40,59 @@ const programOptionsJson = JSON.stringify(programOptions).replaceAll("<", "\\u00
 
         The verdict shares the title's baseline — PRODUCT §1's question and
         its answer on one line, rather than two paragraphs apart. */}
+    {/* One row: what this plan is, then everything you can do to it. A
+        calendar's chrome lives at the top of the page, not scattered down it —
+        the view switch and the layer box used to sit in the week's own section
+        head, a second bar 200 px lower saying the same kind of thing. */}
     <div class="planner-head">
-      <h1 class="planner-title" id="planner-title">Semesterplan</h1>
-      {/* The plan's long name and the plan's verdict, as one band. On a phone
-          they share a line under the title and the whole banner is two rows
-          instead of four (mob-A, 2026-07-31): 138 px of naming before the week
-          was 16 % of the screen, and three of those rows were one sentence
-          each. On a wide screen `display: contents` dissolves this box and the
-          two go back to their own grid areas — the verdict at the far end of
-          the title's line, the hint under the pair. */}
-      <div class="planner-meta">
+      <div class="planner-name">
+        <h1 class="planner-title" id="planner-title">Semesterplan</h1>
         {/* Always filled by `renderBanner` — the programme's long name, or the
             semester the empty week is for — so the one line it will occupy is
             held from first paint rather than appearing at mount and pushing
             the whole page down 21px. */}
         <p class="np-hint planner-context-line" id="planner-context-line"></p>
-        <p class="planner-status" id="planner-status">
-          <span class="planner-verdict" id="planner-grid-status" aria-live="polite"></span>
-        </p>
+      </div>
+
+      {/* The layer is a box you tick; the view is a switch you throw. They read
+          as two kinds of control because they are (REWORK-2026-07-30b). */}
+      <button
+        type="button"
+        class="planner-others-toggle"
+        id="planner-others-toggle"
+        aria-pressed="false"
+      >
+        <span class="planner-check" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5">
+            <path d="m4 12 6 6L20 6" />
+          </svg>
+        </span>
+        Øvinger og labber
+      </button>
+
+      {/* "Uke" is the timetable shape a student already knows from every other
+          calendar: days as columns, time down. The id keeps saying `kolonner`
+          because that is the value in localStorage and the name of the module
+          that draws it — the transposed week it used to be named against now
+          lives only on /emne/[code]/. */}
+      <div class="planner-view-tabs" role="group" aria-label="Velg hvordan uka vises">
+        <span class="planner-view-thumb" aria-hidden="true"></span>
+        <button
+          type="button"
+          class="planner-view-tab"
+          id="planner-view-kolonner"
+          aria-pressed="true"
+        >
+          Uke
+        </button>
+        <button
+          type="button"
+          class="planner-view-tab"
+          id="planner-view-tavle"
+          aria-pressed="false"
+        >
+          Liste
+        </button>
       </div>
       {/* The page's one permanent opener for studieinfo. It was an underlined
             word in the hint line: 37x22, under WCAG 2.5.8's 24px floor, and
@@ -86,7 +121,30 @@ const programOptionsJson = JSON.stringify(programOptions).replaceAll("<", "\\u00
           </svg>
         <span id="planner-edit-plan-label">Endre</span>
       </button>
+
+      {/* The page's primary action, and the only thing on it wearing the
+          accent — that is the token's one job (DESIGN §8). It used to be a
+          paper button at the bottom of the Emner column, below the fold on a
+          phone and indistinguishable from "Velg fra studieplanen" beside it. */}
+      <button
+        type="button"
+        class="np-btn np-btn--primary planner-add-course-btn"
+        id="planner-add-course-btn"
+      >
+        Legg til emne
+      </button>
     </div>
+
+    {/* The verdict, on its own line under the bar. The product's one job is to
+        answer "can I take these together", so the answer stands between the
+        plan's name and the week it is about — not tucked at the end of the
+        title's line where it read as a caption on the name. */}
+    <p class="planner-status" id="planner-status">
+      <span class="planner-verdict" id="planner-grid-status" aria-live="polite"></span>
+      {/* DR-9's date, which is a fact about the calendar rather than about the
+          plan, so it sits at the far end rather than in the run of verdicts. */}
+      <span class="planner-deadline" id="planner-deadline" hidden></span>
+    </p>
   </div>
 
   <p class="np-hint planner-link-note" id="planner-link-note" hidden></p>
@@ -108,62 +166,21 @@ const programOptionsJson = JSON.stringify(programOptions).replaceAll("<", "\\u00
         </div>
       </div>
 
-      <div class="planner-section-head">
-        {/* Kept for the region's accessible name and hidden from the page: a
-            grid of weekdays with an hour ruler over it does not need to be
-            told it is a week (REWORK-2026-07-30j). */}
-        <h2 class="planner-section-name sr-only" id="planner-week-heading">Uke</h2>
-        {/* Two ways of looking at one week, and one layer you can add to it —
-            and they used to be identical uppercase mono `.np-toggle`s in a
-            row, so nothing in the form said that one PICKS and the other ADDS.
-            The switch is words with a rule that slides between them; the layer
-            is a box you tick. Neither can be mistaken for the other now
-            (REWORK-2026-07-30b).
-
-            "Uke" is the timetable shape a student already knows from every
-            other calendar: days as columns, time down. Its id keeps saying
-            `kolonner` because that is the value in localStorage and the name of
-            the module that draws it — the transposed week it used to be named
-            against now lives only on /emne/[code]/. */}
-        <div class="planner-section-tools">
-          <div class="planner-view-tabs" role="group" aria-label="Velg hvordan uka vises">
-            <button
-              type="button"
-              class="planner-view-tab"
-              id="planner-view-kolonner"
-              aria-pressed="true"
-            >
-              Uke
-            </button>
-            <button
-              type="button"
-              class="planner-view-tab"
-              id="planner-view-tavle"
-              aria-pressed="false"
-            >
-              Liste
-            </button>
-          </div>
-          <button
-            type="button"
-            class="planner-others-toggle"
-            id="planner-others-toggle"
-            aria-pressed="false"
-          >
-            <span class="planner-check" aria-hidden="true">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5">
-                <path d="m4 12 6 6L20 6" />
-              </svg>
-            </span>
-            Øvinger og labber
-          </button>
-        </div>
-      </div>
+      {/* Kept for the region's accessible name and hidden from the page: a
+          grid of weekdays with an hour ruler over it does not need to be told
+          it is a week (REWORK-2026-07-30j). The head that used to carry it is
+          gone with its controls — they live in the page's own bar now, and a
+          rule under an invisible heading ruled nothing. */}
+      <h2 class="planner-section-name sr-only" id="planner-week-heading">Uke</h2>
       {/* `data-reserve`: the week's height, held from first paint until a real
           week is drawn into it — a LEASE, like the exam list's and the course
           page's, not a permanent floor. See planner-week.css. */}
       <div class="planner-grid-frame" id="planner-grid-frame" data-reserve></div>
       <div class="planner-grid-notes" id="planner-grid-notes"></div>
+      {/* What was fetched and when, under the week it qualifies rather than at
+          the foot of the page: a composition has to admit where it is thin, and
+          it cannot do that two screens below the thing it is thin about. */}
+      <p class="np-hint planner-provenance" id="planner-provenance" hidden></p>
     </section>
 
     <div class="planner-below">
@@ -203,18 +220,12 @@ const programOptionsJson = JSON.stringify(programOptions).replaceAll("<", "\\u00
           </button>
         </p>
 
-        <button type="button" class="np-btn planner-add-course-btn" id="planner-add-course-btn">
-          Legg til emne
-        </button>
-
         <details class="planner-plan-panel" id="planner-plan-panel" hidden>
           <summary class="np-summary planner-plan-summary">Fra studieplanen</summary>
           <div class="planner-plan-body" id="planner-plan-body"></div>
         </details>
       </section>
     </div>
-
-    <p class="np-hint planner-provenance" id="planner-provenance" hidden></p>
   </div>
 </Layout>
 
@@ -227,111 +238,131 @@ const programOptionsJson = JSON.stringify(programOptions).replaceAll("<", "\\u00
     margin-bottom: var(--space-4);
   }
 
-  /* The question and its answer on one baseline. The verdict pushes to the far
-     end on a wide screen and drops under the title when there is no room.
+  /* THE BAR. What the plan is, then everything you can do to it, on one line —
+     the shape every calendar opens with. A wrapping flex row rather than named
+     grid areas: the areas existed to keep the code and the long programme name
+     adjacent while a verdict and a button wrapped between them, and the name
+     now sits inside `.planner-name` where nothing can get in.
 
-     A grid rather than a wrapping flex row, because two of these four things
-     are a PAIR and wrapping cannot be told that: the code line and the long
-     programme name are one statement said twice, and flex wrapped the verdict
-     and the Endre button in between them. Areas keep the pair adjacent at every
-     width.
-
-     Two rows on a phone, not four: the four-row stack cost 138 px before a
-     single hour of the week was drawn. Nothing is dropped and nothing is
-     collapsed behind a tap. */
+     `--gap-4` between tools and `--space-3` between wrapped rows: on a phone
+     this comes out as the name, then the box and the switch sharing a line,
+     then the two buttons. */
   .planner-head {
-    display: grid;
-    grid-template-areas:
-      "title edit"
-      "meta  meta";
-    grid-template-columns: minmax(0, 1fr) auto;
-    align-items: center;
-    gap: var(--space-2) var(--gap-3);
-  }
-
-  .planner-title {
-    grid-area: title;
-  }
-
-  /* Baseline-aligned rather than centred: the hint is 13 px and the verdict
-     18 px, and centring two sizes on one line makes neither sit on the line the
-     title established. Wrapping is allowed. */
-  .planner-meta {
-    grid-area: meta;
     display: flex;
     flex-wrap: wrap;
-    align-items: baseline;
-    gap: var(--space-1) var(--gap-3);
+    align-items: center;
+    gap: var(--space-3) var(--gap-4);
+  }
+
+  /* Pushes everything else to the far end, and is allowed to shrink first: a
+     42-character programme name may ellipsise, a control may not. */
+  .planner-name {
+    margin-inline-end: auto;
     min-width: 0;
   }
 
-  .planner-context-line {
-    grid-area: hint;
-  }
-
+  /* The verdict's own line, between the plan's name and the week it judges. */
   .planner-status {
-    grid-area: verdict;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: var(--space-2) var(--gap-4);
+    margin-top: var(--space-3);
+    min-height: 1.4rem;
   }
 
-  /* Wide enough for all three on the title's line: the code, the control that
-     changes it, and the verdict at the far end. */
-  @media (min-width: 46rem) {
-    .planner-head {
-      grid-template-areas:
-        "title edit verdict"
-        "hint  hint hint";
-      grid-template-columns: auto auto minmax(0, 1fr);
-      align-items: center;
-      gap: var(--space-1) var(--gap-6);
-    }
-
-    /* The box dissolves and its two children become grid children again, each
-       in the area it has always had. */
-    .planner-meta {
-      display: contents;
-    }
-
-    .planner-status {
-      justify-self: end;
-    }
-  }
-
+  /* The run of verdicts. A flex row of its own rather than `display: contents`,
+     so `renderVerdict` keeps owning one element and the `.is-clean` rule below
+     keeps having a box to hide. */
   .planner-verdict {
-    font-size: var(--text-md);
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-2) var(--gap-4);
+    min-width: 0;
   }
 
   .planner-verdict:empty {
     display: none;
   }
 
-  /* THE TITLE. `MTFYMA Kull 24 H26` — the plan in the notation a student writes
-     on a timetable, so it is the mono at the page-title step. Data-Is-Mono has
-     always governed codes and counts; this follows it to the top of the scale.
-
-     No separators between the three parts, only spaces: in a mono face at
-     display size the facts already read as three. The short forms are what pays
-     for the code beside them at 390 px.
-
-     Slightly under --text-xl because Spline Sans Mono sets wider and taller
-     than Schibsted Grotesk: 1.75rem mono optically matches 2rem grotesk.
-
-     WHICH OF THE TWO IS DECIDED BY THE PROBE, NOT BY A CLASS. As a class added
-     at mount, the title changed face and size (27px → 39px at 390px) one frame
-     after the server had painted the other one, with the whole page hanging off
-     its baseline. `html[data-plan="program"]` is the same fact known before the
-     first frame; the grotesk is the DEFAULT because "no plan" is the only state
-     a static page can honestly assume. `syncPlanProbe` keeps it true after. */
-  .planner-title {
-    font-family: var(--font-sans);
-    font-size: var(--text-xl);
-    letter-spacing: -0.015em;
-    line-height: var(--leading-tight);
+  /* NOT A PILL. A mark and a sentence: the colour sits in the sign, the words
+     stay ink, and nothing here is a badge the eye learns to skip. A filled
+     capsule would also have to pick a fill for "we do not know", and there
+     isn't one — Green-Means-Fits and Red-Is-Collision are both spoken for. */
+  :global(.planner-chip) {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--gap-2);
+    font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
+    color: var(--fg);
   }
 
-  :global(html[data-plan="program"]) .planner-title {
-    font-family: var(--font-mono);
-    font-size: clamp(1.4rem, 4.4vw, 1.75rem);
-    letter-spacing: -0.02em;
+  :global(.planner-chip svg) {
+    width: 15px;
+    height: 15px;
+    flex: none;
+  }
+
+  :global(.planner-chip.is-clean svg) {
+    color: var(--verdict);
+  }
+
+  :global(.planner-chip.np-note-clash svg),
+  :global(.planner-chip.is-over svg) {
+    color: var(--clash);
+  }
+
+  /* "kan ikke sjekkes" carries no mark at all: a sign would have to be one of
+     the two colours that already mean fits and collides. */
+  :global(.planner-chip.is-unknown) {
+    color: var(--muted);
+    font-weight: var(--weight-normal);
+  }
+
+  /* Not a fact about the plan but about the calendar, so it stands apart from
+     the run of verdicts rather than in it. */
+  .planner-deadline {
+    margin-inline-start: auto;
+    font-size: var(--text-sm);
+    color: var(--muted);
+  }
+
+  .planner-deadline :global(b) {
+    color: var(--fg);
+    font-weight: var(--weight-medium);
+  }
+
+  @media (max-width: 46rem) {
+    .planner-deadline {
+      margin-inline-start: 0;
+    }
+  }
+
+  /* THE TITLE. `MTFYMA Kull 24 H26` — the plan in the notation a student writes
+     on a timetable. No separators between the three parts, only spaces: at this
+     size the facts already read as three, and the short forms are what pays for
+     the code beside them at 390 px.
+
+     A NAME, NOT A HEADLINE. It was `--text-xl` — the page-title step — for a
+     string that names the document you are already looking at, and it pushed
+     the week down for the privilege. A calendar puts its own name at the top
+     left in about 20 px and gives the rest of the row to the controls.
+
+     ONE SIZE, so the probe no longer has to pick. The old pair existed because
+     the plan's title was set in a second typeface at a second size, and a class
+     added at mount swapped both one frame after the server had painted the
+     other (27px → 39px at 390px, with the whole page hanging off its baseline).
+     Stage 1 aliased `--font-mono` to the system face, which killed the face
+     half; equal sizes kill the rest, and a swap that cannot happen needs no
+     probe. `data-plan` is still load-bearing for `--plan-courses` and for the
+     reservations — this is only the title's use of it that has gone. */
+  .planner-title {
+    font-size: 1.25rem;
+    font-weight: var(--weight-semibold);
+    letter-spacing: -0.015em;
+    line-height: var(--leading-snug);
   }
 
   :global(.planner-title-part) {
@@ -366,14 +397,6 @@ const programOptionsJson = JSON.stringify(programOptions).replaceAll("<", "\\u00
      an aria-label, so only the ink changes. A square --control-h box, 44 px on
      every touch device. */
   @media (max-width: 46rem) {
-    /* The row the verdict shares with the hint, held at the taller of the two:
-       the verdict appears, says "henter timeplan …", then vanishes under the
-       `:has(.is-clean)` rule below, so without this the page moved 4px each
-       way. */
-    .planner-meta {
-      min-height: 1.6rem;
-    }
-
     .planner-edit-plan {
       justify-content: center;
       width: var(--control-h);
@@ -391,15 +414,15 @@ const programOptionsJson = JSON.stringify(programOptions).replaceAll("<", "\\u00
       white-space: nowrap;
     }
 
-    /* The verdict is not shown when it is a pass: "ingen kollisjoner" answers a
-       question you only ask when something might be wrong, and on a phone it
+    /* The pass is not shown on a phone: "Ingen forelesninger kolliderer"
+       answers a question you only ask when something might be wrong, and it
        spent a line of the first screen saying nothing is. A collision still
        says so, as does "kan ikke sjekkes", and the line keeps its `aria-live`.
 
-       Matched through the wrapper with `:has()`, not on the span, or the flex
-       gap stays behind. `.is-clean` is the only class that survives
-       `renderVerdict`'s own `className =`. */
-    .planner-status:has(.is-clean) {
+       Scoped to the VERDICT, not to `.planner-status` around it — the deadline
+       shares that row now, and hiding the row took the one date the whole
+       positioning rests on down with a clean week (D13). */
+    .planner-verdict:has(.is-clean) {
       display: none;
     }
   }
@@ -434,37 +457,35 @@ const programOptionsJson = JSON.stringify(programOptions).replaceAll("<", "\\u00
     min-width: 0;
   }
 
+  /* One rule between the week and what is under it, and one between the two
+     columns. Two bordered boxes would say the same thing twice over — the page
+     IS the surface, so what separates a region from its neighbour is the line
+     between them, not a wall around each. */
   .planner-below {
     display: grid;
     gap: var(--space-7);
+    margin-top: clamp(1.9rem, 4vw, 2.9rem);
+    padding-top: clamp(1.4rem, 3vw, 1.9rem);
+    border-top: 1px solid var(--border-strong);
   }
 
   @media (min-width: 60rem) {
     .planner-below {
-      /* Exams first: they are time-ordered, so they rhyme with the week above.
-         The course list wants a measure rather than a fraction. */
-      /* The track carries the rule's gutter as well as the list, so the list
-         keeps its measure rather than paying for the division. */
-      grid-template-columns: minmax(0, 1fr) calc(22rem + var(--space-6));
+      /* Equal halves. The course list used to take a fixed 22rem measure and
+         leave the exams a fraction, which made the exam dates the wider of two
+         lists that both hold five short rows — and the load track under Emner
+         has nothing to say at 22rem that it cannot say at half the page. */
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
       align-items: start;
-      gap: var(--space-6);
+      gap: 0 clamp(2rem, 4vw, 3.5rem);
     }
 
-    /* One hairline divides the two, with the same distance on either side.
-       Two bordered boxes would say the same thing twice over — the page IS
-       the surface, so what separates a column from its neighbour is the line
-       between them, not a wall around each. Only where they sit side by side:
-       stacked, each section head's own rule already divides them, and a
-       vertical line down a phone would divide nothing. */
+    /* Only where they sit side by side: stacked, the gap between two heads is
+       already the division, and a vertical line down a phone would divide
+       nothing. */
     .planner-courses {
-      padding-inline-start: var(--space-6);
+      padding-inline-start: clamp(2rem, 4vw, 3.5rem);
       border-inline-start: 1px solid var(--border);
-    }
-  }
-
-  @media (min-width: 84rem) {
-    .planner-below {
-      grid-template-columns: minmax(0, 1fr) calc(26rem + var(--space-6));
     }
   }
 
@@ -507,36 +528,27 @@ const programOptionsJson = JSON.stringify(programOptions).replaceAll("<", "\\u00
 
   /* --- Section headers --------------------------------------------------- */
 
-  /* A section head is a NAME and its controls, divided by a rule — not four
-     unrelated things on one line with a four-hundred-pixel gap in the middle. */
+  /* A section head is a NAME and a qualifier on one baseline. No rule under it:
+     the two columns are already divided from the week by `.planner-below`'s own
+     border-top and from each other by the hairline between them, and a third
+     rule 40 px below the second is ruling that has stopped meaning anything.
+     Structure is the heading, the space around it, and one line per division. */
   .planner-section-head {
     display: flex;
     align-items: baseline;
     gap: var(--gap-3) var(--gap-4);
     flex-wrap: wrap;
     margin-bottom: var(--space-3);
-    padding-bottom: var(--space-2);
-    border-bottom: 1px solid var(--border-strong);
   }
 
-
-  /* The grotesk at a real size, not tracked-out uppercase mono. Data-Is-Mono
-     means the mono is for times, dates, codes and counts, so spending it on
-     section labels spends the rule's meaning too. */
+  /* A real size, not tracked-out uppercase. Data-Is-Mono means `.np-data` is
+     for times, dates, codes and counts, so spending its voice on section labels
+     spends the rule's meaning too. */
   .planner-section-name {
     font-size: var(--text-md);
-    font-weight: var(--weight-medium);
+    font-weight: var(--weight-semibold);
     letter-spacing: -0.015em;
-  }
-
-  /* Controls sit at the far end of the rule, grouped, so the head reads
-     "name … tools" rather than as a row of equal-weight chips. */
-  .planner-section-tools {
-    display: flex;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: var(--gap-2) var(--gap-3);
-    margin-left: auto;
+    margin-inline-end: auto;
   }
 
   /* The default ink is set at ZERO specificity on purpose, and that is what
@@ -560,37 +572,43 @@ const programOptionsJson = JSON.stringify(programOptions).replaceAll("<", "\\u00
     display: none;
   }
 
-  /* --- Rutenett ⇄ Liste ------------------------------ */
+  /* --- Uke ⇄ Liste ------------------------------ */
 
-  /* Two words and a rule that slides between them. No box: a box says "press
-     me", and this is a place you already are — one of the two is always true,
-     which is exactly what a filled chip cannot say. The rule is also the mark
-     the section head draws underneath, so the control sits IN the structure.
+  /* A segmented control: a recessed track with the live view raised out of it.
+     One of the two is always true, which is what the form has to say — a pair
+     of buttons would ask to be pressed, and a pair of bare words in the page's
+     bar would read as links among the chrome around them.
 
-     The BUTTONS carry the padding, not the container — a target is only a
-     target where the pointer lands. The negative margins pull that height back
-     out of the layout, so the head keeps its rhythm while each word becomes a
-     34px target (WCAG 2.5.8 asks 24; a bare word at --text-sm is 21). */
+     The BUTTONS carry the height, not the container — a target is only a target
+     where the pointer lands, and each is a full `--control-h` minus the track's
+     2px lip (WCAG 2.5.8 asks 24). */
   .planner-view-tabs {
     position: relative;
     display: flex;
-    gap: var(--gap-4);
-    margin-block: -9px -8px;
-    padding-bottom: 2px;
+    flex: none;
+    padding: 2px;
+    background: var(--wash);
+    border-radius: var(--radius-sm);
   }
 
-  /* The travelling rule. `--view-x` / `--view-w` are written by
-     `renderViewTabs` from the live button boxes, because the labels are
-     different widths in every font and at every zoom level. It rides the same
-     --dur and --ease as the week's own layer change. */
-  .planner-view-tabs::after {
-    content: "";
+  /* THE THUMB. A rule under a word was right when the switch lived in the
+     week's own section head, where a hairline was the local idiom. In the
+     page's bar it sits beside two buttons and a checkbox, and a segmented
+     control is what every calendar puts there: a recessed track with the live
+     view raised out of it on paper.
+
+     `--view-x` / `--view-w` are still written by `renderViewTabs` from the live
+     button boxes, because the labels are different widths in every font and at
+     every zoom level. */
+  .planner-view-thumb {
     position: absolute;
+    top: 2px;
+    bottom: 2px;
     inset-inline-start: 0;
-    bottom: 0;
-    height: 2px;
     width: var(--view-w, 0);
-    background: var(--ui);
+    background: var(--card);
+    border-radius: calc(var(--radius-sm) - 1px);
+    box-shadow: var(--shadow-sm);
     transform: translateX(var(--view-x, 0));
     transition:
       transform var(--dur) var(--ease),
@@ -598,15 +616,17 @@ const programOptionsJson = JSON.stringify(programOptions).replaceAll("<", "\\u00
   }
 
   :global(.planner-view-tab) {
+    position: relative;
+    z-index: 1;
+    display: inline-flex;
+    align-items: center;
+    min-height: calc(var(--control-h) - 4px);
+    padding-inline: var(--space-3);
     font-family: var(--font-sans);
     font-size: var(--text-sm);
-    font-weight: var(--weight-normal);
+    font-weight: var(--weight-medium);
     color: var(--muted);
-    /* 9px above and 4px below: the rule has to stay ~6px under the word, so the
-       target grows mostly upward, into the gap the head already has. */
-    padding: 9px var(--space-1) 4px;
-    margin-inline: calc(-1 * var(--space-1));
-    border-radius: var(--radius-xs);
+    border-radius: calc(var(--radius-sm) - 1px);
     transition: color var(--dur-fast) var(--ease);
   }
 
@@ -616,7 +636,6 @@ const programOptionsJson = JSON.stringify(programOptions).replaceAll("<", "\\u00
 
   :global(.planner-view-tab[aria-pressed="true"]) {
     color: var(--fg);
-    font-weight: var(--weight-medium);
   }
 
   /* The layer, not a view: a box you tick. Nothing about it is shaped like the
@@ -671,21 +690,9 @@ const programOptionsJson = JSON.stringify(programOptions).replaceAll("<", "\\u00
     opacity: 1;
   }
 
-  /* The gap that says "different kind of control" — wider than any gap inside
-     either group. */
-  .planner-section-tools {
-    gap: var(--gap-2) var(--space-5);
-  }
-
-  /* The verdict: PRODUCT §1's primary job answered beside the kicker, in three
-     states and three inks —
-       .is-clean       — the week holds together (Green-Means-Fits)
-       .np-note-clash  — two things cannot coexist (Red-Is-Collision)
-       neither         — the muted default: "kan ikke sjekkes". A gap is not a
-                         clash and not a pass, so it may spend neither colour.
-     `.is-clean` keeps its `:global()` because plannerApp adds it. */
-  :global(.planner-section-sub.is-clean),
-  :global(.planner-verdict.is-clean) {
+  /* The exam head's own verdict, which is still one sentence rather than a run
+     of chips: `.is-clean` there means the same as it does above. */
+  :global(.planner-section-sub.is-clean) {
     color: var(--verdict);
   }
 
@@ -838,61 +845,52 @@ const programOptionsJson = JSON.stringify(programOptions).replaceAll("<", "\\u00
     box-shadow: 0 0 0 1px var(--clash);
   }
 
-  /* --- The list: one rule, and it runs along the list -------------------- */
+  /* --- The list: the distances are the only rules ------------------------ */
 
-  /* A rule across a list divides it; a gap is not a division between two exams,
-     it is the distance between them, and distance runs along the list. So the
-     only rule left is vertical, the exams are knots on it, and the gaps hang
-     between them. */
+  /* A rule ACROSS a list divides it, and a gap between two exams is not a
+     division — it is the distance between them, which is the one thing this
+     list exists to show. So the gaps are the rules: each carries a hairline
+     that runs from its own words to the edge, and nothing else here is ruled.
+     (The vertical rule with the exams as knots on it said the same thing
+     turned 90°, and cost a line down a page whose structure is now type,
+     hairlines and space.) */
   :global(.exam-list) {
-    --exam-date-col: 5.5rem;
-    --exam-knot: 20px;
-    position: relative;
+    --exam-date-col: 3.9rem;
+    --exam-knot: 19px;
     list-style: none;
     max-width: none;
     margin: 0;
     padding: 0;
   }
 
-  :global(.exam-list)::before {
-    content: "";
-    position: absolute;
-    left: calc(var(--exam-date-col) + var(--gap-4) + 3px);
-    top: 1.1em;
-    bottom: 1.1em;
-    width: 1px;
-    background: var(--border-strong);
-  }
-
-  /* Two columns: the date, then the exam. The countdown that used to need a
-     third is a segment on the rule now. Keeping the column "just in case" was
-     not free: an `auto` track collapses to zero but its gap does not, and those
-     16 px pushed "Skriftlig skoleeksamen" onto a second line at 390 px. */
+  /* Three columns: the date, the exam, and the weekday at the far end. */
   :global(.exam-row) {
     display: grid;
-    grid-template-columns: var(--exam-date-col) minmax(0, 1fr);
+    grid-template-columns: var(--exam-date-col) minmax(0, 1fr) auto;
     align-items: baseline;
     gap: 0 var(--gap-4);
-    padding: var(--space-1) 0;
-  }
-
-  /* The one row that still has a third thing to say. */
-  :global(.exam-row.exam-dateless) {
-    grid-template-columns: var(--exam-date-col) minmax(0, 1fr) auto;
+    padding: var(--space-2) 0;
   }
 
   :global(.exam-date) {
-    text-align: right;
-    font-size: var(--text-md);
-    font-weight: var(--weight-medium);
-    letter-spacing: -0.02em;
+    font-size: var(--text-sm);
+    white-space: nowrap;
+  }
+
+  /* The figure being scanned. */
+  :global(.exam-day) {
+    font-weight: var(--weight-semibold);
+  }
+
+  :global(.exam-month),
+  :global(.exam-weekday) {
+    font-weight: var(--weight-normal);
+    color: var(--muted);
   }
 
   :global(.exam-weekday) {
     font-size: var(--text-xs);
-    font-weight: var(--weight-normal);
-    color: var(--faint);
-    margin-inline-end: var(--gap-1);
+    white-space: nowrap;
   }
 
   :global(.exam-what) {
@@ -937,25 +935,39 @@ const programOptionsJson = JSON.stringify(programOptions).replaceAll("<", "\\u00
     white-space: nowrap;
   }
 
-  /* The distance, hung on the rule between two knots. */
+  /* The distance between two dates, drawn as distance: the words, then a
+     hairline running out to the edge. That is what makes the row read as a
+     SPACE and not as a third entry in the list. */
   :global(.exam-gap) {
+    display: flex;
+    align-items: center;
+    gap: var(--gap-3);
     padding: var(--space-1) 0 var(--space-1)
       calc(var(--exam-date-col) + var(--gap-4) + var(--exam-knot));
     font-size: var(--text-xs);
-    color: var(--faint);
-  }
-
-  /* The first segment — today to the next exam. Same rule and indent as the
-     lesedager connectors, so the list reads as one chain of distances; never
-     `is-tight`'s red, because how far off an exam is says nothing about how
-     much room there is to revise. */
-  :global(.exam-gap.is-away) {
     color: var(--muted);
   }
 
+  :global(.exam-gap-rule) {
+    flex: 1 1 auto;
+    height: 1px;
+    background: var(--border);
+  }
+
+  /* The first segment — today to the next exam. Same idiom as the lesedager
+     connectors, so the list reads as one chain of distances; never `is-tight`'s
+     red, because how far off an exam is says nothing about how much room there
+     is to revise. */
   :global(.exam-gap.is-tight) {
     color: var(--clash);
     font-weight: var(--weight-medium);
+  }
+
+  /* Tight is the one distance worth seeing from across the room, so its rule
+     carries the colour too — but muted into the hairline, not drawn at full
+     strength: a red line across the list would out-shout the dates. */
+  :global(.exam-gap.is-tight) :global(.exam-gap-rule) {
+    background: color-mix(in srgb, var(--clash) 35%, var(--border));
   }
 
   :global(.exam-dateless) :global(.exam-date) {
@@ -987,12 +999,24 @@ const programOptionsJson = JSON.stringify(programOptions).replaceAll("<", "\\u00
   }
 
   :global(.planner-load-track) {
+    position: relative;
     display: flex;
     gap: 2px;
     height: 15px;
     background: var(--card);
     border-radius: var(--radius-xs);
     overflow: hidden;
+  }
+
+  /* Where 30 sp lands, on a track the plan has already run past. Ink, not a
+     signal colour: it marks a boundary, and the verdict chip above says
+     whether crossing it is a problem. */
+  :global(.planner-load-mark) {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background: var(--fg);
   }
 
   /* Printed ink, exactly like a week bar and an exam-band cell, so one course

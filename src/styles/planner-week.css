@@ -996,28 +996,43 @@ html[data-view="tavle"] #planner-grid-frame[data-reserve] {
 }
 
 /* The weekday names its column and then gets out of the way — the week's
-   typographic event is the blocks. Negative tracking went with the size: it
-   was tightening a headline, and at label size it only closes the letters up.
-   Today's column is the one that reaches full ink. */
+   typographic event is the blocks. Three uppercase letters, tracked, at the
+   label step: this is the one place in the system where tracked-out micro-type
+   is right rather than lazy, because it is what every calendar's weekday row
+   is and because a 60px column cannot hold "mandag" at any size worth reading.
+   Centred over its column, like the day it names. */
 .planner-cols-day-header {
-  padding: 0 6px var(--space-2);
+  padding: 0 4px var(--space-2);
   font-size: var(--planner-cols-head-font);
-  font-weight: var(--weight-medium);
+  font-weight: var(--weight-semibold);
+  letter-spacing: var(--tracking);
+  text-transform: uppercase;
   line-height: 1;
-  /* `--muted`, not a percentage of `--fg`: the old 34 % was a wash under a
-     bold headline, and at label size the ink has to clear AA on its own.
-     `tokens.test.ts` is the authority that it does. */
+  text-align: center;
+  /* `--muted`, not a percentage of `--fg`: the ink has to clear AA on its own
+     at this size. `tokens.test.ts` is the authority that it does. */
   color: var(--muted);
   white-space: nowrap;
   overflow: hidden;
   border-bottom: 1px solid var(--border-strong);
 }
 
-/* Today keeps the whole of the emphasis the rest of the row gave up: full ink
-   AND the weight, because at 0.9rem a colour step alone is a small signal. */
+/* The full word, kept for the accessibility tree and taken off the page —
+   "man" is not a thing a screen reader can expand. Same trade, same reason, as
+   `.planner-grid-spine-long` in the transposed grid. */
+.planner-cols-dow-long {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* Today is the accent's other job (DESIGN §8): "you are here", the same colour
+   as the needle below it, so the column and the minute agree. */
 .planner-cols-day-header[data-today] {
-  font-weight: var(--weight-bold);
-  color: var(--fg);
+  color: var(--accent);
 }
 
 /* The hour ruling, back on the horizontal — it follows the time axis whichever
@@ -1034,8 +1049,11 @@ html[data-view="tavle"] #planner-grid-frame[data-reserve] {
   border-right: 1px solid var(--border);
 }
 
+/* Today's column, washed in the accent rather than in ink: "you are here" is
+   the accent's job, and a grey column reads as disabled next to four white
+   ones. 4 % because it sits UNDER the blocks and must not tint them. */
 .planner-cols-day[data-today] {
-  background-color: color-mix(in srgb, var(--fg) 4%, transparent);
+  background-color: color-mix(in srgb, var(--accent) 5%, transparent);
 }
 
 /* Lanes get the column minus the space the drop-in strips reserve — on EVERY
@@ -1096,6 +1114,10 @@ html[data-view="tavle"] #planner-grid-frame[data-reserve] {
   white-space: nowrap;
 }
 
+/* The room, and on a drop-in strip the room and the activity. Quieter than the
+   code but on the block's own ink, never a grey: a knocked-out label on a
+   printed field has only one ramp to move along. */
+.planner-cols-room,
 .planner-cols-sub {
   font-size: var(--text-xs);
   line-height: 1.2;
@@ -1105,8 +1127,21 @@ html[data-view="tavle"] #planner-grid-frame[data-reserve] {
   color: color-mix(in srgb, var(--on-block) 72%, transparent);
 }
 
+.planner-cols-block.is-muted .planner-cols-room,
 .planner-cols-block.is-muted .planner-cols-sub {
   color: var(--muted);
+}
+
+/* Under 45 minutes there is no room for two lines at full size, so both lines
+   take a step down rather than one of them disappearing. */
+.planner-cols-block.is-tight {
+  padding: 1px 5px;
+}
+
+.planner-cols-block.is-tight .planner-cols-code,
+.planner-cols-block.is-tight .planner-cols-room {
+  font-size: 0.66rem;
+  line-height: 1.1;
 }
 
 /* One zone per incident, cut across every lane in the column. Drawn OVER the
@@ -1174,14 +1209,21 @@ html[data-view="tavle"] #planner-grid-frame[data-reserve] {
 }
 
 /* NÅLEN, turned with the axis. Same reasoning as the transposed one — today
-   only, hidden outside the drawn hours, and no clock rides on it. */
+   only, hidden outside the drawn hours, and no clock rides on it.
+
+   THE ACCENT, WITH A HALO. It crosses blocks in arbitrary colour, and one of
+   the course hues is a blue at nearly the accent's own value — there the line
+   vanished into the fill it was crossing. A 1px ring in the PAGE's colour is
+   what makes an overlay legible against anything under it; no single hue drawn
+   from a palette it is itself a member of can do that on its own. */
 .planner-cols-now {
   position: absolute;
   left: 0;
   right: 0;
   top: var(--planner-y);
   height: 2px;
-  background: var(--ui);
+  background: var(--accent);
+  box-shadow: 0 0 0 1px var(--bg);
   pointer-events: none;
   z-index: 4;
 }
@@ -1190,16 +1232,20 @@ html[data-view="tavle"] #planner-grid-frame[data-reserve] {
   display: none;
 }
 
+/* The head: a dot on the rail's side, the mark every calendar puts there. It
+   was a triangle built from borders, which is the same shape a CSS arrow makes
+   and read as a play button at 8px. */
 .planner-cols-now::before {
   content: "";
   position: absolute;
-  left: 0;
+  left: -3px;
   top: 50%;
   transform: translateY(-50%);
-  width: 0;
-  height: 0;
-  border-block: 6px solid transparent;
-  border-left: 8px solid var(--ui);
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 0 1.5px var(--bg);
 }
 
 /* The strike-in, turned 90° with everything else: the week prints downward. */
@@ -1327,10 +1373,18 @@ html[data-view="tavle"] #planner-grid-frame[data-reserve] {
   color: var(--fg);
 }
 
+/* When the day starts and ends, at the far end of its own rule. */
 .planner-board-sum {
   margin-inline-start: auto;
   font-size: var(--text-xs);
   color: var(--faint);
+}
+
+/* `display: none` until the row is live, which takes it out of the
+   accessibility tree with it — otherwise every row in the week announces "nå".
+   The lit state is further down, after the row's own type rules. */
+.planner-board-now-tag {
+  display: none;
 }
 
 /* Two numeral columns framing the line: the departure at the left margin, the
@@ -1407,6 +1461,31 @@ button.planner-board-row:hover {
   letter-spacing: -0.03em;
   text-align: right;
   white-space: nowrap;
+}
+
+/* THE ROW YOU ARE INSIDE. The list's answer to the needle: the same accent, in
+   the only form a list has for it. Never `--clash` — being in a lecture right
+   now is not a problem, and this page spends red on exactly one thing.
+
+   Placed after the row's own type rules rather than beside the `display: none`
+   above, so the specificity runs the right way round. */
+.planner-board-row.is-now {
+  background: color-mix(in srgb, var(--accent) 6%, transparent);
+}
+
+.planner-board-row.is-now .planner-board-from {
+  color: var(--accent);
+  font-weight: var(--weight-semibold);
+}
+
+.planner-board-row.is-now .planner-board-now-tag {
+  display: inline;
+  flex: none;
+  font-size: var(--text-xs);
+  font-weight: var(--weight-semibold);
+  letter-spacing: var(--tracking);
+  text-transform: uppercase;
+  color: var(--accent);
 }
 
 /* "Digital undervisning" is a sentence wearing a room's clothes: at display

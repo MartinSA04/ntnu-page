@@ -237,6 +237,9 @@ export function renderBoard(
   board.setAttribute("aria-label", "Ukeplan som liste");
 
   const dayCount = entries.some((e) => e.dayNumber === 6) ? 6 : 5;
+  // Read once for the whole render: two rows must never disagree about whether
+  // it is 09:59 or 10:00.
+  const now = new Date();
   let strike = 0;
   // Occurrence counter behind `motionKey` — see there for why a session needs
   // an identity that outlives the re-render.
@@ -251,15 +254,19 @@ export function renderBoard(
     head.setAttribute("data-motion-key", `day-${day}`);
     if (day === options.todayNumber) head.setAttribute("data-today", "");
     head.append(el("h3", "planner-board-dayname", dayName(day)));
-    const minutes = items.reduce(
-      (sum, e) => sum + (minutesOf(e.endTime) - minutesOf(e.startTime)),
-      0,
+    // WHEN THE DAY STARTS AND ENDS, not how many hours are inside it. "7,5 t"
+    // is a number you cannot plan around — two hours of that could be at 08:15
+    // or at 19:00 — while "08:15–17:00" is the shape of the day, which is the
+    // thing a student is deciding about. `fri` still says the day is empty.
+    const last = items.reduce(
+      (latest, e) => (minutesOf(e.endTime) > minutesOf(latest) ? e.endTime : latest),
+      items[0]?.endTime ?? "",
     );
     head.append(
       el(
         "span",
         "planner-board-sum np-data",
-        items.length === 0 ? "fri" : `${(minutes / 60).toFixed(1).replace(".", ",")} t`,
+        items.length === 0 ? "fri" : `${items[0]?.startTime}–${last}`,
       ),
     );
     board.append(head);
@@ -290,6 +297,10 @@ export function renderBoard(
     for (const entry of items) {
       const row = buildRow(entry, strike++, motionKey(entry, keySeen), options.onBlockClick);
       if (marked.has(entry)) row.classList.add("is-clashing");
+      // The first frame's answer; `syncBoardNow` keeps it true on the minute
+      // without rebuilding the week.
+      if (isLive(entry.dayNumber, entry.startTime, entry.endTime, options.todayNumber ?? null, now))
+        row.classList.add("is-now");
       board.append(row);
 
       const segment = noteAfter.get(entry);
@@ -311,6 +322,54 @@ export function renderBoard(
   board.style.setProperty("--planner-step", `${staggerStep(strike, 45)}ms`);
   host.append(board);
   return { rowCount: entries.length };
+}
+
+/** Is `at` inside this session, on this session's day? */
+function isLive(
+  dayNumber: number,
+  startTime: string,
+  endTime: string,
+  todayNumber: number | null,
+  at: Date,
+): boolean {
+  if (dayNumber !== todayNumber || startTime === "" || endTime === "") return false;
+  const minutes = at.getHours() * 60 + at.getMinutes();
+  return minutesOf(startTime) <= minutes && minutes < minutesOf(endTime);
+}
+
+/**
+ * Marks the row you are inside right now, or none.
+ *
+ * Exported because it must re-run on a timer: an ordinary minute may NOT
+ * re-render the week — that would throw away the layer motion, the scroll
+ * position and any open popover — so this is Liste's half of what
+ * `syncColumnNow` does for the grid. Silently does nothing when this view is
+ * not the one on screen, so the caller may simply call all of them.
+ *
+ * `todayNumber` is passed rather than derived: the caller owns "what day is
+ * it", and a second reading of the clock here is a second chance to disagree
+ * with the column that drew today's wash.
+ */
+export function syncBoardNow(
+  frame: HTMLElement,
+  todayNumber: number | null,
+  at: Date = new Date(),
+): void {
+  // `Array.from`, not a spread: the Node typecheck pass's lib has no
+  // DOM.Iterable, so a NodeList is not iterable there.
+  const rows = Array.from(frame.querySelectorAll<HTMLElement>(".planner-board-row[data-day]"));
+  for (const row of rows) {
+    row.classList.toggle(
+      "is-now",
+      isLive(
+        Number(row.getAttribute("data-day")),
+        row.getAttribute("data-start") ?? "",
+        row.getAttribute("data-end") ?? "",
+        todayNumber,
+        at,
+      ),
+    );
+  }
 }
 
 /**
@@ -357,10 +416,21 @@ function buildRow(
   time.append(el("span", "planner-board-to np-data", `til ${entry.endTime}`));
   row.append(time);
 
+  // What the needle is in the grid: the row you are inside right now. Placed
+  // by `syncBoardNow` on a timer rather than by this render, for the same
+  // reason the needle is — an ordinary minute may not rebuild the week.
+  row.setAttribute("data-day", String(entry.dayNumber));
+  row.setAttribute("data-start", entry.startTime);
+  row.setAttribute("data-end", entry.endTime);
+
   const what = el("span", "planner-board-what");
   const name = el("span", "planner-board-name");
   name.append(dot(entry.hueVar));
   name.append(el("span", "planner-board-course", entry.courseName));
+  // Present on every row and `display: none` until the row is live, which
+  // takes it out of the accessibility tree too — so nothing announces "nå"
+  // about a session at four o'clock this afternoon.
+  name.append(el("span", "planner-board-now-tag", "nå"));
   what.append(name);
   const sub = [entry.courseCode, entry.label].filter(Boolean).join(" · ");
   what.append(el("span", "planner-board-sub np-data", sub));

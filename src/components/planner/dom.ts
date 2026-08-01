@@ -51,6 +51,21 @@ const ICONS = {
    * separately drift in stroke and optical centre.
    */
   chevronDown: [["path", { d: "m6 9 6 6 6-6" }]],
+  /**
+   * `circle-check` — the verdict, when the answer is yes. A mark rather than a
+   * coloured pill: the colour sits in the sign, and the sentence beside it
+   * stays ink, so a verdict never becomes a badge the eye learns to skip.
+   */
+  circleCheck: [
+    ["circle", { cx: "12", cy: "12", r: "9" }],
+    ["path", { d: "m8.5 12 2.5 2.5 4.5-5" }],
+  ],
+  /** `circle-alert` — the verdict, when there is something to look at. */
+  circleAlert: [
+    ["circle", { cx: "12", cy: "12", r: "9" }],
+    ["path", { d: "M12 7.5v5" }],
+    ["path", { d: "M12 16.2v.1" }],
+  ],
 } as const satisfies Record<string, readonly IconShape[]>;
 
 export type IconName = keyof typeof ICONS;

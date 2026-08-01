@@ -250,6 +250,7 @@ const IDS = [
   "planner-grid-notes",
   "planner-grid-status",
   "planner-status",
+  "planner-deadline",
   "planner-exam-list-host",
   "planner-exam-status",
   "planner-course-rows",
@@ -535,8 +536,12 @@ describe("mountPlannerApp — audit repro", () => {
       "#26h;-;%2BTDT4109,%2BTMA4412",
     );
     const status = find("planner-grid-status");
-    expect(status.textContent).toBe("ingen kollisjoner");
-    expect(status.classList.contains("is-clean")).toBe(true);
+    // DR-1: the engine only ever compares LECTURES, so the pass says which
+    // thing it checked. "ingen kollisjoner" claimed the whole week.
+    expect(status.textContent).toBe("Ingen forelesninger kolliderer");
+    // The state moved onto the chip when the verdict became a run of them; the
+    // phone rule that hides a clean pass matches it with `:has()`.
+    expect(status.querySelector(".is-clean")).not.toBeNull();
   });
 
   it("the provenance line is silent when the join has no gap to admit", async () => {

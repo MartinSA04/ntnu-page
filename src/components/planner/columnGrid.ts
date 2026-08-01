@@ -46,12 +46,13 @@ const DEFAULT_START_HOUR = 8;
 const DEFAULT_END_HOUR = 16;
 
 /**
- * Duration a block needs before it carries more than its code. Height is
+ * Duration below which a block sets its two lines a step smaller. Height is
  * duration here, so this is the vertical twin of the transposed bar's width
- * rule. Below 45 minutes only the code is drawn, and the code is never dropped.
+ * rule — but nothing is DROPPED at this threshold any more: the code and the
+ * room are both facts the grid's geometry cannot state, so the type gives way
+ * instead of the content.
  */
 const ROOM_MINUTES = 45;
-const LABEL_MINUTES = 90;
 
 export interface ColumnRenderOptions {
   /** Same contract as the grid's and the board's: a click opens the session. */
@@ -315,15 +316,14 @@ function buildBlock(
   block.style.setProperty("--planner-strike", String(strike));
 
   block.append(el("span", "planner-cols-code np-data", entry.courseCode));
-  const duration = durationOf(entry);
-  // The room before the activity, the same order the transposed bar settled
-  // on: where you have to walk survives, the label is what gets cut.
-  if (duration >= ROOM_MINUTES && entry.rooms) {
-    block.append(el("span", "planner-cols-sub", entry.rooms));
-  }
-  if (duration >= LABEL_MINUTES && entry.label) {
-    block.append(el("span", "planner-cols-sub", entry.label));
-  }
+  // THE COURSE AND THE ROOM, AND NOTHING ELSE. The clock is already drawn —
+  // it IS the block's place in the grid — and the activity is one tap away in
+  // the session card. The room is the only fact here that position cannot
+  // state, so it never drops out however narrow the lane gets: the type
+  // shrinks instead (`.is-tight` below).
+  if (entry.rooms) block.append(el("span", "planner-cols-room np-data", entry.rooms));
+  // A block shorter than a lecture cannot hold two lines at full size.
+  if (durationOf(entry) < ROOM_MINUTES) block.classList.add("is-tight");
   return block;
 }
 
@@ -398,7 +398,16 @@ export function renderColumnGrid(
   grid.append(el("div", "planner-cols-corner"));
 
   for (const day of geo.days) {
-    const header = el("div", "planner-cols-day-header", dayName(day.dayNumber));
+    // Three letters, uppercase, and the full word still in the accessibility
+    // tree — the same trade the transposed grid's spine makes, for the same
+    // reason: "man" cannot be expanded by a screen reader, and a column this
+    // narrow cannot hold "mandag" at any size worth reading. Every calendar
+    // sets its weekday row this way; it is the one place micro-type earns it.
+    const header = el("div", "planner-cols-day-header");
+    header.append(el("span", "planner-cols-dow-long", dayName(day.dayNumber)));
+    const short = el("span", "planner-cols-dow", dayName(day.dayNumber).slice(0, 3));
+    short.setAttribute("aria-hidden", "true");
+    header.append(short);
     header.setAttribute("data-day", String(day.dayNumber));
     if (day.dayNumber === options.todayNumber) header.setAttribute("data-today", "");
     grid.append(header);
