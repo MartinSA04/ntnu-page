@@ -74,9 +74,16 @@ const roomLabel = (rooms: { building: string | null; room: string | null }[]): s
  * A room worth setting in the display figure is a real room code. "Digital
  * undervisning" is a sentence wearing a room's clothes; at 1.4rem it wraps and
  * knocks the row's two numeral columns out of alignment.
+ *
+ * What separates a code from a sentence is whitespace and a digit, not
+ * punctuation: a shape test spelled out in letters and digits rejected
+ * `A4-156` — a real Realfagbygget room, where TDT4120's øvingsveiledning sits
+ * five days a week — purely for its hyphen, and demoted it to the small style
+ * meant for the sentence.
  */
 export function isRoomCode(room: string): boolean {
-  return /^[A-ZÆØÅ]{1,4}\d{1,3}[A-ZÆØÅ]?$/.test(room.trim());
+  const t = room.trim();
+  return t.length <= 8 && !/\s/.test(t) && /\d/.test(t);
 }
 
 /**

@@ -244,7 +244,6 @@ const IDS = [
   "planner-direction-actions",
   "planner-direction-btn",
   "planner-others-toggle",
-  "planner-view-uke",
   "planner-view-kolonner",
   "planner-view-tavle",
   "planner-grid-frame",
@@ -1121,7 +1120,7 @@ describe("mountPlannerApp — audit repro", () => {
       "#26h;-;%2BTDT4109",
     );
     const frame = find("planner-grid-frame");
-    const grid = frame.querySelector(".planner-grid");
+    const grid = frame.querySelector(".planner-cols");
     expect(grid).not.toBeNull();
     // The measured 390 px geometry: the frame's own 24 px padding is scrollable
     // content, so scrollWidth - clientWidth is 26 while the grid itself fits.
@@ -1228,7 +1227,7 @@ describe("mountPlannerApp — audit repro", () => {
     // accessible name, which still spells the day and the hours out loud.
     const slots = (): string =>
       find("planner-grid-frame")
-        .querySelectorAll(".planner-block")
+        .querySelectorAll(".planner-cols-block")
         .map((b) => b.getAttribute("aria-label") ?? "")
         .join(" | ");
 

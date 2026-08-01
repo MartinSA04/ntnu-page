@@ -131,13 +131,18 @@ const FULL_LOAD_CREDITS = 30;
 const RAIL_WIDTH_PX = 48;
 
 /**
- * The three week views: the transposed grid (days as rows), the column grid
- * (days as columns — the timetable shape) and Tavla (no geometry). Views of
- * one plan, never three plans.
+ * The two week views: the column grid (days as columns — the timetable shape)
+ * and Tavla (no geometry). Views of one plan, never two plans.
+ *
+ * The value stays `"kolonner"` rather than becoming `"uke"` alongside its
+ * label: it is a localStorage key's value, and a student who last picked the
+ * column grid would otherwise come back to an unrecognised string. `"uke"` is
+ * also still spelled by the transposed grid on `/emne/[code]/`, which is the
+ * one place that geometry survives.
  */
-export type WeekView = "uke" | "kolonner" | "tavle";
+export type WeekView = "kolonner" | "tavle";
 
-const WEEK_VIEWS: readonly WeekView[] = ["uke", "kolonner", "tavle"];
+const WEEK_VIEWS: readonly WeekView[] = ["kolonner", "tavle"];
 
 const WEEK_VIEW_KEY = "np:weekView";
 
@@ -151,9 +156,9 @@ const WEEK_VIEW_KEY = "np:weekView";
 function loadWeekView(): WeekView {
   try {
     const stored = localStorage.getItem(WEEK_VIEW_KEY);
-    return WEEK_VIEWS.find((view) => view === stored) ?? "uke";
+    return WEEK_VIEWS.find((view) => view === stored) ?? "kolonner";
   } catch {
-    return "uke";
+    return "kolonner";
   }
 }
 
@@ -180,16 +185,16 @@ const WEEK_BOX_KEY = "np:weekBox";
  * How tall this browser's week actually came out, per view, with the width it
  * was measured at: `{ "tavle": [390, 891] }`.
  *
- * The three views have unrelated geometries — Rader is five day rows, Kolonner
- * is drawn hours × 4.5rem, Liste is a session count — so the frame cannot
- * reserve one height for all of them, and reserving Rader's for Liste left
- * 0.14 CLS. Kolonner can be computed; Liste cannot, because nothing before the
- * fetch knows the session count.
+ * The views have unrelated geometries — Uke is drawn hours × 4.5rem, Liste is
+ * a session count — so the frame cannot reserve one height for both, and
+ * reserving the other view's is worse than reserving nothing (0.14 CLS when
+ * that was measured). Uke can be computed; Liste cannot, because nothing
+ * before the fetch knows the session count.
  *
  * So the page measures itself and Layout.astro's pre-paint probe hands the
  * number back as `--planner-box` before the next first frame. Sound because a
- * load in Kolonner or Liste is by construction a return visit — the only way
- * into either is the tab that put you there.
+ * load in Liste is by construction a return visit — the only way into it is
+ * the tab that put you there.
  *
  * The width rides along because it is what makes the height meaningful (a list
  * measured in 390px wraps differently at 1440); the probe discards the entry
@@ -229,7 +234,6 @@ interface PlannerElements {
   directionActions: HTMLElement;
   directionButton: HTMLButtonElement;
   othersToggle: HTMLButtonElement;
-  viewUke: HTMLButtonElement;
   viewKolonner: HTMLButtonElement;
   viewTavle: HTMLButtonElement;
   gridFrame: HTMLElement;
@@ -266,7 +270,6 @@ function getElements(): PlannerElements | null {
     directionActions: byId<HTMLElement>("planner-direction-actions"),
     directionButton: byId<HTMLButtonElement>("planner-direction-btn"),
     othersToggle: byId<HTMLButtonElement>("planner-others-toggle"),
-    viewUke: byId<HTMLButtonElement>("planner-view-uke"),
     viewKolonner: byId<HTMLButtonElement>("planner-view-kolonner"),
     viewTavle: byId<HTMLButtonElement>("planner-view-tavle"),
     gridFrame: byId<HTMLElement>("planner-grid-frame"),
@@ -1034,21 +1037,22 @@ export async function mountPlannerApp(
   );
 
   elements.editPlan.addEventListener("click", () => studieinfo.open(), { signal });
-  elements.viewUke.addEventListener("click", () => setWeekView("uke"));
   elements.viewKolonner.addEventListener("click", () => setWeekView("kolonner"));
   elements.viewTavle.addEventListener("click", () => setWeekView("tavle"));
   // The travelling rule is measured, so re-measure whenever the measurement
-  // could change: a resize, and the frame after the webfont swaps.
+  // could change: a resize, and the frame after font loading settles (there is
+  // no webfont to swap any more, but the promise is still the cheapest hook
+  // onto "layout has run once").
   window.addEventListener("resize", renderViewTabs, { passive: true, signal });
   document.fonts?.ready.then(() => renderViewTabs());
 
-  // --- Rader ⇄ Kolonner ⇄ Liste ----------
+  // --- Uke ⇄ Liste ----------
 
   /**
-   * Switches which of the three views draws the week. Only the week
-   * re-renders: the exam list, credit line and course rows say the same thing
-   * in every view, and rebuilding them would throw away the student's scroll
-   * position for a change they did not ask those surfaces to make.
+   * Switches which of the two views draws the week. Only the week re-renders:
+   * the exam list, credit line and course rows say the same thing in either
+   * view, and rebuilding them would throw away the student's scroll position
+   * for a change they did not ask those surfaces to make.
    */
   function setWeekView(view: WeekView): void {
     if (weekView === view) return;
@@ -1061,10 +1065,9 @@ export async function mountPlannerApp(
   /**
    * The pressed state, and the rule that travels to it.
    *
-   * Offsets are measured rather than declared because the three labels are
-   * different widths in every face, at every zoom step, and again once the
-   * webfont lands. `offsetLeft` is relative to the tabs container, which is the
-   * rule's positioned ancestor.
+   * Offsets are measured rather than declared because the labels are
+   * different widths in every face and at every zoom step. `offsetLeft` is
+   * relative to the tabs container, which is the rule's positioned ancestor.
    *
    * Guarded on `offsetWidth` because the unit suite renders into a DOM with no
    * layout: there the tabs still get `aria-pressed` and the decoration with
@@ -1073,7 +1076,6 @@ export async function mountPlannerApp(
   function renderViewTabs(): void {
     let active: HTMLElement | null = null;
     for (const [button, view] of [
-      [elements.viewUke, "uke"],
       [elements.viewKolonner, "kolonner"],
       [elements.viewTavle, "tavle"],
     ] as const) {
@@ -1081,7 +1083,7 @@ export async function mountPlannerApp(
       button.setAttribute("aria-pressed", String(on));
       if (on) active = button;
     }
-    const tabs = elements.viewUke.parentElement;
+    const tabs = elements.viewKolonner.parentElement;
     if (!tabs || !active || typeof active.offsetWidth !== "number" || active.offsetWidth === 0) {
       return;
     }
@@ -1834,9 +1836,16 @@ export async function mountPlannerApp(
       // same terms as Tavla below: `renderGrid` still owns the margin notes and
       // the conflict count, because which courses we could not draw is a fact
       // about the WEEK, not about which way round it is drawn.
+      //
+      // `onChoiceClick` rides along with the notes, NOT with the week: a note
+      // that says "EXPH0300 har 14 grupper" is a link into the picker, and it
+      // is inert without this. It used to be passed only by the branch that
+      // drew Rader into the real frame, so deleting that view took the notes'
+      // click with it.
       gridResult = renderGrid(discardHost, elements.gridNotes, filteredStates, showOthers, {
         loading: anyLoading,
         pendingChoiceMessage: question?.weekMessage ?? null,
+        onChoiceClick: openCourseSettings,
       });
       const columns = renderColumnGrid(
         elements.gridFrame,
@@ -1861,16 +1870,19 @@ export async function mountPlannerApp(
           {
             loading: anyLoading,
             pendingChoiceMessage: question?.weekMessage ?? null,
+            onChoiceClick: openCourseSettings,
           },
         );
       }
-    } else if (weekView === "tavle") {
+    } else {
       // Tavla renders into the same frame from the same states — a view of the
-      // plan, not a second plan. `renderGrid` still owns the margin notes for
-      // the same reason as the column branch above.
+      // plan, not a second plan. `renderGrid` still owns the margin notes —
+      // and their click into the picker — for the same reason as the column
+      // branch above.
       gridResult = renderGrid(discardHost, elements.gridNotes, filteredStates, showOthers, {
         loading: anyLoading,
         pendingChoiceMessage: question?.weekMessage ?? null,
+        onChoiceClick: openCourseSettings,
       });
       renderBoard(
         elements.gridFrame,
@@ -1883,15 +1895,6 @@ export async function mountPlannerApp(
           onBlockClick: openBlockPopover,
         },
       );
-    } else {
-      gridResult = renderGrid(elements.gridFrame, elements.gridNotes, filteredStates, showOthers, {
-        loading: anyLoading,
-        pendingChoiceMessage: question?.weekMessage ?? null,
-        todayNumber: todayWeekday(),
-        animate: pendingViewAnimation,
-        onBlockClick: openBlockPopover,
-        onChoiceClick: openCourseSettings,
-      });
     }
     // The strike-in plays once, on the render a view switch caused — never on
     // the re-render a group pick or a plan edit causes.
@@ -1965,8 +1968,8 @@ export async function mountPlannerApp(
    *
    * The lease is the important half: every reserved number is an estimate of a
    * week that has not been drawn, and leaving it standing is how loading in
-   * Liste and then pressing Rader left 600px of white paper for the rest of the
-   * visit.
+   * Liste and then pressing the other tab left 600px of white paper for the
+   * rest of the visit.
    *
    * Three states are deliberately neither released nor remembered: a skeleton,
    * an apology and an onboarding card are all shorter than the week they stand

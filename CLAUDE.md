@@ -105,20 +105,24 @@
   loading→data reflow; this is the paint→mount half, and it was 0.52 of the
   0.61 on its own. It duplicates `SKELETON_DAYS` and the ruler's 22px from
   `grid.ts`; the row metrics live on the *frame* so it can compute a week that
-  does not exist yet. **The three views have three unrelated geometries** and
-  that base rule is RADER's alone (which is all `/emne/[code]/` can draw) —
-  Kolonner is the drawn hours × `--planner-hour-h`, Liste is a session count.
-  Reserving Rader's for Liste is worse than reserving nothing (0.14 CLS), so
-  `#planner-grid-frame` overrides per `html[data-view]`, by **id**, so a
-  remembered Liste height can never reach the course page's frame. Liste has
-  no formula, so `saveWeekBox`/`--planner-box` remembers the height per view
-  *and per width* and the probe hands it back before paint — sound because a
-  load in Kolonner or Liste is by construction a return visit, and discarded
-  outside a 32px width tolerance rather than trusting another layout's number.
-  All of it is a **lease**: `--planner-box` is one variable holding the height
-  of the view the page LOADED in, so a reservation that never ends kept Liste's
-  829px around Rader's 247px week the moment the student pressed the other tab
-  (600px of white paper above the exam list, for the rest of the visit).
+  does not exist yet. **Each week geometry reserves its own height** and that
+  base class rule is RADER's alone — which since stage 2 is `/emne/[code]/`'s
+  geometry and nothing else, because the planner's Rader tab is gone. The
+  planner's two are Uke (the drawn hours × `--planner-hour-h`, the `#`-scoped
+  base rule) and Liste (a session count, `html[data-view="tavle"]`). Reserving
+  one for the other is worse than reserving nothing (0.14 CLS), and the
+  planner's rules are scoped **by id** so a remembered Liste height can never
+  reach the course page's frame. Liste has no formula, so
+  `saveWeekBox`/`--planner-box` remembers the height per view *and per width*
+  and the probe hands it back before paint — sound because a load in Liste is
+  by construction a return visit, and discarded outside a 32px width tolerance
+  rather than trusting another layout's number. **The probe's default view must
+  match `loadWeekView`'s** (`kolonner`), or a cold load reserves for a view it
+  is not about to draw. All of it is a **lease**: `--planner-box` is one
+  variable holding the height of the view the page LOADED in, so a reservation
+  that never ends kept Liste's 829px around the other view's much shorter week
+  the moment the student pressed the other tab (600px of white paper above the
+  exam list, for the rest of the visit).
   `settleWeekBox` releases on the first drawn week and `setWeekView` on the way
   out of a view. A gate for this needs a **one-course** plan — a full plan draws
   a week taller than every reservation, so slack is zero whether or not the

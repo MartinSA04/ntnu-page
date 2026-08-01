@@ -160,17 +160,20 @@ const crawlDate = formatCrawlDate(semestersData.crawledAt);
           applyWeekBox(root);
         }
         // Which way the planner draws its week, and how tall that came out last
-        // time. The three views have three different geometries, so one reserved
-        // height cannot serve all three (planner-week.css has the measurements).
+        // time. The two views have different geometries, so one reserved height
+        // cannot serve both (planner-week.css has the measurements).
+        //
+        // The default must agree with `loadWeekView`'s: disagree, and a cold
+        // load reserves the height of a view it is not about to draw.
         //
         // The remembered height is preferred over any formula because it is
         // evidence rather than a model, and it is nearly always available: a
-        // load in Kolonner or Liste is by construction a return visit. It is
-        // stored WITH the width it was measured at and discarded outside a small
+        // load in Liste is by construction a return visit. It is stored WITH
+        // the width it was measured at and discarded outside a small
         // tolerance — a height measured at another width is not evidence about
         // this one.
         function applyWeekBox(root) {
-          var view = "uke";
+          var view = "kolonner";
           var box = null;
           try {
             var stored = localStorage.getItem(WEEK_VIEW_KEY);
@@ -185,7 +188,7 @@ const crawlDate = formatCrawlDate(semestersData.crawledAt);
               box = entry[1];
             }
           } catch (e) {
-            view = "uke";
+            view = "kolonner";
             box = null;
           }
           root.setAttribute("data-view", view);

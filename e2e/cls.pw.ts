@@ -101,7 +101,7 @@ async function clsOf(page: Page, url: string): Promise<number> {
  */
 async function seedPlan(page: Page): Promise<void> {
   await page.goto("/planlegger/#26h;MTDT.2026;");
-  await expect(page.locator("#planner-grid-frame .planner-block").first()).toBeVisible({
+  await expect(page.locator("#planner-grid-frame .planner-cols-block").first()).toBeVisible({
     timeout: 45_000,
   });
   // The probe reads `np:plans`, so the derived programme courses have to have
@@ -145,9 +145,9 @@ test.describe("layout stability", () => {
   });
 
   /**
-   * The other two views, from cold. Reserving Rader's height for all three left
-   * 0.14 CLS on a first load in Liste and 0.08 in Kolonner — worse, in Liste,
-   * than any page had before the reservations existed.
+   * Both views, from cold. Reserving one height for both left 0.14 CLS on a
+   * first load in Liste and 0.08 in Uke — worse, in Liste, than any page had
+   * before the reservations existed.
    *
    * `np:weekView` is set WITHOUT a matching `np:weekBox`, on purpose: that
    * exercises the formula fallback rather than the remembered height, and the
@@ -155,7 +155,7 @@ test.describe("layout stability", () => {
    * test below.
    */
   for (const [view, label] of [
-    ["kolonner", "Kolonner"],
+    ["kolonner", "Uke"],
     ["tavle", "Liste"],
   ] as const) {
     test(`the week holds its shape in ${label}, cold`, async ({ page }) => {
@@ -209,8 +209,8 @@ test.describe("layout stability", () => {
    * The other half of a reservation: giving it back.
    *
    * `--planner-box` is one variable holding the height of the view the page
-   * LOADED in, so a reservation that never ends kept Liste's 829px around
-   * Rader's 247px week for the rest of the visit.
+   * LOADED in, so a reservation that never ends kept Liste's 829px around the
+   * other view's much shorter week for the rest of the visit.
    *
    * Measured as slack — frame height minus what it contains — because that is
    * what the student sees, and it is zero in every view or the lease has
@@ -223,7 +223,7 @@ test.describe("layout stability", () => {
    */
   test("the week gives its reserved space back when the view changes", async ({ page }) => {
     await page.goto("/planlegger/#26h;-;%2BTDT4120");
-    await expect(page.locator("#planner-grid-frame .planner-block").first()).toBeVisible({
+    await expect(page.locator("#planner-grid-frame .planner-cols-block").first()).toBeVisible({
       timeout: 45_000,
     });
     await page.click("#planner-view-tavle");
@@ -249,9 +249,11 @@ test.describe("layout stability", () => {
       });
 
     for (const [id, label] of [
-      ["#planner-view-uke", "Rader"],
-      ["#planner-view-kolonner", "Kolonner"],
+      ["#planner-view-kolonner", "Uke"],
       ["#planner-view-tavle", "Liste"],
+      // Back to Uke: the reported case is a lease held across a switch, and one
+      // switch each way is what proves it is handed back in both directions.
+      ["#planner-view-kolonner", "Uke"],
     ] as const) {
       await page.click(id);
       // A height measured mid-transition is a frame of an animation, not the

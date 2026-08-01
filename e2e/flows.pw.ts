@@ -36,7 +36,21 @@ async function settingsFromBlock(page: Page, block = gridBlocks(page).first()): 
 /** The course list's row is inert; its settings button is the target. */
 const courseSettingsBtn = (page: Page, code: string) =>
   page.locator(`#planner-course-rows .planner-course-open[data-code="${code}"]`);
-const gridBlocks = (page: Page) => page.locator("#planner-grid-frame .planner-block");
+/**
+ * A drawn session in the planner's week. `#planner-grid-frame` is
+ * /planlegger/'s own id, and the planner draws Uke — the transposed grid's
+ * `.planner-block` survives on /emne/[code]/, whose frame carries the class but
+ * no id, and the two course-page tests below address it there directly.
+ *
+ * A helper rather than a literal because ~45 call sites go through it, and
+ * they did once already: as `.planner-block` alone it was 28 of the 46 e2e
+ * failures dropping Rader caused.
+ */
+const gridBlocks = (page: Page) => page.locator("#planner-grid-frame .planner-cols-block");
+
+/** The course code printed on the first drawn session. */
+const firstBlockCode = async (page: Page): Promise<string> =>
+  (await gridBlocks(page).first().locator(".planner-cols-code").textContent())?.trim() ?? "";
 
 /**
  * The planner names the plan in its own title, so there is no topbar chip
@@ -161,7 +175,7 @@ test("share: a program-less link clears the profile chip", async ({ page }) => {
   await expect(editPlanLabel(page)).toHaveText("Velg studieprogram");
 });
 
-test("overlap: two colliding courses stack, both full width and readable", async ({ page }) => {
+test("overlap: two colliding courses take a lane each, both readable", async ({ page }) => {
   // MTDT 2026's obligatory TDT4109 collides with a manually added TDT4120 —
   // the exact clash the old suite's clash-preview (ekstraemne) test verified.
   await page.goto("/planlegger/#26h;MTDT.2026;%2BTDT4120");
@@ -174,27 +188,29 @@ test("overlap: two colliding courses stack, both full width and readable", async
   expect(await settledVerdict(page)).toMatch(/\d+ kollisjon/);
 
   // Only the two colliding blocks carry "kolliderer med" in their aria-label.
-  const clashBlocks = page.locator('.planner-block[aria-label*="kolliderer med"]');
+  const clashBlocks = page.locator('.planner-cols-block[aria-label*="kolliderer med"]');
   await expect(clashBlocks).toHaveCount(2, { timeout: 30_000 });
 
-  // they no longer split a column between them — they
-  // take a lane each and keep their full width, which is their duration. The
-  // old assertion was `--planner-col-count === "2"`, i.e. "each got half".
+  // A lane each, and neither is drawn on top of the other — the fault this
+  // guards is two colliding sessions sharing one lane and hiding one of them.
+  // Each still carries its code, which is the floor a split column must clear.
   const blocks = await clashBlocks.all();
   const lanes = new Set<string>();
   for (const block of blocks) {
     lanes.add(await block.evaluate((el) => el.style.getPropertyValue("--planner-lane")));
-    const box = await block.boundingBox();
-    // A colliding bar is now as wide as any other bar of the same length —
-    // 8 px was the floor when two of them shared one 150 px weekday.
-    expect(box?.width ?? 0).toBeGreaterThan(40);
-    const codeText = (await block.locator(".planner-block-code").textContent())?.trim() ?? "";
-    expect(codeText).not.toBe("");
+    const code = block.locator(".planner-cols-code");
+    expect(((await code.textContent()) ?? "").trim()).not.toBe("");
+    // Readable, which for a split column means the code is not clipped: a lane
+    // narrower than the course code on it is the failure THE WIDTH LAW exists
+    // to prevent, and a collision is where a column is at its narrowest.
+    expect(
+      await code.evaluate((el) => el.scrollWidth - el.clientWidth),
+    ).toBeLessThanOrEqual(1);
   }
   expect(lanes.size).toBe(2);
 
-  // And exactly one zone marks the minutes they share.
-  await expect(page.locator(".planner-clash-zone")).toHaveCount(1);
+  // And exactly one mark stands over the minutes they share.
+  await expect(page.locator(".planner-cols-clash")).toHaveCount(1);
 });
 
 test("verdict: a failed timetable fetch refuses the check instead of clearing it", async ({
@@ -272,13 +288,19 @@ test("groups: a non-default parallel renders with a programme set", async ({ pag
   // programme's sections BEFORE the group filter ran, so an explicit pick of a
   // parallel tagged for ANOTHER programme was stripped and the block vanished
   // silently. TMA4400's "Forelesning 2 MTBYGG" is exactly that parallel.
-  const tmaBlocks = () => page.locator("#planner-grid-frame .planner-block").filter({ hasText: "TMA4400" });
+  const tmaBlocks = () => gridBlocks(page).filter({ hasText: "TMA4400" });
   // The picked session, addressed by its own aria-label rather than by
   // position: since a lecture pick answers only its own session
   // family, so the week keeps two other TMA4400 sessions and blocks are
   // appended day-major, which makes `.first()` the Tuesday block.
   const mtbyggBlock = () =>
-    page.locator('#planner-grid-frame .planner-block[aria-label^="TMA4400, onsdag 08:15"]');
+    // Two attribute matches rather than one prefix: the column block's
+    // accessible name carries the activity between the code and the slot
+    // ("TMA4400 Forelesning 2 MTBYGG, onsdag 08:15–…"), which is the point of
+    // this test, so the slot cannot be matched as a prefix.
+    page.locator(
+      '#planner-grid-frame .planner-cols-block[aria-label^="TMA4400"][aria-label*="onsdag 08:15"]',
+    );
 
   await page.goto("/planlegger/#26h;MTDT.2026;");
   await expect(courseRows(page)).toHaveCount(5, { timeout: 30_000 });
@@ -470,30 +492,28 @@ test("week: three overlapping lectures stack into three lanes, no pile", async (
 
   await page.goto(`/planlegger/#26h;-;${codes.map((c) => `%2B${c}`).join(",")}`);
 
-  // Transposing the axes deletes the pile rather than managing it: three
-  // simultaneous lectures are three full-width bars in three lanes of Monday's
-  // row — vertical space is free.
-  await expect(page.locator("#planner-grid-frame .planner-block")).toHaveCount(3, {
-    timeout: 30_000,
-  });
+  // Lanes delete the pile rather than managing it: three simultaneous lectures
+  // are three blocks side by side in Monday's column, each still naming itself.
+  await expect(gridBlocks(page)).toHaveCount(3, { timeout: 30_000 });
   await expect(page.locator(".planner-block-pile")).toHaveCount(0);
   for (const code of codes) {
-    await expect(page.locator(".planner-block-code", { hasText: code })).toHaveCount(1);
+    await expect(page.locator(".planner-cols-code", { hasText: code })).toHaveCount(1);
   }
 
-  // All three sit in Monday, each in its own lane — three distinct offsets.
-  const monday = page.locator(".planner-grid-row").first();
-  await expect(monday.locator(".planner-block")).toHaveCount(3);
-  const bars = await monday.locator(".planner-block").all();
-  const tops = await Promise.all(bars.map(async (b) => (await b.boundingBox())?.y ?? 0));
-  expect(new Set(tops).size).toBe(3);
+  // All three sit in Monday, each in its own lane — three distinct offsets
+  // along the axis the lanes divide, which is the horizontal one here.
+  const monday = page.locator('.planner-cols-day[data-day="1"]');
+  await expect(monday.locator(".planner-cols-block")).toHaveCount(3);
+  const bars = await monday.locator(".planner-cols-block").all();
+  const lefts = await Promise.all(bars.map(async (b) => (await b.boundingBox())?.x ?? 0));
+  expect(new Set(lefts).size).toBe(3);
 
-  // A three-way collision is ONE zone across the minutes they share, not three
-  // competing marks — the mark belongs to the moment, not to any one course.
-  await expect(monday.locator(".planner-clash-zone")).toHaveCount(1);
+  // A three-way collision is ONE mark across the minutes they share, not three
+  // competing ones — the mark belongs to the moment, not to any one course.
+  await expect(monday.locator(".planner-cols-clash")).toHaveCount(1);
 
-  // Each bar opens its own session popover, naming the slot it stands for.
-  await page.locator("#planner-grid-frame .planner-block").first().click();
+  // Each block opens its own session popover, naming the slot it stands for.
+  await gridBlocks(page).first().click();
   const popover = page.locator("#planner-block-popover");
   await expect(popover).toBeVisible();
   await expect(popover.locator(".block-popover-clock")).toHaveText("08:15–10:00");
@@ -555,7 +575,7 @@ test("session popover: the card names the building, the length and the collision
   );
 
   await page.goto("/planlegger/#26h;-;%2BTDT4110,%2BTDT4120");
-  const bar = page.locator("#planner-grid-frame .planner-block", { hasText: "TDT4110" });
+  const bar = gridBlocks(page).filter({ hasText: "TDT4110" });
   await expect(bar).toBeVisible({ timeout: 30_000 });
   await bar.click();
 
@@ -569,8 +589,8 @@ test("session popover: the card names the building, the length and the collision
   await expect(meta).toContainText("mandag");
   await expect(meta).toContainText("1 t 45 min");
   await expect(meta).toContainText("uke 34–47");
-  // "F1" is not a place you can walk to. The bar has no width for the building;
-  // the card does.
+  // "F1" is not a place you can walk to. The block has no width for the
+  // building; the card does.
   await expect(popover).toContainText("IT-bygget, sydfløy");
   // A partial overlap names the minutes the two really share: 15:15, not the
   // session's own 14:15.
@@ -582,24 +602,23 @@ test("session popover: the card names the building, the length and the collision
   await expect(popover.locator(".block-popover-edit")).toHaveText("Endre emnet");
 });
 
-test("week: Rader, Kolonner and Liste show the same week three ways", async ({ page }) => {
+test("week: Uke and Liste show the same week two ways", async ({ page }) => {
   await page.goto("/planlegger/#26h;MTDT.2026;");
   await expect(gridBlocks(page).first()).toBeVisible({ timeout: 45_000 });
 
-  const bars = await gridBlocks(page).count();
-  expect(bars).toBeGreaterThan(0);
-
-  // Kolonner: the same sessions, turned 90°. Same plan,
-  // same group narrowing, same layer toggle — so the same count, exactly as
-  // the list owes the grid below.
-  await page.click("#planner-view-kolonner");
+  // Uke is what a cold load draws, so the tab is pressed before anything is
+  // clicked — the page and `loadWeekView` have to agree about that or the CLS
+  // reservation is for a view the frame is not about to fill.
+  await expect(page.locator("#planner-view-kolonner")).toHaveAttribute("aria-pressed", "true");
   const columns = page.locator("#planner-grid-frame .planner-cols");
   await expect(columns).toBeVisible();
-  await expect(page.locator("#planner-view-kolonner")).toHaveAttribute("aria-pressed", "true");
-  // Blocks AND strips: a drop-in window is one of the transposed week's
-  // `.planner-block`s too, so counting only the lanes here would let the
-  // column view quietly drop every open øvingsvindu and still look equal.
-  await expect(page.locator(".planner-cols-block, .planner-cols-band")).toHaveCount(bars);
+  // Blocks AND strips: a drop-in window is a session the list owes the week
+  // too, so counting only the lanes would let either view quietly drop every
+  // open øvingsvindu and still look equal to the other.
+  const sessions = await page.locator(".planner-cols-block, .planner-cols-band").count();
+  expect(sessions).toBeGreaterThan(0);
+  // The transposed grid is /emne/[code]/'s alone now; the planner never draws
+  // it, in either view.
   await expect(page.locator(".planner-grid")).toHaveCount(0);
   // Five weekday columns, each headed by its own day.
   await expect(page.locator(".planner-cols-day")).toHaveCount(5);
@@ -627,7 +646,7 @@ test("week: Rader, Kolonner and Liste show the same week three ways", async ({ p
   // WITH its air, not the code pressed against two walls.
   expect(narrowest).toBeGreaterThanOrEqual(codeWidth + 12);
 
-  // A block opens the same session popover a bar does.
+  // A block opens the session popover.
   await page.locator(".planner-cols-block").first().click();
   await expect(page.locator("#planner-block-popover")).toBeVisible();
   await page.keyboard.press("Escape");
@@ -635,14 +654,15 @@ test("week: Rader, Kolonner and Liste show the same week three ways", async ({ p
   await page.click("#planner-view-tavle");
   await expect(page.locator(".planner-board")).toBeVisible();
   await expect(page.locator("#planner-view-tavle")).toHaveAttribute("aria-pressed", "true");
+  await expect(page.locator("#planner-view-kolonner")).toHaveAttribute("aria-pressed", "false");
   // Same plan, same group narrowing, same øving toggle — so the same session
-  // count. 57 rows against 7 bars is what shipped when the list ignored the
+  // count. 57 rows against 7 blocks is what shipped when the list ignored the
   // toggle and listed every published lab group.
-  await expect(page.locator(".planner-board-row")).toHaveCount(bars);
+  await expect(page.locator(".planner-board-row")).toHaveCount(sessions);
   await expect(page.locator(".planner-grid")).toHaveCount(0);
   await expect(page.locator(".planner-cols")).toHaveCount(0);
 
-  // A row opens the same session popover a bar does.
+  // A row opens the same session popover a block does.
   await page.locator(".planner-board-row").first().click();
   await expect(page.locator("#planner-block-popover")).toBeVisible();
   await page.keyboard.press("Escape");
@@ -652,8 +672,8 @@ test("week: Rader, Kolonner and Liste show the same week three ways", async ({ p
   await page.reload();
   await expect(page.locator(".planner-board")).toBeVisible({ timeout: 45_000 });
 
-  await page.click("#planner-view-uke");
-  await expect(page.locator(".planner-grid")).toBeVisible();
+  await page.click("#planner-view-kolonner");
+  await expect(columns).toBeVisible();
   await expect(page.locator(".planner-board")).toHaveCount(0);
 });
 
@@ -742,7 +762,7 @@ test("kolonner: the week is dealt out in whole days at every width", async ({ pa
   }
 });
 
-test("kolonner: an open øvingsvindu names itself, opens, and stacks", async ({ page }) => {
+test("uke: an open øvingsvindu names itself, opens, and stacks", async ({ page }) => {
   // The strip shipped as 8 px of colour and nothing else: five slivers that
   // named nothing and could not be opened, and two windows on one day drew one
   // exactly on top of the other. Live 2026: two courses publish drop-in windows
@@ -753,7 +773,6 @@ test("kolonner: an open øvingsvindu names itself, opens, and stacks", async ({ 
   );
   await expect(gridBlocks(page).first()).toBeVisible({ timeout: 45_000 });
   await page.click("#planner-others-toggle");
-  await page.click("#planner-view-kolonner");
 
   const strips = page.locator(".planner-cols-band");
   await expect(strips.first()).toBeVisible();
@@ -781,9 +800,13 @@ test("kolonner: an open øvingsvindu names itself, opens, and stacks", async ({ 
 
   // The strip is IN the week's one strike order, not beside it: with no
   // `--planner-strike` at all it took step zero, so every strip fired on the
-  // first frame and the sessions trickled in behind them.
-  await page.click("#planner-view-uke");
+  // first frame and the sessions trickled in behind them. Out to Liste and
+  // back is what re-runs the strike — `setWeekView` ignores a click on the
+  // view already showing.
+  await page.click("#planner-view-tavle");
+  await expect(page.locator(".planner-board")).toBeVisible();
   await page.click("#planner-view-kolonner");
+  await expect(strips.first()).toBeVisible();
   const steps = await page
     .locator(".planner-cols-block, .planner-cols-band")
     .evaluateAll((nodes) =>
@@ -923,15 +946,13 @@ test("week: the øving layer shows picked groups, not the whole cohort's", async
   // EXPH0300 publishes 14 seminar groups. Before this, turning the toggle on
   // drew every one of them — 41 blocks in an MTDT week.
   await page.goto("/planlegger/#26h;MTDT.2026;");
-  await expect(page.locator("#planner-grid-frame .planner-block").first()).toBeVisible({
-    timeout: 45_000,
-  });
-  const before = await page.locator("#planner-grid-frame .planner-block").count();
+  await expect(gridBlocks(page).first()).toBeVisible({ timeout: 45_000 });
+  const before = await gridBlocks(page).count();
 
   await page.click("#planner-others-toggle");
   await expect(page.locator(".planner-note-groups").first()).toBeVisible({ timeout: 15_000 });
 
-  const after = await page.locator("#planner-grid-frame .planner-block").count();
+  const after = await gridBlocks(page).count();
   // A handful of ungrouped/sole-group activities may appear; a flood may not.
   expect(after).toBeLessThan(before + 12);
 
@@ -944,7 +965,7 @@ test("week: the øving layer shows picked groups, not the whole cohort's", async
   }
 
   // A note asks "which group is mine", which is an edit — so it opens the
-  // picker directly, unlike a bar, which asks "what is this session".
+  // picker directly, unlike a block, which asks "what is this session".
   await notes.first().click();
   await expect(page.locator("#planner-course-settings")).toBeVisible();
   await expect(
@@ -958,26 +979,22 @@ test("week: the øving toggle moves the layer and leaves nothing behind", async 
   // `is-settling` freezes every bar's geometry mid-transition, and an orphaned
   // ghost is a bar that is not in the plan.
   await page.goto("/planlegger/#26h;MTDT.2026;");
-  const grid = page.locator("#planner-grid-frame .planner-grid");
-  await expect(page.locator("#planner-grid-frame .planner-block").first()).toBeVisible({
-    timeout: 45_000,
-  });
-  // Settled, not merely painted: the bundles land one by one and the bar count
-  // is still climbing on the frame the first one appears. The verdict is the
-  // signal for that — it stays "henter timeplan …" until every bundle is in.
-  await expect(page.locator(".planner-grid-spine").first()).toBeVisible();
+  await expect(gridBlocks(page).first()).toBeVisible({ timeout: 45_000 });
+  // Settled, not merely painted: the bundles land one by one and the block
+  // count is still climbing on the frame the first one appears. The verdict is
+  // the signal for that — it stays "henter timeplan …" until every bundle is in.
+  await expect(page.locator(".planner-cols-day-header").first()).toBeVisible();
   await settledVerdict(page);
 
   const hosts = {
-    uke: grid,
     kolonner: page.locator("#planner-grid-frame .planner-cols"),
     tavle: page.locator(".planner-board"),
   };
-  for (const view of ["uke", "kolonner", "tavle"] as const) {
+  for (const view of ["kolonner", "tavle"] as const) {
     await page.click(`#planner-view-${view}`);
     const host = hosts[view];
     await expect(host).toBeVisible();
-    const lectures = await page.locator("#planner-grid-frame .planner-block").count();
+    const lectures = await gridBlocks(page).count();
 
     await page.click("#planner-others-toggle");
     await expect(host).not.toHaveClass(/is-settling/, { timeout: 5_000 });
@@ -988,8 +1005,7 @@ test("week: the øving toggle moves the layer and leaves nothing behind", async 
     // that just left are gone, not merely invisible.
     await expect(host).not.toHaveClass(/is-settling|is-closing/, { timeout: 5_000 });
     await expect(page.locator(".planner-motion-ghost")).toHaveCount(0);
-    if (view === "uke")
-      await expect(page.locator("#planner-grid-frame .planner-block")).toHaveCount(lectures);
+    if (view === "kolonner") await expect(gridBlocks(page)).toHaveCount(lectures);
   }
 });
 
@@ -1185,7 +1201,7 @@ test("drop and restore a programme course", async ({ page }) => {
   await expect(courseRows(page)).toHaveCount(5, { timeout: 30_000 });
   await expect(gridBlocks(page).first()).toBeVisible({ timeout: 30_000 });
 
-  const code = (await gridBlocks(page).first().locator(".planner-block-code").textContent())?.trim() ?? "";
+  const code = await firstBlockCode(page);
   expect(code).not.toBe("");
   // the row IS the control, and the verb is inside the
   // settings modal it opens — two taps, which the user explicitly allowed in
@@ -1218,7 +1234,7 @@ test("dropping from a block's settings keeps focus in the document", async ({ pa
   await expect(courseRows(page)).toHaveCount(5, { timeout: 30_000 });
   await expect(gridBlocks(page).first()).toBeVisible({ timeout: 45_000 });
 
-  const code = (await gridBlocks(page).first().locator(".planner-block-code").textContent())?.trim() ?? "";
+  const code = await firstBlockCode(page);
   expect(code).not.toBe("");
 
   await settingsFromBlock(page);
@@ -1266,17 +1282,15 @@ test.describe("time passing", () => {
     // Wednesday of teaching week 36, mid-morning.
     await page.clock.install({ time: new Date("2026-09-02T10:40:00+02:00") });
     await page.goto("/planlegger/#26h;MTDT.2026;");
-    await expect(page.locator("#planner-grid-frame .planner-block").first()).toBeVisible({
-      timeout: 45_000,
-    });
-    const today = page.locator("#planner-grid-frame .planner-grid-row[data-today]");
-    const marker = page.locator("#planner-grid-frame .planner-grid-now");
+    await expect(gridBlocks(page).first()).toBeVisible({ timeout: 45_000 });
+    const today = page.locator("#planner-grid-frame .planner-cols-day[data-today]");
+    const marker = page.locator("#planner-grid-frame .planner-cols-now");
     await expect(today).toHaveAttribute("data-day", "3");
 
     // The ordinary minute may NOT re-render: the marker moves and nothing
     // else does. Rebuilding the week every 60 s would throw away the layer
     // motion, the scroll position and any open popover.
-    const bar = await page.locator("#planner-grid-frame .planner-block").first().elementHandle();
+    const bar = await gridBlocks(page).first().elementHandle();
     await page.clock.runFor("00:05:00");
     expect(await bar?.evaluate((el) => el.isConnected)).toBe(true);
 
@@ -1289,15 +1303,13 @@ test.describe("time passing", () => {
     // misplaced — the highlight is the louder signal.
     await page.clock.fastForward("24:00:00");
     await expect(today).toHaveAttribute("data-day", "4");
-    // The needle is on today's row or nowhere, so its
-    // being visible at all is the assertion that it followed the day.
+    // The needle lives in today's column or nowhere, so its being visible at
+    // all is the assertion that it followed the day — it is drawn as a child of
+    // the day it belongs to rather than positioned against the whole week.
     await expect(marker).toBeVisible();
-    const rowTop = await page
-      .locator('#planner-grid-frame .planner-grid-row[data-day="4"]')
-      .evaluate((el: HTMLElement) => el.offsetTop);
-    expect(await marker.evaluate((el) => el.style.getPropertyValue("--planner-now-top"))).toBe(
-      `${rowTop}px`,
-    );
+    await expect(
+      page.locator('#planner-grid-frame .planner-cols-day[data-day="4"] .planner-cols-now'),
+    ).toHaveCount(1);
 
     // The countdown to the next exam reads the date too, and was a day long
     // with it. It is a segment on the list's rule, not a cell in the row —
@@ -1315,9 +1327,7 @@ test.describe("time passing", () => {
     // Monday of teaching week 36, 15 minutes into TMA4412's 08:15 lecture.
     await page.clock.install({ time: new Date("2026-08-31T08:30:00+02:00") });
     await page.goto("/planlegger/#26h;MTDT.2026;");
-    await expect(page.locator("#planner-grid-frame .planner-block").first()).toBeVisible({
-      timeout: 45_000,
-    });
+    await expect(gridBlocks(page).first()).toBeVisible({ timeout: 45_000 });
 
     await page.goto("/");
     const label = page.locator("#home-now-label");
@@ -1387,25 +1397,25 @@ test("ett navn: the plan is named once, and the switch is not a third toggle", a
       x: el.style.getPropertyValue("--view-x"),
       w: el.style.getPropertyValue("--view-w"),
     }));
-  const atGrid = await ruleAt();
-  expect(Number.parseFloat(atGrid.w)).toBeGreaterThan(0);
+  const atWeek = await ruleAt();
+  expect(Number.parseFloat(atWeek.w)).toBeGreaterThan(0);
   // At the first tab, so at the container's own inline start (the tab carries
   // a negative inline margin, which is how its 24px target is bought without
   // widening the head).
-  expect(Number.parseFloat(atGrid.x)).toBeLessThanOrEqual(0);
-
-  await page.click("#planner-view-kolonner");
-  await expect(page.locator(".planner-cols").first()).toBeVisible();
-  const atColumns = await ruleAt();
-  expect(Number.parseFloat(atColumns.x)).toBeGreaterThan(Number.parseFloat(atGrid.x));
+  expect(Number.parseFloat(atWeek.x)).toBeLessThanOrEqual(0);
 
   await page.click("#planner-view-tavle");
   await expect(page.locator(".planner-board").first()).toBeVisible();
   const atList = await ruleAt();
-  // Three tabs, so the rule travels further for the third than for the second.
-  expect(Number.parseFloat(atList.x)).toBeGreaterThan(Number.parseFloat(atColumns.x));
-  // "Kolonner" is the longest word — the rule is measured, not a fixed third.
-  expect(Number.parseFloat(atList.w)).toBeLessThan(Number.parseFloat(atColumns.w));
+  // The rule TRAVELS to the second word rather than appearing under it.
+  expect(Number.parseFloat(atList.x)).toBeGreaterThan(Number.parseFloat(atWeek.x));
+  // "Liste" is the longer word — the rule is measured, not a fixed half.
+  expect(Number.parseFloat(atList.w)).toBeGreaterThan(Number.parseFloat(atWeek.w));
+
+  // …and back, so the travel is not one-way.
+  await page.click("#planner-view-kolonner");
+  await expect(page.locator(".planner-cols").first()).toBeVisible();
+  expect(Number.parseFloat((await ruleAt()).x)).toBe(Number.parseFloat(atWeek.x));
 
   // And the layer control is a box you tick, not a fourth view: it has a
   // check mark of its own and never takes the pressed FILL the old toggle did.
@@ -1473,11 +1483,11 @@ test.describe("target sizes", () => {
 test.describe("nålen", () => {
   test.use({ timezoneId: "Europe/Oslo" });
 
-  test("is on today's row inside the drawn hours, and nowhere else", async ({ page }) => {
-    // Two states, not four: on the row at a minute, or absent. The faint
-    // week-wide hairline it replaces was the same KIND of mark as the 1px hour
-    // rules it crossed, so off today it could not be found at all.
-    const marker = page.locator("#planner-grid-frame .planner-grid-now");
+  test("is in today's column inside the drawn hours, and nowhere else", async ({ page }) => {
+    // Two states, not four: on the minute, or absent. The faint week-wide
+    // hairline it replaces was the same KIND of mark as the 1px hour rules it
+    // crossed, so off today it could not be found at all.
+    const marker = page.locator("#planner-grid-frame .planner-cols-now");
 
     // Tuesday of teaching week 36, inside EXPH0300's 08:15 lecture.
     await page.clock.install({ time: new Date("2026-09-01T09:05:00+02:00") });
@@ -1485,14 +1495,19 @@ test.describe("nålen", () => {
     await expect(gridBlocks(page).first()).toBeVisible({ timeout: 45_000 });
     await expect(marker).toBeVisible();
 
-    // It spans exactly today's row, so the head lands on that row's top border.
-    const row = page.locator('#planner-grid-frame .planner-grid-row[data-day="2"]');
-    const [top, height] = await row.evaluate((el: HTMLElement) => [el.offsetTop, el.offsetHeight]);
-    const style = await marker.evaluate((el) => ({
-      t: el.style.getPropertyValue("--planner-now-top"),
-      h: el.style.getPropertyValue("--planner-now-height"),
-    }));
-    expect(style).toEqual({ t: `${top}px`, h: `${height}px` });
+    // It is drawn INSIDE Tuesday's column — a child of the day it names, not a
+    // line laid over the week and positioned to look like it.
+    await expect(
+      page.locator('#planner-grid-frame .planner-cols-day[data-day="2"] .planner-cols-now'),
+    ).toHaveCount(1);
+
+    // And at 09:05 of the drawn span, computed from the axis the blocks use, so
+    // a needle and a bar can never disagree about what o'clock is where.
+    const [min, span] = await page
+      .locator("#planner-grid-frame .planner-cols")
+      .evaluate((el) => [Number(el.getAttribute("data-min")), Number(el.getAttribute("data-span"))]);
+    const y = Number.parseFloat(await marker.evaluate((el) => el.style.getPropertyValue("--planner-y")));
+    expect(y).toBeCloseTo(((9 * 60 + 5 - min) / span) * 100, 3);
 
     // Past the drawn hours: gone. A week clamped to its own sessions has no
     // honest place to put 21:10, and this is not a clock.
@@ -1500,44 +1515,52 @@ test.describe("nålen", () => {
     await page.clock.runFor("01:00");
     await expect(marker).toBeHidden();
 
-    // Saturday: gone. There is no today row to be on.
+    // Saturday: gone. There is no today column to be in.
     await page.clock.setFixedTime(new Date("2026-09-05T11:40:00+02:00"));
     await page.clock.runFor("01:00");
     await expect(marker).toBeHidden();
   });
+});
 
-  test("every bar is centred in its row", async ({ page }) => {
-    // `--planner-lane-h` is a stride (bar + gap), so N lanes occupy N strides
-    // LESS one trailing gap. Without that subtraction every row in the week was
-    // off-centre — and the row's real height is max(spine, field), which the
-    // spine won, so no amount of padding could have fixed it.
-    await page.goto("/planlegger/#26h;MTDT.2026;");
-    await expect(gridBlocks(page).first()).toBeVisible({ timeout: 45_000 });
-
-    const gaps = await page.evaluate(() =>
-      Array.from(document.querySelectorAll("#planner-grid-frame .planner-grid-row")).flatMap((row) => {
-        const field = row.querySelector(".planner-grid-field") as HTMLElement;
-        const fr = field.getBoundingClientRect();
-        return Array.from(field.querySelectorAll(".planner-block")).map((bar) => {
-          const r = bar.getBoundingClientRect();
-          return {
-            band: bar.classList.contains("is-band"),
-            above: Math.round(r.top - fr.top),
-            below: Math.round(fr.bottom - r.bottom),
-          };
-        });
-      }),
-    );
-    expect(gaps.length).toBeGreaterThan(0);
-    for (const g of gaps) {
-      // A lane bar sits one pad from the top; a band sits one pad from the
-      // bottom. Whichever it is, its own side must be the pad exactly.
-      expect(g.band ? g.below : g.above).toBe(8);
-    }
-    // And with one lane and no band the two ends match, which is the claim.
-    const single = gaps.filter((g) => !g.band && g.below === 8);
-    expect(single.length).toBeGreaterThan(0);
+/**
+ * The transposed grid's own geometry, on the ONE surface that still draws it.
+ * `/emne/[code]/` mounts `renderGrid` into its own `.planner-grid-frame` — the
+ * planner stopped offering Rader as a view, so a claim about a day ROW has to
+ * be made where a day row still exists.
+ */
+test("course page: every bar is centred in its row", async ({ page }) => {
+  // `--planner-lane-h` is a stride (bar + gap), so N lanes occupy N strides
+  // LESS one trailing gap. Without that subtraction every row in the week was
+  // off-centre — and the row's real height is max(spine, field), which the
+  // spine won, so no amount of padding could have fixed it.
+  await page.goto("/emne/TDT4120/");
+  await expect(page.locator(".planner-grid-frame .planner-block").first()).toBeVisible({
+    timeout: 45_000,
   });
+
+  const gaps = await page.evaluate(() =>
+    Array.from(document.querySelectorAll(".planner-grid-frame .planner-grid-row")).flatMap((row) => {
+      const field = row.querySelector(".planner-grid-field") as HTMLElement;
+      const fr = field.getBoundingClientRect();
+      return Array.from(field.querySelectorAll(".planner-block")).map((bar) => {
+        const r = bar.getBoundingClientRect();
+        return {
+          band: bar.classList.contains("is-band"),
+          above: Math.round(r.top - fr.top),
+          below: Math.round(fr.bottom - r.bottom),
+        };
+      });
+    }),
+  );
+  expect(gaps.length).toBeGreaterThan(0);
+  for (const g of gaps) {
+    // A lane bar sits one pad from the top; a band sits one pad from the
+    // bottom. Whichever it is, its own side must be the pad exactly.
+    expect(g.band ? g.below : g.above).toBe(8);
+  }
+  // And with one lane and no band the two ends match, which is the claim.
+  const single = gaps.filter((g) => !g.band && g.below === 8);
+  expect(single.length).toBeGreaterThan(0);
 });
 
 test("the layer leaves in the reverse of the order it arrived in", async ({ page }) => {
@@ -1558,7 +1581,7 @@ test("the layer leaves in the reverse of the order it arrived in", async ({ page
     );
 
   await page.locator("#planner-others-toggle").click();
-  const arrive = await indices(".planner-block.is-arriving", "--planner-arrive");
+  const arrive = await indices(".planner-cols-block.is-arriving, .planner-cols-band.is-arriving", "--planner-arrive");
   expect(arrive.length).toBeGreaterThan(1);
   // Reading order, ascending: 0, 1, 2 …
   expect(arrive).toEqual([...arrive].sort((a, b) => a - b));
@@ -1567,17 +1590,19 @@ test("the layer leaves in the reverse of the order it arrived in", async ({ page
   await page.locator("#planner-others-toggle").click();
   const depart = await indices(".planner-motion-ghost", "--planner-depart");
   expect(depart.length).toBe(arrive.length);
-  // The same reading order, DESCENDING: the last bar to land is the first to go.
+  // The same reading order, DESCENDING: the last block to land is the first to go.
   expect(depart).toEqual([...depart].sort((a, b) => b - a));
   expect(Math.max(...depart)).toBe(depart.length - 1);
 });
 
-test("the row height animates with the layer instead of snapping", async ({ page }) => {
-  // `--planner-bands` feeds the field's min-height and was never added to the
-  // motion snapshot, so a row whose height changed only because a drop-in strip
-  // appeared had nothing rewound and snapped on the first frame while every bar
-  // around it animated. TDT4120's weekday-long Øvingsveiledning is exactly that
-  // case.
+test("the space the strips reserve animates with the layer instead of snapping", async ({
+  page,
+}) => {
+  // The lane box's inset IS the width the drop-in strips reserve
+  // (`--planner-band-space`), and a property the box is sized from that is not
+  // in the motion snapshot snaps on the first frame while every block around it
+  // animates — shoving a whole day's lectures sideways mid-travel. TDT4120's
+  // weekday-long Øvingsveiledning is exactly that case.
   await page.goto("/planlegger/#26h;-;%2BTDT4120,%2BTMA4412");
   await expect(gridBlocks(page).first()).toBeVisible({ timeout: 45_000 });
   await page.locator("#planner-others-toggle").click();
@@ -1589,31 +1614,32 @@ test("the row height animates with the layer instead of snapping", async ({ page
   await page.keyboard.press("Escape");
   await page.waitForTimeout(1500);
 
-  const rowH = () =>
+  const inset = () =>
     page
-      .locator("#planner-grid-frame .planner-grid-row")
+      .locator("#planner-grid-frame .planner-cols-lanes")
       .first()
-      .evaluate((el: HTMLElement) => Math.round(el.getBoundingClientRect().height));
+      .evaluate((el: HTMLElement) => Math.round(Number.parseFloat(getComputedStyle(el).left)));
 
-  const tall = await rowH();
+  const wide = await inset();
+  expect(wide).toBeGreaterThan(0);
 
-  // Hiding: the row must still be tall while the bars are wiping out, and
-  // short once everything has settled.
+  // Hiding: the strips' space must still be held while they are wiping out, and
+  // given back once everything has settled.
   await page.locator("#planner-others-toggle").click();
   await page.waitForTimeout(120);
-  expect(await rowH()).toBe(tall);
+  expect(await inset()).toBe(wide);
   await page.waitForTimeout(1200);
-  const short = await rowH();
-  expect(short).toBeLessThan(tall);
+  const none = await inset();
+  expect(none).toBeLessThan(wide);
 
-  // Revealing: the space opens FIRST, so the row is already growing at 120 ms
+  // Revealing: the space opens FIRST, so the inset is already growing at 60 ms
   // — but it has not arrived, which is what proves it is a transition and not
   // a snap.
   await page.locator("#planner-others-toggle").click();
   await page.waitForTimeout(60);
-  const midway = await rowH();
-  expect(midway).toBeGreaterThan(short);
-  expect(midway).toBeLessThan(tall);
+  const midway = await inset();
+  expect(midway).toBeGreaterThan(none);
+  expect(midway).toBeLessThan(wide);
 });
 
 test("the list's own height animates too, so nothing under it jumps", async ({ page }) => {
@@ -1713,8 +1739,15 @@ test.describe("the phone's week", () => {
     // One ellipsis standing in for one character, because the room and the
     // activity name shared a box. They are two boxes now and `fitBlockLabels`
     // drops whichever the bar cannot hold — the room whole or not at all.
-    await page.goto("/planlegger/#26h;MTDT.2026;");
-    await expect(gridBlocks(page).first()).toBeVisible({ timeout: 45_000 });
+    //
+    // On /emne/[code]/, because `fitBlockLabels` belongs to the transposed grid
+    // and that is the one surface still drawing it. The column week's own
+    // `.planner-cols-sub` ellipsises ON PURPOSE — a block there is as wide as
+    // its share of a weekday, not as long as its session.
+    await page.goto("/emne/TDT4120/");
+    await expect(page.locator(".planner-grid-frame .planner-block").first()).toBeVisible({
+      timeout: 45_000,
+    });
 
     // `Array.from`, not a spread, and no generic type arguments: this file is
     // in the Node typecheck pass, whose `lib` has neither DOM.Iterable nor the
@@ -1728,26 +1761,27 @@ test.describe("the phone's week", () => {
     expect(cut).toEqual([]);
   });
 
-  test("the days stay put while the week is dragged", async ({ page }) => {
+  test("the hours stay put while the week is dragged", async ({ page }) => {
     // Five days and eight hours do not fit a phone, so the axis scrolls — and
-    // the one thing that may not scroll with it is the column saying which row
-    // you are reading. Dragged to the right edge the spine measured x = −162.
+    // the one thing that may not scroll with it is the rail saying which hour
+    // you are reading.
     await page.goto("/planlegger/#26h;MTDT.2026;");
     await expect(gridBlocks(page).first()).toBeVisible({ timeout: 45_000 });
 
     const frame = page.locator("#planner-grid-frame");
-    const spine = page.locator(".planner-grid-spine").first();
-    const before = await spine.evaluate((el) => Math.round(el.getBoundingClientRect().x));
+    const rail = page.locator(".planner-cols-rail").first();
+    const before = await rail.evaluate((el) => Math.round(el.getBoundingClientRect().x));
 
     await frame.evaluate((el) => {
       el.scrollLeft = el.scrollWidth;
     });
     await page.waitForTimeout(200);
-    const after = await spine.evaluate((el) => Math.round(el.getBoundingClientRect().x));
+    const after = await rail.evaluate((el) => Math.round(el.getBoundingClientRect().x));
     expect(after).toBe(before);
 
     // And the fade that says "there is more" is never drawn over it: the left
-    // ramp used to veil MANDAG…FREDAG while the bars behind them stayed crisp.
+    // ramp used to veil the column deliberately still on screen while the
+    // blocks behind it stayed crisp.
     const mask = await frame.evaluate((el) => getComputedStyle(el).maskImage);
     expect(mask).not.toContain("transparent 0");
   });

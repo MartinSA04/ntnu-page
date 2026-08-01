@@ -48,7 +48,11 @@
   /* KOLONNER's two, here for the same reason: the frame reserves that view's
      height before that view exists. */
   --planner-hour-h: 4.5rem;
-  --planner-cols-head-font: clamp(0.85rem, 1.6vw, 1.15rem);
+  /* A LABEL, not a heading. At `--text-md` this was section-title size for the
+     word "man", and the row it sits in is vertical space the week's axis wants
+     — worst on a phone, where the week already scrolls sideways. The
+     reservation above is computed from this var, so it follows on its own. */
+  --planner-cols-head-font: clamp(0.78rem, 1.05vw, 0.9rem);
   --planner-frame-pad-block: var(--cell);
   padding: var(--planner-frame-pad-block) var(--cell);
   margin-bottom: var(--space-2);
@@ -74,24 +78,27 @@
   min-height: calc(2 * var(--planner-frame-pad-block) + var(--planner-box-rader));
 }
 
-/* --- The other two views' heights ----------------------------------------
+/* --- The planner's two views' heights -------------------------------------
  *
- * The reservation above models RADER only. Reserving it for KOLONNER and TAVLE
- * cost 0.14 CLS in Liste and 0.08 in Kolonner on a first load. Measured,
- * five-course plan (mobile/desktop): rader 233/295, kolonner 487/651, tavle
- * 907/877.
+ * The reservation above models RADER only, and RADER is not one of the
+ * planner's views — reserving it for UKE and LISTE cost 0.08 and 0.14 CLS on a
+ * first load. Measured, five-course plan (mobile/desktop): rader 233/295, uke
+ * 487/651, liste 907/877.
  *
  * Only the planner's own frame gets these — by id — because /emne/[code]/
  * builds its own `.planner-grid-frame` and always renders RADER into it.
  *
  * The height comes from `--planner-box` (what this browser last measured for
  * THIS view at THIS width, handed back before first paint by Layout.astro's
- * probe) and falls back to the formulas below. Kolonner's is exact arithmetic;
- * Tavle's cannot be — its height is a session count — so it is a line fitted
+ * probe) and falls back to the formulas below. Uke's is exact arithmetic;
+ * Liste's cannot be — its height is a session count — so it is a line fitted
  * through five plans of 1–5 courses (±100px).
  *
+ * The unqualified rule is UKE's, because Uke is the default view and so what a
+ * missing `data-view` is about to draw.
+ *
  * ALL OF IT IS A LEASE (`data-reserve`). `--planner-box` is ONE variable
- * holding the height of the view the page LOADED in, so pressing Rader after
+ * holding the height of the view the page LOADED in, so pressing Uke after
  * loading in Liste left 600px of white paper above the exam list for the rest
  * of the visit. `renderGridAndExams` releases it on the first drawn week and
  * `setWeekView` on the way out of a view.
@@ -100,7 +107,10 @@
   min-height: calc(
     2 *
     var(--planner-frame-pad-block) +
-    var(--planner-box, var(--planner-box-rader))
+    var(
+      --planner-box,
+      calc(var(--planner-cols-head-font) + var(--space-2) + 1px + 8 * var(--planner-hour-h))
+    )
   );
 }
 
@@ -109,17 +119,6 @@
    above would otherwise keep RADER's floor under a view that drew less. */
 #planner-grid-frame:not([data-reserve]) {
   min-height: 0;
-}
-
-html[data-view="kolonner"] #planner-grid-frame[data-reserve] {
-  min-height: calc(
-    2 *
-    var(--planner-frame-pad-block) +
-    var(
-      --planner-box,
-      calc(var(--planner-cols-head-font) + var(--space-2) + 1px + 8 * var(--planner-hour-h))
-    )
-  );
 }
 
 html[data-view="tavle"] #planner-grid-frame[data-reserve] {
@@ -996,21 +995,28 @@ html[data-view="tavle"] #planner-grid-frame[data-reserve] {
   color: var(--muted);
 }
 
-/* The weekday is still the week's typographic event — it moved from the row's
-   spine to the head of its own column when the axes swapped. */
+/* The weekday names its column and then gets out of the way — the week's
+   typographic event is the blocks. Negative tracking went with the size: it
+   was tightening a headline, and at label size it only closes the letters up.
+   Today's column is the one that reaches full ink. */
 .planner-cols-day-header {
   padding: 0 6px var(--space-2);
   font-size: var(--planner-cols-head-font);
-  font-weight: var(--weight-bold);
+  font-weight: var(--weight-medium);
   line-height: 1;
-  letter-spacing: -0.03em;
-  color: color-mix(in srgb, var(--fg) 34%, transparent);
+  /* `--muted`, not a percentage of `--fg`: the old 34 % was a wash under a
+     bold headline, and at label size the ink has to clear AA on its own.
+     `tokens.test.ts` is the authority that it does. */
+  color: var(--muted);
   white-space: nowrap;
   overflow: hidden;
   border-bottom: 1px solid var(--border-strong);
 }
 
+/* Today keeps the whole of the emphasis the rest of the row gave up: full ink
+   AND the weight, because at 0.9rem a colour step alone is a small signal. */
 .planner-cols-day-header[data-today] {
+  font-weight: var(--weight-bold);
   color: var(--fg);
 }
 

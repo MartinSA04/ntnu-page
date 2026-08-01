@@ -132,6 +132,18 @@ describe("isRoomCode", () => {
     expect(isRoomCode("Digital undervisning")).toBe(false);
     expect(isRoomCode("Realfagbygget A")).toBe(false);
   });
+
+  test("punctuation does not make a code a sentence", () => {
+    // A4-156 is a real Realfagbygget room — where TDT4120's øvingsveiledning
+    // sits five days a week — and a letters-then-digits shape test demoted it
+    // to the small style meant for "Digital undervisning", purely for the
+    // hyphen. What separates a code from a sentence is whitespace and a digit.
+    expect(isRoomCode("A4-156")).toBe(true);
+    expect(isRoomCode("KJL1")).toBe(true);
+    // Still not a code: no digit, or long enough to be prose.
+    expect(isRoomCode("Auditorium")).toBe(false);
+    expect(isRoomCode("Gløshaugen/12")).toBe(false);
+  });
 });
 
 describe("data-motion-key (REWORK-2026-07-29g)", () => {

@@ -387,9 +387,36 @@ worlds. Landed in this pass:
   the proportional face sets the same string narrower. The e2e phone test
   caught the wrap this would otherwise have caused.
 
-**Not yet done, and the doc must not pretend otherwise.** §4 and §5 below
-still describe the component layer as built: cards, the frame, the printed
-fills, the ruling. The direction removes cards as page structure, drops the
-Rader view, and rebuilds the list as a departure board with the time and room
-as two numeral columns. Until that lands, §4–§5 are accurate about the code
-and stale about the intent.
+**2026-08-01, stage 2 — two views, and the page is the surface.**
+
+- **Rader is no longer a planner view.** `WeekView` is `"kolonner" | "tavle"`
+  and the tabs read **Uke** and **Liste**; `"kolonner"` stays the stored value
+  and the default, because it is what a student's localStorage already holds
+  and what the pre-paint probe must agree with. `grid.ts` is untouched and
+  `/emne/[code]/` still draws the transposed week through it — which is now the
+  only surface that does, so the Rader-geometry e2e claims (bar centring, the
+  room printed whole) moved there and the needle's own test moved to the
+  column week, where a needle still exists.
+- **The two columns under the week are divided by one hairline**, not by a
+  border around each. The sections were already card-less — what was left was
+  a gap doing a rule's job. The week's open question (`.planner-direction`)
+  lost its `.np-panel` and got nothing in its place: the page knows it has at
+  most one such question, so the box was a container for a count it already
+  knew, and what makes the question findable is that it is the only thing
+  above the week and carries the only button there. A coloured bar down its
+  side was tried and rejected — Ink-Before-Chrome, and the accent is already
+  spent on the button. `--card` now appears only on things that
+  float (the four `<dialog>`s, the popover) and on two ground tones (the exam
+  band's empty day, the load track), which are grounds rather than cards.
+- **The week's day header is a label, not a heading.** It was `--text-md` bold
+  for the word "man"; it is now ~0.9rem medium in `--muted`, with today taking
+  full ink and the weight. The CLS reservation is computed from the same
+  `--planner-cols-head-font`, so it followed on its own.
+- **`isRoomCode` counts whitespace and a digit, not punctuation.** The old
+  letter/digit shape test rejected `A4-156` for its hyphen and demoted a real
+  room to the style meant for "Digital undervisning".
+
+**Not yet done, and the doc must not pretend otherwise.** §4 and §5 above
+still describe the printed fills and the frame as built. The list is not yet
+a departure board with the time and room as two numeral columns. Until that
+lands, those sections are accurate about the code and stale about the intent.
