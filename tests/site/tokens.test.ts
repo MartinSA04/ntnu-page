@@ -74,9 +74,9 @@ const HUES = [
   "--hue-blue",
   "--hue-cyan",
   "--hue-purple",
-  "--hue-magenta",
+  "--hue-indigo",
   "--hue-orange",
-  "--hue-yellow",
+  "--hue-green",
 ] as const;
 
 /** A percentage token (`26%`) as a 0–1 fraction. */

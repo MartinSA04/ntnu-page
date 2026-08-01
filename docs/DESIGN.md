@@ -555,8 +555,32 @@ meaningful when it is an oversight.
   and the needle. It was full ink, which is what every other day would be if the
   rest were not deliberately washed back.
 
-**What is deliberately NOT the artifact.** Its `--c1…--c5` are five Google
-Calendar hues; this palette keeps its own six, which `tokens.test.ts` measures
-against every fill and label they carry. Its body is 14px on a 1240px page;
-this keeps the type scale in §3. Neither is a design the artifact argued for —
-they are the defaults it inherited from being a single self-contained file.
+**2026-08-01, stage 7 — the course palette, which was the last of it.**
+
+The hues were deep jewel tones: `#0d47a1` navy, `#00695c` teal, `#8d6e00`
+olive. Legible, and the colours of a spreadsheet rather than of the thing every
+student already has open in another tab. They are the calendar set now —
+`--hue-blue` `#027cb8`, `--hue-cyan` `#00818c`, `--hue-purple` `#8e24aa`,
+`--hue-indigo` `#3f51b5`, `--hue-orange` `#d93c0b`, `--hue-green` `#0b8043`.
+
+Two of the reference's five fail AA with the code knocked out of them
+(`#039be5` measures 3.08:1 under white, `#f4511e` 3.48), so **those two are
+darkened along their own hue until they clear, and the other four are the
+reference's exactly**. That is the shape of the trade throughout this pass: the
+family is the design decision and is kept; the value is measured and bought.
+Dark-theme indigo went one step up its own ramp for the same reason — it is the
+darkest of the six, and a tint of it under its own label was 4.02:1.
+
+`--hue-magenta` and `--hue-yellow` were renamed to `--hue-indigo` and
+`--hue-green`, because with these values the old names were lies.
+
+**A note on how this doc read before.** Three stages of this change log carried
+a paragraph explaining what was "deliberately NOT the artifact", including this
+palette. That framing had it backwards: the artifact was the design decision,
+not a proposal to be reconciled against what was already here. Where the
+reference and this repo disagree, the reference wins unless something
+measurable says it cannot — and then the fix is to buy the value, not to keep
+the old design. The one thing that genuinely does not port is its 14px body on
+a 1240px page, and only because the reference is a single self-contained file
+with no other pages to be consistent with; every type step it actually uses
+(13, 18, 15) is already in §3's scale.

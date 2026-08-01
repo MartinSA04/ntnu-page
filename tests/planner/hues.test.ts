@@ -6,9 +6,9 @@ describe("hueForIndex", () => {
     expect(hueForIndex(0)).toBe("--hue-blue");
     expect(hueForIndex(1)).toBe("--hue-cyan");
     expect(hueForIndex(2)).toBe("--hue-purple");
-    expect(hueForIndex(3)).toBe("--hue-magenta");
+    expect(hueForIndex(3)).toBe("--hue-indigo");
     expect(hueForIndex(4)).toBe("--hue-orange");
-    expect(hueForIndex(5)).toBe("--hue-yellow");
+    expect(hueForIndex(5)).toBe("--hue-green");
   });
 
   it("cycles back to the first hue at index 6", () => {

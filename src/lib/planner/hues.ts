@@ -7,9 +7,9 @@ export const PLAN_HUES = [
   "--hue-blue",
   "--hue-cyan",
   "--hue-purple",
-  "--hue-magenta",
+  "--hue-indigo",
   "--hue-orange",
-  "--hue-yellow",
+  "--hue-green",
 ] as const;
 
 export type PlanHue = (typeof PLAN_HUES)[number];

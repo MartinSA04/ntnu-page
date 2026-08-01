@@ -94,16 +94,27 @@
   --clash: #c62828;
   --clash-bg: #fdecea;
 
-  /* Course identity hues. Six, and every one of them is kept clear of three
-     colours that mean something else: the accent's azure, the verdict's green
-     and the collision's red. A course that shares a hue with an interface mark
-     makes that mark vanish the moment it crosses the course's own block. */
-  --hue-blue: #0d47a1;
-  --hue-cyan: #00695c;
-  --hue-purple: #6a1b9a;
-  --hue-magenta: #ad1457;
-  --hue-orange: #bf360c;
-  --hue-yellow: #8d6e00;
+  /* COURSE IDENTITY HUES — the calendar set, which is what the direction chose.
+     They were deep jewel tones (#0d47a1 navy, #00695c teal, #8d6e00 olive):
+     legible, and the colours of a spreadsheet rather than of the thing every
+     student already has open in another tab.
+
+     Two of the five in the reference fail AA with the code knocked out of them
+     (#039be5 measures 3.08:1 under white, #f4511e 3.48), so those two are
+     darkened along their own hue until they clear — the family is kept, the
+     value is bought. The other four are the reference's exactly.
+     `tokens.test.ts` checks all six as a printed fill and as a tint.
+
+     Every one is still kept clear of the three colours that mean something
+     else: the accent's azure, the verdict's green and the collision's red. A
+     course that shares a hue with an interface mark makes that mark vanish the
+     moment it crosses the course's own block. */
+  --hue-blue: #027cb8;
+  --hue-cyan: #00818c;
+  --hue-purple: #8e24aa;
+  --hue-indigo: #3f51b5;
+  --hue-orange: #d93c0b;
+  --hue-green: #0b8043;
 
   /* Interaction washes. */
   --wash: color-mix(in srgb, var(--fg) 6%, transparent);
@@ -291,12 +302,17 @@
   --clash: #ff6369;
   --clash-bg: #3a1a1c;
 
-  --hue-blue: #64b5f6;
+  /* The same six families, at the light end of the pair — the reference's dark
+     values. Indigo is one step up its own ramp (#7986cb → #9fa8da): it is the
+     darkest of the six, and a tint of it on this ground was only 4.02:1 under
+     its own label. The tinted pair is the binding constraint here, not the
+     printed one, because both sides of it are the same hue. */
+  --hue-blue: #4fc3f7;
   --hue-cyan: #4db6ac;
   --hue-purple: #ce93d8;
-  --hue-magenta: #f06292;
+  --hue-indigo: #9fa8da;
   --hue-orange: #ff8a65;
-  --hue-yellow: #ffd54f;
+  --hue-green: #66bb6a;
 
   --ruling-line: color-mix(in srgb, var(--border) 60%, transparent);
   --ruling-hour: color-mix(in srgb, var(--border-strong) 95%, transparent);
