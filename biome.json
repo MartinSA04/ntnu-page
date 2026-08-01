@@ -12,8 +12,6 @@
       "!node_modules",
       "!.astro",
       "!.wrangler",
-      "!src/styles/fonts",
-      "!src/styles/fonts.css",
       "!tests/fixtures"
     ]
   },

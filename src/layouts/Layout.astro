@@ -3,9 +3,6 @@ import { ClientRouter } from "astro:transitions";
 import semestersData from "../../data/semesters.json";
 import ThemeToggle from "../components/ThemeToggle.astro";
 import { faviconDataUri, VERDICT } from "../lib/favicon.ts";
-import groteskLatin from "../styles/fonts/schibsted-grotesk-latin.woff2?url";
-import monoLatin from "../styles/fonts/spline-sans-mono-latin.woff2?url";
-import "../styles/fonts.css";
 import "../styles/tokens.css";
 import "../styles/base.css";
 import "../styles/primitives.css";
@@ -88,8 +85,6 @@ const crawlDate = formatCrawlDate(semestersData.crawledAt);
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <link rel="preload" href={groteskLatin} as="font" type="font/woff2" crossorigin />
-    <link rel="preload" href={monoLatin} as="font" type="font/woff2" crossorigin />
     <title>{title}</title>
     <meta name="description" content={description} />
     <link rel="icon" href={faviconDataUri(VERDICT)} />

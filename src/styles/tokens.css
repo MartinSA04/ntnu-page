@@ -1,39 +1,46 @@
 /**
- * Ruteark design tokens — the system for ntnu-page and nothing else.
+ * Design tokens for ntnu-page and nothing else.
  *
- * North star: the squared paper (ruteark) students sketch timetables on,
- * set with an engineer's hand. Warm Flexoki paper and ink; Schibsted
- * Grotesk speaks, Spline Sans Mono carries data; green means "it fits",
- * red is reserved for collisions; the squared ruling appears only on
- * planning surfaces. See docs/DESIGN.md for the rules.
+ * The surface is a calendar, played straight: the page is white and IS the
+ * content surface, because this product's content is static and known and so
+ * needs no modular containers to sit in. Structure comes from type, hairlines
+ * and space. One system accent carries the primary action and the "you are
+ * here" marker; green judges whether the term works, red marks a collision,
+ * amber marks something worth a look. Six course colours identify courses and
+ * nothing else. See docs/DESIGN.md for the rules.
  */
 
 :root {
   color-scheme: light;
 
-  /* Surfaces — Flexoki paper, stepping down like sheets on a desk. */
-  --bg: #fffcf0;
-  --card: #f2f0e5;
-  --card-nested: #e6e4d9;
-  --card-hover: #e6e4d9;
+  /* Surfaces. The page IS the content surface: this product's content is
+     static and known — one week, one exam list, one course list — so it needs
+     no modular containers to sit in. --card survives as the one step down,
+     for the few surfaces that genuinely float (popovers, dialogs). */
+  --bg: #ffffff;
+  --card: #f7f7f8;
+  --card-nested: #f0f0f2;
+  --card-hover: #f0f0f2;
 
   /* Ink ramp. */
-  --fg: #100f0f;
-  --muted: #575653;
-  --faint: #6f6e69;
+  --fg: #1d1d1f;
+  --muted: #6e6e73;
+  --faint: #98989d;
 
-  /* Structural hairlines only — never on interactive controls. */
-  --border: #dad8ce;
-  --border-strong: #cecdc3;
+  /* Structural hairlines. With no cards, these carry the structure the
+     containers used to: a day boundary must be heavier than the rows inside
+     it, never the other way round. */
+  --border: #e6e6e9;
+  --border-strong: #d6d6db;
 
   /* Controls. Ink-Before-Chrome forbids borders here, so the tonal step is the
      whole affordance: --card against --bg computes 1.11:1 in light, and in dark
-     the fill lifts a full Flexoki step above --card so it reads there too.
+     the fill lifts a full step above --card so it reads there too.
      --control-edge survives only for `.planner-check`, a 14px indicator with no
      fill of its own. */
   --control-bg: var(--card);
   --control-hover: var(--card-hover);
-  --control-edge: var(--faint);
+  --control-edge: var(--border-strong);
 
   /* There is no `--accent`. It used to do five jobs: the collision verdict, the
      full-credit figure, the "I planen" state, every focus ring and every link.
@@ -45,17 +52,23 @@
   /* THE VERDICT. Green, and only where the plan is judged: the collision line
      and a full 30 sp. Nothing else, ever.
 
-     Hue 107°, not green-600's 73°: the paper is 48°, so the old olive read as
-     darker paper, while a *true* green (145–160°) would collide with the course
-     hue cyan at 175°. 100–120° is the gap where neither lives.
+     Kept clear of the course palette below: a verdict may not wear a colour
+     that also means "this is TDT4120".
 
      Clears AA as text AND as a fill on every surface in the system, which is
      why there is no `-ink` or `-strong` variant. */
-  --verdict: #31701f;
-  --verdict-contrast: #fffcf0;
+  --verdict: #177334;
+  --verdict-contrast: #ffffff;
+  --verdict-soft: #e9f5ec;
+
+  /* Attention, short of a problem: an over-full load, sessions sharing an
+     hour. Amber sits between the verdict and the collision so red is never
+     spent on something that is merely worth a look. */
+  --warn: #a8590a;
+  --warn-soft: #fdf3e6;
 
   /* THE INTERFACE. Ink — focus rings, pressed and selected fills, links, hover,
-     membership. 18.62:1 as a fill or ring on paper (11.98:1 dark), against
+     membership. 18.6:1 as a fill or ring on the page (12.0:1 dark), against
      green's 4.39: a focus ring is a thing you must not miss, and it was the
      weakest mark on the page. --ui-ring is the softened variant the arrival
      flash fades from, never a resting focus indicator. */
@@ -63,21 +76,34 @@
   --ui-contrast: var(--bg);
   --ui-ring: color-mix(in srgb, var(--fg) 50%, transparent);
 
-  /* Collision ink: Flexoki red, reserved exclusively for conflicts. It is
+  /* THE ACCENT, and it has exactly ONE job: the primary action and the
+     now/today marker. The old --accent was retired for doing five jobs at
+     once; this one is allowed back because it does one, and because a
+     calendar without a "you are here" colour has to spend red on it instead.
+     It is deliberately NOT in the course palette below — an interface mark
+     that shares a hue with a course identity disappears the moment it crosses
+     that course's block. */
+  --accent: #1a73e8;
+  --accent-contrast: #ffffff;
+
+  /* Collision ink, reserved exclusively for conflicts. It is
      deliberately a different *kind* of mark from the hue washes below — a wash
      can never out-shout another wash, and Red-Is-Collision means red has to win
      on sight. --clash-bg fills the overlapping band only. There are no inset
      shadows anywhere on this site (DESIGN §5), so no per-bar edge token. */
-  --clash: #af3029;
-  --clash-bg: #ffe1d5;
+  --clash: #c62828;
+  --clash-bg: #fdecea;
 
-  /* Course identity hues (Flexoki categorical 600s; green/red excluded). */
-  --hue-blue: #205ea6;
-  --hue-cyan: #24837b;
-  --hue-purple: #5e409d;
-  --hue-magenta: #a02f6f;
-  --hue-orange: #bc5215;
-  --hue-yellow: #ad8301;
+  /* Course identity hues. Six, and every one of them is kept clear of three
+     colours that mean something else: the accent's azure, the verdict's green
+     and the collision's red. A course that shares a hue with an interface mark
+     makes that mark vanish the moment it crosses the course's own block. */
+  --hue-blue: #0d47a1;
+  --hue-cyan: #00695c;
+  --hue-purple: #6a1b9a;
+  --hue-magenta: #ad1457;
+  --hue-orange: #bf360c;
+  --hue-yellow: #8d6e00;
 
   /* Interaction washes. */
   --wash: color-mix(in srgb, var(--fg) 6%, transparent);
@@ -89,23 +115,23 @@
      color-mix(in srgb, var(--dot) var(--wash-course), var(--card)). Percentages
      rather than finished colours because --dot is set per block and a custom
      property resolves its var()s where it is *declared*. Tuned PER THEME: the
-     8% that reads as a clear hue on dark paper collapses to one flat gray-beige
-     over warm light paper. */
-  --wash-course: 18%;
-  --wash-course-hover: 26%;
-  --wash-course-muted: 9%;
+     strength that reads as a clear hue on a dark ground is not the one that
+     reads on white. */
+  --wash-course: 14%;
+  --wash-course-hover: 22%;
+  --wash-course-muted: 8%;
 
   /* Block ink. The week's bars are PRINTED colour with the code knocked out of
-     them, not a tint of the paper: five 18 % washes on warm paper read as five
-     tones of beige that neither identify a course nor recede behind red.
+     them, not a tint of the ground: five washes on white read as five pale
+     tints that neither identify a course nor recede behind red.
 
      --block-mix is how far the hue is pulled toward --block-base before it
-     becomes the fill. On light paper the Flexoki 600s need deepening to carry
-     paper-coloured text; on Flexoki black the 400s are already luminous, so the
-     mix is 0 and the text goes near-black instead. */
-  --block-mix: 86%;
-  --block-base: #100f0f;
-  --on-block: #fffcf0;
+     becomes the fill. The six hues are already chosen dark enough (light) or
+     light enough (dark) to carry knocked-out text, so the mix is 100 % in both
+     themes: the fill is the hue itself. */
+  --block-mix: 100%;
+  --block-base: #1d1d1f;
+  --on-block: #ffffff;
   /* An øving/lab bar is the same colour at a fraction of the ink — reduced,
      never red, per DR-1's display layer. */
   --block-muted: 26%;
@@ -125,9 +151,8 @@
      the real face so the swap changes the shapes without moving anything. The
      generic stack stays behind them for a machine that has neither. */
   --font-sans:
-    "Schibsted Grotesk", "Schibsted Grotesk Fallback", system-ui, "Segoe UI", Arial, sans-serif;
-  --font-mono:
-    "Spline Sans Mono", "Spline Sans Mono Fallback", ui-monospace, SFMono-Regular, Menlo, monospace;
+    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-mono: var(--font-sans);
 
   /* Seven steps, one per role docs/DESIGN.md §3 names — no step without a job.
      --text-lg is DESIGN's 1.6rem headline and --text-xl the page title. */
@@ -192,8 +217,8 @@
   --plan-any: min(var(--plan-courses, 0), 1);
 
   /* Geometry: instrument corners, not book corners. */
-  --radius-xs: 2px;
-  --radius-sm: 3px;
+  --radius-xs: 3px;
+  --radius-sm: 4px;
   --radius: 6px;
   --radius-lg: 10px;
 
@@ -212,58 +237,64 @@
 :root[data-theme="dark"] {
   color-scheme: dark;
 
-  --bg: #100f0f;
-  --card: #1c1b1a;
-  --card-nested: #282726;
-  --card-hover: #282726;
+  --bg: #151517;
+  --card: #1e1e21;
+  --card-nested: #2a2a2d;
+  --card-hover: #2a2a2d;
 
-  --fg: #cecdc3;
-  --muted: #9f9d96;
-  --faint: #878580;
+  --fg: #f2f2f5;
+  --muted: #a1a1a8;
+  --faint: #75757c;
 
-  --border: #403e3c;
-  --border-strong: #575653;
+  --border: #303034;
+  --border-strong: #3d3d42;
 
-  /* Dark controls lift a whole Flexoki step clear of --card, which is where the
+  /* Dark controls lift a whole step clear of --card, which is where the
      light theme's tonal step disappears: #1c1b1a against #100f0f is 1.10:1 and
      a resting search field is simply not there. Hover then goes a step
      further again. */
-  --control-bg: #282726;
-  --control-hover: #343331;
+  --control-bg: #2a2a2d;
+  --control-hover: #333338;
 
   /* The same hue shift as light (73° → 99°), lifted for a black ground. --ui
      and --ui-ring need no dark override — they derive from --fg and --bg. */
-  --verdict: #74ad55;
-  --verdict-contrast: #100f0f;
+  --verdict: #6fc98a;
+  --verdict-contrast: #10231a;
+  --verdict-soft: #17291d;
 
-  /* Flexoki red-300, not the light theme's mirror red-400: red is the one ink
-     the product cannot afford to whisper, and red-400 read 4.42:1 on --bg and
-     3.62:1 on --clash-bg — both under AA for the sentence naming which two
-     courses collide. red-300 measures 6.30 / 5.66 / 5.17. */
-  --clash: #e8705f;
-  --clash-bg: #3e1715;
+  --warn: #f0b357;
+  --warn-soft: #35291a;
 
-  --hue-blue: #4385be;
-  --hue-cyan: #3aa99f;
-  --hue-purple: #8b7ec8;
-  --hue-magenta: #ce5d97;
-  --hue-orange: #da702c;
-  --hue-yellow: #d0a215;
+  --accent: #8ab4f8;
+  --accent-contrast: #10233d;
+
+  /* Lifted for a dark ground: red is the one ink the product cannot afford to
+     whisper, and it must clear AA on the page AND on its own tinted band, for
+     the sentence naming which two courses collide. tests/site/tokens.test.ts
+     measures every pair. */
+  --clash: #ff6369;
+  --clash-bg: #3a1a1c;
+
+  --hue-blue: #64b5f6;
+  --hue-cyan: #4db6ac;
+  --hue-purple: #ce93d8;
+  --hue-magenta: #f06292;
+  --hue-orange: #ff8a65;
+  --hue-yellow: #ffd54f;
 
   --ruling-line: color-mix(in srgb, var(--border) 60%, transparent);
   --ruling-hour: color-mix(in srgb, var(--border-strong) 95%, transparent);
 
-  /* Dark paper already reads the hue at these strengths — kept as-is so dark
-     is unchanged; only light needed lifting (see the light values above). */
-  --wash-course: 8%;
-  --wash-course-hover: 14%;
-  --wash-course-muted: 4%;
+  /* A dark ground needs a stronger tint than white to read as the same hue. */
+  --wash-course: 22%;
+  --wash-course-hover: 30%;
+  --wash-course-muted: 12%;
 
-  /* The Flexoki 400s are already luminous on black paper — no deepening, and
-     the knocked-out text goes to near-black instead of to paper. */
+  /* The dark palette is already luminous — no deepening, and the knocked-out
+     text goes to near-black instead of to white. */
   --block-mix: 100%;
-  --block-base: #cecdc3;
-  --on-block: #100f0f;
+  --block-base: #f2f2f5;
+  --on-block: #16161a;
   --block-muted: 30%;
 
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.35);

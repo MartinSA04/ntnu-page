@@ -7,126 +7,100 @@ rather than an editorial reading surface.
 
 ## 1. North star
 
-**"Ruteark"** — the squared paper every Norwegian student sketches a
-timetable on, set with an engineer's hand. The page is a warm Flexoki sheet;
-planning surfaces carry a faint squared ruling; data is typeset in a humanist
-mono; the tool's verdict is a color: green when things fit, red ink where
-they collide. Interaction is quiet and tactile — flat at rest, surface
-answers on hover, a 1px dip on press.
+**The calendar, played straight.** A student opens this to answer one
+question — does the term hold together, and where do I walk in at 10:15 — so
+the design's job is to disappear. The week is days against hours in solid
+colour blocks with mass; the list is a departure board with the time in the
+left margin and the room in the right; and the page carries no modular
+containers, because the content is static and known.
 
-Explicitly rejected: serif bookishness (that is StudyCompanion's voice, not
-this tool's), SaaS gradients/glassmorphism/hero metrics, warning-triangle
-alarmism, pill-shaped chrome, bouncy motion, pure #000/#fff anywhere.
+Adopted 2026-08-01, replacing **Ruteark** (warm Flexoki paper, a vendored
+grotesk and mono, a squared ruling, printed course fills). The craft bar is
+Google Calendar and Apple Calendar: the familiar thing, executed properly,
+without irony or smuggled quirk.
+
+Explicitly rejected: anything that reads as institutional (Studentweb,
+Blackboard, Altinn), as a startup dashboard, or as concept-led — a timetable
+that costs half a second per glance has failed regardless of how it
+photographs. Cards as page structure are out: they are a container for
+content whose count and shape you do not know at build time, and this page
+knows both.
 
 ## 2. Color
 
-Flexoki throughout. Every neutral is warm; colour is a literal Flexoki
-swatch unless a bullet below says otherwise and says why — the two standing
-exceptions are `--verdict` (hue 107°, §8) and the sanctioned `--wash` /
-`--selection` mixes in tokens.css.
+Neutrals carry the page; colour is spent on exactly four jobs, and no two of
+them share a hue.
 
-- **Paper**: `--bg` #FFFCF0 ground, `--card` #F2F0E5 panels one step down,
-  `--card-nested` #E6E4D9 for recessed/nested fills. Dark mode mirrors on
-  Flexoki black (#100F0F / #1C1B1A / #282726) — elevation lightens.
-- **Ink**: `--fg` #100F0F, `--muted` #575653, `--faint` #6F6E69 (captions
-  and placeholders only).
-- **Hairlines**: `--border` / `--border-strong` — structure only (rules,
-  frames, table lines). Interactive controls are surface-or-nothing.
-- **Controls**: `--control-bg` / `--control-hover` — the resting/hover fill
-  of `.np-field`/`.np-btn`/`.np-toggle`, one deliberate step off `--card` so
-  a control is identifiable against the page in *both* themes (measured:
-  `--card` on `--bg` is only ~1.1:1, below WCAG 1.4.11's 3:1 for a control
-  boundary). The fill is the whole affordance: `.np-field` carried a 2px
-  `--control-edge` rule along its inline start until 2026-07-30 and no longer
-  does, in any form. `--control-edge` survives for `.planner-check` alone, the
-  øving toggle's 14 px indicator, which has no fill of its own to be seen by.
-- **The verdict — green** (`--verdict` #31701F light / #74AD55 dark): the
-  color of "it fits", and it owns exactly two things — the collision line
-  and the credit total at a full 30 sp. Nothing else. One token in both
-  roles (text and fill), on every paper step; there is no `-ink` and no
-  `-strong` variant, and `--verdict-contrast` is the only thing that ever
-  sits on top of it.
-- **The interface — ink** (`--ui` = `--fg`, `--ui-contrast` = `--bg`):
-  focus rings, pressed and selected fills, links, hover, membership
-  ("I planen"), the now marker. `--ui-ring` is the softened variant the
-  deep-link arrival flash fades from, never a resting focus indicator.
-- **There is no `--accent`** (retired 2026-07-30). It did five jobs and only
-  two of them were verdicts, which is the definition of decoration the rule
-  below forbids. Splitting it is what makes the rule enforceable: there is
-  no general-purpose accent token left to reach for.
-- **Collision red** (#AF3029 / #D14D41 + `--clash-bg`): **only** for two
-  things that cannot coexist (timetable overlaps, same-day exams). Fetch
+- **Ground and ink**: `--bg` #FFFFFF is the content surface itself — there is
+  no grey backdrop for cards to float on. `--card` #F7F7F8 survives for the
+  few surfaces that genuinely float (popovers, dialogs). Ink runs
+  `--fg` → `--muted` → `--faint`; hairlines are `--border` and
+  `--border-strong`. Dark mirrors on #151517.
+- **The interface — ink** (`--ui` = `--fg`). Focus rings, pressed and
+  selected fills, links, hover, membership. Unchanged and still adjudicated:
+  a focus ring measured 18.6:1 as ink against 4.4 as a colour.
+- **The accent — system blue** (`--accent` #1A73E8 / #8AB4F8 dark), and it has
+  **exactly one job**: the primary action and the now/today marker. The old
+  `--accent` was retired for doing five jobs; this one is allowed back because
+  it does one. It is deliberately absent from the course palette — an
+  interface mark that shares a hue with a course vanishes the moment it
+  crosses that course's block.
+- **The verdict — green** (`--verdict`): the term works. Nothing else.
+- **Collision — red** (`--clash`): two things that cannot coexist. Fetch
   errors, empty states and validation are ink, not red.
-- **Course hues**: six Flexoki categoricals (blue, cyan, purple, magenta,
-  orange, yellow — green and red are spoken for), assigned by selection
-  order, expressed as the square `.np-dot` or as a **printed fill with
-  `--on-block` knocked out of it** (tokens.css's block ink). Two surfaces
-  carry the fill and no others: the week's bars, and the head of the session
-  popover a bar opens: the card is the bar you pressed, so it wears the same
-  colour the same way (REWORK-2026-07-30 "Kvittering"). Never as text color,
-  never as borders.
+- **Attention — amber** (`--warn`): short of a problem. An over-full load,
+  sessions sharing an hour. Amber exists so red is never spent on something
+  merely worth a look.
+- **Course hues**: six, and every one is kept clear of the accent's azure, the
+  verdict's green and the collision's red. They are chosen dark enough (light
+  theme) and light enough (dark theme) to carry knocked-out text, so
+  `--block-mix` is 100 % in both themes — the fill is the hue itself, not the
+  hue pulled toward black.
+
+`tests/site/tokens.test.ts` measures every pair that carries text and fails
+below AA. It caught two regressions in this very change.
 
 ### Named rules
 
-**Red-Is-Collision.** Red marks coexistence failures, nothing else. If red
-appears, two concrete things clash, and the copy names both.
+**Red-Is-Collision.** Unchanged. Red marks coexistence failures, nothing
+else, and the copy names both things.
 
-**Green-Means-Fits.** Green is a *judgement about whether the term works*,
-and nothing else: the conflict-free line and a full 30 sp. Membership,
-selection, focus and hover are interface and take `--ui`. Green never
-decorates — and since 2026-07-30 it cannot, because the token it would have
-to borrow no longer exists.
+**Green-Means-Fits.** Unchanged. Green is a judgement about whether the term
+works. Membership, selection, focus and hover are interface and take `--ui`.
+
+**One-Job-Accent.** The accent may mark the primary action and "now/today",
+and nothing else. The moment it marks a third thing it is `--accent` again in
+the bad sense, and the rule that killed it applies.
 
 ## 3. Typography
 
-**Voice**: Schibsted Grotesk (400/500/700) — a Norwegian grotesk with
-sturdy, slightly wonky terminals. All sentences: headings, body, buttons,
-navigation.
-**Data**: Spline Sans Mono (400/500/600) — every time, date, week number,
-course code, credit count, kicker and label; `tabular-nums` where figures
-column up.
+**One family: the platform's own UI face.** `-apple-system,
+BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif`.
+There are no vendored fonts, no `@font-face`, no preloads and no build step —
+see CLAUDE.md for what was deleted and why. Google Calendar and Apple
+Calendar both use the system face on purpose; so does this.
 
-Both are vendored as a **single variable file per subset** (`latin` +
-`latin-ext`, four files total) declaring a `font-weight: <min> <max>` range,
-not one static `@font-face` per weight — every weight above is a real
-instanced axis position, never browser-synthesised fake bold. See
-`scripts/fetch-fonts.mjs`, which asserts (a) every vendored file contains an
-`fvar` table — a static instance smuggled in here would silently reintroduce
-fake bold at every weight but one — and (b) the four files hash differently
-— a family or subset collapsing to one file means the subsetting broke.
-Only the two `latin` faces are preloaded (Norwegian æ/ø/å live in `latin`,
-U+0000–00FF; `latin-ext` never loads for our own copy).
+**`--font-mono` is an alias of `--font-sans`.** `.np-data` keeps its meaning
+and every call site — it still marks a figure a student copies — but the
+distinction is now carried by `font-variant-numeric: tabular-nums` rather
+than by a second typeface. Figures still column up; they just do it in the
+same voice as the sentence around them.
 
-**Scale — seven steps, one per role, no dead rung:**
-
-| Token | Size | Role |
-| --- | --- | --- |
-| `--text-xs` | 0.72rem | label (mono kickers, notes, toggles) |
-| `--text-sm` | 0.84rem | small sentence (`.np-hint`, control labels) |
-| `--text-base` | 1rem | body |
-| `--text-md` | 1.13rem | title (section and row heads) |
-| `--text-lg` | 1.6rem | headline (`<h2>`) |
-| `--text-xl` | 2rem | page title (`<h1>` on content pages) |
-| `--text-2xl` | 2.6rem | display (the homepage, and nowhere else) |
-
-Prose measure `--measure` (38rem) applies only to **unclassed** prose
-(`:where(p,ul,ol):not([class])`); every classed data surface — result
-lists, course rows, exam lists — uses the full `--maxw` (72rem) column. A
-list that needs the narrow measure sets it explicitly; the default is wide.
+**Scale — seven steps, one per role, unchanged.** `--text-xs` label,
+`--text-sm` small sentence, `--text-base` body, `--text-md` title, `--text-lg`
+headline, `--text-xl` page title, `--text-2xl` display.
 
 ### Named rules
 
-**Data-Is-Mono.** If a string is something a student copies into a
-calendar — a time, a date, a code, a count — it is mono. If it is a
-sentence, it is the grotesk. No third voice.
+**Data-Is-Mono is retired, and `.np-data` is not.** The rule was right about
+*which* strings matter — times, dates, codes, counts — and wrong that they
+need their own face. Keep marking them; the mark now buys tabular figures
+instead of a monospace.
 
-**`.np-note` vs. `.np-hint`.** `.np-note` is Data-Is-Mono's fragment voice —
-"uke 38–40", "0 sp", "dato ikke satt", "kull 2026" — never a full sentence.
-Any small text with a verb (help text, empty-state invitations, provenance,
-"undervises ikke i valgt semester") is `.np-hint`: sans, `--text-sm`,
-`--leading-normal`, `--muted`. Putting a sentence in `.np-note` or a bare
-fragment in `.np-hint` is the same category error Data-Is-Mono forbids —
-it just took a second class to say it precisely.
+**`.np-note` vs. `.np-hint`.** Unchanged, and still a real distinction:
+`.np-note` is the fragment voice ("uke 38–40", "0 sp"), `.np-hint` is any
+small text with a verb. Putting a sentence in `.np-note` is still the same
+category error it always was.
 
 ## 4. Surfaces, ruling, elevation
 
@@ -355,14 +329,22 @@ apology. Empty states are invitations to act.
   (fits / collides); green-vs-red is that verdict's native language. Blue
   remains a course-identity hue, and a verdict may not wear a colour that
   also means "this is TDT4120". Do not "brand-correct" this to blue.
-- **The verdict green is hue 107°, not Flexoki green-600's 73°** — the one
-  sanctioned departure from "accents are literal Flexoki swatches"
-  (adjudicated 2026-07-30). green-600 sat 25° from the paper's own 48° and
-  read as darker paper rather than as a colour. A *true* green (145–160°)
-  was not available either: the course hue cyan is at 175°, and Flexoki's
-  green is olive precisely to stay clear of it. 100–120° is the only gap
-  where neither the ground nor a course identity lives. Measured, both
-  directions, all three paper steps — see `tests/site/tokens.test.ts`.
+- **The verdict green's exact value is measured, not chosen** (restated
+  2026-08-01). The 107° Flexoki-departure argument died with the Flexoki
+  ground; what survives is the constraint that produced it — the verdict must
+  clear AA as text and as a fill on every surface it lands on, and must not
+  collide with a course hue. `tests/site/tokens.test.ts` is the authority, and
+  it rejected the first value tried in this change at 4.46:1.
+
+- **The accent is back, with one job** (2026-08-01). `--ui` stays ink; a
+  separate `--accent` carries the primary action and the now/today marker.
+  A calendar without a "you are here" colour has to spend red on it instead,
+  and red means collision here. The rule that killed the old `--accent` was
+  never "no accent" — it was "no token doing five jobs".
+- **A course hue may never be the accent's hue.** Found the hard way: with the
+  interface blue and the course blue at the same value, the now-line vanished
+  the moment it crossed that course's block. An overlay that crosses arbitrary
+  fills cannot be a flat colour drawn from a palette it is also a member of.
 - **The interface is ink, not the accent.** Ink-Before-Chrome already
   governed every other surface; the accent was the unexplained exception.
   A focus ring went from 4.39:1 to 18.62:1 by obeying the rule the rest of
@@ -384,3 +366,30 @@ apology. Empty states are invitations to act.
      that the product works, and the page already answers with the student's
      own week. `.np-ruled` is deleted; the ruling lives in the one file that
      draws it.
+
+---
+
+## 9. Change log
+
+**2026-08-01 — Ruteark → the calendar.** Adopted after four direction rounds;
+the owner chose the category standard played straight, over three concept-led
+worlds. Landed in this pass:
+
+- `tokens.css` remapped end to end: white ground, system ink ramp, the
+  four-job colour scheme above, six course hues cleared of all three signal
+  colours, `--block-mix` 100 % in both themes.
+- Type moved to the platform UI face. **Deleted**: `scripts/fetch-fonts.mjs`,
+  `scripts/woff2-tables.mjs`, `src/styles/fonts.css`, `src/styles/fonts/`,
+  `tests/fonts.test.ts`, and the two preloads in `Layout.astro`.
+  `--font-mono` is now an alias, so `.np-data` survives unchanged at every
+  call site.
+- `--exam-date-col` 6.5rem → 5.5rem: it was sized for a monospace date, and
+  the proportional face sets the same string narrower. The e2e phone test
+  caught the wrap this would otherwise have caused.
+
+**Not yet done, and the doc must not pretend otherwise.** §4 and §5 below
+still describe the component layer as built: cards, the frame, the printed
+fills, the ruling. The direction removes cards as page structure, drops the
+Rader view, and rebuilds the list as a departure board with the time and room
+as two numeral columns. Until that lands, §4–§5 are accurate about the code
+and stale about the intent.
