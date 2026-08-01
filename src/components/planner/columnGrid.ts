@@ -61,6 +61,13 @@ export interface ColumnRenderOptions {
   todayNumber?: number | null;
   /** Strike the blocks in on this render — set by a view switch only. */
   animate?: boolean;
+  /**
+   * Day-of-month per weekday (1 = mandag) for the week the page is open in.
+   * Passed rather than derived: the caller owns "what day is it", and a second
+   * reading of the clock here is a second chance to disagree with the column
+   * that drew today's wash.
+   */
+  dates?: Map<number, number>;
 }
 
 export interface ColumnRenderResult {
@@ -408,6 +415,14 @@ export function renderColumnGrid(
     const short = el("span", "planner-cols-dow", dayName(day.dayNumber).slice(0, 3));
     short.setAttribute("aria-hidden", "true");
     header.append(short);
+    // WHICH Monday this column is. The week the grid draws is a pattern — a
+    // block stands for every week in its own range — but the page is open in
+    // exactly one of them, and every calendar a student already uses says which.
+    // The date is not a claim that everything under it happens this week; the
+    // margin notes and the provenance line are what name the weeks a course
+    // skips.
+    const date = options.dates?.get(day.dayNumber);
+    if (date !== undefined) header.append(el("span", "planner-cols-dom np-data", String(date)));
     header.setAttribute("data-day", String(day.dayNumber));
     if (day.dayNumber === options.todayNumber) header.setAttribute("data-today", "");
     grid.append(header);

@@ -668,29 +668,58 @@
   padding: var(--space-4);
 }
 
-/* The clock is the largest thing in the card: it is the one fact a student
-   copies into a calendar, and the axis above the bar labels whole hours only. */
-.block-popover-when {
+/* The course's own name, beside its code in the title. Not tracked and not the
+   code's weight — one of the two has to be the identifier and the other the
+   word, or the line reads as a single long string. */
+.block-popover-course {
+  font-weight: var(--weight-normal);
+  letter-spacing: normal;
+  opacity: 0.82;
+}
+
+.block-popover-course::before {
+  content: " ";
+}
+
+/* LABELLED ROWS. A label column narrow enough to be scanned past and wide
+   enough to hold "Sted", with the value doing the talking. The clock is no
+   longer set large: in a grid the time is already drawn — it IS the block's
+   place in the week — so printing it at --text-lg made the card's loudest
+   thing the one fact the reader had just pointed at. */
+.block-popover-facts {
   display: grid;
-  gap: var(--space-1);
+  gap: var(--space-2);
   margin: 0;
 }
 
-.block-popover-clock {
-  font-size: var(--text-lg);
-  font-weight: var(--weight-medium);
-  line-height: var(--leading-tight);
-  letter-spacing: -0.02em;
+.block-popover-row {
+  display: grid;
+  grid-template-columns: 4.4rem minmax(0, 1fr);
+  gap: var(--gap-3);
+  align-items: baseline;
 }
 
-.block-popover-meta {
+.block-popover-row dt {
   font-size: var(--text-sm);
   color: var(--muted);
 }
 
-.block-popover-facts {
-  display: grid;
-  gap: var(--space-2);
+.block-popover-row dd {
+  margin: 0;
+  font-size: var(--text-sm);
+}
+
+/* The qualifier under a value: the building under the room, the weeks under the
+   hours. Its own line, because it answers a question the value did not raise. */
+.block-popover-row dd small {
+  display: block;
+  margin-top: 1px;
+  font-size: var(--text-xs);
+  color: var(--muted);
+}
+
+.block-popover-clock {
+  font-weight: var(--weight-medium);
 }
 
 .block-popover-clash {

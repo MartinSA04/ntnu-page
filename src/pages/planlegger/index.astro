@@ -206,8 +206,12 @@ const programOptionsJson = JSON.stringify(programOptions).replaceAll("<", "\\u00
             is simply "no children". The reservation is the probe's
             (tokens.css), so a plan-less page still spends nothing on it. */}
         <div class="planner-load" id="planner-credit-strip" aria-hidden="true"></div>
+        {/* The figure, then what the mark on the track above it means. The
+            track cannot label itself, and "streken er 30 sp" is the difference
+            between a bar with a tick in it and a bar you can read. */}
         <p class="planner-load-foot">
           <span class="np-data planner-credit-line" id="planner-credit-line">0 av 30 sp</span>
+          <span class="planner-load-legend" id="planner-load-legend" hidden>streken er 30 sp</span>
         </p>
         <p class="np-hint planner-credit-note" id="planner-credit-note" hidden></p>
 
@@ -397,6 +401,25 @@ const programOptionsJson = JSON.stringify(programOptions).replaceAll("<", "\\u00
      an aria-label, so only the ink changes. A square --control-h box, 44 px on
      every touch device. */
   @media (max-width: 46rem) {
+    /* Every row the bar spends is a row the week does not get, and the bar now
+       carries the controls that used to sit lower down. So: tighter rows, and
+       the context line clamped to ONE — a 42-character programme name wrapping
+       to a second line is 18px spent restating what the title already says in
+       the notation a student actually types. */
+    .planner-head {
+      gap: var(--space-2) var(--gap-3);
+    }
+
+    .planner-context-line {
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .planner-status {
+      margin-top: var(--space-2);
+    }
+
     .planner-edit-plan {
       justify-content: center;
       width: var(--control-h);
@@ -709,6 +732,18 @@ const programOptionsJson = JSON.stringify(programOptions).replaceAll("<", "\\u00
     color: var(--verdict);
   }
 
+  .planner-load-foot {
+    display: flex;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: var(--space-1) var(--gap-3);
+  }
+
+  .planner-load-legend {
+    font-size: var(--text-xs);
+    color: var(--muted);
+  }
+
   .planner-credit-note:not([hidden]) {
     max-width: none;
     margin-bottom: var(--space-3);
@@ -972,6 +1007,14 @@ const programOptionsJson = JSON.stringify(programOptions).replaceAll("<", "\\u00
 
   :global(.exam-dateless) :global(.exam-date) {
     color: var(--faint);
+  }
+
+  /* The one caveat that is true of every row and belongs on none of them. */
+  :global(.exam-foot) {
+    max-width: none;
+    margin: var(--space-3) 0 0;
+    padding-top: var(--space-3);
+    border-top: 1px solid var(--border);
   }
 
   /* Named in words, because the split cell and the ring are the fast read but

@@ -488,10 +488,35 @@ structure and left the thing you actually look at alone.
   that is absent in one state and present in the next cannot animate, and its
   rule is an inset shadow so at zero it draws nothing.
 
-**Not yet done, and the doc must not pretend otherwise.** The session popover
-still leads with the clock as one large figure rather than the artifact's
-`Tid / Sted / Merk` definition list; it carries the collision sentence and the
-group-edit action, which the artifact's does not, and no rearrangement has been
-adjudicated. The artifact also dates its weekday headers (`MAN 14`); this
-planner draws a *pattern* week whose blocks span "uke 34–47", so a date numeral
-would claim a specific Monday the data does not support.
+**2026-08-01, stage 5 — the rest of it.**
+
+- **The week is dated.** Day headers carry the day-of-month beside the weekday,
+  today's in a filled accent disc, and the context line leads with `Uke 38`.
+  The week the grid draws is still a *pattern* — a block stands for every week
+  in its own range — but the page is opened in exactly one of them, and a
+  calendar that will not say which is a diagram. The honesty problem this
+  creates is answered where it already was: a block whose weeks read "uke
+  34–40, 42–47" is drawn under a date in week 41 where it does not occur, and
+  the margin notes and the provenance line are what name that. A date numeral
+  claims which Monday the column is, not that everything under it happens.
+  `weekDates.ts` is ISO 8601 (NTNU publishes timetables in ISO week numbers)
+  and unit-tested across both year boundaries.
+- **The session popover is labelled rows** — `Tid`, `Sted`, and a `Merk` when
+  there is something a clock cannot state ("Åpent vindu — du kan stikke innom
+  når du vil"). The clock stopped being the card's largest figure: in a grid
+  the time is already drawn, since it IS the block's place in the week you just
+  clicked. The title names the *session* — code, course, activity — because
+  "which of this course's five sessions is this" is the one thing the block has
+  no width to say. It keeps the collision sentence and the edit action, which
+  the artifact's card does not have.
+- **The exam list closes with its own caveat** ("Første eksamen om N dager.
+  Eksamensrom tildeles noen dager før."), because NTNU publishes exam dates
+  months before rooms and a list that never mentions rooms reads like a fetch
+  that failed.
+- **The load track's mark is labelled** ("streken er 30 sp"), shown only when
+  the track actually draws one.
+- **The phone pays for the bar.** The controls that moved up cost rows the week
+  used to have: the context line is clamped to one line at ≤46rem and the bar's
+  rows tightened. The gate is now a fraction of the screen rather than a pixel
+  count — the week must begin inside the first 35 % — which is the claim that
+  was always meant, measured at 277 of 844.

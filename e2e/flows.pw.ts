@@ -581,14 +581,24 @@ test("session popover: the card names the building, the length and the collision
 
   const popover = page.locator("#planner-block-popover");
   await expect(popover).toBeVisible();
-  await expect(popover.locator(".block-popover-code")).toHaveText("TDT4110");
-  // The clock is the card's one large figure; the quiet line under it carries
-  // the weekday, the length and the weeks.
+  // The title names the SESSION: the code, the course beside it, and the
+  // activity under it — "which of this course's five sessions is this" is the
+  // one thing the block itself has no width to say.
+  await expect(popover.locator(".block-popover-code")).toContainText("TDT4110");
+  await expect(popover.locator(".block-popover-course")).toHaveText(
+    "Informasjonsteknologi, grunnkurs",
+  );
+  await expect(popover.locator(".np-head-sub")).toHaveText("Forelesning");
+  // Labelled rows, so a short string that is a PLACE is not left looking like a
+  // short string that is an activity.
+  const when = popover.locator(".block-popover-when");
+  await expect(when).toContainText("mandag");
   await expect(popover.locator(".block-popover-clock")).toHaveText("14:15–16:00");
   const meta = popover.locator(".block-popover-meta");
-  await expect(meta).toContainText("mandag");
   await expect(meta).toContainText("1 t 45 min");
   await expect(meta).toContainText("uke 34–47");
+  await expect(popover.locator(".block-popover-row dt").first()).toHaveText("Tid");
+  await expect(popover.locator(".block-popover-row dt").nth(1)).toHaveText("Sted");
   // "F1" is not a place you can walk to. The block has no width for the
   // building; the card does.
   await expect(popover).toContainText("IT-bygget, sydfløy");
@@ -1716,7 +1726,7 @@ test.describe("the banner's pair", () => {
     const verdict = await box("#planner-grid-status");
     const edit = await box("#planner-edit-plan");
     const tabs = await box(".planner-view-tabs");
-    const banner = await box(".planner-banner");
+    const frame = await box("#planner-grid-frame");
 
     // Nothing fits between them: the gap is smaller than a line of text at any
     // step on the page's scale, so no sentence can have got in there.
@@ -1726,10 +1736,19 @@ test.describe("the banner's pair", () => {
     expect(tabs.top).toBeGreaterThanOrEqual(hint.bottom);
     // A clean verdict is still not printed on a phone at all.
     expect(verdict.bottom - verdict.top).toBe(0);
-    // The bar carries the view switch and the layer box now — they came UP out
-    // of the week's own section head, which is gone with them, so the page as a
-    // whole did not grow a row. This is what it costs before the week is drawn.
-    expect(banner.bottom - banner.top).toBeLessThan(150);
+    // WHAT IS SPENT BEFORE THE WEEK, which is the number that matters and the
+    // one the old 138px finding was about. Measured to the frame's top rather
+    // than to the banner's bottom: the bar carries the view switch and the
+    // layer box now, and they came UP out of the week's own section head — so
+    // the banner grew by exactly what the page lost lower down, and a budget on
+    // the banner alone would read that move as a regression.
+    //
+    // Expressed as a FRACTION of the screen rather than a pixel count, because
+    // that is the actual claim: the week has to start in the first third-ish,
+    // or the thing the page is for is below the fold. From the viewport's top,
+    // so the site topbar is inside the budget too. Measured at 277 of 844.
+    const viewport = page.viewportSize();
+    expect(frame.top).toBeLessThan((viewport?.height ?? 844) * 0.35);
   });
 
   test("the verdict appears on a phone exactly when it has something to report", async ({

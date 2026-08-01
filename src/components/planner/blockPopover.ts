@@ -9,10 +9,15 @@
  * because neither gesture is visible.
  *
  * The head carries the bar's own printed fill with the code knocked out, so the
- * card is visibly the bar you pressed. The clock is its largest figure. The
- * room names its building, which the bar has no width for. A collision gets a
- * sentence, or pressing the red bar answers every question except the one the
- * red raised. A lecture drawn on an unresolved guess says so. The button is a
+ * card is visibly the bar you pressed, and it names the session — code, course,
+ * activity — because "which of this course's five sessions is this" is the one
+ * thing the block itself has no width to say.
+ *
+ * Under it, LABELLED rows: Tid, Sted, and a Merk when there is something about
+ * the session a clock cannot state. The clock is no longer the card's largest
+ * figure — in a grid the time is already drawn, since it IS the block's place
+ * in the week you just clicked. A collision gets a sentence, or pressing the
+ * red bar answers every question except the one the red raised. The button is a
  * verb that names its outcome (DESIGN §7).
  *
  * Deliberately **no tail** pointing at the bar: the frame clips its own
@@ -21,7 +26,7 @@
  * to leave off.
  */
 import { dayName, el, icon } from "./dom.js";
-import type { BlockClash, BlockDetail } from "./grid.js";
+import { type BlockClash, type BlockDetail, isDropIn } from "./grid.js";
 
 /** Desktop breakpoint — matches the stylesheet's own bottom-sheet cutoff. */
 const DESKTOP_QUERY = "(min-width: 60rem)";
@@ -138,10 +143,16 @@ export function mountBlockPopover(
       `np-head ${detail.isLecture ? "np-head--printed" : "np-head--reduced"} block-popover-head`,
     );
     const ident = el("div", "np-head-ident");
+    // THE CODE AND THE NAME AS ONE TITLE, with the ACTIVITY under it. The name
+    // used to be the second line, which spent it saying what the course rail
+    // three inches away already says — while the one fact that separates this
+    // card from the other four this course opens, "which session is this", was
+    // buried in the facts below.
     const title = el("h3", "np-head-title block-popover-code np-data", detail.code);
     title.id = "block-popover-title";
+    if (ctx.courseName) title.append(el("span", "block-popover-course", ctx.courseName));
     ident.append(title);
-    if (ctx.courseName) ident.append(el("p", "np-head-sub", ctx.courseName));
+    if (detail.entryName) ident.append(el("p", "np-head-sub", detail.entryName));
     head.append(ident);
 
     const closeBtn = el("button", "np-icon-btn block-popover-close");
@@ -154,41 +165,55 @@ export function mountBlockPopover(
 
     const body = el("div", "block-popover-body");
 
-    const when = el("p", "block-popover-when");
+    // LABELLED ROWS. The card answers two questions — when, and where — and a
+    // stack of unlabelled facts made the reader work out which was which from
+    // the shape of the string. "R8" and "Forelesning 2" are both short lines of
+    // text; only a label tells you one is a place.
+    //
+    // The clock is no longer one large figure: it was the card's loudest thing
+    // in a view where the time is ALREADY drawn — it is the block's own place
+    // in the grid you just clicked.
+    const facts = el("dl", "block-popover-facts");
+    const row = (label: string, value: Node | string, sub?: Node | string | null): void => {
+      const wrap = el("div", "block-popover-row");
+      wrap.append(el("dt", undefined, label));
+      const dd = el("dd");
+      dd.append(value);
+      // `append(node)`, never `el("small", …, node)`: the third argument of `el`
+      // is TEXT and assigning an element to it stringifies the element.
+      if (sub) {
+        const small = el("small");
+        small.append(sub);
+        dd.append(small);
+      }
+      wrap.append(dd);
+      facts.append(wrap);
+    };
+
+    const when = el("span", "block-popover-when");
+    when.append(`${dayName(detail.dayNumber)} `);
     when.append(el("span", "block-popover-clock np-data", `${detail.startTime}–${detail.endTime}`));
     const meta = el("span", "block-popover-meta");
-    meta.append(dayName(detail.dayNumber));
     const duration = durationLabel(detail.startTime, detail.endTime);
-    if (duration) {
-      meta.append(" · ");
-      meta.append(el("span", "np-data", duration));
-    }
+    if (duration) meta.append(el("span", "np-data", duration));
     if (detail.weeksLabel) {
-      meta.append(" · ");
+      if (duration) meta.append(" · ");
       meta.append(el("span", "np-data", detail.weeksLabel));
     }
-    when.append(meta);
-    body.append(when);
+    row("Tid", when, meta.childElementCount > 0 ? meta : null);
 
-    // Room and activity, each its own fact with its own second line: the
-    // building under the room, the guess under the parallel. No label column.
-    const facts = el("div", "block-popover-facts");
     if (detail.rooms) {
-      const fact = el("div", "np-fact");
-      fact.append(el("p", "np-fact-value np-data", detail.rooms));
-      if (detail.buildings) fact.append(el("p", "np-fact-sub", detail.buildings));
-      facts.append(fact);
+      row("Sted", el("span", "np-data", detail.rooms), detail.buildings ? detail.buildings : null);
     }
-    if (detail.entryName) {
-      const fact = el("div", "np-fact");
-      fact.append(el("p", "np-fact-value", detail.entryName));
-      if (detail.isLecture && ctx.lectureAlternatives > 1) {
-        fact.append(
-          el("p", "np-fact-sub", `Én av ${ctx.lectureAlternatives} alternative forelesninger.`),
-        );
-      }
-      facts.append(fact);
+
+    // The one thing about this session a clock cannot say: you do not have to
+    // be there at any particular minute of it.
+    if (isDropIn(detail)) {
+      row("Merk", "Åpent vindu — du kan stikke innom når du vil.");
+    } else if (detail.isLecture && ctx.lectureAlternatives > 1) {
+      row("Merk", `Én av ${ctx.lectureAlternatives} alternative forelesninger.`);
     }
+
     if (facts.childElementCount > 0) body.append(facts);
 
     if (detail.clash) {

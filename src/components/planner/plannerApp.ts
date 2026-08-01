@@ -53,6 +53,7 @@ import {
   type PlanStore,
   parsePlanHash,
 } from "../../lib/planner/store.js";
+import { isoWeekNumber, weekdayDates } from "../../lib/planner/weekDates.js";
 import { syncPlanProbe } from "../../lib/planProbe.js";
 import { type AddCourseDeps, type AddCourseHandle, mountAddCourse } from "./addCourse.js";
 import { mountBlockPopover, type SessionChoice } from "./blockPopover.js";
@@ -234,6 +235,7 @@ interface PlannerElements {
   editPlanLabel: HTMLElement;
   linkNote: HTMLElement;
   creditLine: HTMLElement;
+  loadLegend: HTMLElement;
   deadline: HTMLElement;
   creditNote: HTMLElement;
   creditStrip: HTMLElement;
@@ -271,6 +273,7 @@ function getElements(): PlannerElements | null {
     editPlanLabel: byId<HTMLElement>("planner-edit-plan-label"),
     linkNote: byId<HTMLElement>("planner-link-note"),
     creditLine: byId<HTMLElement>("planner-credit-line"),
+    loadLegend: byId<HTMLElement>("planner-load-legend"),
     deadline: byId<HTMLElement>("planner-deadline"),
     creditNote: byId<HTMLElement>("planner-credit-note"),
     creditStrip: byId<HTMLElement>("planner-credit-strip"),
@@ -818,6 +821,12 @@ export async function mountPlannerApp(
       if (line.childNodes.length > 0) line.append(" · ");
       line.append(node);
     };
+    // WHICH WEEK the grid's dates belong to, FIRST in the line. The week is a
+    // pattern, but the page is open in one of them and the day headers carry
+    // its dates, so the number that names it has to be visible — and on a phone
+    // this line is clamped to one, so anything at its end is the thing that
+    // gets cut. A 42-character programme name is the right thing to lose there.
+    append(el("span", "np-data", `Uke ${isoWeekNumber(new Date())}`));
     if (program) {
       const named = program.name !== "" && program.name !== program.code;
       if (named) append(program.name);
@@ -960,6 +969,9 @@ export async function mountPlannerApp(
       "is-full",
       Math.abs(summary.total - FULL_LOAD_CREDITS) < 0.05,
     );
+    // The legend only when there is a mark to explain: the track draws one
+    // exactly when the plan has run past 30 sp (`renderCreditStrip`).
+    elements.loadLegend.hidden = summary.total <= FULL_LOAD_CREDITS;
 
     const notes: string[] = [];
     if (summary.offSemester > 0) {
@@ -1943,6 +1955,7 @@ export async function mountPlannerApp(
           todayNumber: todayWeekday(),
           animate: pendingViewAnimation,
           onBlockClick: openBlockPopover,
+          dates: weekdayDates(new Date()),
         },
       );
       // Nothing to draw is a message branch, not an empty frame. The messages

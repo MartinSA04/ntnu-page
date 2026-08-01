@@ -236,6 +236,7 @@ const IDS = [
   "planner-edit-plan-label",
   "planner-link-note",
   "planner-credit-line",
+  "planner-load-legend",
   "planner-credit-note",
   "planner-credit-strip",
   "planner-direction",

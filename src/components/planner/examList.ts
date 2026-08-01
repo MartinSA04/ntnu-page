@@ -291,6 +291,30 @@ function awayLine(row: ExamListRow): HTMLLIElement | null {
   return away;
 }
 
+/**
+ * The list's closing line: how far off the first exam is, and the one caveat
+ * about exam data that is true of every row and belongs on none of them.
+ *
+ * The ROOM is the caveat worth spending a line on. NTNU publishes exam dates
+ * months before it publishes where you sit them, and a list that shows a date,
+ * a code and a vurderingsform without ever mentioning rooms reads as though it
+ * simply failed to fetch one — which is the same shape as a bug.
+ */
+function examFoot(rows: ExamListRow[]): HTMLElement[] {
+  const next = rows.find((row) => row.daysFromToday !== null && row.daysFromToday >= 0);
+  const away =
+    next?.daysFromToday == null
+      ? null
+      : next.daysFromToday === 0
+        ? "Første eksamen er i dag."
+        : next.daysFromToday === 1
+          ? "Første eksamen om 1 dag."
+          : `Første eksamen om ${next.daysFromToday} dager.`;
+  return [
+    el("p", "exam-foot np-hint", `${away ? `${away} ` : ""}Eksamensrom tildeles noen dager før.`),
+  ];
+}
+
 /** "i dag" / "om 1 dag" / "om {n} dager" — the singular/plural split every
  * other day-count sentence in this codebase already makes (D3). */
 function daysFromTodayText(days: number): string {
@@ -434,9 +458,15 @@ export function renderExamList(
     );
   }
 
-  // Band first: the shape of the period, then the dates that make it up.
+  // Band first: the shape of the period, then the dates that make it up, then
+  // the one thing the dates cannot say for themselves.
   const band = examBand(model.rows, hueByCode);
-  listHost.replaceChildren(...(band ? [band] : []), list, ...clashLines(model.rows));
+  listHost.replaceChildren(
+    ...(band ? [band] : []),
+    list,
+    ...clashLines(model.rows),
+    ...examFoot(model.rows),
+  );
 
   // How many rows actually share their day (`sameDay` is set on EVERY row of a
   // same-date cluster), so the verdict reads "3 eksamener samme dag" for a

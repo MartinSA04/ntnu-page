@@ -1020,6 +1020,10 @@ html[data-view="tavle"] #planner-grid-frame[data-reserve] {
    is and because a 60px column cannot hold "mandag" at any size worth reading.
    Centred over its column, like the day it names. */
 .planner-cols-day-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
   padding: 0 4px var(--space-2);
   font-size: var(--planner-cols-head-font);
   font-weight: var(--weight-semibold);
@@ -1047,10 +1051,34 @@ html[data-view="tavle"] #planner-grid-frame[data-reserve] {
   white-space: nowrap;
 }
 
+/* THE DATE. Not tracked, not uppercase and not micro: the weekday above it is
+   a label, this is a figure, and the two want opposite treatments on one
+   baseline — which is exactly why it is its own element and not part of the
+   label's string. A round box because a date is a point in a week and the ring
+   is what says "this one", the mark every calendar reserves for today. */
+.planner-cols-dom {
+  display: grid;
+  place-items: center;
+  min-width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 50%;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  letter-spacing: normal;
+  color: var(--fg);
+}
+
 /* Today is the accent's other job (DESIGN §8): "you are here", the same colour
-   as the needle below it, so the column and the minute agree. */
+   as the needle below it, so the column and the minute agree. The weekday
+   takes the colour and the date takes the fill — one of them has to be the
+   quieter half or the header out-shouts the week under it. */
 .planner-cols-day-header[data-today] {
   color: var(--accent);
+}
+
+.planner-cols-day-header[data-today] .planner-cols-dom {
+  background: var(--accent);
+  color: var(--accent-contrast);
 }
 
 /* The hour ruling, back on the horizontal — it follows the time axis whichever
