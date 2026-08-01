@@ -86,8 +86,13 @@ async function settledVerdict(page: Page, timeout = 45_000): Promise<string> {
 
 /** The course code of each row, read from its printed chip — never from the
  *  credit column, which is `.np-data` too. */
+/**
+ * The codes in the course rail. `.planner-course-code`, not the swatch beside
+ * it: the hue and the code used to be one printed chip, and are two things now
+ * — the same dot the exam list and Liste use, plus the code in ink.
+ */
 function courseCodesOf(page: Page): Promise<string[]> {
-  return page.locator("#planner-course-rows .planner-course-chip").allTextContents();
+  return page.locator("#planner-course-rows .planner-course-code").allTextContents();
 }
 
 test("onboarding: modal → programme + kull + retning → a full week", async ({ page }) => {

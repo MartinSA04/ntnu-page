@@ -515,8 +515,26 @@ structure and left the thing you actually look at alone.
   that failed.
 - **The load track's mark is labelled** ("streken er 30 sp"), shown only when
   the track actually draws one.
+- **The collision verdict is a shortcut to the collision.** "2 kollisjoner denne
+  uka" is a button that scrolls the week to the first clash mark, in whichever
+  view is drawing it — the one thing a student does after reading that sentence
+  is look for them, and the week is a scroller. Underlined on hover only: at
+  rest it is a verdict and must read as one.
+- **The course rail carries a swatch, not a printed chip.** The dot already
+  carries a course's identity in the exam list, in Liste's rows and in the
+  session card; the rail was the one place that fused the hue and the code into
+  one filled shape, which made the same course two different objects on one
+  page. A dropped course keeps the swatch as a ring, so the column of marks
+  never develops a hole.
 - **The phone pays for the bar.** The controls that moved up cost rows the week
-  used to have: the context line is clamped to one line at ≤46rem and the bar's
-  rows tightened. The gate is now a fraction of the screen rather than a pixel
-  count — the week must begin inside the first 35 % — which is the claim that
-  was always meant, measured at 277 of 844.
+  used to have: the context line is clamped to one line at ≤46rem — with the
+  week number moved to its front so the 42-character programme name is what
+  gets cut — and the bar's rows tightened. The gate is now a fraction of the
+  screen rather than a pixel count: the week must begin inside the first 35 %,
+  which is the claim that was always meant. Measured at 277 of 844.
+
+**What is deliberately NOT the artifact.** Its `--c1…--c5` are five Google
+Calendar hues; this palette keeps its own six, which `tokens.test.ts` measures
+against every fill and label they carry. Its body is 14px on a 1240px page;
+this keeps the type scale in §3. Neither is a design the artifact argued for —
+they are the defaults it inherited from being a single self-contained file.

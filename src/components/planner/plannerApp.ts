@@ -1397,15 +1397,21 @@ export async function mountPlannerApp(
       const details = state?.bundle?.details;
       const name = details?.courseName ?? course.name;
 
-      // The chip is the week's own bar at label size, so a course looks the
-      // same in the grid, the exam band and here. A dropped course keeps the
-      // shape and loses the fill, so it reads as switched off, not missing.
-      const chip = el("span", "planner-course-chip np-data", course.code);
+      // A SWATCH AND THE CODE, not the code printed inside the hue. The dot is
+      // already what carries a course's identity in the exam list, in Liste's
+      // rows and in the session card — this rail was the one place that fused
+      // the two, which made the same course two different shapes on one page.
+      // A dropped course keeps the swatch and loses its fill, so the row reads
+      // as switched off rather than as missing.
+      const chip = el("span", "planner-course-chip");
       if (state) chip.style.setProperty("--dot", `var(${state.hueVar})`);
       row.append(chip);
 
       const nameCell = el("span", "planner-course-name");
-      nameCell.append(el("span", "planner-course-title", name));
+      const title = el("span", "planner-course-title");
+      title.append(el("b", "planner-course-code np-data", course.code));
+      title.append(` ${name}`);
+      nameCell.append(title);
       row.append(nameCell);
 
       // Right-aligned in its own column so the figures stack into something a
@@ -1718,12 +1724,33 @@ export async function mountPlannerApp(
       renderLoadChip(host);
       return;
     }
-    const chip = el("span", "planner-chip np-note-clash");
+    // A VERDICT YOU CAN FOLLOW. The one thing a student does after reading
+    // "2 kollisjoner denne uka" is look for them, and the week is a scroller —
+    // so the sentence is the shortcut to the place it is about. A button rather
+    // than a link: it moves the page, it does not go anywhere.
+    const chip = el("button", "planner-chip np-note-clash is-jump");
+    chip.type = "button";
     chip.append(icon("circleAlert"));
     chip.append(el("span", "np-data", String(grid.conflictCount)));
     chip.append(grid.conflictCount === 1 ? " kollisjon denne uka" : " kollisjoner denne uka");
+    chip.addEventListener("click", jumpToFirstClash);
     host.append(chip);
     renderLoadChip(host);
+  }
+
+  /**
+   * Scrolls the week to its first collision, in whichever view is drawing it.
+   *
+   * Every view marks a clash with something: the column grid a zone over the
+   * shared minutes, the transposed grid the same, the list a rule in the
+   * margin of the rows involved. Whichever exists is the target — no view
+   * needs to be switched to, because the student chose the one they are in.
+   */
+  function jumpToFirstClash(): void {
+    const mark = elements.gridFrame.querySelector(
+      ".planner-cols-clash, .planner-clash-zone, .planner-board-row.is-clashing",
+    );
+    mark?.scrollIntoView({ behavior: "smooth", block: "center", inline: "center" });
   }
 
   /**

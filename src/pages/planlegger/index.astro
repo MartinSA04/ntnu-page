@@ -325,6 +325,22 @@ const programOptionsJson = JSON.stringify(programOptions).replaceAll("<", "\\u00
     font-weight: var(--weight-normal);
   }
 
+  /* The verdict you can follow. Underlined ON HOVER only: at rest it is a
+     verdict and must read as one, and a permanently underlined sentence in the
+     page's most important line would look like a footnote. The target is the
+     whole sentence, which clears 24px on its own at this size. */
+  :global(button.planner-chip.is-jump) {
+    font-family: inherit;
+    cursor: pointer;
+    text-align: start;
+    text-decoration-color: transparent;
+  }
+
+  :global(button.planner-chip.is-jump:hover) {
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+
   /* Not a fact about the plan but about the calendar, so it stands apart from
      the run of verdicts rather than in it. */
   .planner-deadline {
@@ -1126,27 +1142,25 @@ const programOptionsJson = JSON.stringify(programOptions).replaceAll("<", "\\u00
 
   /* The chip is the week's own bar at label size: printed hue, code knocked
      out of it. */
+  /* The same mark as the exam list's knot and Liste's dot, at the same size:
+     one shape means "this course" everywhere on the page. */
   :global(.planner-course-chip) {
-    display: inline-flex;
-    align-items: center;
-    height: 20px;
-    padding: 0 var(--space-2);
-    font-size: var(--text-xs);
-    font-weight: var(--weight-medium);
-    letter-spacing: -0.01em;
-    white-space: nowrap;
-    border-radius: var(--radius-xs);
+    width: 12px;
+    height: 12px;
+    border-radius: 3px;
     background: color-mix(in srgb, var(--dot) var(--block-mix), var(--block-base));
-    color: var(--on-block);
   }
 
-  /* A dropped course is still a course: the chip keeps its shape and loses its
-     fill, so the row reads as switched off rather than as missing (§0.3). No
-     ring either — the fill going and the text going faint is what "grayed out"
-     means here. */
+  /* A dropped course is still a course: the swatch keeps its place and loses
+     its fill, so the row reads as switched off rather than as missing (§0.3).
+     A ring, not nothing, or the column of marks develops a hole. */
   :global(.planner-course-row.is-dropped .planner-course-chip) {
     background: transparent;
-    color: var(--faint);
+    box-shadow: inset 0 0 0 1px var(--border-strong);
+  }
+
+  :global(.planner-course-code) {
+    font-weight: var(--weight-semibold);
   }
 
   /* `anywhere` is the floor, not the plan: almost every name wraps at a space,
