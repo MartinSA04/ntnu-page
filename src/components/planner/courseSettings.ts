@@ -413,14 +413,16 @@ export function mountCourseSettings(store: PlanStore, signal: AbortSignal): Cour
   }
 
   /**
-   * The same masthead the session card opens on (`.np-head--printed`): the
-   * course's printed fill with its code knocked out, its name on the quiet line
-   * under it. A student reaches this modal FROM that card, and sharing only a
-   * hue dot made the editor read as a different object.
+   * The same masthead the session card opens on: the course's swatch, its code,
+   * its name on the quiet line under it. A student reaches this modal FROM that
+   * card, so the two have to be visibly one object — which is what the shared
+   * `.np-head` buys, and it no longer costs a full-bleed band of colour to do
+   * it (see `.np-head-swatch`).
    */
   function renderHead(ctx: CourseSettingsContext): HTMLElement {
-    const head = el("div", "np-head np-head--printed course-settings-head");
+    const head = el("div", "np-head course-settings-head");
     head.style.setProperty("--dot", `var(${ctx.hueVar})`);
+    head.append(el("span", "np-head-swatch"));
     const ident = el("div", "np-head-ident");
     const title = el("h2", "np-head-title np-data course-settings-code", ctx.code);
     title.id = "course-settings-title";

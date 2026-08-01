@@ -354,41 +354,48 @@ button.np-tag:hover {
    which is why the frame clips its corners and every `<dialog>` using this pads
    its BODY rather than itself.
 
-   Two grounds, and which one a surface takes says what it is about:
-
-    - `.np-head` is paper one step down with a hairline under it, for a subject
-      with no colour of its own (a programme is not a course).
-    - `.np-head--printed` is the course's own printed fill with the text knocked
-      out, the same arithmetic `.planner-block` uses, so a card about a course
-      reads as the bar you pressed. The hue is a FILL here, never text (DESIGN
-      §8). `.np-head--reduced` is the øving/lab strength of the same fill. */
+   ONE GROUND, whatever the subject: paper one step down with a hairline under
+   it. A card about a course carries `.np-head-swatch` — the same 12px mark the
+   exam list, the course rail and Liste use — rather than being flooded with the
+   course's hue. The flood was two variants (`--printed`, `--reduced`) that had
+   to knock their own text out, invert every control inside them, and pick a
+   strength per layer; the swatch says the same thing in the shape the rest of
+   the product already says it in. */
 .np-head {
   display: flex;
   align-items: flex-start;
-  justify-content: space-between;
-  gap: var(--gap-2);
-  padding: var(--space-2) var(--space-2) var(--space-2) var(--space-4);
+  gap: var(--gap-3);
+  padding: var(--space-3) var(--space-2) var(--space-3) var(--space-4);
   background: var(--card);
   color: var(--fg);
   border-bottom: 1px solid var(--border);
 }
 
-.np-head--printed {
+/* THE COURSE'S MARK, not the course's FLOOD. `--printed` and `--reduced` filled
+   the whole masthead with the hue and knocked the text out of it — the loudest
+   possible chrome on a surface whose entire thesis is that structure comes from
+   type, hairlines and space. A 12px swatch says the same thing ("this card is
+   about TDT4120") in the same shape the exam list, the course rail and Liste
+   already use, and leaves the title in ink where it is easiest to read.
+   `margin-top` optically centres it on the title's cap height rather than on
+   its line box. */
+.np-head-swatch {
+  flex: none;
+  width: 12px;
+  height: 12px;
+  margin-top: 5px;
+  border-radius: 3px;
   background: color-mix(in srgb, var(--dot) var(--block-mix), var(--block-base));
-  color: var(--on-block);
-  border-bottom: 0;
 }
 
-.np-head--reduced {
-  background: color-mix(in srgb, var(--dot) var(--block-muted), var(--card));
-  color: var(--fg);
-  border-bottom: 0;
-}
-
+/* Takes the width, so the close button lands at the far end without the head
+   needing `justify-content: space-between` — which would also have pushed the
+   swatch away from the title it belongs to. */
 .np-head-ident {
   display: grid;
   gap: 1px;
   min-width: 0;
+  margin-inline-end: auto;
 }
 
 .np-head-title {
@@ -398,25 +405,20 @@ button.np-tag:hover {
   overflow-wrap: anywhere;
 }
 
-/* Mixed from `currentcolor` rather than set to `--muted`, so one declaration
-   serves both grounds: 74 % of ink on paper, 74 % of paper on a printed fill. */
+/* One ground now, so this is plainly `--muted` — it used to be mixed from
+   `currentcolor` because the head could be a printed band, where a fixed grey
+   is invisible. Nothing knocks its text out any more. */
 .np-head-sub {
   margin: 0;
   font-size: var(--text-sm);
   line-height: var(--leading-snug);
-  color: color-mix(in srgb, currentcolor 74%, transparent);
+  color: var(--muted);
 }
 
 /* `.np-icon-btn` rests at `--muted` with a `--fg`-mixed wash; on a printed band
    both are invisible, so inside a head it is knocked out of the band. */
 .np-head .np-icon-btn {
   flex-shrink: 0;
-  color: inherit;
-}
-
-.np-head .np-icon-btn:hover {
-  color: inherit;
-  background: color-mix(in srgb, currentcolor 16%, transparent);
 }
 
 /* --- The footer of a card -------------------------------------------------

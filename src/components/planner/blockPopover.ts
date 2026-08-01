@@ -138,10 +138,8 @@ export function mountBlockPopover(
     // an øving/lab bar takes rather than printing a lecture-strength colour.
     dialog.style.setProperty("--dot", `var(${ctx.hueVar})`);
 
-    const head = el(
-      "div",
-      `np-head ${detail.isLecture ? "np-head--printed" : "np-head--reduced"} block-popover-head`,
-    );
+    const head = el("div", "np-head block-popover-head");
+    head.append(el("span", "np-head-swatch"));
     const ident = el("div", "np-head-ident");
     // THE CODE AND THE NAME AS ONE TITLE, with the ACTIVITY under it. The name
     // used to be the second line, which spent it saying what the course rail

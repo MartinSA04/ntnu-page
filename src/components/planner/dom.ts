@@ -28,12 +28,24 @@ export function el<K extends keyof HTMLElementTagNameMap>(
 type IconShape = readonly [tag: "path" | "circle", attrs: Record<string, string>];
 
 const ICONS = {
-  /** `settings-2` — settings for one thing. The course rows and the plan's own. */
+  /** `settings-2` — settings for one thing. The plan's own control, in the bar. */
   settings: [
     ["path", { d: "M20 7h-9" }],
     ["path", { d: "M14 17H5" }],
     ["circle", { cx: "17", cy: "17", r: "3" }],
     ["circle", { cx: "7", cy: "7", r: "3" }],
+  ],
+  /**
+   * `ellipsis-vertical` — the actions belonging to ONE ROW. Not `settings-2`,
+   * which the plan's own control in the bar wears: the same mark at two scopes
+   * says the two do the same kind of thing at different levels, and they do
+   * not — one changes the plan, the other opens what you can do to a course.
+   * The row is also where every list a student uses puts exactly this mark.
+   */
+  rowMenu: [
+    ["circle", { cx: "12", cy: "5", r: "1.6" }],
+    ["circle", { cx: "12", cy: "12", r: "1.6" }],
+    ["circle", { cx: "12", cy: "19", r: "1.6" }],
   ],
   /** `x` — dismiss. */
   close: [
@@ -92,7 +104,7 @@ export function icon(name: IconName, className?: string): SVGSVGElement {
 
 /** The course rows' target, kept as its own name because that is what it means. */
 export function settingsIcon(): SVGSVGElement {
-  return icon("settings");
+  return icon("rowMenu");
 }
 
 /** A `.np-dot` square carrying a course hue via the `--dot` custom property. */

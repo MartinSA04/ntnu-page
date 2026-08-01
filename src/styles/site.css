@@ -630,8 +630,8 @@
   max-width: calc(100vw - 2 * var(--space-4));
   max-height: min(70vh, 30rem);
   overflow-y: auto;
-  /* No padding: the head is a full-bleed printed strip and `.np-frame`'s
-     `overflow: hidden` is what trims its corners to the frame's radius. */
+  /* No padding: the head, the rows and the foot each carry their own, and the
+     two hairlines between them have to reach the card's edges to divide it. */
   padding: 0;
   color: var(--fg);
   box-shadow: var(--shadow-lg);
@@ -726,8 +726,13 @@
   margin: 0;
 }
 
+/* The foot, divided from the facts by the card's second hairline — the same
+   rule as under the head. A card with a head, a set of rows and a foot is
+   three parts, and the two lines are what say so. */
 .block-popover-actions {
-  margin-top: var(--space-1);
+  margin-top: var(--space-3);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--border);
 }
 
 /* --- Inline icon marks ------------------------------ */

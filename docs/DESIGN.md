@@ -232,20 +232,21 @@ mark in other clothes; don't.
   panel. Note it sets `overflow: hidden`, which is why the week's frame is
   deliberately *not* an `.np-frame` (it would kill the horizontal scroll —
   see `planner-week.css`).
-- **`.np-head` / `.np-head-ident` / `.np-head-title` / `.np-head-sub`** — the
-  masthead every card and modal opens on (REWORK-2026-07-30 "Kvittering"): what
-  this is, its quiet second line, and the way out of it, full-bleed against the
-  frame's own edge. Two grounds, and which one a surface takes says what it is
-  about. Plain `.np-head` is paper one step down with a hairline under it, for a
-  subject with no colour of its own (the studieinfo modal: a programme is not a
-  course). **`.np-head--printed`** is the course's own printed fill with the
-  text knocked out of it (§2's block ink, `--dot` set per open by the call
-  site), so the session card and the course modal read as the bar you pressed;
-  **`.np-head--reduced`** is the same fill at øving/lab strength. A `<dialog>`
-  using one pads its BODY, never itself, and the body is what scrolls, so the
-  head stays put. Live users: all four floating surfaces in the planner, i.e.
-  the session popover and the course modal (printed), studieinfo and
-  add-course (paper).
+- **`.np-head` / `.np-head-swatch` / `.np-head-ident` / `.np-head-title` /
+  `.np-head-sub`** — the masthead every card and modal opens on
+  (REWORK-2026-07-30 "Kvittering"): what this is, its quiet second line, and the
+  way out of it, full-bleed against the frame's own edge. **One ground**, paper
+  one step down with a hairline under it. A surface about a COURSE adds
+  `.np-head-swatch` — the same 12px mark as `.np-dot`, `--dot` set per open by
+  the call site — so the session card and the course modal read as the block you
+  pressed. The `--printed` / `--reduced` variants that flooded the whole
+  masthead with the hue are **deleted** (2026-08-01): a full-bleed band of
+  colour is the loudest chrome on the site, on a surface whose entire thesis is
+  that structure comes from type, hairlines and space — and it cost two
+  variants that had to knock out their own text, invert every control inside
+  themselves, and pick a strength per layer. A `<dialog>` pads its BODY, never
+  itself, and the body is what scrolls, so the head stays put. Live users: all
+  four floating surfaces in the planner.
 - **`.np-fact` / `.np-fact-value` / `.np-fact-sub`** — a fact and the line that
   qualifies it: a room over its building, a parallel over "one of three",
   credits over where the course came from. This is what replaced the
@@ -555,7 +556,19 @@ meaningful when it is an oversight.
   and the needle. It was full ink, which is what every other day would be if the
   rest were not deliberately washed back.
 
-**2026-08-01, stage 7 — the course palette, which was the last of it.**
+**2026-08-01, stage 8 — the marks and the floating surfaces.**
+
+- **A row's actions are `ellipsis-vertical`, not `settings-2`.** The plan's own
+  control in the bar wears `settings-2`; the same mark at two scopes said the
+  two do the same kind of thing at different levels, and they do not. The row is
+  also where every list a student uses puts exactly this mark.
+- **A card about a course carries a swatch, not a coloured band.** See
+  `.np-head` in §5 — the `--printed` / `--reduced` variants are gone.
+- **The popover is three parts divided by two hairlines**: head, labelled rows,
+  foot. The foot had only a top margin, which left the button floating in the
+  same box as the facts.
+
+**2026-08-01, stage 7 — the course palette.**
 
 The hues were deep jewel tones: `#0d47a1` navy, `#00695c` teal, `#8d6e00`
 olive. Legible, and the colours of a spreadsheet rather than of the thing every
