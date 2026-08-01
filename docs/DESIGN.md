@@ -533,6 +533,28 @@ structure and left the thing you actually look at alone.
   screen rather than a pixel count: the week must begin inside the first 35 %,
   which is the claim that was always meant. Measured at 277 of 844.
 
+**2026-08-01, stage 6 — one shape, everywhere.** Stage 5 gave the course rail
+the artifact's rounded 12px swatch and left the exam list on a 7px hard square,
+Liste on `.np-dot`'s 8px/1px one, and `/emne/`'s bars on `border-radius: 0`.
+Making one of four match is worse than matching none: it says the difference is
+meaningful when it is an oversight.
+
+- **The course mark is one primitive**: a rounded square, 10px in a row of text
+  (`.np-dot`, the exam knot) and 12px where it leads a block of it (the rail).
+  Not a circle — that is a bullet, and belongs to lists of sentences. The
+  corner is what makes it the same object as the blocks in the week.
+- **Both week geometries round their sessions to 4px.** The transposed grid's
+  bars were still square, so the same session was two shapes depending on which
+  page drew it.
+- **The hour rail prints whole times** (`08:00`, not `08`) and is wide enough
+  for them: an axis you read a time off, not a column of numbers you have to be
+  told are hours. Day columns keep their edge up through the header.
+- **The load track is 8px and fully rounded.** At 15px it was a bar chart of one
+  bar, competing with the course rows it introduces.
+- **Today's day name in Liste is the accent**, matching the week's own header
+  and the needle. It was full ink, which is what every other day would be if the
+  rest were not deliberately washed back.
+
 **What is deliberately NOT the artifact.** Its `--c1…--c5` are five Google
 Calendar hues; this palette keeps its own six, which `tokens.test.ts` measures
 against every fill and label they carry. Its body is 14px on a 1240px page;

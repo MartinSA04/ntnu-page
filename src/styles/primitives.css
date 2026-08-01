@@ -205,17 +205,26 @@ button.np-tag:hover {
 
 /* The square dot — a filled ruteark cell carrying a course hue.
    Set the hue per element: style="--dot: var(--hue-cyan)". */
+/* THE COURSE MARK. One shape wherever a course is named without being drawn:
+   the exam list, Liste's rows, the course rail, a tag. A rounded square, not a
+   circle and not a hard one — a circle is a bullet and belongs to lists of
+   sentences, a hard square at 8px reads as a rendering artefact, and the corner
+   is what makes it the same object as the blocks in the week.
+
+   10px, because at 8 the hue was a speck: it has to carry a course's identity
+   next to 15px type, and six of them have to be told apart at a glance. */
 .np-dot {
   flex: none;
-  width: 8px;
-  height: 8px;
-  border-radius: 1px;
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
   background: var(--dot, var(--ui));
 }
 
 .np-tag--sm .np-dot {
-  width: 6px;
-  height: 6px;
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
 }
 
 /* Selectable toggle (semester switcher, filters). aria-pressed drives it. */

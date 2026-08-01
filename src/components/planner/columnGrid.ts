@@ -463,7 +463,9 @@ export function renderColumnGrid(
   const rail = el("div", "planner-cols-rail");
   rail.setAttribute("aria-hidden", "true");
   for (let hour = Math.ceil(geo.minMinutes / 60); hour <= Math.floor(geo.maxMinutes / 60); hour++) {
-    const label = el("span", "planner-cols-hour np-data", String(hour).padStart(2, "0"));
+    // "08:00", not "08". The rail is the axis a student reads a time OFF, and a
+    // bare two-digit column is a set of numbers you have to be told are hours.
+    const label = el("span", "planner-cols-hour np-data", `${String(hour).padStart(2, "0")}:00`);
     // The hour is the figure's identity across a re-render: when the øving
     // layer stretches the axis, 10:00 must TRAVEL to its new percentage rather
     // than be replaced by a different element that happens to say "10".

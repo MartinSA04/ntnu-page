@@ -31,8 +31,11 @@
   /* KOLONNER's hour rail, on the SCROLL CONTAINER rather than `.planner-cols`:
      the frame needs it for `scroll-padding-inline-start` (a scrolled column
      must come to rest beside the rail, not under it) and a parent cannot read a
-     child's custom property. `.planner-cols` inherits it. */
-  --planner-rail: 2.5rem;
+     child's custom property. `.planner-cols` inherits it.
+
+     Wide enough for "08:00" plus its tick: the rail prints whole times, not
+     bare hours, so it is an axis rather than a column of numbers. */
+  --planner-rail: 3.6rem;
   /* RADER's day spine, on the frame for the same reason: the mask below has to
      know how wide the column that stays put is. */
   --planner-spine: clamp(5.5rem, 11vw, 9.5rem);
@@ -232,7 +235,7 @@ html[data-view="tavle"] #planner-grid-frame[data-reserve] {
     --planner-frame-pad-block: var(--space-2);
     padding: var(--planner-frame-pad-block) 0;
     --planner-spine: 3rem;
-    --planner-rail: 1.9rem;
+    --planner-rail: 2.9rem;
     --planner-lane-h: 30px;
     --planner-bar-h: 26px;
     --planner-band-h: 17px;
@@ -427,8 +430,10 @@ html[data-view="tavle"] #planner-grid-frame[data-reserve] {
   overflow: hidden;
   white-space: nowrap;
   text-align: left;
-  /* Instrument corners: a timetable bar is a printed rule, not a pill. */
-  border-radius: 0;
+  /* The same 4px corner the column week's blocks take. Two geometries drawing
+     the same session must not disagree about what shape a session is — and at
+     0 two touching bars fuse into one run of ink. */
+  border-radius: 4px;
   background: color-mix(in srgb, var(--dot) var(--block-mix), var(--block-base));
   color: var(--on-block);
   cursor: pointer;
@@ -1036,6 +1041,9 @@ html[data-view="tavle"] #planner-grid-frame[data-reserve] {
   color: var(--muted);
   white-space: nowrap;
   overflow: hidden;
+  /* The day's own edge, continued up through the header: a column that is ruled
+     for eleven hours and open at the top is not a column. */
+  border-left: 1px solid var(--border);
   border-bottom: 1px solid var(--border-strong);
 }
 
@@ -1470,8 +1478,11 @@ html[data-view="tavle"] #planner-grid-frame[data-reserve] {
   color: color-mix(in srgb, var(--fg) 40%, transparent);
 }
 
+/* Today is the accent, the same "you are here" the week's own header and the
+   needle carry — not simply full ink, which is what every OTHER day would be
+   if the rest were not deliberately washed back. */
 .planner-board-day[data-today] .planner-board-dayname {
-  color: var(--fg);
+  color: var(--accent);
 }
 
 /* When the day starts and ends, at the far end of its own rule. */

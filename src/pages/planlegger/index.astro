@@ -960,9 +960,10 @@ const programOptionsJson = JSON.stringify(programOptions).replaceAll("<", "\\u00
     content: "";
     position: absolute;
     inset-inline-start: 0;
-    top: 0.35em;
-    width: 7px;
-    height: 7px;
+    top: 0.3em;
+    width: 10px;
+    height: 10px;
+    border-radius: 3px;
     background: var(--dot);
   }
 
@@ -1053,17 +1054,20 @@ const programOptionsJson = JSON.stringify(programOptions).replaceAll("<", "\\u00
      first segment shoves every course row down 23px. Keyed on the probe so a
      page with no plan reserves nothing. */
   .planner-load:empty {
-    min-height: calc(var(--plan-any) * 15px);
+    min-height: calc(var(--plan-any) * 8px);
     margin-bottom: calc(var(--plan-any) * var(--space-2));
   }
 
+  /* A track, not a chart. 8px and fully rounded: it answers "roughly how full
+     is this term" in one glance and then gets out of the way — at 15px it was
+     a bar chart of one bar, competing with the course rows it introduces. */
   :global(.planner-load-track) {
     position: relative;
     display: flex;
     gap: 2px;
-    height: 15px;
-    background: var(--card);
-    border-radius: var(--radius-xs);
+    height: 8px;
+    background: var(--wash);
+    border-radius: 4px;
     overflow: hidden;
   }
 
