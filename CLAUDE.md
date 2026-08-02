@@ -1,14 +1,27 @@
 # CLAUDE.md
 
-- Doc hierarchy: `docs/PRODUCT.md` is the definitive product definition
-  (positioning, flows, MoSCoW, domain rules DR-1…DR-10, decisions D1–D15 —
-  do NOT re-add killed features); `docs/ROADMAP.md` sequences the build;
-  `docs/PLANNER.md` remains binding only for Ruteark render detail;
-  `docs/SPEC.md` covers architecture/data contracts; `docs/DESIGN.md` is
-  **Ruteark**, this repo's own design system — its named rules and §8
-  adjudicated decisions apply. `docs/plan/` holds the planning panel's
-  working papers (perspectives, critiques, flow blueprints f1–f5). StudyCompanion is inspiration
-  only; do not port its styles or re-introduce serif/`.sc-*` idioms.
+- **Doc hierarchy — four files, and they do not overlap.**
+  `docs/PRODUCT.md` is the definitive product definition (mandate,
+  positioning, flows, feature status, domain rules DR-1…DR-10, decisions
+  D1–D15, and the killed list — do **not** re-add killed features);
+  `docs/DESIGN.md` is the design system, and its named rules and §9
+  adjudicated decisions are binding; `docs/SPEC.md` covers architecture and
+  data contracts; `docs/ROADMAP.md` sequences what is left. There is no
+  fifth doc. `PLANNER.md`, `REVIEW.md`, `UX-STUDY.md`, the two `AUDIT-*`
+  files and `docs/plan/` were all consumed and **deleted** — every rule worth
+  keeping was moved into the four above, so do not restore them and do not
+  cite their finding IDs in new prose. (Some test names and a few comments
+  still carry an old ID like `pd-5` or `groups-1`. They are labels, not
+  links.)
+- **The design system has no codename.** An earlier warm-paper direction
+  called *Ruteark* — Flexoki ground, vendored Schibsted Grotesk + Spline Sans
+  Mono, a squared 15-minute ruling, printed course fills — was replaced
+  wholesale on 2026-08-01 by the calendar direction now in DESIGN.md. Only
+  the `.np-*` prefix and the primitives' interaction grammar survived. A few
+  comments in `primitives.css`, `base.css`, `site.css`, `Layout.astro` and
+  `favicon.ts` still say the word; it is a leftover, not a rule.
+  StudyCompanion was inspiration only — never port its styles, and never
+  reintroduce serif or `.sc-*` idioms.
 - `src/styles/{tokens,base,primitives}.css` are owned here and hand-edited.
   **There are no vendored fonts.** Type is the platform's own UI face
   (`-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, …`), and
@@ -108,13 +121,13 @@
   0.61 on its own. It duplicates `SKELETON_DAYS` and the ruler's 22px from
   `grid.ts`; the row metrics live on the *frame* so it can compute a week that
   does not exist yet. **Each week geometry reserves its own height** and that
-  base class rule is RADER's alone — which since stage 2 is `/emne/[code]/`'s
-  geometry and nothing else, because the planner's Rader tab is gone. The
-  planner's two are Uke (the drawn hours × `--planner-hour-h`, the `#`-scoped
-  base rule) and Liste (a session count, `html[data-view="tavle"]`). Reserving
-  one for the other is worse than reserving nothing (0.14 CLS), and the
-  planner's rules are scoped **by id** so a remembered Liste height can never
-  reach the course page's frame. Liste has no formula, so
+  base class rule belongs to the transposed geometry alone — which is
+  `/emne/[code]/`'s and nothing else, because the planner's third view is
+  gone. The planner's two are Uke (the drawn hours × `--planner-hour-h`, the
+  `#`-scoped base rule) and Liste (a session count, `html[data-view="tavle"]`).
+  Reserving one for the other is worse than reserving nothing (0.14 CLS), and
+  the planner's rules are scoped **by id** so a remembered Liste height can
+  never reach the course page's frame. Liste has no formula, so
   `saveWeekBox`/`--planner-box` remembers the height per view *and per width*
   and the probe hands it back before paint — sound because a load in Liste is
   by construction a return visit, and discarded outside a 32px width tolerance

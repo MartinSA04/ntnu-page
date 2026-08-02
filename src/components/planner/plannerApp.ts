@@ -1,5 +1,5 @@
 /**
- * `/planlegger/` orchestrator (PRODUCT.md §0). Schedule-first: programme +
+ * `/planlegger/` orchestrator (PRODUCT.md §1). Schedule-first: programme +
  * kull picked once → the week for the chosen semester renders immediately,
  * prefilled with the courses the study plan says the student has (DR-7's
  * pre-fill IS the default plan, not a hedged suggestion).
@@ -651,7 +651,7 @@ export async function mountPlannerApp(
     };
   }
 
-  // Hash wins over storage on load (PRODUCT.md §7) — but only a hash that
+  // Hash wins over storage on load (PRODUCT.md §6) — but only a hash that
   // carries a plan. Every load ends by writing the current plan back into the
   // hash, so a trivially-empty hash (`#v2;26h;-;`) is indistinguishable from
   // "no hash was ever set" and must defer to localStorage instead of wiping it.
@@ -665,7 +665,7 @@ export async function mountPlannerApp(
    * Opening a link REPLACES local state (§7's "hash wins over storage"), which
    * is right — a link that did not show its own plan would be pointless — but
    * it was doing so silently and irreversibly, over a plan the recipient may
-   * have spent the evening on. PRODUCT §3 flow 6 asks for three actions here
+   * have spent the evening on. PRODUCT §4 flow 5 asks for three actions here
    * (bruk denne / slå sammen / behold min egen); the merge half is Phase 3 and
    * unbuilt, but the destructive half is live TODAY, so the way back is what
    * ships now. Null whenever there was nothing to lose, or the link carries
@@ -887,7 +887,7 @@ export async function mountPlannerApp(
     );
     // ONE ACCENT ON SCREEN, AND ON THE RIGHT ACTION (§8's One-Job-Accent).
     // "Legg til emne" is the primary action of a plan that EXISTS. With no plan
-    // it is the secondary route — §0.1 ranks programme + kull first — and while
+    // it is the secondary route — PRODUCT §1.1 ranks programme + kull first — and while
     // it kept the accent there, the loudest thing on the empty page was the
     // path the mandate ranks second, over an empty-state card whose own primary
     // was grey paper. The card takes the accent back for that one state.
@@ -1518,7 +1518,7 @@ export async function mountPlannerApp(
 
   /**
    * The plan itself and nothing else: courses being taken, plus programme
-   * courses the student dropped (grayed — §0.3). The study plan's choice pool
+   * courses the student dropped (grayed — PRODUCT §1.3). The study plan's choice pool
    * deliberately does not live here; at 30–60 rows it would bury the six
    * courses this list exists to show.
    *
@@ -1574,7 +1574,7 @@ export async function mountPlannerApp(
       if (isDropped) {
         // The one status a row still says for itself: a dropped course is out
         // of the week, the credits and the exams, so a grayed row with no
-        // explanation looks broken (§0.3).
+        // explanation looks broken (PRODUCT §1.3).
         row.append(el("span", "planner-course-sp np-data", "droppet"));
       } else {
         // A course the week cannot draw gets ONE mark; the sentence is in the
@@ -1642,7 +1642,7 @@ export async function mountPlannerApp(
   }
 
   /** One offered course row: code · name · credits + a "Legg til"/"I planen"
-   *  affordance. The in-plan word is DESIGN §7's mandated half of the pair and
+   *  affordance. The in-plan word is DESIGN §8's mandated half of the pair and
    *  must be spelled the same way on every surface. */
   function buildPlanPanelRow(course: ClassifiedCourse): HTMLElement {
     const row = el("div", "planner-plan-row");
@@ -1853,7 +1853,7 @@ export async function mountPlannerApp(
     .addEventListener("change", () => renderGridAndExams(), { signal });
 
   /**
-   * The verdict beside the Ukeplan kicker — PRODUCT §1's primary job, *kan jeg
+   * The verdict beside the Ukeplan kicker — PRODUCT §2's primary job, *kan jeg
    * ta disse emnene sammen?*, answered on the page. Counts are grouped slots,
    * so a three-way clash is one problem, and nothing is asserted while a fetch
    * could still change it.
@@ -2133,10 +2133,10 @@ export async function mountPlannerApp(
     if (noProfile) {
       // State 1: no plan at all.
       renderWeekCard((card) => {
-        // DESIGN §7: an empty state is an invitation to act. "Ingen plan ennå."
+        // DESIGN §8: an empty state is an invitation to act. "Ingen plan ennå."
         // is a STATUS — it named the absence and left the page saying nothing
         // about what the tool is for, on the one screen where the student has
-        // no other evidence. This is §0.1's mandate in one sentence.
+        // no other evidence. This is PRODUCT §1.1's mandate in one sentence.
         card.append(
           el(
             "p",

@@ -123,7 +123,7 @@ export function formatCreditNumber(value: number): string {
   return Number.isInteger(rounded) ? String(rounded) : rounded.toFixed(1).replace(".", ",");
 }
 
-/** Formats a credit total per DESIGN.md/PLANNER.md: comma decimals, "X av 30 sp". */
+/** Formats a credit total per DESIGN.md §8: comma decimals, "X av 30 sp". */
 export function formatCredits(total: number): string {
   return `${formatCreditNumber(total)} av 30 sp`;
 }

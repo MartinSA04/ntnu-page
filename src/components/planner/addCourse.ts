@@ -72,7 +72,7 @@ export interface AddCourseRowControl {
 /**
  * Derives a row's control from the plan *entry*, not from `hasCourse`.
  *
- * Four states, because §0.3/D3 say a programme course is never deleted: absent
+ * Four states, because a programme course is never deleted (PRODUCT §1.3): absent
  * → "Legg til", a manual add → "Fjern", a programme course → "Dropp", a dropped
  * programme course → "Legg tilbake". Calling `removeCourse` unconditionally
  * hard-deleted a programme course, and with no `dropped` marker left behind the
@@ -103,7 +103,7 @@ export function addCourseRowControl(store: PlanStore, course: AddCourseInput): A
     return {
       label: "Fjern",
       ariaLabel: `Fjern ${code} fra planen`,
-      // DESIGN §7's mandated pair is "Legg til i planen" → "I planen". The
+      // DESIGN §8's mandated pair is "Legg til i planen" → "I planen". The
       // *verbs* stay: Dropp/Legg tilbake cannot collapse into a two-state
       // toggle.
       state: "I planen",
@@ -333,7 +333,7 @@ export function mountAddCourse(deps: AddCourseDeps, signal: AbortSignal): AddCou
   /**
    * Enter adds, when the query names exactly one course.
    *
-   * The five-codes flow is the one PRODUCT §2's persona B arrives on — paste a
+   * The five-codes flow is the one PRODUCT §3's persona B arrives on — paste a
    * code, add it, next — and Enter did nothing at all, so each code cost a
    * select-all, a retype and a trip to the mouse. It commits only on an
    * unambiguous query: an exact code, or a single remaining match. Anything

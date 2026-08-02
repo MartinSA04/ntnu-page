@@ -1,8 +1,8 @@
 /**
- * Fetch + shape layer for the planner (PLANNER.md §3). Per-course failures are
+ * Fetch + shape layer for the planner (SPEC.md). Per-course failures are
  * captured rather than thrown so the page can render partial plans.
  *
- * Owns the *honest signal* PRODUCT §1's moat rests on: for every course it says
+ * Owns the *honest signal* PRODUCT §2's moat rests on: for every course it says
  * whether the timetable came back **with entries**, came back **empty**, or
  * **failed and why** (`TimetableOutcome`). Never collapse the three into "no
  * blocks drawn" — read `timetableOutcomeOf(bundle)` or `courseFetchState(code)`,
@@ -442,7 +442,7 @@ export function clearCourseBundleMemo(): void {
   fetchStates.clear();
 }
 
-/** One catalog course as compacted in `search-index.json` (PLANNER.md §4). */
+/** One catalog course as compacted in `search-index.json` (SPEC.md). */
 export type PlannerIndexExam = [season: string, date: string | null];
 
 /**

@@ -18,7 +18,7 @@
  * figure — in a grid the time is already drawn, since it IS the block's place
  * in the week you just clicked. A collision gets a sentence, or pressing the
  * red bar answers every question except the one the red raised. The button is a
- * verb that names its outcome (DESIGN §7).
+ * verb that names its outcome (DESIGN §8).
  *
  * Deliberately **no tail** pointing at the bar: the frame clips its own
  * corners, the card flips above the anchor and becomes a bottom sheet under

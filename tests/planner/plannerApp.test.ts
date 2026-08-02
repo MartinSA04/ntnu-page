@@ -994,8 +994,9 @@ describe("mountPlannerApp — audit repro", () => {
       },
       "#26h;MTDT.2026;",
     );
-    // The row carries no Dropp of its own any more (D3 relaxed §0.3's "one tap
-    // to restore" to two) — it opens the settings modal, and the verb is there.
+    // The row carries no Dropp of its own any more — it opens the settings
+    // modal, and the verb is there. That relaxes PRODUCT §1.3's "one tap to
+    // restore" to two, deliberately: one editing surface per course.
     const rows = find("planner-course-rows");
     const openBtn = rows
       .descendants()
@@ -1012,7 +1013,7 @@ describe("mountPlannerApp — audit repro", () => {
     for (let i = 0; i < 5; i++) await new Promise((r) => setTimeout(r, 0));
 
     // The action closes the modal (the course it edits is no longer on screen)
-    // and the row stays, grayed and saying so — §0.3's visible, reversible drop.
+    // and the row stays, grayed and saying so — PRODUCT §1.3's visible, reversible drop.
     expect(dialog?.open).toBe(false);
     const dropped = rows.descendants().find((e) => e.dataset.code === "TDT4136");
     expect(dropped?.className).toContain("is-dropped");

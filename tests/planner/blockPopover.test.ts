@@ -29,7 +29,7 @@ describe("durationLabel", () => {
 
 describe("editVerb", () => {
   /* "Innstillinger" was the system's word for the same button. A verb names
-     its outcome (DESIGN §7), and which outcome depends on what the course
+     its outcome (DESIGN §8), and which outcome depends on what the course
      offers on the layer the clicked session belongs to. */
   test("a lecture layer with parallels offers the parallel", () => {
     expect(editVerb("parallel")).toBe("Velg parallell");

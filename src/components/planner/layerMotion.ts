@@ -2,7 +2,7 @@
  * LAYER MOTION — what happens when the øving/lab layer is switched on or off.
  *
  * It cannot reuse the view-switch strike-in: replaying it over the whole week
- * because one toggle moved is the entrance choreography DESIGN §6 forbids, and
+ * because one toggle moved is the entrance choreography DESIGN §7 forbids, and
  * it would claim lectures that did not change had changed.
  *
  * So the motion says what actually happened — one layer arrived, or one left:

@@ -98,9 +98,10 @@ function courseCodesOf(page: Page): Promise<string[]> {
 test("onboarding: modal → programme + kull + retning → a full week", async ({ page }) => {
   await page.goto("/planlegger/");
 
-  // The empty state is a card in the week frame, not a dead end (§0/B5).
-  // Its button is now the only "Velg studieprogram" on the page besides the
-  // topbar chip — the banner's identically-labeled control is gone.
+  // The empty state is a card in the week frame, not a dead end: the picker it
+  // points at used to be authored `hidden`, so an empty planner offered nothing
+  // at all. Its button is now the page's ONLY "Velg studieprogram" — both the
+  // banner's identically-labeled control and the topbar chip are gone.
   const card = page.locator("#planner-grid-frame .planner-week-card");
   await expect(card).toBeVisible({ timeout: 15_000 });
   await card.locator("button", { hasText: "Velg studieprogram" }).click();
@@ -223,7 +224,7 @@ test("verdict: a failed timetable fetch refuses the check instead of clearing it
 }) => {
   // With 4 of 5 timetables fine and one 503, the week drew a normal grid and
   // the status said "ingen kollisjoner" in Green-Means-Fits accent — a
-  // confident answer to PRODUCT §1's only question, computed over data it never
+  // confident answer to PRODUCT §2's only question, computed over data it never
   // had. `--verdict` green is the only thing on the page still coloured by an
   // outcome, so a false green is the loudest lie it can tell.
   await page.route("**/api/course/TMA4400/timetable*", (route) =>
@@ -1236,7 +1237,7 @@ test("drop and restore a programme course", async ({ page }) => {
   expect(code).not.toBe("");
   // the row IS the control, and the verb is inside the
   // settings modal it opens — two taps, which the user explicitly allowed in
-  // place of §0.3's one.
+  // place of PRODUCT §1.3's one.
   const settings = page.locator("#planner-course-settings");
   const row = courseRows(page).filter({ hasText: code }).first();
   await courseSettingsBtn(page, code).click();

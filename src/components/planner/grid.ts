@@ -1,5 +1,5 @@
 /**
- * UKEPLAN — the weekly spread (PRODUCT.md §0/DR-1). **Days are rows and time
+ * UKEPLAN — the weekly spread (PRODUCT.md §1/DR-1). **Days are rows and time
  * is the horizontal axis**: one row per weekday, its name in the left spine,
  * its sessions as bars along a labelled hour ruler. A day row is the full page
  * width, so a 1 t 45 lecture is 22 % of it, and overlaps stack downward into
@@ -178,7 +178,7 @@ export interface GridRenderOptions {
   /**
    * Stagger the bars in on this render. Set by a view switch only, never by a
    * re-render from a group pick or plan edit — replaying the whole week
-   * because one checkbox moved is the entrance choreography DESIGN §6 forbids.
+   * because one checkbox moved is the entrance choreography DESIGN §7 forbids.
    */
   animate?: boolean;
 }
@@ -277,7 +277,7 @@ export function buildingLabel(rooms: { building: string | null; room: string | n
     .join(", ");
 }
 
-/** Spoken week range for aria-labels, e.g. "uke 35 til 41" (PLANNER.md §2's a11y example). */
+/** Spoken week range for aria-labels, e.g. "uke 35 til 41". */
 function spokenWeekRange(weeks: number[]): string {
   if (weeks.length === 0) return "";
   const first = weeks[0];
@@ -1088,7 +1088,7 @@ export function renderGrid(
   // instead of the canned recovery copy — never a curtain over a week that has
   // something true to show. `programPlan.ts` prefills every course obligatory
   // in ALL directions precisely so a gated period still renders real blocks;
-  // suppressing them breaks §0.1's "programme + kull → your week, instantly".
+  // suppressing them breaks PRODUCT §1.1's "programme + kull → your week, instantly".
   const pending = options.pendingChoiceMessage ?? null;
   if (courses.length === 0) {
     return pending
@@ -1289,7 +1289,8 @@ export function renderGrid(
       .map((entry) => nodeByEntry.get(entry))
       .filter((node): node is HTMLElement => node !== undefined);
     const [first] = nodes;
-    // A5: the tokens can zero a transition but not a scroll behaviour.
+    // Asked directly: the duration tokens can zero a CSS transition, but they
+    // cannot reach a scripted scroll (DESIGN §7).
     const reduced = globalThis.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
     first?.scrollIntoView({ block: "center", behavior: reduced ? "auto" : "smooth" });
     for (const node of nodes) {

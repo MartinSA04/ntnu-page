@@ -1,5 +1,5 @@
 /**
- * The planner's seam onto `ntnu-api`'s conflict engine (PLANNER.md §3), and
+ * The planner's seam onto `ntnu-api`'s conflict engine, and
  * the place this product's two policies are written down:
  *
  * **DR-1: hard conflicts are lecture-only.** `findConflicts` is

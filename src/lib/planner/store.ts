@@ -1,10 +1,11 @@
 /**
- * Plan state + persistence (PLANNER.md §3, PRODUCT.md §7/§0). Storage and the
+ * Plan state + persistence (PRODUCT.md §6 for the shape and the hash grammar,
+ * §1 for the mandate the drop/restore semantics come from). Storage and the
  * change-event target are injected so this works in non-DOM contexts.
  *
  * Courses carry `source` (programme pre-fill or manual add) and, for programme
  * courses only, `dropped` — grays out, one tap restores, excluded from
- * schedule/credits (§0.3). Removing a manual add deletes it outright.
+ * schedule/credits (PRODUCT §1.3). Removing a manual add deletes it outright.
  *
  * Storage is split three ways: the programme choice is global (it survives a
  * semester switch), the course list is scoped per semester.
@@ -149,9 +150,9 @@ const nullEvents: EventTargetLike = {
  * `MSØK/5` are why `/` and `+` are here). Studieretning codes run to 20.
  *
  * Untrusted input reaches both: a shared plan hash could write any text into
- * `np:profile` as a programme "code", which the topbar chip then repeated on
- * every page forever. The same guard runs on read, so an already-poisoned
- * profile is dropped rather than rendered.
+ * `np:profile` as a programme "code", which every surface reading the profile
+ * then repeated for the rest of the visit. The same guard runs on read, so an
+ * already-poisoned profile is dropped rather than rendered.
  */
 const CODE_PATTERN = /^[A-ZÆØÅ0-9_+/-]{2,16}$/i;
 const DIRECTION_PATTERN = /^[A-ZÆØÅ0-9_+/-]{2,32}$/i;

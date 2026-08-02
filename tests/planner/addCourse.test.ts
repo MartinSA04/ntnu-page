@@ -59,7 +59,7 @@ describe("addCourseRowControl", () => {
     store.addCourse(TDT4109);
     const control = addCourseRowControl(store, TDT4109);
     expect(control.label).toBe("Fjern");
-    // DESIGN §7's mandated half of the pair, not "Lagt til ✓".
+    // DESIGN §8's mandated half of the pair, not "Lagt til ✓".
     expect(control.state).toBe("I planen");
     expect(control.stateKind).toBe("added");
 

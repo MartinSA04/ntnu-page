@@ -1,9 +1,9 @@
 /**
- * Ruteark primitives — the .np-* vocabulary. One interaction grammar: flat at
- * rest; hover answers on the surface (paper darkens a step, bare controls take
- * an ink wash) with text lighting to full ink; press dips 1px; focus is the
- * global 2px --ui outline. Interactive controls never carry borders (hairlines
- * are structure).
+ * The .np-* primitive vocabulary (docs/DESIGN.md §5). One interaction grammar:
+ * flat at rest; hover answers on the surface (paper darkens a step, bare
+ * controls take an ink wash) with text lighting to full ink; press dips 1px;
+ * focus is the global 2px --ui outline. Interactive controls never carry
+ * borders (hairlines are structure).
  *
  * The press dip lives on the controls themselves, not on an opt-in class.
  * `.np-press` stays as the escape hatch for one-off pressables.
@@ -110,9 +110,10 @@
 }
 
 /* THE PRIMARY ACTION, and the only thing on a page allowed to wear it — that
-   is `--accent`'s one job (DESIGN §8). Ink-Before-Chrome is not broken here:
-   the rule is that STRUCTURE is tone and hairlines, while a control may carry
-   a fill, and this is the one control on the page that must be found first.
+   is `--accent`'s one job (DESIGN §2's One-Job-Accent). Ink-Before-Chrome is
+   not broken here: the rule is that STRUCTURE is tone and hairlines, while a
+   control may carry a fill, and this is the one control that must be found
+   first.
    At most one per surface; a second turns the first back into decoration. */
 .np-btn--primary {
   background: var(--accent);
@@ -173,7 +174,7 @@
 
 /* --- Tags & toggles ------------------------------------------------ */
 
-/* Course tag: squared (ruteark cell, not a pill), mono code, hue dot.
+/* Course tag: squared (a cell, not a pill), the code beside a hue dot.
    `--sm` is the in-grid size, for tags that sit inside a timetable block. */
 .np-tag {
   display: inline-flex;
@@ -203,9 +204,8 @@ button.np-tag:hover {
   background: var(--card-hover);
 }
 
-/* The square dot — a filled ruteark cell carrying a course hue.
-   Set the hue per element: style="--dot: var(--hue-cyan)". */
-/* THE COURSE MARK. One shape wherever a course is named without being drawn:
+/* THE COURSE MARK. Set the hue per element: style="--dot: var(--hue-cyan)".
+   One shape wherever a course is named without being drawn:
    the exam list, Liste's rows, the course rail, a tag. A rounded square, not a
    circle and not a hard one — a circle is a bullet and belongs to lists of
    sentences, a hard square at 8px reads as a rendering artefact, and the corner

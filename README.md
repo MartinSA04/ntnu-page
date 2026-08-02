@@ -2,43 +2,40 @@
 
 Uoffisiell semesterplanlegger for NTNU: velg emner (eller hent dem fra et
 studieprogram og kull), og se timeplankollisjoner, eksamensdatoer og
-studiepoeng før du melder deg opp. Emnekatalog og studieplaner følger med.
-Karakterstatistikk (HK-dir/DBH) is served by the worker's
-`/api/course/:code/grades` endpoint and rendered on `/emne/[code]/` as a
-season-split figure (small multiples, one hue, cohort `n` on every chart,
-deferred sittings held out) — added 2026-07-27 as a deliberate partial
-reversal of PRODUCT.md D12: the fork point counts as a decision context.
-Sortable columns, cross-course leaderboards and hue-tinted bars stay killed;
-see PRODUCT.md §6 and D12.
+studiepoeng før du melder deg opp. Emnekatalog, karakterstatistikk og
+studieplaner følger med.
 
 Astro static site + Cloudflare Worker in one deployable unit: the Worker
 serves the built site via Workers Assets and exposes a cached `/api/*` layer
 over the [`ntnu-api`](https://github.com/MartinSA04/ntnu-api) client.
-**Product spec: `docs/PRODUCT.md`** (positioning, flows, MoSCoW, the domain
-rules and decisions that bind the build); `docs/PLANNER.md` remains binding
-only for the Ruteark render/interaction detail it specifies. Design system:
-**Ruteark**, this repo's own (`docs/DESIGN.md`) — Flexoki paper, Schibsted
-Grotesk + Spline Sans Mono (vendored as variable fonts), squared-ruling
-signature. Architecture and contracts: `docs/SPEC.md`. What's shipped vs.
-open: `docs/ROADMAP.md`.
+
+## Docs
+
+| File | What it decides |
+|---|---|
+| [`docs/PRODUCT.md`](docs/PRODUCT.md) | **The product definition.** Mandate, positioning, flows, feature status, the domain rules (DR-1…DR-10) and the decisions that stay decided. |
+| [`docs/DESIGN.md`](docs/DESIGN.md) | The design system: colour, type, the `.np-*` primitives, the week's own rules, motion, voice. Its named rules are binding. |
+| [`docs/SPEC.md`](docs/SPEC.md) | Architecture and data contracts: module layout, the crawled-data shapes, the worker API, testing. |
+| [`docs/ROADMAP.md`](docs/ROADMAP.md) | What is shipped and what is left, in order. |
+
+`CLAUDE.md` holds the non-obvious invariants — the fixes a reasonable person
+would undo.
 
 ## Data flow
 
 - **Crawled nightly** (`data/` + `public/data/` — gitignored build artifacts,
-  never committed): course catalog (`searchAll`, **two catalog years unioned**
-  — the canonical one and `year - 1`, so a course taught last year still gets a
-  page), study-program catalog, semesters — ~20 upstream requests. Static
-  pages (`/emne/[code]`) and the
-  client-side search index are built from these and ship only as part of the
-  deployed site (`/studier/[code]` was deleted 2026-07-25 — see PRODUCT.md
-  §0 addendum). `npm run build` crawls automatically
-  if the files are missing (`prebuild` guard). The crawler is deliberately
-  polite: identifying user agent, ~500 ms gaps between requests, stable
-  `+ntnucoursecode` sort for dedup-friendly pagination, and retry/backoff left
-  entirely to `ntnu-api` (which honors `Retry-After`).
-- **Live via `/api/*`** (per-course, cached memory→KV with per-datatype TTLs):
-  course details (6h), grade distributions (24h), timetables/schedules (1h),
-  study plans (24h). Only viewed courses hit upstream.
+  never committed): the course catalog via `searchAll`, **two catalog years
+  unioned** (the canonical one and `year - 1`, so a course taught last year
+  still gets a page), the study-programme catalog, and semesters — ~20
+  upstream requests. Static pages (`/emne/[code]`) and the client-side search
+  index are built from these and ship only as part of the deployed site.
+  `npm run build` crawls automatically if the files are missing (`prebuild`
+  guard). The crawler is deliberately polite: an identifying user agent,
+  ~500 ms gaps, a stable sort for dedup-friendly pagination, and
+  retry/backoff left entirely to `ntnu-api` (which honours `Retry-After`).
+- **Live via `/api/*`** (per course, cached memory → KV with per-datatype
+  TTLs): course details (6 h), grade distributions (24 h), timetables (1 h),
+  study plans (24 h). Only viewed courses hit upstream.
 
 ## Commands
 
@@ -48,34 +45,36 @@ npm run build      # astro build → dist/
 npm run preview    # wrangler dev: built site + live /api on :8787
 npm run dev        # astro dev on :4321 (/api proxied to :8787 — run preview too)
 mise run check     # lint + typecheck + tests
+mise run e2e       # browser suite over recorded /api fixtures
+mise run e2e:live  # same suite against live NTNU, plus the contract checks
 ```
 
-## Workflows (same split as ntnu-api / ntnu-mcp)
+## Workflows
 
 - `ci.yml` — lint + typecheck + tests + build smoke on push/PR. Crawl
-  artifacts come from a date-keyed Actions cache so CI rarely crawls at all.
-- `e2e.yml` — the Playwright suite (`e2e/*.pw.ts`) against a real build +
-  wrangler dev server on live NTNU data. Runs on PRs touching
-  `src/lib/planner/**`, `src/components/planner/**`, `worker/**`, plus a
-  nightly schedule (upstream data can drift independently of any commit).
-  This is the only end-to-end check of the "programme + kull → your week"
-  flow; it was not wired into CI before and a regression could ship behind
-  a green badge (see `docs/REVIEW.md` T1).
+  artifacts come from a date-keyed Actions cache, so CI rarely crawls at all.
+- `e2e.yml` — the Playwright suite against a real build and wrangler dev
+  server. Runs on PRs touching `src/lib/planner/**`,
+  `src/components/planner/**` and `worker/**`, plus a nightly schedule
+  (upstream data drifts independently of any commit). This is the only
+  end-to-end check of the "programme + kull → your week" flow.
 - `release.yml` — tag-driven deploy: `npm version <bump> && git push
   --follow-tags` re-runs checks, crawls fresh, **runs the e2e suite**, then
   builds, `wrangler deploy`s, and cuts a GitHub Release. Needs
-  `CLOUDFLARE_API_TOKEN` + `CLOUDFLARE_ACCOUNT_ID`. The e2e run gates every
-  deploy directly, regardless of whether the tagged diff touched the paths
-  `e2e.yml` watches.
-- `crawl.yml` — nightly (03:47 UTC) crawl + rebuild + redeploy so baked data
+  `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID`. The e2e run gates every
+  deploy directly, regardless of which paths the tagged diff touched.
+- `crawl.yml` — nightly (03:47 UTC) crawl + rebuild + redeploy, so baked data
   stays fresh without a code release. No-ops entirely until the Cloudflare
   secrets exist, so no upstream requests are wasted.
 
 ## Not wired up yet
 
-- No GitHub remote; no Cloudflare deploy (workflows activate once the repo is
-  pushed and the two Cloudflare secrets are added).
+- No GitHub remote; no Cloudflare deploy (the workflows activate once the repo
+  is pushed and the two Cloudflare secrets are added).
 - KV cache: create with `npx wrangler kv namespace create CACHE`, then add the
-  binding in `wrangler.jsonc` (worker runs memory-only cache without it).
-- Custom domain route commented out in `wrangler.jsonc`
-  (`ntnu.martinsundal.no` is a placeholder — rename freely).
+  binding in `wrangler.jsonc` (the worker runs memory-only without it).
+- Custom domain route commented out in `wrangler.jsonc`;
+  `ntnu.martinsundal.no` is a placeholder. It appears in **two** places that
+  must agree — `astro.config.mjs`'s `site` and `public/robots.txt`'s
+  `Sitemap:` line — and `tests/site/discoverability.test.ts` is what notices
+  if they stop agreeing.

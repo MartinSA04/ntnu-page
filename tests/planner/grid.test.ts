@@ -380,7 +380,7 @@ function drawBoth(
   );
   return { frame, notes };
 }
-describe("renderGrid: the transposed shell (REWORK-2026-07-29b D1)", () => {
+describe("renderGrid: the transposed shell", () => {
   const courses = [state({ code: "TMA4400", bundle: bundleFromEntries([entry("Forelesning")]) })];
 
   test("days are rows with a spine, not columns with a three-letter header", () => {
@@ -668,7 +668,7 @@ describe("identity across the øving toggle", () => {
   });
 });
 
-describe("drop-in windows get a strip, not a lane (REWORK-2026-07-30c)", () => {
+describe("drop-in windows get a strip, not a lane", () => {
   // TDT4120's øvingsveiledning is 08:15–14:00 every weekday. Long enough to be
   // a drop-in window rather than a session you attend at a time, so it may not
   // take a lane and push every real session down a row.

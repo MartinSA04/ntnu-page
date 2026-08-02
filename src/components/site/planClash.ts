@@ -1,5 +1,5 @@
 /**
- * Plan-aware clash preview for the course page (PRODUCT.md §6). `/emne/[code]/`
+ * Plan-aware clash preview for the course page (PRODUCT.md §9). `/emne/[code]/`
  * answers *does this fit my week* before the student commits, through the same
  * engine `/planlegger/` uses rather than a second one.
  *

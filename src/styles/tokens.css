@@ -100,7 +100,7 @@
      deliberately a different *kind* of mark from the hue washes below — a wash
      can never out-shout another wash, and Red-Is-Collision means red has to win
      on sight. --clash-bg fills the overlapping band only. There are no inset
-     shadows anywhere on this site (DESIGN §5), so no per-bar edge token. */
+     shadows anywhere on this site (DESIGN §4), so no per-bar edge token. */
   --clash: #c62828;
   --clash-bg: #fdecea;
 
@@ -176,12 +176,15 @@
   --ruling-line: color-mix(in srgb, var(--border) 55%, transparent);
   --ruling-hour: color-mix(in srgb, var(--border-strong) 90%, transparent);
 
-  /* Type. Sentences in the grotesk; data (times, dates, codes, counts) in the
-     mono — the Data-Is-Mono rule.
-     The "… Fallback" families are Arial and Courier New with this project's own
-     metrics stamped on them (fonts.css, generated). They sit directly behind
-     the real face so the swap changes the shapes without moving anything. The
-     generic stack stays behind them for a machine that has neither. */
+  /* Type: ONE family, the platform's own UI face (docs/DESIGN.md §3). There are
+     no webfonts, no @font-face and no build step — so there is nothing to swap
+     and no metric-matched fallback to stamp.
+
+     `--font-mono` is an ALIAS of `--font-sans`, deliberately. Data-Is-Mono is
+     retired: the rule was right about which strings matter (times, dates,
+     codes, counts) and wrong that they need their own typeface, so `.np-data`
+     survives at every call site and buys `tabular-nums` instead of a second
+     face. Do not point this at a real monospace without re-deciding §3. */
   --font-sans:
     -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   --font-mono: var(--font-sans);

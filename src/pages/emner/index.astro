@@ -550,7 +550,7 @@ const cityFacets = [
     }
 
     /**
-     * DESIGN §7's pair, both halves. The accessible name starts with the visible
+     * DESIGN §8's pair, both halves. The accessible name starts with the visible
      * label so voice control matches what the student can read — a button
      * reading "Lagt til" that answered to "Fjern TDT4100 fra planen" is a WCAG
      * 2.5.3 failure as well as a fourth spelling of one state.
@@ -639,7 +639,7 @@ const cityFacets = [
       addBtn.type = "button";
       addBtn.className = "np-btn emner-row-add";
 
-      // I2: the row was write-only — the "+" mutated localStorage and said
+      // The row used to be write-only: the "+" mutated localStorage and said
       // nothing. The button reports the state now.
       const sync = (): void => setAddState(addBtn, code);
       sync();

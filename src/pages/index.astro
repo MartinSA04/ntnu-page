@@ -13,8 +13,8 @@ const seasonWord = isAutumn ? "høsten" : "våren";
 <Layout title="Semesterplan · planlegg semesteret ved NTNU" description={description}>
   {/* The returning student's answer, when there is one to give: which room,
       right now. It renders above the pitch and replaces it — a page that
-      already knows your week should not open by explaining what it is
-      (REWORK-2026-07-29b D3). `hidden` until the plan says otherwise, so a
+      already knows your week should not open by explaining what it is.
+      `hidden` until the plan says otherwise, so a
       first-time visitor never sees an empty frame. */}
   {/* The card's place, held from first paint for a visitor whose stored plan
       says one is coming (Layout.astro's probe). `#home-now` itself stays

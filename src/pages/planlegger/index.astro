@@ -30,16 +30,17 @@ const programOptionsJson = JSON.stringify(programOptions).replaceAll("<", "\\u00
 
 <Layout title="Planlegger · Semesterplan" description={description} wide>
   <div class="planner-banner">
-    {/* ETT NAVN (REWORK-2026-07-30b). The plan is named ONCE, here, in the
-        notation a student types: MTDT · 2026 · Høst 2026, set in the mono
-        because every part of it is data (Data-Is-Mono, followed up the type
-        scale rather than abandoned at the top of it). The topbar's chip
-        carried the same three facts 100 px above this and is gone from this
-        page; the programme's own 42-character database string is a hint now,
-        not a 2 rem headline.
+    {/* ETT NAVN. The plan is named ONCE, here, in the notation a student
+        types: MTDT · 2026 · Høst 2026. The topbar's chip carried the same
+        three facts 100 px above this and is gone from this page; the
+        programme's own 42-character database string is a hint now, not a
+        2 rem headline. The title is a NAME, not a headline (DESIGN §9): one
+        size, one family, no probe-driven face swap.
 
-        The verdict shares the title's baseline — PRODUCT §1's question and
-        its answer on one line, rather than two paragraphs apart. */}
+        The verdict is not on this line. It gets its own, between the plan's
+        name and the week it is about — PRODUCT §2's question and its answer
+        adjacent, but the answer read as a caption on the name when the two
+        shared a baseline. */}
     {/* One row: what this plan is, then everything you can do to it. A
         calendar's chrome lives at the top of the page, not scattered down it —
         the view switch and the layer box used to sit in the week's own section
@@ -55,7 +56,7 @@ const programOptionsJson = JSON.stringify(programOptions).replaceAll("<", "\\u00
       </div>
 
       {/* The layer is a box you tick; the view is a switch you throw. They read
-          as two kinds of control because they are (REWORK-2026-07-30b). */}
+          as two kinds of control because they are. */}
       <button
         type="button"
         class="planner-others-toggle"
@@ -110,7 +111,7 @@ const programOptionsJson = JSON.stringify(programOptions).replaceAll("<", "\\u00
             hand-drawn approximation of that icon, which is worse than either
             using it or using something else. */}
       {/* THE PLAN IS THE URL, AND NOTHING ON THE PAGE SAID SO. Shared-link
-          creations are PRODUCT §1's north-star metric, `syncHash` has kept the
+          creations are PRODUCT §2's north-star metric, `syncHash` has kept the
           address bar current since the beginning, and there was no way to act
           on that short of knowing to select the address bar. Hidden until
           there is a plan — an empty plan is not a thing to send anyone. */}
@@ -152,9 +153,10 @@ const programOptionsJson = JSON.stringify(programOptions).replaceAll("<", "\\u00
       </button>
 
       {/* The page's primary action, and the only thing on it wearing the
-          accent — that is the token's one job (DESIGN §8). It used to be a
-          paper button at the bottom of the Emner column, below the fold on a
-          phone and indistinguishable from "Velg fra studieplanen" beside it. */}
+          accent — that is the token's one job (DESIGN §2's One-Job-Accent). It
+          used to be a paper button at the bottom of the Emner column, below the
+          fold on a phone and indistinguishable from "Velg fra studieplanen"
+          beside it. */}
       <button
         type="button"
         class="np-btn np-btn--primary planner-add-course-btn"
@@ -197,7 +199,7 @@ const programOptionsJson = JSON.stringify(programOptions).replaceAll("<", "\\u00
 
       {/* Kept for the region's accessible name and hidden from the page: a
           grid of weekdays with an hour ruler over it does not need to be told
-          it is a week (REWORK-2026-07-30j). The head that used to carry it is
+          it is a week. The head that used to carry it is
           gone with its controls — they live in the page's own bar now, and a
           rule under an invisible heading ruled nothing. */}
       <h2 class="planner-section-name sr-only" id="planner-week-heading">Uke</h2>
@@ -1245,10 +1247,10 @@ const programOptionsJson = JSON.stringify(programOptions).replaceAll("<", "\\u00
     height: 16px;
   }
 
-  /* The chip is the week's own bar at label size: printed hue, code knocked
-     out of it. */
   /* The same mark as the exam list's knot and Liste's dot, at the same size:
-     one shape means "this course" everywhere on the page. */
+     one shape means "this course" everywhere on the page. It was a printed
+     chip — the hue filled with the code knocked out of it — which made the
+     same course two different objects on one page. */
   :global(.planner-course-chip) {
     width: 12px;
     height: 12px;
@@ -1257,8 +1259,9 @@ const programOptionsJson = JSON.stringify(programOptions).replaceAll("<", "\\u00
   }
 
   /* A dropped course is still a course: the swatch keeps its place and loses
-     its fill, so the row reads as switched off rather than as missing (§0.3).
-     A ring, not nothing, or the column of marks develops a hole. */
+     its fill, so the row reads as switched off rather than as missing
+     (PRODUCT §1.3). A ring, not nothing, or the column of marks develops a
+     hole — one of the two sanctioned inset shadows, DESIGN §4. */
   :global(.planner-course-row.is-dropped .planner-course-chip) {
     background: transparent;
     box-shadow: inset 0 0 0 1px var(--border-strong);

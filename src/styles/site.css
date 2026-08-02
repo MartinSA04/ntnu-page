@@ -1,6 +1,5 @@
-/* Site shell — topbar, content column, footer. Ruteark's own chrome: only
-   the frame around pages built from the pages/crawler/worker/planner
-   agents' slices lives here. */
+/* Site shell — topbar, content column, footer. Only the frame around the
+   pages lives here; each page owns its own interior. */
 
 .site {
   min-height: 100dvh;

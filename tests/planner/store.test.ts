@@ -689,7 +689,7 @@ describe("parsePlanHash / formatPlanHash — encoding and validation (B10)", () 
   });
 
   it("rejects a programme segment whose cohort is not a plausible year", () => {
-    // The grammar PRODUCT §7 used to document put *courses* in this slot;
+    // The grammar PRODUCT §6 used to document put *courses* in this slot;
     // feeding that form to the shipped parser produced {code:"TDT4100",
     // cohort:1}, a 400 from ?year=1 and a banner reading "TDT4100 · kull 1".
     const parsed = parsePlanHash("#26h;TDT4100.1,TMA4100.1;IT2805.1");

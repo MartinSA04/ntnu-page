@@ -429,7 +429,7 @@ export function mountCourseSettings(store: PlanStore, signal: AbortSignal): Cour
   }
 
   /**
-   * Dropp/Legg tilbake mirrors PRODUCT.md §0.3's verbs; a manual add's is
+   * Dropp/Legg tilbake mirrors PRODUCT.md §1.3's verbs; a manual add's is
    * "Fjern fra planen". This is the ONLY remove control — the course row
    * carries none of its own.
    */

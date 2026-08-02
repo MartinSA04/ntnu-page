@@ -165,7 +165,7 @@ export function periodNumberFor(semesterId: string, cohort: number): number | nu
   return isAutumn ? (semYear - cohort) * 2 + 1 : (semYear - 1 - cohort) * 2 + 2;
 }
 
-/** How many cohorts back of the current one a chip row considers (PLANNER.md). */
+/** How many cohorts back of the current one a chip row considers. */
 const MAX_COHORTS_BACK = 7;
 
 /** The highest non-null `periods[].periodNumber` in the plan; `null` when none exists. */

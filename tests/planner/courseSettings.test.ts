@@ -361,7 +361,7 @@ describe("courseFacts", () => {
   });
 
   /* A dropped course is still in the plan and still restorable, so the line
-     says what dropping DID rather than repeating the verb (§0.3). */
+     says what dropping DID rather than repeating the verb (PRODUCT §1.3). */
   test("says what a dropped course is excluded from", () => {
     expect(courseFacts({ credits: 7.5, source: "program", dropped: true })).toEqual({
       figure: "7,5 sp",

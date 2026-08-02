@@ -1,18 +1,18 @@
-# ntnu-page — Architecture Spec
+# SPEC.md — architecture and data contracts
 
-A NTNU semester planner: pick a study programme + kull (or paste course
+An NTNU semester planner: pick a study programme and kull (or add course
 codes), see the merged weekly schedule, catch lecture collisions and exam
 clustering, and share the result as a URL — before the registration deadline.
-Built on the `ntnu-api` npm package and **Ruteark**, this repo's own design
-system (`docs/DESIGN.md` — its named rules are binding: Data-Is-Mono,
-Red-Is-Collision, Green-Means-Fits, Ruling-Marks-The-Plan, Ink-Before-Chrome).
-StudyCompanion (`.sc-*`, serif) was inspiration only; nothing from it is
-ported or referenced — this file used to say otherwise in two contradicting
-places, which REVIEW.md T2 called out. Product definition lives in
-`docs/PRODUCT.md`; this file covers architecture and data contracts only.
+Built on the `ntnu-api` npm package.
+
+Product definition is `docs/PRODUCT.md`; the design system is
+`docs/DESIGN.md` and its named rules are binding. This file covers
+architecture and data contracts only.
 
 Site language is **Norwegian** (labels, headings, prose), bokmål, sentence
 case. Code, comments and identifiers are English.
+
+---
 
 ## Topology
 
@@ -24,310 +24,310 @@ Astro static site (dist/)  ──served by──▶  Cloudflare Worker (Workers 
    + runtime index)                                         (memory → KV)
 ```
 
-- **Nightly crawl** (~20 upstream requests over two catalog years — see
-  below): course catalog via `searchAll(year)` for the canonical year and
-  `year - 1`, `programs.all()`, `semesters.all()`. Output is gitignored
-  build-artifact JSON — consumed at build time (static pages) and at runtime
-  (search index fetch), baked into each deploy, never committed. A
-  `prebuild` guard (`crawler/ensure-data.mjs`) crawls automatically when the
-  files are absent.
-- **Live via Worker `/api/*`** (per-course/per-program, cached): course
-  details, grade distributions, timetables, study plans. Only
-  courses/programmes people actually view are fetched upstream.
-- **e2e in CI (REVIEW.md T1)**: `.github/workflows/e2e.yml` runs the
-  Playwright suite (`e2e/*.pw.ts`) against a real build + wrangler dev server
-  on PRs touching `src/lib/planner/**`, `src/components/planner/**`,
-  `worker/**`, plus a nightly schedule for live-data drift.
-  `release.yml` runs it again directly before every deploy, so a tag push is
-  gated regardless of which paths the tagged diff touched.
+- **Nightly crawl** (~20 upstream requests over two catalog years): course
+  catalog via `searchAll(year)` for the canonical year and `year - 1`,
+  `programs.all()`, `semesters.all()`. Output is gitignored build-artifact
+  JSON — consumed at build time (static pages) and at runtime (the search
+  index), baked into each deploy, never committed. A `prebuild` guard
+  (`crawler/ensure-data.mjs`) crawls automatically when the files are absent.
+- **Live via Worker `/api/*`** (per course / per programme, cached): course
+  details, grade distributions, timetables, study plans. Only courses and
+  programmes people actually view are fetched upstream.
 - Not yet wired: GitHub remote, Cloudflare deploy, KV namespace creation.
-  Config carries commented placeholders + instructions.
+  Config carries commented placeholders and instructions.
 
-## Repo layout & file ownership
+## Repo layout and ownership
 
-| Path | Contents | Owner agent |
-|---|---|---|
-| `src/styles/` | the Ruteark system: tokens/base/primitives.css (owned here), `planner-week.css` (the week's geometry, shared by `/planlegger/` and `/emne/[code]/`) + generated fonts.css/fonts/ | design |
-| `src/components/ThemeToggle.astro`, `Icon.astro`, `src/lib/{favicon,pageLifecycle}.ts` | shell components | shell |
-| `src/layouts/Layout.astro`, `src/styles/site.css`, `src/pages/index.astro`, `src/pages/404.astro` | page shell — persistent nav (Planlegger + Emner + studieinfo chip, replacing the 2026-07-24 one-pill nav + plan strip; the interim plan-count link is deleted too, 665513f), footer, landing, 404 | shell |
-| `src/pages/planlegger/index.astro`, `src/components/planner/*`, `src/lib/planner/*` | **the app** — see the architecture section below | planner |
-| `src/pages/emner/index.astro`, `src/pages/emne/[code].astro`, `src/components/site/*` | catalog pages and islands (`/studier/*` deleted 2026-07-25, no replacement page) | pages |
-| `crawler/crawl.mjs` (+ helpers), `data/*.json`, `public/data/search-index.json`, `.github/workflows/crawl.yml`, `tests/crawler.test.mjs` | crawler | crawler |
-| `worker/src/*.ts`, `worker/tsconfig.json`, `tests/worker/*.test.ts` | API worker | worker |
-| `e2e/*.pw.ts`, `playwright.config.ts` | browser suite: what only shows up after a ClientRouter navigation, and the four+ flagship flows against live data | docs/CI |
-| `docs/*.md`, `.github/workflows/ci.yml`, `.github/workflows/release.yml`, `.github/workflows/e2e.yml`, `biome.json`, root `package.json` scripts | docs, CI, lint gate | docs/CI |
-| root configs (`astro.config.mjs`, `wrangler.jsonc`, `tsconfig*.json`, `mise.toml`) | pre-written — edit only with clear need | — |
+| Path | Contents |
+|---|---|
+| `src/styles/` | `tokens.css`, `base.css`, `primitives.css` (the `.np-*` layer), `site.css` (the shell), `planner-week.css` (the week's geometry, shared by `/planlegger/` and `/emne/[code]/`) |
+| `src/layouts/Layout.astro`, `src/components/{ThemeToggle,Icon}.astro`, `src/lib/{favicon,pageLifecycle,planProbe,sitemap}.ts` | page shell: persistent nav, footer, theme, lifecycle, the plan probe |
+| `src/pages/planlegger/index.astro`, `src/components/planner/*`, `src/lib/planner/*` | **the app** — see below |
+| `src/pages/{index,404}.astro`, `src/pages/emner/index.astro`, `src/pages/emne/[code].astro`, `src/pages/sitemap.xml.ts`, `src/components/site/*` | landing, catalog pages and their islands |
+| `crawler/*.mjs`, `data/*.json`, `public/data/search-index.json`, `.github/workflows/crawl.yml` | crawler |
+| `worker/src/*.ts`, `worker/tsconfig.json` | API worker |
+| `e2e/*.pw.ts`, `playwright.config.ts` | browser suite |
+| `tests/**` | unit tests: crawler transforms, worker routes, planner engines, site islands, design tokens |
+| root configs (`astro.config.mjs`, `wrangler.jsonc`, `tsconfig*.json`, `mise.toml`, `biome.json`) | pre-written — edit only with clear need |
 
-## `/planlegger/` architecture — the flagship surface
+---
 
-**Rebuilt 2026-07-25** (design spec `docs/plan/REWORK-2026-07-25-design.md`,
-recorded as PRODUCT.md's §0 addendum). Reading order for a change:
+## `/planlegger/` — the flagship surface
+
+Reading order for a change:
 
 ```
-store.ts        the plan's shape + persistence + the unversioned hash grammar
+store.ts        the plan's shape + persistence + the hash grammar
    │
 data.ts         fetch + shape: search-index rows, per-course bundles,
    │             indexForSemester() (the exam-window filter)
    │
-programPlan.ts  study-plan resolution: resolvePeriodFor() is the one
-   │             entry point (the studieinfo modal and the planner both
-   │             call it — they must never diverge on how a period resolves)
+programPlan.ts  study-plan resolution: resolvePeriodFor() is the ONE entry
+   │             point — the studieinfo modal and the planner both call it
    │
-layout.ts       pure day-column layout engine (clusters, columns, piling)
-   │             — consumed by grid.ts, no DOM
-groups.ts       pure group/parallel selection engine — consumed by grid.ts
-   │             and popover.ts, no DOM
-examSchedule.ts pure exam-list model (sort, gaps, tight flag, countdown)
-   │             — consumed by examList.ts, no DOM
+   │  pure engines, no DOM:
+   │  layout.ts       day-column packing (clusters, columns, piling)
+   │  groups.ts       parallel / øving group selection
+   │  conflicts.ts    the seam onto ntnu-api's conflict engine + DR-1 policy
+   │  activity.ts     DR-1's lecture/other collapse
+   │  schedule.ts     semester-id arithmetic + the semester-window filters
+   │  examSchedule.ts exam-list model (sort, gaps, tight flag, countdown)
+   │  weekDates.ts    which ISO week the page is open in
+   │  hues.ts         course hue from the plan's code SET
+   │  deadline.ts     NTNU's two standing registration dates
    │
-grid.ts / examList.ts / studieinfo.ts / popover.ts / addCourse.ts
-   │             DOM renderers/dialogs: the week grid, the exam date list,
-   │             the studieinfo modal, the block popover, the add-course
-   │             search modal
+   │  DOM renderers and dialogs:
+   │  columnGrid.ts   "Uke" — days across, time down
+   │  board.ts        "Liste" — a departure board, one row per session
+   │  grid.ts         the transposed week (days as rows), used by /emne/[code]/
+   │  examList.ts     the exam month band + list
+   │  layerMotion.ts  the øving layer's arrive/leave choreography
+   │  studieinfo.ts   programme / kull / retning / semester modal
+   │  courseSettings.ts  the one surface a planned course is configured on
+   │  blockPopover.ts a session's facts, anchored to the bar you clicked
+   │  addCourse.ts    the catalog search modal
+   │  dom.ts          tiny element builders; types.ts  view shapes
    │
 plannerApp.ts    orchestration: owns the DOM ids in planlegger/index.astro,
-                  wires store → data → programPlan → the renderers, and is
-                  the one place a `<script>` module talks to `document`
+                  wires store → data → programPlan → renderers, and is the
+                  ONE place a <script> module talks to `document`
 ```
 
-- **`store.ts`** — `PlanState` (`semesterId`, `courses[]` with
-  `source: "program" | "manual"` + `dropped` + `credits` + `groups?: string[]`,
-  optional `program: { code, name, cohort, direction? }`). Storage is split
-  three ways: `np:profile` (the programme choice, global, survives a
-  semester switch), `np:plans` (the course list, keyed per `semesterId` — a
-  manual add in one semester never leaks into another), `np:lastSemester`
-  (session restore). `removeProgram()` clears the profile and drops
-  programme-sourced courses in the *active* semester's plan while keeping
-  manual adds (a programme course in another semester's stored plan is not
-  pruned — known-minor, see ROADMAP.md). `onPlanChange(cb)` fires on
-  storage events, the custom `ntnu:plan-change` event, and the page's own
-  writes, so the persistent nav's studieinfo chip and every page that reads
-  the plan stay live without polling.
-  **Hash grammar — unversioned, no compat parse** (per the 2026-07-25
-  mandate: "no versioning/compat apparatus, delete old code outright"; see
-  PRODUCT.md §7's suspension note for why a versioned grammar existed
-  before and why that requirement is now suspended):
-  `#<semesterId>;<programme>;<courses>` — three `;`-separated segments,
-  every field `encodeURIComponent`-escaped so `Ø`/`Å`/`Æ` and the grammar's
-  own `.`/`-`/`+`/`~` survive the round trip (REVIEW.md B10). `programme` is
-  `-` (none) or `code[.cohort[.direction]]`, `cohort` gated to a plausible
-  4-digit year or the whole segment is rejected. `courses` is a comma list
-  of `[-|+]code[.version][~groupKey…]`: `-` = dropped programme course,
-  `+` = manual add, bare = active programme course; a version equal to the
-  default (`"1"`) is omitted; each trailing `~groupKey` is a selected
-  parallel/øving group for that course (repeatable — a course can carry
-  both a lecture parallel and an øving group pick). Malformed course tokens
-  are dropped rather than failing the whole parse. `parsePlanHash`/
-  `formatPlanHash` live here; `hashchange` is listened for so a pasted link
-  updates an already-open tab. **No legacy/versioned hash is read any
-  more** — an old `#v2;…` link (or any hash with a version token) simply
-  fails to parse `semesterId` and is treated as absent, by design.
-- **`data.ts`** — `PlannerIndex`/`PlannerIndexCourse` (the typed shape of
-  `search-index.json`, six-element tuple — see below), `fetchCourseBundle`,
-  `indexForSemester(index, semesterId, window?)` — narrows every row's exams
-  to one semester's season *and* `fromDate…examFinalDate` window before
-  anything renders them (REVIEW.md C3: a carried-over course's only exam date
-  can be last year's).
+### The engine and state layer (`src/lib/planner/`)
 
-  **The honest-fetch contract (rewritten 2026-07-27, audit A1/pd-*) — this is
-  the layer PRODUCT §1's moat is built on, so it is spelled out rather than
-  left to the code:**
+- **`store.ts`** — `PlanState` and persistence. Storage and the change-event
+  target are injected so it works in non-DOM contexts. Split three ways:
+  `np:profile` (the programme choice, global — it survives a semester switch),
+  `np:plans` (the course list, keyed per `semesterId`), `np:lastSemester`.
+  `removeProgram()` clears the profile and drops programme-sourced courses in
+  the *active* semester while keeping manual adds. `onPlanChange(cb)` fires on
+  storage events, on the custom `ntnu:plan-change` event and on the page's own
+  writes, so every surface reading the plan stays live without polling.
+  `parsePlanHash`/`formatPlanHash` live here, and `hashchange` is listened for
+  so a pasted link updates an already-open tab. **No legacy or versioned hash
+  is read** — an old `#v2;…` link fails to parse `semesterId` and is treated
+  as absent, by design (PRODUCT.md §6 has the grammar).
+
+- **`data.ts`** — `PlannerIndex` / `PlannerIndexCourse` (the typed shape of
+  `search-index.json`), `fetchCourseBundle`, and
+  `indexForSemester(index, semesterId, window?)`, which narrows every row's
+  exams to one semester's season *and* `fromDate…examFinalDate` window before
+  anything renders them — a carried-over course's only exam date can be last
+  year's.
+
+  **The honest-fetch contract.** This is the layer PRODUCT's moat is built
+  on, so it is spelled out rather than left to the code:
   - `TimetableOutcome` is the authority on the week's verdict:
     `{kind:"entries",count}` | `{kind:"empty"}` | `{kind:"failed",reason,message}`,
-    plus `{kind:"pending"}` in the wider `CourseFetchState`. **"came back
+    plus `{kind:"pending"}` in the wider `CourseFetchState`. **"Came back
     empty" and "we could not ask" must never collapse into "no blocks
-    drawn"** — that is precisely how a failed fetch used to render as "ingen
-    kollisjoner". Read `timetableOutcomeOf(bundle)` or
-    `courseFetchState(code)`; never `bundle.timetable?.length`.
-    `bundleFromEntries()` builds the same guarantees for a hand-made bundle
-    (`courseTimetable.ts`), and a semester-narrowed clone keeps the *fetch's*
-    outcome so "fetched 12 entries, none this semester" stays distinct from
-    "fetch failed".
-  - **No upstream English ever leaves this module** (pd-9). Every rejection is
-    a `FetchFailureError` with a classified `reason`
+    drawn"** — that is precisely how a failed fetch renders as "ingen
+    kollisjoner". Read `timetableOutcomeOf(bundle)` or `courseFetchState(code)`,
+    never `bundle.timetable?.length`. `bundleFromEntries()` builds the same
+    guarantees for a hand-made bundle, and a semester-narrowed clone keeps the
+    *fetch's* outcome, so "fetched 12 entries, none this semester" stays
+    distinct from "fetch failed".
+  - **No upstream English leaves this module.** Every rejection is a
+    `FetchFailureError` with a classified `reason`
     (`not-found`/`invalid`/`rate-limited`/`server`/`network`/`timeout`/`unknown`),
     a `source` (`ntnu` | `site` — a failed download of our *own*
     `search-index.json` must not be reported as "NTNU svarte ikke"), and a
-    ready Norwegian `message` from `failureMessage()`. The raw worker/browser
-    string survives as `.detail`, for `console.debug` only. A consumer that
-    prints `err.message` blindly still renders bokmål.
-  - **Memoisation is per part, and failures are never cached.** Bundles are memoised
-    per `code:year:version`; *details* have their own memo keyed by **code
-    alone**, because `/api/course/:code` carries neither year nor version and
-    re-fetching byte-identical data on every semester switch was pd-8. A
-    bundle carrying any failure is **dropped from the memo as it settles**
-    (pd-5) — the module outlives every ClientRouter navigation, so memoising a
-    transient blip made it permanent for the session; in-flight dedup is
-    unaffected. `loadPlannerIndex()`'s rejection is not memoised either
-    (pd-3). `clearCourseBundleMemo()` is what "Prøv igjen" calls.
-  - Every request carries the caller's `onPage` signal combined with a
-    `FETCH_TIMEOUT_MS` (15 s) cap, so one stalled socket cannot hang the page
-    (pd-4).
-- **`programPlan.ts`** — `findProgramPlan` (memoised per `code:year`, three-
-  year step-back on 404, `encodeURIComponent`s the code so `MTIØT`/`ÅSOS`
-  reach the worker), `classifyPeriod` (obligatory vs. gated-by-studieretning
-  vs. elective-pool), `resolvePeriodFor(plan, semesterId, cohort,
-  direction?)` — the one function that turns a fetched study plan into "this
-  semester's courses, or the question that has to be answered first". The
-  studieinfo modal and the planner page both call it; nothing else
-  re-implements period resolution.
-- **`layout.ts`** — `layoutDay(items, maxColumns = MAX_COLUMNS) →
-  LayoutSlot[]`, pure and dependency-free: greedy calendar-column packing into
-  overlap clusters. `MAX_COLUMNS = 2` is a **default, not a constant** — the
-  cap is a viewport question (below 40rem a day column is ~56 px, so grid.ts
-  passes 1 and a 2-deep cluster piles instead of splitting into 27 px
-  slivers). A cluster needing more than the cap is **not split at all**:
-  every member comes back `piled: true` and the grid draws the whole cluster
-  as ONE block naming each session (code + start–end time). **There is no
-  "+N til" overflow chip and no `overflow` flag any more** — the chip named a
-  count the student could not act on, and three columns in a ~106 px weekday
-  is ~35 px per block, at which width a course code broke one character per
-  line (audit grid-3/grid-7). `LayoutSlot.cluster` is also the renderer's
-  partition, so "what overlaps what" has exactly one implementation.
-- **`groups.ts`** — `groupKey(name)` (slug, never contains `~` — load-
-  bearing for the hash grammar above), `groupOptions(entries)`,
-  `defaultLectureKeys(entries, programCode?)` (the programme's own lecture
-  parallel, or parallel 1 with a "1 av N" badge when no programme mapping
-  exists), `applyGroupSelection(entries, selectedKeys)` — narrows a
-  course's rendered entries to its selected group set; øving/lab entries
-  are never defaulted away, only narrowed once a group is picked.
-- **`examSchedule.ts`** — `buildExamList(exams, todayIso) → ExamListModel`,
-  pure date math (`Date.UTC` day-differencing, no `Date.parse`, locale/
-  timezone-independent): sorts dated exams chronologically, annotates
+    ready Norwegian `message`. The raw string survives as `.detail`, for
+    `console.debug` only.
+  - **Memoisation is per part, and failures are never cached.** Bundles are
+    memoised per `code:year:version`; *details* have their own memo keyed by
+    **code alone**, because `/api/course/:code` carries neither year nor
+    version. A bundle carrying any failure is dropped from the memo as it
+    settles — the module outlives every ClientRouter navigation, so memoising
+    a transient blip made it permanent for the session. In-flight dedup is
+    unaffected, and `loadPlannerIndex()`'s rejection is not memoised either.
+    `clearCourseBundleMemo()` is what "Prøv igjen" calls.
+  - Every request carries the caller's `onPage` signal combined with a 15 s
+    `FETCH_TIMEOUT_MS` cap, so one stalled socket cannot hang the page.
+
+- **`layout.ts`** — `layoutDay(items, maxColumns) → LayoutSlot[]`, pure:
+  greedy calendar-column packing into overlap clusters. A touching boundary
+  (`start === prevEnd`) is **not** an overlap, matching the conflict engine's
+  own rule. The column cap is a **viewport question, not a constant** — below
+  40 rem a day column is ~56 px, so 1 is passed and a 2-deep cluster piles
+  instead of splitting into 27 px slivers. A cluster needing more than the cap
+  is **not split at all**: every member comes back `piled: true` and the
+  renderer draws the whole cluster as ONE block naming each session. There is
+  no "+N til" overflow chip and no `overflow` flag — the chip named a count
+  the student could not act on, and three columns in a ~106 px weekday is
+  ~35 px per block, at which width a course code breaks one character per
+  line. `LayoutSlot.cluster` is also the renderer's partition, so "what
+  overlaps what" has exactly one implementation.
+
+- **`groups.ts`** — `groupKey(name)` (a slug that never contains `~` —
+  load-bearing for the hash grammar), `groupOptions`, `defaultLectureKeys`,
+  `applyGroupSelection`. **Lecture entries are not all alternatives**:
+  "Forelesning 1" Tuesday and "Forelesning 2" Monday are complementary
+  sessions, while four "Forelesning 1 <programmes>" are one session offered
+  four times. So narrowing runs per *session family* — only groups within one
+  family are mutually exclusive — and an unresolvable family is reported
+  rather than guessed. Øving and lab entries are never defaulted away, only
+  narrowed once a group is picked, and **a selection of one kind may never
+  delete the other kind's entries**.
+
+- **`activity.ts` / `conflicts.ts` / `schedule.ts`** — thin policy seams over
+  `ntnu-api`. What NTNU's titles *mean* lives upstream; what stays here is
+  this product's policy: DR-1's asymmetric collapse to `lecture | other`, the
+  lecture-only pre-filter, and the rule that **no exam logic goes in
+  `conflicts.ts`** (`examSchedule.ts` owns the sort, gaps, same-day flag and
+  "tett" threshold — there is exactly one exam engine).
+
+- **`examSchedule.ts`** — `buildExamList(exams, todayIso) → ExamListModel`.
+  Pure `Date.UTC` day-differencing, no `Date.parse`, locale- and
+  timezone-independent: sorts dated exams chronologically, annotates
   `gapToNext`/`tight`/`sameDay`, sets `daysFromToday` on the first upcoming
   exam only, keeps dateless exams in a separate bucket.
-- **`grid.ts`** — `renderGrid(frame, notesHost, courses, showOthers,
-  options?) → GridRenderResult` (`conflictCount` = grouped collision slots,
-  `conflictPairCount`, `mutedLayerAutoRevealed`, `blockCount`, `state`, plus
-  the two honesty fields wave 2 added: `incompleteCourses[]` — courses whose
-  timetable we could not get, as opposed to courses NTNU publishes nothing
-  for — and `partial`, which means "these counts are a floor, do not print a
-  clean verdict"), plus `renderGridMessage(frame, notesHost, message?)` for
-  every non-grid state (loading, empty, pending-choice) so a message never
-  renders inside the week's own frame as though it were a plan (DESIGN's
-  Ruling-Marks-The-Plan). Shared by `/planlegger/` (the full week) and
-  `/emne/[code]/` (a single-course read-only week) — one renderer, not two.
-  `GridRenderOptions.onBlockClick` hands a clicked block's or pile's
-  `BlockDetail` to the block popover.
-- **`examList.ts`** — `renderExamList(frame, listHost, courses, semesterId,
-  index, options?) → ExamRenderResult` and `renderExamMessage(...)`,
-  rendering `examSchedule.ts`'s `ExamListModel` as a chronological
-  `.exam-row`/`.exam-gap` list with a summary kicker line — **replaces the
-  deleted `examRibbon.ts`**. Reads an already `indexForSemester`-narrowed
-  index so a stale exam date cannot reach it.
-- **`studieinfo.ts`** — `mountStudieinfo(deps, signal) → StudieinfoHandle`,
-  `publishMonthFor(semesterId)`. Opened through the handle alone, from
-  `/planlegger/` alone: `#planner-edit-plan` ("Endre") plus the contextual
-  empty-state and studieretning openers. The `OPEN_STUDIEINFO_EVENT` window
-  event, its `studieinfoEvent.ts` leaf module, the `?studieinfo` query param
-  and `Layout.astro`'s topbar chip that used all three are **deleted**
-  (2026-07-30, owner's call). **The only surface that picks
-  programme/kull/retning/semester** — the deleted homepage picker and
-  planner inline picker are gone. Absorbed `/studier/[code]/`'s "Bruk som
-  planen min" import semantics: Lagre calls `setProgramPlan`, preserving
-  manual adds/drops and (since Task 10/12) course `groups`.
-- **`popover.ts`** — `mountBlockPopover(store, signal) → BlockPopoverHandle`,
-  one shared non-modal `<dialog>` (`show()`, not `showModal()`, so the grid
-  stays interactive behind it) for a clicked block or pile: facts,
-  a group picker sourced from `groups.ts` (radios only where the options
-  really are mutually exclusive parallels; complementary weekly sessions are
-  additive checkboxes — audit week-1) that calls `store.setCourseGroups`
-  immediately, and dropp/fjern/gå-til-emneside actions. A pile spanning more
-  than one course gets `kind: "info"` — its `detail.code` is the codes joined
-  `" · "` (plannerApp keys off that separator), so it shows facts plus one
-  course-page link per code, with no group section and no course action.
-- **`addCourse.ts`** — `mountAddCourse(deps, signal) → AddCourseHandle`, a
-  search `<dialog>` over the whole catalog **replacing the inline
-  `planner-add-*` typeahead**: search field (ranked through
-  `src/components/site/catalogSearch.ts`, the same ranking `/emner/` uses —
-  not a second unranked filter), result rows with a lazy section-aware clash
-  preview (the same path `planClash.ts` uses — kills the S7 false-positive),
-  and the dialog stays open for multiple adds. **One persistent action button
-  per row, four verbs** (`addCourseRowControl`, a pure derive+dispatch over
-  the store): "Legg til" / "Fjern" (manual add) / "Dropp" / "Legg tilbake"
-  (programme course — reversible, DESIGN §7), beside a state span reading
-  "I planen" / "fra programmet" / "droppet". The class name
-  `.add-course-add` survived as a *hook*, not a description; `.add-course-remove`
-  no longer exists. A **not-taught row gets no add control at all**, only
-  `ikke undervist i {year}` — it deliberately does *not* say "kun eksamen",
-  which the six-element index tuple has no field to support (audit copy-3):
-  of the 703 rows excluding the catalog year, 203 record `examOnly: false`.
-  Saying it would need `examOnly` appended to the tuple first (append-only,
-  per the crawled-data contracts below). `deps` is mutated in place by
-  plannerApp rather than re-mounted, and `deps.indexFailed` is what turns the
-  permanent "Henter emner …" into "Fikk ikke hentet emnekatalogen." (pd-3).
-- **`plannerApp.ts`** — the only file that queries `document`. Wires
-  everything above to the DOM ids declared in `planlegger/index.astro`
-  (`#planner-title`, `#planner-context-line`, `#planner-direction*`,
-  `#planner-grid-frame`, `#planner-exam-frame`, `#planner-course-rows`,
-  `#planner-semester*` — grep the page for the full contract rather than
-  duplicating it here, it drifts fast; the old `#planner-add-*` inline
-  typeahead ids are gone with the typeahead itself). Mounted via `onPage()`
-  per the ClientRouter rule (CLAUDE.md).
-- **`src/components/site/planClash.ts`** — the same lecture-conflict engine
-  (`lib/planner/conflicts.ts`) reused as a plan-aware clash preview on
-  `/emner/` result rows, `/emne/[code]/`'s add CTA, and (2026-07-25)
-  `addCourse.ts`'s result rows — all three now share one section-aware
-  path, computed lazily (first hover/focus, not eagerly for every row).
 
-**Deleted 2026-07-25, no replacement:** `examRibbon.ts` (→ `examList.ts` +
-`examSchedule.ts`), `src/components/site/studyPlan.ts` (→ `studieinfo.ts` +
-the planner's "Fra studieplanen" panel), `src/lib/planner/programUrl.ts`
-(→ moot, nothing links to `/studier/*` any more), the sitewide plan-strip
-component (→ the persistent nav's studieinfo chip, `Layout.astro` — and its
-interim replacement, the `#plan-count-link` bar, is deleted too, 665513f),
-and every legacy/versioned hash-parsing branch in `store.ts`.
+- **`grades.ts`** — the pure model behind `/emne/[code]/`'s figure, over DBH
+  table 308 (one row per course version, year, semester, grade). It absorbs
+  four upstream facts: versions double up (counts are summed — a candidate sat
+  the course); counts are **privacy-masked**, and a masked cell is not a zero
+  but is folded into `masked` and left out of the percentage base; grade
+  scales differ per sitting; deferred sittings are their own (year, semester).
 
-## Design-system usage (all UI work)
+- **`hues.ts`** — the six course hues, assigned as a deterministic function of
+  the plan's **code set** (DESIGN.md §9). Never by insertion order.
 
-- Load order in `<head>`: `fonts.css` → `tokens.css` → `base.css` →
-  `primitives.css` → `site.css` (+ `planner-week.css` on pages that render a
-  week). Import via Astro frontmatter in Layout.astro (or the page, for
-  `planner-week.css`) only. The accent is defined in tokens.css (Flexoki
-  green) — no inline accent vars on `<html>`.
-- No-flash theme init: inline `is:inline` head script reading
-  `localStorage["np:theme"]` falling back to `prefers-color-scheme`, setting
-  `data-theme="dark"` on `<html>` before paint. ThemeToggle gets
-  `storageKey="np:theme"`. Include `<ClientRouter />` from `astro:transitions`
-  (ThemeToggle's `onPage` needs `astro:page-load`, and Layout re-applies
-  `data-theme` on `astro:after-swap` — `swapRootAttributes()` wipes it
-  otherwise, see CLAUDE.md).
-- Use ONLY tokens.css custom properties and `.np-*` primitives (inventory in
-  DESIGN.md §5). Never hardcode colors, never pure #000/#fff, no borders on
-  interactive controls, and honor the named rules: Data-Is-Mono,
-  Red-Is-Collision, Green-Means-Fits, Ruling-Marks-The-Plan,
-  Ink-Before-Chrome.
-- Fonts are vendored as **variable files** (`scripts/fetch-fonts.mjs`):
-  4 `.woff2` files (Schibsted Grotesk + Spline Sans Mono, `latin` +
-  `latin-ext`), each declaring a `font-weight: <min> <max>` range rather than
-  one `@font-face` per static weight — see DESIGN.md §3 and CLAUDE.md.
-- Brand: wordmark **"Semesterplan"** (grotesk 700) with a small mono "NTNU"
-  suffix in `--muted`; favicon = the Ruteark mark (a 2×2 ruled square with
-  one cell filled `--accent` green) as an inline SVG data URI from
-  `src/lib/favicon.ts`.
+- **`deadline.ts`** — NTNU's two standing registration dates (15 September,
+  1 February), written here rather than crawled because there is no endpoint
+  for them and inventing one would be worse than stating what every student
+  already knows. A passed deadline returns `null` and the UI says nothing.
+
+- **`weekDates.ts`** — ISO 8601 week arithmetic, unit-tested across both year
+  boundaries, because NTNU publishes timetables in ISO week numbers.
+
+### The renderers (`src/components/planner/`)
+
+- **`columnGrid.ts`** — **Uke**: days across, time down. The width law
+  (whole days only, the day grows before the code shrinks) is expressed in
+  **CSS**, not in a measuring pass, so there is no resize listener and no
+  `getBoundingClientRect`.
+- **`board.ts`** — **Liste**: a departure board, one row per session, the
+  start time in the left margin and the room in the right. No geometry, so
+  nothing narrows as the viewport does — which is the point: the grid is
+  weakest exactly where this is strongest, at 390 px, in print, and in a
+  screen reader.
+- **`grid.ts`** — the transposed week (days as rows, time horizontal), and the
+  **only** renderer `/emne/[code]/` uses. It was a third planner view and is
+  no longer; do not delete it. `renderGrid(...) → GridRenderResult` reports
+  `conflictCount` (grouped collision slots), `conflictPairCount`,
+  `mutedLayerAutoRevealed`, `blockCount`, `state`, plus the two honesty
+  fields: `incompleteCourses[]` (courses whose timetable we could not get, as
+  opposed to courses NTNU publishes nothing for) and `partial` — "these counts
+  are a floor, do not print a clean verdict". `renderGridMessage` exists so a
+  message never renders inside the week's own frame as though it were a plan.
+- **`examList.ts`** — a **month band** showing the shape of the exam period,
+  and under it the list. A same-day pair gets no connector (zero distance is
+  not a distance); the band splits that day into both hues with a collision
+  ring, and the clash line names both courses in words, because neither the
+  split nor the ring survives a screen reader. Reads an already
+  `indexForSemester`-narrowed index, so a stale exam date cannot reach it.
+  Owns the DR-3 kont join (`collectExamInputs` / `isDeferredOn` /
+  `isDeferredOccasion`), fail-open.
+- **`studieinfo.ts`** — the front door: one `<dialog>` owning **all four**
+  choices the plan hangs off (programme, kull, studieretning, semester). Every
+  edit is staged locally; nothing touches the store until **Lagre**, which
+  calls `setProgramPlan` and preserves manual adds, drops and group picks.
+  Opened from `/planlegger/` alone, through `#planner-edit-plan` and the
+  contextual empty-state openers. **It is the only surface that picks any of
+  those four things.**
+- **`courseSettings.ts`** — the ONE surface a planned course is configured on,
+  reached from a course row or from a bar in the week. A real modal, so Esc,
+  backdrop dismissal and focus return are native. `setCourseGroups` writes on
+  every edit, so the grid behind the backdrop is already correct when it
+  closes.
+- **`blockPopover.ts`** — a READ surface: the facts of the session you
+  pointed at, anchored to it, with a way through to the editor rather than
+  being the editor. `show()`, not `showModal()`, so the week stays visible and
+  clicking another bar re-targets the same dialog — which also means it gets
+  no free dismissal, so Esc, backdrop and a real close button are all wired by
+  hand.
+- **`addCourse.ts`** — the catalog search modal, ranked through the same
+  `catalogSearch.ts` `/emner/` uses, not a second unranked filter. One
+  persistent action button per row with four verbs ("Legg til" / "Fjern" /
+  "Dropp" / "Legg tilbake") beside a state span. The dialog stays open for
+  several adds. **Not-taught rows are excluded outright — from the list *and*
+  from the count** (this differs from `/emner/` on purpose; see below). When a
+  query matches only such courses the dialog says so specifically, because
+  "0 treff" would read as "no such course", and a true zero offers the
+  register as a way out. **No per-row clash preview** here or on `/emner/`
+  (PRODUCT.md §9).
+- **`plannerApp.ts`** — the only file that queries `document`. Grep
+  `planlegger/index.astro` for the DOM-id contract rather than duplicating it
+  here; it drifts fast. Mounted via `onPage()`.
+- **`layerMotion.ts`** — the øving layer's arrive/leave choreography
+  (DESIGN.md §7). The renderers stay dumb and still throw the subtree away.
+
+### Site islands (`src/components/site/`)
+
+- **`catalogSearch.ts`** — folding, tokenising and relevance ranking: exact
+  code → code prefix → name-word prefix → substring, both sides folded and
+  tokenised so "TDT 4100" and "maskinlaering" match. It lives here rather than
+  inside the page because the page's own logic is an inline `<script>` vitest
+  cannot import, and ranking is exactly the kind of pure logic that has to be
+  pinned by tests.
+- **`planClash.ts`** — the plan-aware clash preview, through the same engine
+  the planner uses. **One caller, deliberately** (`/emne/[code]/`). It used to
+  run on `/emner/`'s rows and in the add dialog; both dropped it. Don't wire
+  it back into a result list on consistency grounds.
+- **`courseDetails.ts`** — one `/api/course/:code` fetch feeding three places
+  on the course page: the key facts, the prose disclosure, and the scraped
+  exam enrichment, which hangs **under** the catalog exam headline rather than
+  beside it (DR-3 makes the catalog the authority; two peer exam blocks
+  invited exactly the confusion that rule prevents).
+- **`courseTimetable.ts`** — hands fetched entries to `grid.ts` as a
+  one-course plan. One renderer, not two.
+- **`gradeChart.ts`** — the Karakterer figure. Small multiples, because a
+  100 %-stacked bar needs six mutually distinguishable colours for A–F and the
+  palette validator rejected every such ramp this system can build. Small
+  multiples need exactly ONE colour and stay comparable through a shared
+  y-scale — one peak **per grade scale**, so a pass/fail term cannot flatten
+  the letter charts.
+- **`now.ts`** — the landing page's answer to the only question a returning
+  student has on a Tuesday at 11:05: **which room**. It degrades in a straight
+  line, every step a real state rather than a spinner.
+
+---
+
+## Design-system usage
+
+- Load order in `<head>`: `tokens.css` → `base.css` → `primitives.css` →
+  `site.css`, imported from `Layout.astro` frontmatter;
+  `planner-week.css` from the two pages that render a week. **There are no
+  webfonts** — type is the platform UI face (DESIGN.md §3).
+- No-flash theme init: an `is:inline` head script reading
+  `localStorage["np:theme"]`, falling back to `prefers-color-scheme`, setting
+  `data-theme` on `<html>` before paint, and re-applying on
+  `astro:after-swap`. It carries a second passenger, the **plan probe** — see
+  CLAUDE.md for why both are load-bearing.
+- Use ONLY `tokens.css` custom properties and `.np-*` primitives (inventory in
+  DESIGN.md §5). Never hardcode colours, never pure #000/#fff, no borders on
+  interactive controls, and honour the named rules.
+- Brand: wordmark **"Semesterplan"** with a small "NTNU" suffix in `--muted`;
+  favicon is a 2×2 ruled square with one cell filled in the verdict green,
+  inlined as an SVG `data:` URI from `src/lib/favicon.ts` on a fixed dark
+  ground so the tab icon reads the same in both themes.
 - Shell (`site.css` + `Layout.astro`): sticky topbar (wordmark left;
-  **persistent nav, rebuilt 2026-07-25** — `.np-navlink`s for "Planlegger"
-  and "Emner", both always present, `aria-current` computed from an
-  explicit per-item `sections` list, not `path.startsWith`; a studieinfo
-  chip showing `MTDT · 2024 · Høst 2026` (or "Velg studieprogram") that
-  opens the studieinfo modal on `/planlegger/` and navigates + opens it
-  elsewhere; ThemeToggle right) — **no sitewide plan bar of any kind**: the
-  `#plan-strip` was deleted 2026-07-25 and the `#plan-count-link` that
-  replaced it 2026-07-27 (665513f), the chip carries the whole cross-page
-  affordance and re-adding a bar is a regression, not a feature —
-  content column (`--maxw` for data pages via Layout's `wide` prop,
-  `--measure` otherwise), and a footer that only states provenance ("Data
-  hentet {crawlDate} fra NTNU · uoffisiell, med forbehold om feil" — no link;
-  the catalog is one of the two nav destinations, so a third route to it in
-  the footer was chrome, REWORK-2026-07-30d) — `/studier/` is gone outright, not
-  demoted (PRODUCT.md §4 addendum, §0 addendum point 6; supersedes REVIEW.md
-  I1/I5's "one pill, footer-demoted" description).
+  `.np-navlink`s for "Planlegger" and "Emner", both always present,
+  `aria-current` computed from an explicit per-item `sections` list rather
+  than `path.startsWith`; ThemeToggle right), a content column (`--maxw` for
+  data pages via Layout's `wide` prop, `--measure` otherwise), and a footer
+  that only states provenance — no links, because the catalog is already one
+  of the two nav destinations. **No sitewide plan bar of any kind**
+  (PRODUCT.md §5).
 
-## Crawled data contracts (crawler writes, pages read)
+---
 
-`data/catalog.json` — **two catalog years unioned**, newest canonical
-(REVIEW.md C1: a course absent from this year's catalog but present last
-year, e.g. TMA4100, must still get a page):
+## Crawled data contracts
+
+`data/catalog.json` — **two catalog years unioned**, newest canonical, so a
+course absent from this year's catalog but taught last year still gets a page:
+
 ```jsonc
 {
   "year": 2026,                    // canonical (newest) crawled year
@@ -342,13 +342,15 @@ year, e.g. TMA4100, must still get a page):
   }]                                // deduped by code, sorted by code
 }
 ```
+
 `data/programs.json`: `{ "crawledAt", "programs": StudyProgramSummary[] }`
 (full objects from `client.programs.all()`, sorted by code).
 `data/semesters.json`: `{ "crawledAt", "current": Semester | null, "semesters": Semester[] }`.
 
-`public/data/search-index.json` (runtime-fetched by the search island and
-the planner's add field; compact positional tuples — **no existing position
-was renumbered when this grew**):
+`public/data/search-index.json` — runtime-fetched by the search island and the
+planner. Compact **positional tuples**; new fields are only ever appended and
+**no existing position is ever renumbered**:
+
 ```jsonc
 {
   "year": 2026,
@@ -359,243 +361,220 @@ was renumbered when this grew**):
   ]
 }
 ```
-`exams` is `[[season, dateOrNull], ...]` — **every published sitting, ordinary
-and deferred alike.** `transform.mjs` does filter `!exam.continuation`, but
-that filter is a no-op against today's upstream: **0 of 2 438 exam rows in
-`data/catalog.json` carry the flag**, and the catalog search portlet returns
-`continuation: false` for the same sitting `/api/course/:code` labels
-`occasion: "Utsatt eksamen"` (audit exams-1, measured 2026-07-27 on
-HBIOT2030/MGLU1106/ENG1102). This line used to claim "ordinary (non-`kont`)
-exams only" and that claim was false. **The kont filter lives in the
-consumer**, `src/components/planner/examList.ts`
-(`collectExamInputs`/`isDeferredOn`/`isDeferredOccasion`, and the same
-predicate again in `src/components/site/gradeChart.ts`): it needs BOTH this
-index's structured ISO `date` and `/api/course/:code`'s `occasion`, joins them
-on the exact date, and reads `occasion` as a label only (PRODUCT.md DR-3). It
-is fail-open. Do not "fix" this in the crawler — the flag it would filter on
-is never set.
-`version` (element 4) is the catalog course version to thread into
-`/api/course/:code/timetable?year=&version=` — 293 of 5 470 rows are not
-`"1"` (DR-4). `offeredYears` (element 5) is the same field as
-`catalog.json`'s per-course `offeredYears`; a row whose `offeredYears`
-excludes `year` is not taught in the canonical year and its name/location/
-exams/version all come from the newest year it *was* offered — render that
-honestly ("ikke undervist i 2026 · sist undervist 2025"), never as a current
-course with a mysteriously empty week.
 
-Crawler: `node crawler/crawl.mjs [--year 2026]` — plain ESM JS (no TS build),
-imports `ntnu-api`. Default year = `semesters.current()`'s `year`. Crawls the
-canonical year and `year - 1` (~20 requests total at the existing 500 ms
-gap — a `searchAll` pass per year, `programs.all()`, `semesters.all()`); if
-either catalog pass fails the whole crawl fails (exit 1) — a half-crawl that
-looks complete is worse than a red build. Writes all four files atomically
-(tmp + rename), pretty-printed except search-index (minified). Pure
-transform functions live in `crawler/transform.mjs` and are unit-tested with
-small fixture objects (no network in tests). The crawl also sanity-checks its
-own output against floors before writing, so a hollow catalog fails loudly
-instead of being deployed nightly (audit crawler-2/crawler-5). **The contract
-on this page is asserted against the real artifacts** by
-`tests/artifacts.test.mjs` — row counts, the two-year union, `offeredYears`
-descending, the six-element tuple with no position renumbered, and both code
-grammars mirrored from `worker/src/routes.ts` (course *and* programme, the
-crawler-1 split) — skipping cleanly when the gitignored artifacts are absent.
+- `exams` is `[[season, dateOrNull], …]` — **every published sitting, ordinary
+  and deferred alike.** `transform.mjs` does filter `!exam.continuation`, but
+  that filter is a **no-op**: 0 of the 2 439 exam rows in the current
+  `catalog.json` carry the flag, and the search portlet returns
+  `continuation: false` for the same sitting `/api/course/:code` labels
+  `occasion: "Utsatt eksamen"`. **The kont filter lives in the consumer**
+  (`examList.ts`, and the same predicate again in `gradeChart.ts`): it needs
+  both this index's structured ISO date and `/api/course/:code`'s `occasion`,
+  joins them on the exact date, and reads `occasion` as a label only. It is
+  fail-open. **Do not "fix" this in the crawler** — the flag it would filter
+  on is never set.
+- `version` (element 4) is the catalog course version to thread into
+  `/api/course/:code/timetable?year=&version=`. 293 of 5 470 rows are not
+  `"1"` (DR-4).
+- `offeredYears` (element 5) mirrors `catalog.json`'s per-course field. A row
+  whose `offeredYears` excludes `year` is not taught in the canonical year,
+  and its name, location, exams and version all come from the newest year it
+  *was* offered — render that honestly ("ikke undervist i 2026 · sist
+  undervist 2025"), never as a current course with a mysteriously empty week.
+  703 of 5 470 rows are in this state today.
+
+**Crawler:** `node crawler/crawl.mjs [--year 2026]` — plain ESM (no TS build),
+importing `ntnu-api`. Default year is `semesters.current()`'s. It crawls the
+canonical year and `year - 1` (~20 requests at the 500 ms gap); if either
+catalog pass fails, **the whole crawl fails (exit 1)** — a half-crawl that
+looks complete is worse than a red build. All four files are written
+atomically (tmp + rename), pretty-printed except the search index. Pure
+transforms live in `crawler/transform.mjs` and are unit-tested against small
+fixtures with no network. The crawl sanity-checks its own output against
+floors before writing, so a hollow catalog fails loudly rather than deploying
+nightly. **`tests/artifacts.test.mjs` asserts this contract against the real
+artifacts** — row counts, the two-year union, `offeredYears` descending, the
+six-element tuple with no position renumbered, and both code grammars mirrored
+from `worker/src/routes.ts` — and skips cleanly when the gitignored artifacts
+are absent.
+
+---
 
 ## Worker API contract
 
 Base: same origin as the site. **GET/HEAD only** — anything else is
-`405 {"error":"Method not allowed"}` with `Allow: GET, HEAD` (before this,
-a POST was served as a GET, body and all, marked publicly cacheable —
-audit worker-7). JSON responses, `content-type: application/json;
-charset=utf-8`. Course/programme codes may be percent-encoded in the path —
-the worker `decodeURIComponent`s the segment before validating (REVIEW.md B1:
-`MTIØT`, `ÅSOS`, `BØA1100` all 200 today; a malformed escape 400s with the
-route's own message).
+`405 {"error":"Method not allowed"}` with `Allow: GET, HEAD`. JSON responses,
+`content-type: application/json; charset=utf-8`.
 
 | Route | Upstream call | TTL | Notes |
 |---|---|---|---|
 | `GET /api/health` | none | — | `{"ok":true}` |
-| `GET /api/course/:code?year=` | `courses.details(code, year?)` | 6h | 404 `{error}` if null |
-| `GET /api/course/:code/grades` | `grades.distribution(code)` | 24h | `{rows: GradeRow[]}`, `[]` fine |
-| `GET /api/course/:code/timetable?year=&version=` | `courses.timetable(code, year, version?)` | 1h | year required, 4-digit |
-| `GET /api/program/:code/plan?year=` | `programs.studyPlan(code, year)` | 24h | cohort year required; 404 if null |
+| `GET /api/course/:code?year=` | `courses.details(code, year?)` | 6 h | 404 `{error}` if null |
+| `GET /api/course/:code/grades` | `grades.distribution(code)` | 24 h | `{rows: GradeRow[]}`, `[]` is fine |
+| `GET /api/course/:code/timetable?year=&version=` | `courses.timetable(code, year, version?)` | 1 h | year required, 4-digit |
+| `GET /api/program/:code/plan?year=` | `programs.studyPlan(code, year)` | 24 h | cohort year required; 404 if null |
 
-- `GET /api/course/:code/schedule?year=` was implemented, cached and tested
-  but called by nothing — **deleted** (REVIEW.md C5e). It now falls through
-  to the generic 404.
-- Envelope: success = the payload object shown above; error = `{ "error":
-  "<message>" }` with status. **Two code grammars, not one** (audit
-  crawler-1/worker-1): course codes validate against `COURSE_CODE_RE =
-  /^[A-ZÆØÅ0-9_-]{2,16}$/i`, programme codes against the wider
-  `PROGRAM_CODE_RE = /^[A-ZÆØÅ0-9_+/-]{2,16}$/i` — 4 of the 403 codes in
-  `data/programs.json` carry a literal `/` or `+` (`EMNE/HF`, `EMNE/SU`,
+- **Codes are percent-decoded before validation**, in one place
+  (`routes.ts`'s `parseCode`). The WHATWG URL spec keeps path segments
+  encoded, so without the decode every code containing Æ/Ø/Å 400s from the
+  whole `/api` surface — 58 programmes and 238 courses. A malformed escape
+  400s with the route's own message.
+- **Two code grammars, not one.** Course codes validate against
+  `COURSE_CODE_RE = /^[A-ZÆØÅ0-9_-]{2,16}$/i`; programme codes against the
+  wider `PROGRAM_CODE_RE = /^[A-ZÆØÅ0-9_+/-]{2,16}$/i`, because 4 of the 403
+  codes in `programs.json` carry a literal `/` or `+` (`EMNE/HF`, `EMNE/SU`,
   `MSECT+OH`, `MSØK/5`) and used to 400 from our own validator while the UI
   blamed NTNU. `.` stays excluded in both, so no path-traversal shape can
-  form. Both regexes run *after* decoding (uppercase before use). Years
-  `/^\d{4}$/`, optional `?version=` `/^[A-Za-z0-9-]{1,8}$/` (a bound on the
-  cache key, not a whitelist) → else 400.
-- Error mapping: `NotFoundError`→404, `RateLimitError`→429 (+`Retry-After: 60`),
-  other `NTNUAPIError`→502 with the **fixed body `{"error":"Upstream error"}`**
-  — ntnu-api's own message can carry an internal NTNU Liferay portlet URL, so
-  it is `console.warn`ed and never returned (audit sec-4/worker-2). Do not
-  "improve" the 502 by echoing `err.message`. Non-NTNUAPIError bugs propagate
-  (500).
-- **Upstream throttle** (audit sec-5): a token bucket in `routes.ts`
-  (`RateLimiter`, 120 burst / 15 per second, ≤5 000 tracked clients) keyed on
-  `CF-Connecting-IP` — the only client identifier a Worker can trust. A token
-  is spent **inside the handler, after the cache misses**, so it meters *our
-  egress to NTNU* and never throttles a warm-cache visitor; exceeding it is
-  our own `429` + `Retry-After`. Absent header (local `curl`, some test
-  harnesses) ⇒ `server.ts` passes no `throttle` and nothing is metered, rather
-  than bucketing every caller together where one abuser could deny everyone.
-  This is politeness metering, not a DoS defence: 400s, 404s and cache hits
-  cost no tokens.
-- Caching: `TTLCache`/`TieredCache`/`KVCacheBinding` (ntnu-mcp pattern) —
-  isolate memory in front of optional KV binding `CACHE` (`env.CACHE` may be
-  undefined locally → memory-only). `TTLCache` deletes on an expired read and
-  caps at `MAX_ENTRIES = 500` with insertion-order eviction (a `set` on an
-  existing key deletes-then-sets so a refreshed hot key doesn't get evicted
-  ahead of cold ones). Keys `JSON.stringify([kind, ...decodedUppercaseCode,
-  ...params])` — so `MTIØT` and `MTI%C3%98T` share one cache entry, not two.
-  KV prefix `v1:`. **A `null` details/plan result is cached as the sentinel
-  `"missing"` under its own `["details-miss"|"plan-miss", …]` key with its own
-  `MISS_CACHE_TTL_MS` = 10 min**, not the route's positive TTL (audit
-  worker-3): `ntnu-api` returns `null` for an empty 200 too, so a transient
-  blank response used to mean up to 24 h of "this cohort has no plan" — which
-  the study-plan step-back then papers over by silently serving another
-  cohort. KV writes via `ctx.waitUntil`. Response headers: `Cache-Control:
+  form. Both run *after* decoding. Years `/^\d{4}$/`, optional `?version=`
+  `/^[A-Za-z0-9-]{1,8}$/` (a bound on the cache key, not a whitelist) → else
+  400.
+- **Error mapping:** `NotFoundError` → 404, `RateLimitError` → 429 with
+  `Retry-After: 60`, other `NTNUAPIError` → 502 with the **fixed body
+  `{"error":"Upstream error"}`** — ntnu-api's own message can carry an
+  internal NTNU Liferay portlet URL, so it is `console.warn`ed and never
+  returned. Do not "improve" the 502 by echoing `err.message`. Non-API bugs
+  propagate as 500.
+- **Upstream throttle:** a token bucket keyed on `CF-Connecting-IP` (120
+  burst / 15 per second, ≤5 000 tracked clients) — the only client identifier
+  a Worker can trust. A token is spent **inside the handler, after the cache
+  misses**, so it meters *our egress to NTNU* and never throttles a warm-cache
+  visitor. An absent header (local `curl`, some harnesses) means nothing is
+  metered, rather than bucketing every caller together where one abuser could
+  deny everyone. This is politeness metering, not a DoS defence: 400s, 404s
+  and cache hits cost no tokens.
+- **Caching:** `TTLCache` / `TieredCache` / `KVCacheBinding` — isolate memory
+  in front of the optional KV binding `CACHE` (undefined locally →
+  memory-only). `TTLCache` deletes on an expired read and caps at 500 entries
+  with insertion-order eviction (a `set` on an existing key deletes-then-sets,
+  so a refreshed hot key isn't evicted ahead of cold ones). Keys are
+  `JSON.stringify([kind, ...decodedUppercaseCode, ...params])`, so `MTIØT` and
+  `MTI%C3%98T` share one entry. KV prefix `v1:`.
+  **A `null` details/plan result is cached as a `"missing"` sentinel under its
+  own key with its own 10-minute TTL**, not the route's positive TTL:
+  `ntnu-api` returns `null` for an empty 200 too, so a transient blank
+  response used to mean up to 24 h of "this cohort has no plan" — which the
+  study-plan step-back then papers over by silently serving another cohort.
+  KV writes go through `ctx.waitUntil`. Response headers: `Cache-Control:
   public, max-age=<≤300>, s-maxage=<ttl/1000>` on success and on a 404 served
-  from the miss sentinel (10 min); `no-store` on every other error.
-- Entry (`worker/src/server.ts`): module-level `NTNUClient` + `TTLCache` +
-  `RateLimiter` singletons (no options → library defaults); route on
-  `url.pathname`; no router framework. `/api` **without** a trailing slash is
-  part of the API surface too (it used to fall through and answer the HTML 404
-  page where every sibling answered JSON — worker-7). Non-`/api` paths →
-  `env.ASSETS.fetch(request)`; when ASSETS 404s, a `/emne/<code>/` path whose
-  code is not already uppercase gets a `301` to the canonical casing
-  (`canonicalCoursePath`, audit astro-7 — all 5 470 built pages are uppercase
-  and have no case-insensitive collisions), preserving `url.search`.
+  from the sentinel; `no-store` on every other error.
+- **Entry (`worker/src/server.ts`):** module-level `NTNUClient`, `TTLCache`
+  and `RateLimiter` singletons; routing on `url.pathname`; no router
+  framework. `/api` **without** a trailing slash is part of the API surface
+  too. Non-`/api` paths go to `env.ASSETS.fetch`; when ASSETS 404s, an
+  `/emne/<code>/` path whose code is not already uppercase gets a **301** to
+  the canonical casing, preserving `url.search`.
   **Sitewide security headers** (`withSecurityHeaders`, applied to asset and
-  JSON responses alike — the site sent none at all, audit sec-3): a CSP
-  (`default-src 'self'`, `object-src`/`base-uri` `'none'`,
-  `frame-ancestors 'none'`, `img-src 'self' data:`; `script-src`/`style-src`
-  keep `'unsafe-inline'` — the hash form for Layout's single no-flash block is
-  a documented upgrade, deliberately not shipped unverified, see the constant's
-  comment), `X-Content-Type-Options: nosniff`, `Referrer-Policy:
+  JSON responses alike): a CSP (`default-src 'self'`, `object-src` and
+  `base-uri` `'none'`, `frame-ancestors 'none'`, `img-src 'self' data:`;
+  `script-src`/`style-src` keep `'unsafe-inline'` — the hash form for Layout's
+  single no-flash block is a documented upgrade, deliberately not shipped
+  unverified), `X-Content-Type-Options: nosniff`, `Referrer-Policy:
   strict-origin-when-cross-origin`, `X-Frame-Options: DENY`.
-  Route handlers live in `worker/src/routes.ts` as pure functions taking
-  `{ client, cache, throttle? }` deps (ntnu-mcp pattern) so tests inject a fake
-  fetch via `new NTNUClient({ fetch, sleep: async () => {} })` and a bare
-  `TieredCache()`. The decode step lives in `routes.ts`'s `parseCode`, one
-  place, rather than five separate try/catches in `server.ts`.
-- Worker TS: `worker/tsconfig.json` with `types: ["@cloudflare/workers-types"]`;
-  avoid Workers-only ambient types in shared files (structural
-  `MinimalExecutionContext`, ntnu-mcp pattern).
+- Route handlers are pure functions taking `{ client, cache, throttle? }`
+  deps, so tests inject a fake fetch via
+  `new NTNUClient({ fetch, sleep: async () => {} })` and a bare `TieredCache()`.
+- Worker TS: `worker/tsconfig.json` with
+  `types: ["@cloudflare/workers-types"]`; keep Workers-only ambient types out
+  of shared files (use structural interfaces).
+
+---
 
 ## Pages
 
 All pages use `Layout.astro` (props: `title`, `description`, optional
-`wide: boolean`). Build-time data via `import catalog from "../../data/catalog.json"`
-etc. Islands are **vanilla `<script>` modules** (no framework) fetching
-relative `/api/...` URLs, mounted through `onPage()` (CLAUDE.md);
-`astro.config.mjs` proxies `/api` → `http://localhost:8787` during
-`astro dev`.
+`wide`). Build-time data comes from `import catalog from "../../data/catalog.json"`.
+Islands are **vanilla `<script>` modules** (no framework) fetching relative
+`/api/...` URLs, mounted through `onPage()`. `astro.config.mjs` proxies
+`/api` → `http://localhost:8787` during `astro dev`.
 
-- **`/`** — **a landing page, rebuilt 2026-07-25** (§0 addendum point 11):
-  kicker, verb-first `<h1>`, one small `.np-frame.np-ruled` proof fragment
-  (a red-ink collision example) below the fold, one primary CTA ("Åpne
-  planleggeren" → `/planlegger/`), and a resume line ("Planen din: N emner →
-  gå til planleggeren") when a profile already exists. **The programme
-  typeahead, kull chips and direction panel are deleted** — the studieinfo
-  modal is now the only picker, opened from `/planlegger/`.
-- **`/planlegger/`** — **the app**; see the architecture section above.
-  Context line as the page's real `<h1>`; the week at `minmax(0,1fr) 20rem`
-  against the course rail; verdict lines computed from `GridRenderResult`/
-  `ExamRenderResult` and never discarded — **three states, not two**: clean
-  (accent), "N kollisjoner" (clash red) and, since 2026-07-27, "kan ikke
-  sjekkes — mangler timeplan for N emne(r)" in muted ink whenever
-  `partial`/`incompleteCourses` says the counts are a floor; course rows with
-  programme-course
-  drop/restore and manual-add delete; **an "Legg til emne" button opening
-  the add-course search modal** (`addCourse.ts`, replacing the old inline
-  add field) with a plan-aware clash preview on every candidate row before
-  commit; a "Bytt semester" disclosure rather than fold-weight chips; the
-  studieinfo chip/`?studieinfo` param opens `studieinfo.ts` for
-  programme/kull/retning/semester edits.
-- **`/emner/`** — search as a mode, not a nav destination. Hidden until the
-  visitor types a query or picks a studienivå/city chip ("skriv for å søke i
-  N emner" otherwise); city facets are ~4 multi-select `.np-toggle--text`
-  chips (not 8 raw comma-joined location strings); rows carry an add button
-  with a clash preview. Matching and ranking live in
-  `src/components/site/catalogSearch.ts` (extracted 2026-07-27, audit
-  search-1, and shared with the planner's add dialog): exact code → code
-  prefix → name-word prefix → substring, with both sides folded and tokenised
-  so "TDT 4100" and "maskinlaering" match. The query round-trips through
-  `?q=` (`history.replaceState`), so Back from a course page restores the
-  results. A row whose `offeredYears` excludes the catalog year gets **no add
-  button** — only its `/emne/` link (crawler-3). The "· se ukeplanen →" link
-  this bullet used to describe is gone from both `/emner/` and `/emne/[code]/`
-  (94b5d9a — the topbar chip already goes there).
-- **`/emne/[code]/`** — `getStaticPaths` from the two-year-unioned
-  `catalog.json` (~5 470 pages, up from ~4 767 — see C1 above). Order is the
-  fork point first: code · name · campus → verdict CTA ("Legg til i planen",
-  flipping to "Fjern fra planen"/"Dropp"/"Legg tilbake" against the stored
-  plan with a `#emne-plan-state` span reading "I planen", plus a clash
-  sentence in the reserved slot beneath it — the "se ukeplanen →" link is
-  gone, the topbar chip already goes there) → the week for
-  `offeredYears[0]`, narrowed to ONE semester (via `renderGrid`, the same
-  renderer `/planlegger/` uses — `courseTimetable.ts` has no renderer of its
-  own any more; its frame carries `data-static` so the shared block styling
-  drops the click affordance no handler backs) → one exam block (catalog date
-  as the headline, scraped form/duration/aid-code inside a `.np-summary`) →
-  **Karakterer** → the 9-fact panel → all prose in one `.np-summary` ("Mer om
-  emnet"). A course whose `offeredYears` excludes the catalog year gets **no
-  add control at all**, only the sentence "Kan ikke legges til i planen …"
-  (audit crawler-3, matching `addCourse.ts`). No year tabs (U14 — the worker
-  doesn't actually vary by year for most courses, and three tabs implying a
-  choice that isn't there was worse than one honest view).
-  **Karakterer** (`#grades-section` + `src/components/site/gradeChart.ts`,
-  shipped 2026-07-27) renders `/api/course/:code/grades` as season-split
-  small multiples — one bar chart per sitting, newest first, `--hue-blue`
-  only (F is deliberately not red — Red-Is-Collision), cohort `n` per chart,
-  no bars under `MIN_CHART_CANDIDATES` = 10, one shared y-peak **per grade
-  scale** so a pass/fail term cannot flatten the letter charts, and older
-  terms behind a `<details>`. Deferred (utsatt/kont) sittings are **held out
-  and named in a note**, never drawn as peer semesters. That filter is a
-  **client-side join in `gradeChart.ts`**, not a crawler flag: it re-reads
-  `/api/course/:code` (same URL `mountCourseDetails` uses, so it is a browser-
-  cache hit) and classifies each sitting's season through `examList.ts`'s
-  `isDeferredOccasion`. It is fail-open — no scrape, or an occasion we do not
-  recognise, keeps every bucket — and carries a size guard
-  (`DEFERRED_MAX_SHARE`) so a course that has moved term does not have its
-  real cohorts relabelled. Do not try to "fix" this in `crawler/transform.mjs`;
-  `continuation` is false on all 2 438 catalog exam rows (see the search-index
-  note under "Crawled data contracts" above, and PRODUCT.md DR-3). This is a
-  partial reversal of D12 — PRODUCT.md's D12 row records what the decision
-  still forbids.
-- **`/studier/[code]/` and `/studier/` — deleted outright, 2026-07-25, no
-  redirects** (§0 addendum point 3; supersedes REVIEW.md I3/§12/PRODUCT.md
-  D11's "sequence entrances before deletion" plan — the mandate deletes
-  regardless, pre-launch breakage is acceptable). The template's surviving
-  logic — current-period expansion, credit subtotal, DR-5's verbatim group
-  prose, "Bruk som planen min" — moved into the studieinfo modal (kull
-  relevance + plan fetch) and a collapsible "Fra studieplanen" panel in the
-  planner's course rail.
-- **404** — simplified 2026-07-25 (kills S9's stray `value="404"` search-box
-  bug outright rather than patching it): both search forms are gone; the
-  page states the reason, states the crawl date (DR-8), and offers exactly
-  two honest ways back — "Åpne planleggeren" and "Til forsiden".
+- **`/`** — a landing page: the "Nå" card (the student's own running or next
+  session, with the room set as display type), a kicker, a verb-first `<h1>`,
+  one line of sub-copy, and one CTA to `/planlegger/`. No picker, no proof
+  fragment.
+- **`/planlegger/`** — the app. One bar at the top carries the plan's name and
+  every control that acts on it (layer toggle, Uke/Liste, Del, Endre, and the
+  primary "Legg til emne"); the verdict chips and the deadline sit on the line
+  under it; then the week and exam list against the course rail. Verdict
+  states are **three, not two**: clean, "N kollisjoner", and "kan ikke
+  sjekkes — mangler timeplan for N emne(r)" in muted ink whenever `partial` or
+  `incompleteCourses` says the counts are a floor.
+- **`/emner/`** — search as a mode. Hidden until the visitor types or picks a
+  chip ("skriv for å søke i N emner" otherwise); city facets are ~4
+  multi-select chips, not 8 raw comma-joined location strings. The query
+  round-trips through `?q=` via `history.replaceState`, so Back from a course
+  page restores the results. A row whose `offeredYears` excludes the catalog
+  year **keeps its row and its page but gets no verb** — no add button, just a
+  "sist undervist {year}" note — and the whole set is folded into one
+  labelled `Ikke undervist i {year}` group at the end of the register, which
+  opens itself when nothing else matched. **The add dialog omits those rows
+  entirely; this page keeps them. That asymmetry is deliberate** — the dialog's
+  window is twelve rows deep, and "matematikk" spent six of them on courses it
+  was refusing to add. Do not "restore consistency" in either direction.
+- **`/emne/[code]/`** — `getStaticPaths` from the two-year-unioned catalog
+  (5 470 pages). Order is the fork point first: code · name · campus → the
+  verdict CTA (flipping to "Fjern fra planen" / "Dropp" / "Legg tilbake"
+  against the stored plan) with a clash sentence in the reserved slot beneath
+  it → the week for `offeredYears[0]`, narrowed to ONE semester, via
+  `grid.ts` (its frame carries `data-static`, so the shared block styling
+  drops the click affordance no handler backs) → one exam block → **Karakterer**
+  → the key-facts panel → all prose in one "Mer om emnet" disclosure. A course
+  whose `offeredYears` excludes the catalog year gets **no add control**, only
+  the sentence "Kan ikke legges til i planen …". **No year tabs** — upstream
+  has one timetable snapshot per course, and three tabs implying a choice that
+  isn't there was worse than one honest view.
+- **`/404`** — states the reason, states the crawl date (DR-8), and offers
+  exactly two honest ways back. It has no search form.
+- **`/sitemap.xml`** — the only route into the 5 470 course pages: nothing
+  server-rendered links to them, because a 5 470-row anchor list would be
+  440 KB of blocking HTML on the page whose own problem is phone weight.
+  Composition is in `src/lib/sitemap.ts` so it can be unit-tested;
+  `tests/site/discoverability.test.ts` pins the two-file agreement between
+  `astro.config.mjs`'s `site` and `public/robots.txt`'s `Sitemap:` line, which
+  nothing else would notice breaking.
 
-## Quality bar
+---
 
-`mise run check` (= lint + typecheck + test, server-free, excludes
-`*.pw.ts` by design) and `npm run build` must pass. `mise run e2e` (browser
-suite against live data) must pass — it now gates `release.yml` and runs in
-CI on the paths named in `e2e.yml` (REVIEW.md T1). `biome check
---error-on-warnings` must exit 0 — `.astro` frontmatter's
-`noUnusedImports`/`noUnusedVariables` false positives are disabled per-file
-via `biome.json`'s `overrides`, not globally, so a real dead import
-elsewhere still fails the gate (REVIEW.md T3). Tests: crawler transforms,
-worker routes, and the planner's pure engines (fixture-driven, no network).
-Norwegian UI copy, bokmål, sentence case, no exclamation marks, comma
-decimals ("7,5 sp"). Keep dependencies at zero beyond what root
-`package.json` already declares.
+## Testing and quality bar
+
+`mise run check` (lint + typecheck + tests, server-free) and `npm run build`
+must pass. `biome check --error-on-warnings` must exit 0 — `.astro`
+frontmatter's `noUnusedImports`/`noUnusedVariables` false positives are
+disabled **per-file** via `biome.json`'s `overrides`, not globally, so a real
+dead import elsewhere still fails the gate.
+
+**Unit tests** (`tests/`, vitest, no network): crawler transforms, worker
+routes and cache, every planner engine, the site islands, and
+`tests/site/tokens.test.ts`, which measures every token pair that carries text
+and fails below AA. `tests/bundle.test.mjs` fails if an upstream NTNU URL ever
+reaches a client chunk — i.e. if `ntnu-api`'s HTTP layer stops being
+tree-shaken out of the pure helpers the browser imports.
+
+**Browser suite** (`e2e/*.pw.ts`, named so vitest's default include never
+picks them up) — `mise run e2e` builds, serves via wrangler and drives
+Chromium. It **replays recorded `/api/*` responses by default** from
+`e2e/fixtures/api/`, which is what makes it ~25 s, deterministic and runnable
+offline. Two things keep that honest:
+
+- **A miss is recorded, then fails the run in teardown**, so a fixture gap is
+  never silently a live call and never reappears.
+- **`e2e/contract.pw.ts` asserts, against LIVE upstream, the facts the
+  fixtures bake in.** Every one of those was a discovery, and a fixture
+  written from what we already believed would have shipped the bug green. The
+  contract tests are skipped by default and run on the nightly schedule, which
+  is the only thing that can notice upstream moving. When one fails,
+  `mise run e2e:record` refreshes the store; `mise run e2e:live` runs
+  everything against live.
+- `/api/health` is deliberately **not** intercepted — `navigation.pw.ts` reads
+  the worker's real security headers off it, and a replayed response would
+  answer that with headers captured at some past moment.
+
+**`e2e/cls.pw.ts`** gates layout stability with a per-surface budget. Every
+page here paints a static shell and grows its islands a second later, which is
+the shape that produces CLS by default: `/planlegger/` scored 0.61 on a phone
+and a four-page visit accumulated 0.98, because a ClientRouter swap does not
+reset the metric. The budgets are geometry, not timing. See CLAUDE.md for the
+three mechanisms that hold it down and why none of them may be tidied away.
+
+**Copy:** Norwegian bokmål, sentence case, no exclamation marks, comma
+decimals. Keep dependencies at zero beyond what root `package.json` already
+declares.

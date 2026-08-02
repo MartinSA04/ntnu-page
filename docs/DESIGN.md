@@ -1,9 +1,16 @@
-# Design System: Ruteark
+# DESIGN.md — the design system
 
-The design system of ntnu-page — designed for this product only. StudyCompanion
-was the inspiration (Flexoki warmth, paper-and-ink discipline, quiet
-interactions); Ruteark is its own voice, built for a planning instrument
-rather than an editorial reading surface.
+This repo's own design system. It has no codename: it is the calendar,
+played straight. (An earlier warm-paper direction called **Ruteark** — Flexoki
+ground, a vendored grotesk and mono, a squared 15-minute ruling, printed
+course fills — was replaced wholesale on 2026-08-01. Nothing of it survives
+except the `.np-*` class prefix and the primitives' interaction grammar. If
+you find the word in a comment, it is a leftover, not a rule.)
+
+The rules named in **bold** below are binding. `tests/site/tokens.test.ts` is
+the authority on every contrast claim and fails the build below AA.
+
+---
 
 ## 1. North star
 
@@ -11,655 +18,542 @@ rather than an editorial reading surface.
 question — does the term hold together, and where do I walk in at 10:15 — so
 the design's job is to disappear. The week is days against hours in solid
 colour blocks with mass; the list is a departure board with the time in the
-left margin and the room in the right; and the page carries no modular
+left margin and the room in the right; the page carries no modular
 containers, because the content is static and known.
 
-Adopted 2026-08-01, replacing **Ruteark** (warm Flexoki paper, a vendored
-grotesk and mono, a squared ruling, printed course fills). The craft bar is
-Google Calendar and Apple Calendar: the familiar thing, executed properly,
-without irony or smuggled quirk.
+The craft bar is Google Calendar and Apple Calendar: the familiar thing,
+executed properly, without irony or smuggled quirk.
 
 Explicitly rejected: anything that reads as institutional (Studentweb,
-Blackboard, Altinn), as a startup dashboard, or as concept-led — a timetable
+Blackboard, Altinn), as a startup dashboard, or as concept-led. A timetable
 that costs half a second per glance has failed regardless of how it
-photographs. Cards as page structure are out: they are a container for
+photographs. **Cards are not page structure** — a card is a container for
 content whose count and shape you do not know at build time, and this page
 knows both.
 
-## 2. Color
+---
 
-Neutrals carry the page; colour is spent on exactly four jobs, and no two of
+## 2. Colour
+
+Neutrals carry the page. Colour is spent on exactly four jobs, and no two of
 them share a hue.
 
-- **Ground and ink**: `--bg` #FFFFFF is the content surface itself — there is
-  no grey backdrop for cards to float on. `--card` #F7F7F8 survives for the
-  few surfaces that genuinely float (popovers, dialogs). Ink runs
-  `--fg` → `--muted` → `--faint`; hairlines are `--border` and
-  `--border-strong`. Dark mirrors on #151517.
+- **Ground and ink.** `--bg` #FFFFFF *is* the content surface — there is no
+  grey backdrop for cards to float on. `--card` #F7F7F8 survives only for
+  things that genuinely float (dialogs, the popover) and for two ground tones
+  (the exam band's empty day, the load track). Ink runs `--fg` → `--muted` →
+  `--faint`; hairlines are `--border` and `--border-strong`. Dark mirrors on
+  #151517.
 - **The interface — ink** (`--ui` = `--fg`). Focus rings, pressed and
-  selected fills, links, hover, membership. Unchanged and still adjudicated:
-  a focus ring measured 18.6:1 as ink against 4.4 as a colour.
-- **The accent — system blue** (`--accent` #1A73E8 / #8AB4F8 dark), and it has
-  **exactly one job**: the primary action and the now/today marker. The old
-  `--accent` was retired for doing five jobs; this one is allowed back because
-  it does one. It is deliberately absent from the course palette — an
-  interface mark that shares a hue with a course vanishes the moment it
-  crosses that course's block.
+  selected fills, links, hover, membership.
+- **The accent — system blue** (`--accent` #1A73E8 / #8AB4F8 dark), with
+  **exactly one job**: the primary action, and the now/today marker.
 - **The verdict — green** (`--verdict`): the term works. Nothing else.
 - **Collision — red** (`--clash`): two things that cannot coexist. Fetch
   errors, empty states and validation are ink, not red.
 - **Attention — amber** (`--warn`): short of a problem. An over-full load,
   sessions sharing an hour. Amber exists so red is never spent on something
   merely worth a look.
-- **Course hues**: six, and every one is kept clear of the accent's azure, the
-  verdict's green and the collision's red. They are chosen dark enough (light
-  theme) and light enough (dark theme) to carry knocked-out text, so
-  `--block-mix` is 100 % in both themes — the fill is the hue itself, not the
-  hue pulled toward black.
-
-`tests/site/tokens.test.ts` measures every pair that carries text and fails
-below AA. It caught two regressions in this very change.
+- **Course hues — six**, each held clear of the accent's azure, the verdict's
+  green and the collision's red. They are dark enough (light) and light
+  enough (dark) to carry knocked-out text, so `--block-mix` is 100 % in both
+  themes: the fill *is* the hue, not the hue pulled toward black.
 
 ### Named rules
 
-**Red-Is-Collision.** Unchanged. Red marks coexistence failures, nothing
-else, and the copy names both things.
+**Red-Is-Collision.** Red marks coexistence failures, nothing else, and the
+copy names both things.
 
-**Green-Means-Fits.** Unchanged. Green is a judgement about whether the term
-works. Membership, selection, focus and hover are interface and take `--ui`.
+**Green-Means-Fits.** Green is a judgement about whether the term works.
+Membership, selection, focus and hover are interface and take `--ui`.
 
 **One-Job-Accent.** The accent may mark the primary action and "now/today",
-and nothing else. The moment it marks a third thing it is `--accent` again in
-the bad sense, and the rule that killed it applies.
+and nothing else. The moment it marks a third thing, the rule that killed its
+predecessor applies again.
+
+**Course-hues-never-colour-text**, with one sanctioned exception. Hue-coloured
+text fails contrast in half the pairs; the square mark carries identity and
+text stays ink. The exception is the **tinted øving layer**, whose label is
+the course hue pulled toward ink — and it is measured, not assumed:
+`tokens.test.ts` checks both block pairs across all six hues in both themes,
+and rejected 22 % and 15 % dark tints at 3.94:1 and 4.42:1. Do not add
+coloured course names for "scannability".
+
+**`--faint` is not a text colour.** It measured 2.87:1 while carrying a credit
+figure, a dropped course's title and the exam months. It is deliberately
+**not** raised to AA, because it cannot be — `--muted` is 5.07, so a third
+AA-clearing step would have to live inside 4.5–5.07 and would stop being a
+step. It buys back the 3:1 non-text floor instead, and everything a student
+*reads* moved to `--muted`. `tokens.test.ts` pins both halves.
+
+---
 
 ## 3. Typography
 
 **One family: the platform's own UI face.** `-apple-system,
 BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif`.
-There are no vendored fonts, no `@font-face`, no preloads and no build step —
-see CLAUDE.md for what was deleted and why. Google Calendar and Apple
-Calendar both use the system face on purpose; so does this.
+There are no vendored fonts, no `@font-face`, no preloads and no build step.
+Google Calendar and Apple Calendar both use the system face on purpose; so
+does this.
 
 **`--font-mono` is an alias of `--font-sans`.** `.np-data` keeps its meaning
 and every call site — it still marks a figure a student copies — but the
-distinction is now carried by `font-variant-numeric: tabular-nums` rather
-than by a second typeface. Figures still column up; they just do it in the
-same voice as the sentence around them.
+distinction is carried by `font-variant-numeric: tabular-nums` rather than by
+a second typeface. Figures still column up; they do it in the same voice as
+the sentence around them.
 
-**Scale — seven steps, one per role, unchanged.** `--text-xs` label,
-`--text-sm` small sentence, `--text-base` body, `--text-md` title, `--text-lg`
-headline, `--text-xl` page title, `--text-2xl` display.
+**Scale — seven steps, one per role.** `--text-xs` label, `--text-sm` small
+sentence, `--text-base` body, `--text-md` title, `--text-lg` headline,
+`--text-xl` page title, `--text-2xl` display.
 
 ### Named rules
 
-**Data-Is-Mono is retired, and `.np-data` is not.** The rule was right about
+**Data-Is-Mono is retired; `.np-data` is not.** The rule was right about
 *which* strings matter — times, dates, codes, counts — and wrong that they
 need their own face. Keep marking them; the mark now buys tabular figures
-instead of a monospace.
+instead of a monospace. (Several code comments still cite the old name. They
+mean "this is a figure", which is still true.)
 
-**`.np-note` vs. `.np-hint`.** Unchanged, and still a real distinction:
-`.np-note` is the fragment voice ("uke 38–40", "0 sp"), `.np-hint` is any
-small text with a verb. Putting a sentence in `.np-note` is still the same
-category error it always was.
+**`.np-note` vs. `.np-hint`.** `.np-note` is the fragment voice ("uke 38–40",
+"0 sp"); `.np-hint` is any small text with a verb. Putting a sentence in
+`.np-note` is a category error.
 
-## 4. Surfaces, ruling, elevation
+---
 
-Depth is tonal paper layering: page → `--card` → `--card-nested`, flat at
-rest. Shadows are whispers (`--shadow-sm` on floating tiles, one step up on
-hover); `--shadow-lg` only for true overlays. Radii are instrument corners:
-2/3/6px, `--radius-lg` 10px reserved for `.np-frame`.
+## 4. Surfaces, ruling, depth
 
-**The ruling** — the signature. A faint `--cell`-sized squared grid
-(`.np-ruled`) drawn in `--ruling-line`, framed by `.np-frame`, tiled from
-the **content box** (`background-origin: content-box`) so it stays in
-register with whatever it's ruling instead of starting 16px early under the
-frame's padding — every ruled surface's own padding must therefore be a
-whole multiple of `--cell`.
+Depth is tonal paper layering, flat at rest. Shadows are whispers
+(`--shadow-sm` on floating tiles, one step up on hover); `--shadow-lg` only
+for true overlays. Radii are instrument corners: 3 / 4 / 6 px, with
+`--radius-lg` 10 px reserved for `.np-frame`.
 
-**Where it actually is, corrected 2026-07-27 (audit ds-1/ds-4 — the doc was
-stale, the code is right).** The squared field was **retired from the weekly
-spread** in f86105b (adjudicated in
-`docs/superpowers/specs/2026-07-27-planner-simplification-design.md`): a
-15-minute square in both axes behind five columns of blocks is ~600 squares
-of texture, and what a student reads off a timetable is the *hour*. The week
-therefore carries **one hour hairline only**, drawn by `planner-week.css` on
-`.planner-grid-rail`/`.planner-grid-day` — i.e. on the boxes whose top edge
-*is* the slot grid's origin, which is what keeps it in register (tiling it
-from the frame is what caused REVIEW.md D4's ~22 px misregistration). Neither
-`.np-frame` nor a squared field is on the spread, and the exam date list
-carries no ruling either. **`.np-ruled` and `.np-ruled--hours` are both
-deleted** (§5). `--hours` went with zero callers; `.np-ruled` itself had one
-left, the landing page's picture of a plan, and that picture is gone
-(REWORK-2026-07-30d). Reaching for either would have given a contributor a
-15-minute square field plus a second hour rule anchored to a different box
-than the live one.
+**No inset shadow as an edge treatment.** A mark pressed into a control is not
+this system's voice, and the three that existed as decoration were **removed
+rather than reimplemented**: `.np-field`'s and the select's inline-start rule,
+and a per-bar collision edge. Replacing one with a painted gradient or an
+inset-offset outline is the same mark in other clothes; don't.
 
-If the ruling ever comes back on a planning surface, put it on the rail/day
-columns, not the frame.
+Two inset shadows survive, and both are **structural rather than
+decorative** — they are doing something a border cannot:
+- the all-day row's rule, because the row is drawn at **zero height** when the
+  plan has no drop-in window, and an inset shadow is clipped to the box so at
+  zero it draws nothing (a border would still paint a line);
+- the ring on a **dropped** course's swatch, because the mark has to keep its
+  place in the column while losing its fill — a dropped course is switched
+  off, not missing, and a hole in the column of marks reads as the latter.
+
+Do not add a third without one of those two arguments.
+
+**The ruling is one hour hairline, and it lives on the boxes it rules.** The
+squared 15-minute field is gone: in both axes behind five columns of blocks
+it was ~600 squares of texture, and what a student reads off a timetable is
+the *hour*. `planner-week.css` draws the line on `.planner-grid-rail` and
+`.planner-grid-day` — the boxes whose top edge *is* the slot grid's origin,
+which is what keeps it in register. Tiling it from the frame instead is what
+caused a permanent ~22 px misregistration.
+
+**`.np-ruled` and `.np-ruled--hours` do not exist.** Both were deleted with
+their last callers. Reaching for either would give you a 15-minute square
+field plus a second hour rule anchored to a different box than the live one.
+If ruling ever returns to a planning surface, put it on the rail and day
+columns, not on the frame.
 
 ### Named rules
 
-**Ruling-Marks-The-Plan.** The squared ruling appears exactly where
-planning happens — and, since f86105b, *only where a plan is depicted rather
-than operated*: the live week reduced to its hour hairline, and the last
-squared field is the homepage's picture of a plan (§8). Everywhere else the
-paper is plain — if the whole site is ruteark, nothing is. A message is never
-rendered inside a ruled frame (`renderGridMessage` exists for that).
+**Ruling-Marks-The-Plan.** What ruling remains appears exactly where planning
+happens and nowhere else — if the whole site is ruled, nothing is. Two
+corollaries, and the first is the one reviewers keep proposing against:
+*do not spread it* to panels, cards or a hero for "cohesion"; and *the week
+does not carry a squared field either*. A message is never rendered inside
+the week's frame as though it were a plan (`renderGridMessage` exists for
+that).
 
 **Ink-Before-Chrome.** Structure is tonal steps and hairlines; interactive
-controls carry fills or washes, never borders. No sanctioned exception
-remains — the one that used to exist here (`.np-kbd`) has zero users and is
-deleted (§5).
+controls carry fills or washes, never borders. There is no sanctioned
+exception.
 
-## 5. Components (.np-*)
+---
 
-One grammar, defined once in primitives.css: rest = flat; hover = surface
-answer (paper darkens a step, bare controls take `--wash`) + text lights to
-`--ui` where it was muted; **press = a 1px dip, built into every control below**
-(`.np-btn:active`, `.np-icon-btn:active`, `.np-navlink:active`,
-`.np-toggle:active`, `.np-summary:active`, `a.np-tag:active`,
-`button.np-tag:active`) — `.np-press` is the escape hatch for one-off
-pressables that aren't one of those, not something to add alongside them;
-focus = global 2px `--ui` outline.
+## 5. Components (`.np-*`)
 
-**Labels & data**
-- **`.np-kicker`** — mono, `--text-xs`, 500, uppercase, `--tracking-wide`,
-  `--muted`. Eyebrow/section label.
-- **`.np-data`** — mono + `tabular-nums`, inherits size. Wraps any figure a
-  student copies (time, date, week, code, count).
-- **`.np-note`** — mono, `--text-xs`, `--muted`. Fragments only, never a
-  sentence (§3).
-- **`.np-hint`** — sans, `--text-sm`, `--leading-normal`, `--muted`,
-  `max-width: var(--measure)` (opt out with `max-width: none` in a narrow
-  column). Every small *sentence* — help text, empty states, provenance
-  (§3).
-- **`.np-note-clash`** — sans, `--text-sm`, `--leading-normal`, colour
-  `--clash`. A sentence; wrap the day/time/week/code it quotes in
-  `.np-data`.
+One grammar, defined once in `primitives.css`: rest = flat; hover = a surface
+answer (paper darkens a step, bare controls take `--wash`) plus text lighting
+to `--ui` where it was muted; **press = a 1 px dip, built into every control**
+(`.np-btn`, `.np-icon-btn`, `.np-navlink`, `.np-toggle`, `.np-summary`,
+`a.np-tag`, `button.np-tag`) — `.np-press` is the escape hatch for a one-off
+pressable that is none of those, not something to add alongside them; focus =
+a global 2 px `--ui` outline.
+
+**Labels and data**
+- **`.np-kicker`** — `--text-xs`, 500, uppercase, `--tracking-wide`,
+  `--muted`. Eyebrow / section label.
+- **`.np-data`** — `tabular-nums`, inherits size. Any figure a student copies
+  (time, date, week, code, count).
+- **`.np-note`** — `--text-xs`, `--muted`. Fragments only, never a sentence.
+- **`.np-hint`** — `--text-sm`, `--leading-normal`, `--muted`, capped at
+  `--measure` (opt out with `max-width: none` in a narrow column). Every small
+  *sentence*: help text, empty states, provenance.
+- **`.np-note-clash`** — `--text-sm`, colour `--clash`. A sentence; wrap the
+  day/time/week/code it quotes in `.np-data`.
 
 **Buttons**
-- **`.np-btn`** — paper action button on `--control-bg`/`--control-hover`
-  (grotesk 500 label, sentence verbs: "Legg til i planen"). `aria-pressed`/
-  `.is-active` fills `--ui`.
-- **`.np-icon-btn`** — 36px bare glyph, `--wash` hover.
+- **`.np-btn`** — paper action button on `--control-bg`/`--control-hover`,
+  sentence verbs ("Legg til i planen"). `aria-pressed` / `.is-active` fills
+  `--ui`.
+- **`.np-btn--primary`** — the accent's one job made a control. **At most one
+  per surface.**
+- **`.np-icon-btn`** — 36 px bare glyph, `--wash` hover.
 - **`.np-navlink`** — bare navigation text; `aria-current="page"` inks it.
 
-**Tags & toggles**
-- **`.np-tag`** — squared course tag: hue `.np-dot` + mono code, `--text-sm`.
-  A ruteark cell, not a pill. `.np-tag--sm` — the in-grid size for a tag
-  inside a timetable block (`--text-xs`, tighter padding, 6px dot). Inside
-  an already hue-washed `.planner-block`, the tag drops its own surface
-  (`background: transparent`) — a card-coloured chip on top of a course wash
-  is chrome on chrome; a tag sitting directly on `--bg` (the exam list) keeps
-  its card background.
-- **`.np-dot`** — the square hue dot (8px, 1px radius; 6px inside
-  `.np-tag--sm`), set via `style="--dot: var(--hue-cyan)"`.
-- **`.np-toggle`** — selectable mono tag on `--control-bg`/`--control-hover`
-  (semester switcher, filters), `aria-pressed` fills `--ui`.
-  `.np-toggle--text` — sans, `--text-sm`, no uppercase/tracking, same fills
-  and `aria-pressed`; use for multi-word proper names (studieretning/campus
-  choices) where mono-tracked caps would wrap a 20-character Norwegian
-  phrase to two rows. Don't also call `.toUpperCase()` in JS on either
-  variant — the CSS owns casing.
+**Marks, tags and toggles**
+- **`.np-dot`** — the course mark: a **rounded square**, 10 px in a row of
+  text, 12 px where it leads a block of it. Not a circle — a circle is a
+  bullet and belongs to lists of sentences. The corner is what makes it the
+  same object as the bars in the week. Set via
+  `style="--dot: var(--hue-cyan)"`.
+- **`.np-tag`** — squared course tag: `.np-dot` plus the code. Inside an
+  already hue-washed block it drops its own surface — a card-coloured chip on
+  a course wash is chrome on chrome; on `--bg` it keeps its card background.
+  `.np-tag--sm` is the in-grid size.
+- **`.np-toggle`** — selectable tag on `--control-bg`/`--control-hover`;
+  `aria-pressed` fills `--ui`. **`.np-toggle--text`** for multi-word proper
+  names (studieretning, campus), where tracked caps would wrap a
+  20-character Norwegian phrase to two rows. Don't also call `.toUpperCase()`
+  in JS on either — the CSS owns casing.
 
 **Fields**
 - **`.np-field`** — paper input on `--control-bg`, nothing else at rest;
-  focus-within keeps the 2px `--ui` outline. No edge rule (§2).
-
-**No inset shadows, anywhere.** A mark pressed into a box is not this system's
-voice; depth is tonal paper layering, and shadows are outset whispers under
-floating things. The three that existed were **removed rather than
-reimplemented** (2026-07-30): `.np-field`'s and `.studieinfo-select`'s
-inline-start rule, and the ring on a dropped course's chip, which now simply
-loses its fill. The `--clash-edge` token that carried a fourth is deleted, its
-per-bar collision mark having been replaced by the day zone long before.
-Replacing one with a painted gradient or an inset-offset outline is the same
-mark in other clothes; don't.
+  `focus-within` keeps the 2 px `--ui` outline. No edge rule.
 
 **Surfaces**
 - **`.np-panel`** — paper panel on `--card`.
 - **`.np-popover` / `.np-popover-option`** — the floating list surface for
-  every typeahead combobox: `--card` background (never `--card-nested`,
-  which is the *recessed* step and inverts lighter-than-`--card` in dark),
-  `--radius-sm`, `--shadow`, `max-height: var(--popover-max, 18rem)`.
-  `.np-popover` sets no positioning (the call site keeps `position:
-  relative` + placement); `.np-popover-option` sets no display/layout (the
-  call site keeps its own flex/grid) — only the shared padding/corner/
-  `.is-active`-highlight, which is what drifted between three hand-rolled
-  copies before this existed.
-- **`.np-frame`** — the bordered, rounded paper box. Live users: the three
-  `<dialog>`s (studieinfo, add-course, block popover) and the homepage proof
-  panel. Note it sets `overflow: hidden`, which is why the week's frame is
-  deliberately *not* an `.np-frame` (it would kill the horizontal scroll —
-  see `planner-week.css`).
-- **`.np-head` / `.np-head-swatch` / `.np-head-ident` / `.np-head-title` /
-  `.np-head-sub`** — the masthead every card and modal opens on
-  (REWORK-2026-07-30 "Kvittering"): what this is, its quiet second line, and the
-  way out of it, full-bleed against the frame's own edge. **One ground**, paper
-  one step down with a hairline under it. A surface about a COURSE adds
-  `.np-head-swatch` — the same 12px mark as `.np-dot`, `--dot` set per open by
-  the call site — so the session card and the course modal read as the block you
-  pressed. The `--printed` / `--reduced` variants that flooded the whole
-  masthead with the hue are **deleted** (2026-08-01): a full-bleed band of
-  colour is the loudest chrome on the site, on a surface whose entire thesis is
-  that structure comes from type, hairlines and space — and it cost two
-  variants that had to knock out their own text, invert every control inside
-  themselves, and pick a strength per layer. A `<dialog>` pads its BODY, never
-  itself, and the body is what scrolls, so the head stays put. Live users: all
-  four floating surfaces in the planner.
-- **`.np-fact` / `.np-fact-value` / `.np-fact-sub`** — a fact and the line that
-  qualifies it: a room over its building, a parallel over "one of three",
-  credits over where the course came from. This is what replaced the
-  `NÅR / ROM / HVA / UKER` label column, which spent a third of a 20 rem card
-  naming facts that say what they are.
+  every typeahead: `--card` background (never `--card-nested`, which is the
+  *recessed* step and inverts lighter than `--card` in dark), `--radius-sm`,
+  `--shadow`, `max-height: var(--popover-max, 18rem)`. `.np-popover` sets no
+  positioning and `.np-popover-option` sets no display — the call site keeps
+  those. Only the shared padding, corner and `.is-active` highlight live here,
+  which is exactly what drifted between three hand-rolled copies before it
+  existed.
+- **`.np-frame`** — the bordered, rounded paper box. Live users: the four
+  `<dialog>`s (studieinfo, add-course, course settings, block popover). It
+  sets `overflow: hidden`, which is why the week's frame is deliberately
+  **not** an `.np-frame` — it would kill the horizontal scroll.
+- **`.np-head` / `-swatch` / `-ident` / `-title` / `-sub`** — the masthead
+  every card and modal opens on: what this is, its quiet second line, and the
+  way out, full-bleed against the frame's edge. **One ground**, paper one step
+  down with a hairline under it. A surface about a *course* adds
+  `.np-head-swatch` — the same mark as `.np-dot`, `--dot` set per open — so
+  the card reads as the block you pressed. A `<dialog>` pads its **body**,
+  never itself, and the body is what scrolls, so the head stays put.
+- **`.np-fact` / `-value` / `-sub`** — a fact and the line that qualifies it:
+  a room over its building, a parallel over "one of three", credits over
+  where the course came from. This replaced a `NÅR / ROM / HVA / UKER` label
+  column that spent a third of a 20 rem card naming facts that say what they
+  are.
 - **`.np-actions`** — a card's footer: a hairline, then what you can do about
   what is above it. **`--split`** pushes a pair apart when they are different
   kinds of thing (a verb that changes the plan, and the way out to another
-  page); verbs about the same edit stay together at the start (studieinfo's
-  Lagre/Avbryt, add-course's lone Lukk).
+  page); verbs about the same edit stay together at the start.
 - **`.np-link-out`** — the way out of a card to a page ("Gå til emnesiden →").
   A target, not a tail: 24 px tall (WCAG 2.5.8), `--muted` until pointed at.
-- **`.np-ruled`** — deleted with its last caller (§4). The ruling exists in
-  exactly one place now, hand-rolled in `planner-week.css` on the boxes it
-  rules.
 
 **Disclosure**
-- **`.np-summary`** — mono disclosure row with rotating chevron.
+- **`.np-summary`** — disclosure row with a rotating chevron.
 
 **Micro-interactions**
-- **`.np-target-flash`** — quiet `--ui-ring` outline flash on deep-link arrival.
+- **`.np-target-flash`** — a quiet `--ui-ring` outline flash on deep-link
+  arrival.
 
-**Deleted — do not reach for these, they no longer exist:** `.np-kbd`
-(zero users), `.np-tile` (zero users; §12's killed triptych was its only
-prospective user), `.np-lift` (zero users), **`.np-ruled--hours`** (zero
-users as of 2026-07-27, audit ds-4 — the week's hour line is hand-drawn in
-`planner-week.css` on the box that keeps it in register; this modifier would
-have tiled a second one from a different origin, §4). A documented primitive
-with no caller is system debt; the primitive layer is defined once and every
-user of it is expected to actually exist.
+**Deleted — do not reach for these:** `.np-ruled`, `.np-ruled--hours`,
+`.np-kbd`, `.np-tile`, `.np-lift`. A documented primitive with no caller is
+system debt; the primitive layer is defined once and every user of it is
+expected to actually exist.
 
-## 6. Motion
+---
 
-One easing (`--ease`), `--dur-fast` (110ms) for state, `--dur` (190ms) for
-surfaces, `--dur-flash` for arrival marks. Transform/opacity/color only,
-with one bounded exception below. Theme flips are instant (`.theme-snap`
-zeroes transitions for one frame). No entrance choreography for arriving
-data — a re-render caused by a fetch, a group pick or a plan edit draws
-straight.
+## 6. The week
+
+The primary surface, and the one with the most accumulated rules.
+
+**A block's edges are its facts** — left and right are the day, top and bottom
+are the start and the end — so it carries no ring. The separation is real air,
+and each side does a different job: 3 px in from the left so the block does
+not sit on the day's own rule, 6 px of channel at the right so the hour ruling
+runs unbroken past it, 2 px off the bottom so the line a session *ends* on is
+never covered. **4 px of corner** — not zero: at zero, two touching blocks
+fuse into one column of ink.
+
+**A block carries the course and the room, and nothing else.** The clock is
+already drawn, and the room is the only fact position cannot state, so it
+never drops out — the type shrinks instead. Block text has **one ink, and the
+quieting is weight**: the room and activity under the code were `--on-block`
+at 72 % and failed AA on all six hues in light (orange 3.01). The light hues
+clear AA at *full* strength by so little (orange 4.56) that no alpha survives
+on all six, so there is no quieter colour to be had. Do not re-introduce a
+mix.
+
+**52 px an hour, not 72.** A student reads a timetable for the *shape* of a
+week; at 72 an eight-hour day was 576 px of column. A tick per hour on the
+rail, because the ruling is painted behind the blocks as a calendar's is, and
+**the rail prints whole times** (`08:00`, not `08`) — an axis you read a time
+off, not a column of numbers you have to be told are hours.
+
+**The øving layer is tinted, not printed**, with its label in the course hue
+pulled toward ink — one treatment in both geometries. This is §2's one
+sanctioned exception, and it is measured.
+
+**Drop-in windows live in an all-day row.** A window is 08:15–14:00 every
+weekday, not an appointment at a time, so it has no honest place on the time
+axis. The row is drawn **at zero height** when the plan has no window, because
+a row that is absent in one state and present in the next cannot animate, and
+its rule is an inset shadow so at zero it draws nothing.
+
+**Two views, and they are Uke and Liste.** `WeekView` is
+`"kolonner" | "tavle"` — the stored values stay as they are, because that is
+what a student's localStorage already holds and what the pre-paint probe must
+agree with. A third transposed view ("Rader") was removed from the planner;
+its renderer (`grid.ts`) survives because `/emne/[code]/` draws a single
+course's week through it, and is now the only surface that does.
+
+**Both week geometries round their sessions to 4 px**, so the same session is
+not two shapes depending on which page drew it.
+
+**The week is dated.** Day headers carry the day-of-month beside the weekday,
+today's in a filled accent disc, and the context line leads with `Uke 38`. The
+grid still draws a *pattern* week — a block stands for every week in its own
+range — but the page is opened in exactly one of them, and a calendar that
+will not say which is a diagram. A date numeral claims which Monday the column
+is, not that everything under it happens; the margin notes and the provenance
+line are what name the difference. Week numbers are ISO 8601, because NTNU
+publishes timetables in them.
+
+**Outside the teaching period the week is a MØNSTERUKE.** Dating it
+unconditionally put `MAN 27 … FRE 31` over blocks that all run `uke 34–47` —
+every block false under its own date, on the default state of the surface.
+Inside the teaching period the numerals stay; outside it they come off and the
+context line reads `Mønsteruke · undervisning fra uke 34`.
+
+**The day header is a label, not a heading** — ~0.9 rem medium in `--muted`,
+with today taking full ink and the weight.
+
+**The needle** is the accent with a 1 px page-coloured halo and a dot at the
+rail. In Liste, the row you are inside is washed in the accent and carries a
+`nå` tag, placed on a timer. Same contract for both: **an ordinary minute may
+not rebuild the week.**
+
+**Whole days only.** The day count is `maks(1, min(ukedager, gulv(plass /
+dagminimum)))` and the width `maks(dagminimum, plass / dager)`, expressed in
+CSS rather than in a measuring pass — hence no resize listener. Flooring the
+count keeps the week honest at the edges: a narrower window drops a whole day
+and widens the rest.
+
+**The phone gate is a fraction, not a pixel count**: the week must begin
+inside the first **37 %** of the screen, measured from the viewport's top so
+the site topbar is inside the budget too. That is the claim that was always
+meant, and it is what the controls at the top of the page are budgeted
+against. The figure was 0.35 and was raised deliberately: the verdict and the
+deadline cannot share one 390 px row, so a **qualified** pass spends 27 px
+more than a plan whose pass says nothing. Only a qualified plan spends it —
+an unqualified clean verdict is still hidden on a phone.
+
+---
+
+## 7. Motion
+
+One easing (`--ease`), `--dur-fast` (110 ms) for state, `--dur` (190 ms) for
+surfaces, `--dur-flash` for arrival marks. Transform, opacity and colour only,
+with one bounded exception. Theme flips are instant. **No entrance
+choreography for arriving data** — a re-render caused by a fetch, a group pick
+or a plan edit draws straight.
 
 **The week is the exception, and only under a deliberate switch.** Two
-controls change how the week is drawn rather than what is in it — Uke ⇄
-Liste, and «vis øvinger og labber» — and both animate, because a student who
-pressed one of them is asking to see the same plan differently and needs to
-be able to follow it there.
+controls change how the week is drawn rather than what is in it — Uke ⇄ Liste,
+and «vis øvinger og labber» — and both animate, because a student who pressed
+one of them is asking to see the same plan differently and needs to be able to
+follow it there.
 
-- Uke ⇄ Liste redraws, so it plays the strike-in: a clip-path wipe from the
-  left, staggered in reading order (`.is-striking`).
-- The øving toggle does not redraw. One layer arrives or leaves, so what
-  stays travels, what arrives strikes in after the space is made, and what
-  leaves wipes out before the space closes (`layerMotion.ts`,
-  REWORK-2026-07-29g). Replaying the strike-in here would claim that
-  lectures which did not change had changed.
+- **Uke ⇄ Liste** redraws, so it plays the strike-in: a clip-path wipe from
+  the left, staggered in reading order.
+- **The øving toggle** does not redraw. One layer arrives or leaves, so what
+  stays *travels*, what arrives *strikes in* after the space is made, and what
+  leaves *wipes out* before the space closes (`layerMotion.ts`). Replaying the
+  strike-in here would claim that lectures which did not change had changed.
 
-Travelling is what breaks the transform-only rule: the week's grid animates
-`left`, `width`, `top` and `min-height`, because a bar's width **is** its
-duration and a `scaleX` FLIP would squash the course code inside it for the
-length of the move. It is bounded to ~50 elements of one surface on an
-explicit press. The list half is flow layout and stays on `transform`.
+Travelling is what breaks the transform-only rule: the week animates `left`,
+`width`, `top` and `min-height`, because a bar's width **is** its duration and
+a `scaleX` FLIP would squash the course code inside it for the length of the
+move. It is bounded to ~50 elements of one surface on an explicit press. The
+list half is flow layout and stays on `transform`.
 
 Reduced motion zeroes all duration tokens globally *for CSS transitions*.
-Scripted motion is not covered by that and asks the media query directly:
-the conflict-note `scrollIntoView` falls back to `"auto"` (A5), and the
-layer change skips its whole choreography.
+Scripted motion is not covered by that and asks the media query directly: the
+conflict-note `scrollIntoView` falls back to `"auto"`, and the layer change
+skips its whole choreography.
 
-## 7. Voice & copy
+---
+
+## 8. Voice and copy
 
 Norwegian bokmål, sentence case, no exclamation marks. Verbs name their
-outcome and stay consistent through the flow: "Legg til i planen" →
-"I planen"; "kolliderer med" for clashes; credits always "X av 30 sp" with
-comma decimals. "Fjern" labels only an outright, irreversible removal (a
-manual add). A programme course's removal is reversible — it grays out, not
-gone — and gets its own verb: "Dropp" → "Legg tilbake" (§0.3 of PRODUCT.md;
-using "Fjern" for both used to make an editable, reversible action read as
-a delete). Errors say what failed and what to do next, in ink, without
-apology. Empty states are invitations to act.
+outcome and stay consistent through the flow: "Legg til i planen" → "I
+planen"; "kolliderer med" for clashes; credits always "X av 30 sp" with comma
+decimals ("7,5").
 
-## 8. Adjudicated decisions
+**"Fjern" labels only an outright, irreversible removal** — a manual add. A
+programme course's removal is reversible (it grays out, it is not gone) and
+gets its own verb: **"Dropp" → "Legg tilbake"**. Using "Fjern" for both made
+an editable action read as a delete.
+
+Errors say what failed and what to do next, in ink, without apology. Empty
+states are invitations to act. Semester names as NTNU writes them ("Høst
+2026"). The planner is "planen" in copy; the page title is "Planlegger".
+
+**No upstream English reaches the UI.** Every fetch failure carries a ready
+Norwegian sentence; the raw string survives only as a debug detail.
+
+---
+
+## 9. Adjudicated decisions
+
+Settled, with the reasoning, so they are not re-opened by the next reviewer.
 
 - **The verdict is green, not NTNU blue.** The tool's output is a verdict
-  (fits / collides); green-vs-red is that verdict's native language. Blue
-  remains a course-identity hue, and a verdict may not wear a colour that
-  also means "this is TDT4120". Do not "brand-correct" this to blue.
-- **The verdict green's exact value is measured, not chosen** (restated
-  2026-08-01). The 107° Flexoki-departure argument died with the Flexoki
-  ground; what survives is the constraint that produced it — the verdict must
-  clear AA as text and as a fill on every surface it lands on, and must not
-  collide with a course hue. `tests/site/tokens.test.ts` is the authority, and
-  it rejected the first value tried in this change at 4.46:1.
+  (fits / collides); green-vs-red is that verdict's native language. Blue is a
+  course-identity hue, and a verdict may not wear a colour that also means
+  "this is TDT4120". Do not "brand-correct" this.
 
-- **The accent is back, with one job** (2026-08-01). `--ui` stays ink; a
-  separate `--accent` carries the primary action and the now/today marker.
-  A calendar without a "you are here" colour has to spend red on it instead,
-  and red means collision here. The rule that killed the old `--accent` was
-  never "no accent" — it was "no token doing five jobs".
+- **The verdict green's exact value is measured, not chosen.** The constraint
+  is that it must clear AA as text and as a fill on every surface it lands on,
+  and must not collide with a course hue. `tokens.test.ts` is the authority
+  and it rejected the first value tried at 4.46:1.
+
+- **The interface is ink, not the accent.** Ink-Before-Chrome already governed
+  every other surface; the accent was the unexplained exception. A focus ring
+  went from 4.39:1 to 18.62:1 by obeying the rule the rest of the system
+  already followed.
+
+- **The accent exists, with one job.** A calendar without a "you are here"
+  colour has to spend red on it, and red means collision here. The rule that
+  killed the previous `--accent` was never "no accent" — it was "no token
+  doing five jobs".
+
 - **A course hue may never be the accent's hue.** Found the hard way: with the
   interface blue and the course blue at the same value, the now-line vanished
   the moment it crossed that course's block. An overlay that crosses arbitrary
   fills cannot be a flat colour drawn from a palette it is also a member of.
-- **The interface is ink, not the accent.** Ink-Before-Chrome already
-  governed every other surface; the accent was the unexplained exception.
-  A focus ring went from 4.39:1 to 18.62:1 by obeying the rule the rest of
-  the system already followed.
-- **Course hues never color text.** Hue-colored text on warm paper fails
-  contrast in half the pairs; the square dot carries identity, text stays
-  ink. Do not add colored course names for "scannability".
-- **The ruling is not on cards** — re-adjudicated 2026-07-27 (audit ds-1),
-  because the live state had inverted the original wording. Two decisions,
-  and they are separate:
-  1. *Do not spread it.* Extending the squared background to panels, cards
-     or a hero for "cohesion" dilutes the one signature. That still stands,
-     and it is the half reviewers keep proposing.
-  2. *The week does not carry it either.* f86105b retired the squared field
-     from the weekly spread in favour of a single hour hairline (§4), and
-     REWORK-2026-07-30d retired the last ruled element on the site with it:
-     the landing page's `aria-hidden` picture of a plan, which showed two
-     invented courses colliding. A drawing of the product is not evidence
-     that the product works, and the page already answers with the student's
-     own week. `.np-ruled` is deleted; the ruling lives in the one file that
-     draws it.
 
----
+- **A course's hue comes from its CODE, not its position in the plan.**
+  Cycling by insertion order meant every add or drop repainted the plan —
+  dropping one course moved 1.95 of the other four — and two people opening
+  the same shared link could see different colours. The assignment is now a
+  deterministic function of the plan's code *set*, so order cannot matter and
+  a recipient sees the sender's week. That brings the churn to 0.55, and it
+  cannot be zero: six buckets and five courses collide, and a displaced course
+  has to go somewhere.
 
-## 9. Change log
-
-**2026-08-01 — the second critique pass.** Re-run scored 26/40. Four of its
-findings were defects in the first pass, which is the useful part of the
-result; three more rules follow from them.
+- **The course palette is the calendar family, and the value is bought.**
+  `--hue-blue` #027cb8, `--hue-cyan` #00818c, `--hue-purple` #8e24aa,
+  `--hue-indigo` #3f51b5, `--hue-orange` #d93c0b, `--hue-green` #0b8043. Two
+  of the reference values fail AA with a code knocked out of them (#039be5
+  measures 3.08:1 under white, #f4511e 3.48), so **those two are darkened
+  along their own hue until they clear and the rest are the reference
+  exactly.** That is the shape of the trade throughout: the family is the
+  design decision and is kept; the value is measured and bought. Dark-theme
+  indigo went one step up its own ramp for the same reason.
 
 - **A pass says what it passed on.** `conflictCount: 0` over a plan where one
   course contributed no classifiable lecture is a claim about four courses
-  printed as a claim about five. The chip now carries `· N emner ikke sjekket`
-  in `--muted`, and — the half that made it urgent — the phone rule that hides a
-  clean verdict is narrowed to an **unqualified** one
-  (`:not(:has(.is-qualified))`). It was hiding the qualified pass too, so a
-  phone showed "kollisjonssjekken er ufullstendig" with no verdict on screen for
-  it to qualify. Costs 27px of the phone's first screen; the week's budget moved
-  0.35 → 0.37 deliberately, and only a qualified plan spends it.
-- **The week is a MØNSTERUKE outside the teaching period.** `weekdayDates(new
-  Date())` ran unconditionally, so through the whole planning window the header
-  read `MAN 27 … FRE 31` over blocks that every one of them runs `uke 34–47` —
-  every block false under its own date, on the default state of the surface.
-  Inside the teaching period the dates stay (a numeral is a true claim about
-  which Monday a column is); outside it the numerals come off and the context
-  line reads `Mønsteruke · undervisning fra uke 34`.
-- **A picker may not make the student read for themselves.** NTNU titles a split
-  lecture with the programmes it serves, and TMA4400 publishes seventeen such
-  rows flat and unsorted. The rows naming the plan's own programme sort to the
-  top and are marked `ditt program` (`namesProgramme`, whole-token — marking the
-  wrong row would send someone to another programme's lecture), and the list is
-  grouped under `Forelesning` / `Øving og lab`. This is weaker and always true
-  where `(din parallell)` is suppressed for being a guess — which is exactly the
-  ambiguous case where the help is needed.
+  printed as a claim about five. The verdict carries `· N emner ikke sjekket`,
+  and the phone rule that hides a clean verdict is narrowed to an
+  **unqualified** one — it was hiding the qualified pass too, leaving
+  "kollisjonssjekken er ufullstendig" on screen with no verdict for it to
+  qualify. The verdict may never print green when nothing was checked.
 
-And the corrections to the pass above: `--muted` on a hue TINT fails AA on all
-six hues (3.76–3.96), so the tinted block's second line inherits the block's own
-ink; `.planner-cols-band .planner-cols-sub`'s `opacity: 0.78` was the same
-mistake in a third disguise and is gone. `tokens.test.ts` now pins the
-prohibition, not just the floor.
+- **The verdict is a run of chips**, between the plan's name and the week: a
+  mark and a sentence, never a filled pill. The colour is in the sign; the
+  words stay ink. "Ingen forelesninger kolliderer" says which thing DR-1
+  actually checked. **The collision verdict is a shortcut to the collision** —
+  "2 kollisjoner denne uka" is a button that scrolls to the first clash mark
+  in whichever view is drawing it, underlined on hover only, because at rest
+  it is a verdict and must read as one.
 
-**2026-08-01 — the critique pass.** `/impeccable critique` on `/planlegger/`,
-scored 24/40. Three rules changed rather than three call sites patched:
+- **One bar at the top of the page.** The plan's name and every control that
+  acts on it share a row: the layer checkbox, the Uke/Liste switch, Del,
+  Endre, and the primary "Legg til emne". They came up out of the week's own
+  section head — a second bar 200 px lower saying the same kind of thing — and
+  that head is gone with them. **The title is a name, not a headline**
+  (1.25 rem / 600).
 
-- **`--faint` is not a text colour, and is now written down as one.** It
-  measured 2.87:1 on `--bg` while carrying a credit figure, a dropped course's
-  title, the exam months and an icon button. It is NOT raised to AA, because it
-  cannot be — `--muted` is 5.07, so a third AA-clearing step would have to live
-  inside 4.5–5.07 and would stop being a step. It buys back the 3:1 non-text
-  floor (`#98989d` → `#8a8a8f`) and everything a student *reads* moved to
-  `--muted`. `tokens.test.ts` pins both halves.
-- **Block text has one ink, and the quieting is weight.** The room and activity
-  under a block's code were `--on-block 72%` and failed AA on all six hues in
-  light (orange 3.01). The light hues clear AA at FULL strength by so little —
-  orange 4.56 — that no alpha survives on all six, so there is no quieter
-  colour to be had and the code's `--weight-medium` against the room's 400 is
-  the whole hierarchy. Measured in `tokens.test.ts`; do not re-introduce a mix.
-- **A course's hue comes from its CODE, not its position** (`hues.ts`). Cycling
-  by insertion order meant every add or drop repainted the plan — dropping one
-  course moved 1.95 of the other four, and two people opening the same shared
-  link could see different colours. The assignment is now a deterministic
-  function of the plan's code SET (so order of adding cannot matter, and a
-  recipient sees the sender's week), which brings that to 0.55. It is not zero
-  and cannot be: six buckets and five courses collide, and a displaced course
-  has to go somewhere.
+- **The view switch is a segmented control**, a recessed track with the live
+  view raised out of it. A travelling underline was right when it lived in a
+  section head, where a hairline was the local idiom; in a bar beside two
+  buttons it read as a link.
 
-Also: the verdict may not print green when nothing was checked (a plan NTNU
-marks no `forelesning` in drew fifteen overlapping bars under "ingen
-forelesninger kolliderer"); `--warn` finally carries the over-full load that
-was wearing `--clash`; and the empty state takes the accent back from the bar,
-because the mandate's first path was grey paper under a blue secondary one.
+- **A row's actions are `ellipsis-vertical`; the plan's own control wears
+  `settings-2`.** The same mark at two scopes claimed the two do the same kind
+  of thing at different levels, and they do not.
 
-**2026-08-01 — Ruteark → the calendar.** Adopted after four direction rounds;
-the owner chose the category standard played straight, over three concept-led
-worlds. Landed in this pass:
+- **A card about a course carries a swatch, not a coloured band.** The
+  `.np-head` variants that flooded the masthead with the hue are deleted: a
+  full-bleed band of colour is the loudest chrome on a site whose thesis is
+  that structure comes from type, hairlines and space, and it cost two
+  variants that had to knock out their own text and invert every control
+  inside themselves.
 
-- `tokens.css` remapped end to end: white ground, system ink ramp, the
-  four-job colour scheme above, six course hues cleared of all three signal
-  colours, `--block-mix` 100 % in both themes.
-- Type moved to the platform UI face. **Deleted**: `scripts/fetch-fonts.mjs`,
-  `scripts/woff2-tables.mjs`, `src/styles/fonts.css`, `src/styles/fonts/`,
-  `tests/fonts.test.ts`, and the two preloads in `Layout.astro`.
-  `--font-mono` is now an alias, so `.np-data` survives unchanged at every
-  call site.
-- `--exam-date-col` 6.5rem → 5.5rem: it was sized for a monospace date, and
-  the proportional face sets the same string narrower. The e2e phone test
-  caught the wrap this would otherwise have caused.
+- **The course rail carries a swatch, not a printed chip.** The dot already
+  carries identity in the exam list, in Liste's rows and in the session card;
+  the rail was the one place that fused the hue and the code into one filled
+  shape, making the same course two objects on one page. A dropped course
+  keeps the swatch as a ring, so the column of marks never develops a hole.
 
-**2026-08-01, stage 2 — two views, and the page is the surface.**
+- **The session popover is labelled rows** — `Tid`, `Sted`, and a `Merk` when
+  there is something a clock cannot state. The clock is not the card's largest
+  figure: in a grid the time is already drawn, because it *is* the block's
+  place in the week you just clicked. The title names the **session** — code,
+  course, activity — because "which of this course's five sessions is this" is
+  the one thing the block has no width to say. Three parts divided by two
+  hairlines: head, rows, foot.
 
-- **Rader is no longer a planner view.** `WeekView` is `"kolonner" | "tavle"`
-  and the tabs read **Uke** and **Liste**; `"kolonner"` stays the stored value
-  and the default, because it is what a student's localStorage already holds
-  and what the pre-paint probe must agree with. `grid.ts` is untouched and
-  `/emne/[code]/` still draws the transposed week through it — which is now the
-  only surface that does, so the Rader-geometry e2e claims (bar centring, the
-  room printed whole) moved there and the needle's own test moved to the
-  column week, where a needle still exists.
-- **The two columns under the week are divided by one hairline**, not by a
-  border around each. The sections were already card-less — what was left was
-  a gap doing a rule's job. The week's open question (`.planner-direction`)
-  lost its `.np-panel` and got nothing in its place: the page knows it has at
-  most one such question, so the box was a container for a count it already
-  knew, and what makes the question findable is that it is the only thing
-  above the week and carries the only button there. A coloured bar down its
-  side was tried and rejected — Ink-Before-Chrome, and the accent is already
-  spent on the button. `--card` now appears only on things that
-  float (the four `<dialog>`s, the popover) and on two ground tones (the exam
-  band's empty day, the load track), which are grounds rather than cards.
-- **The week's day header is a label, not a heading.** It was `--text-md` bold
-  for the word "man"; it is now ~0.9rem medium in `--muted`, with today taking
-  full ink and the weight. The CLS reservation is computed from the same
-  `--planner-cols-head-font`, so it followed on its own.
+- **A picker may not make the student read for themselves.** NTNU titles a
+  split lecture with the programmes it serves, and one course publishes
+  seventeen such rows flat and unsorted. Rows naming the plan's own programme
+  sort to the top and are marked `ditt program` (whole-token matching —
+  marking the wrong row would send someone to another programme's lecture),
+  and the list is grouped under `Forelesning` / `Øving og lab`. This is weaker
+  and always true where `(din parallell)` is suppressed for being a guess,
+  which is exactly the ambiguous case where the help is needed.
+
+- **Under the week: one rule, two equal columns, one hairline.** The sections
+  were already card-less; what was left was a gap doing a rule's job. The
+  week's open question lost its panel and got nothing in its place — the page
+  knows it has at most one such question, so the box was a container for a
+  count it already knew, and what makes the question findable is that it is
+  the only thing above the week and carries the only button there. A coloured
+  bar down its side was tried and rejected: Ink-Before-Chrome, and the accent
+  is already spent on the button.
+
+- **The exam list is typography, not a diagram.** The date is `**21.** nov`
+  with the weekday at the far end, and the reading-day gaps are the only rules
+  in the list — each a hairline running from its own words to the edge. A
+  vertical rule with exams as knots on it was the same idea turned the wrong
+  way for how the list runs. The list **closes with its own caveat**
+  ("Eksamensrom tildeles noen dager før"), because NTNU publishes exam dates
+  months before rooms and a list that never mentions rooms reads like a fetch
+  that failed.
+
+- **The load track is 8 px and fully rounded, and its mark is labelled.** At
+  15 px it was a bar chart of one bar, competing with the course rows it
+  introduces. It marks 30 sp when the plan has run past it, and says so
+  ("streken er 30 sp") only when it actually draws the mark.
+
 - **`isRoomCode` counts whitespace and a digit, not punctuation.** The old
   letter/digit shape test rejected `A4-156` for its hyphen and demoted a real
   room to the style meant for "Digital undervisning".
 
-**2026-08-01, stage 3 — the reference artifact, applied.**
-
-- **One bar at the top of the page.** The plan's name and every control that
-  acts on it share a row: the layer checkbox, the Uke/Liste switch, "Endre",
-  and the primary "Legg til emne". The switch and the checkbox came up out of
-  the week's own section head — a second bar 200 px lower saying the same kind
-  of thing — and that head is gone with them.
-- **The switch is a segmented control**, a recessed track with the live view
-  raised out of it on paper. The travelling rule was right when it lived in a
-  section head, where a hairline was the local idiom; in a bar beside two
-  buttons it read as a link.
-- **`.np-btn--primary` exists, and there is at most one per surface.** The
-  accent's one job (§8) had no button to be on.
-- **The title is a name, not a headline**: 1.25rem/600, down from `--text-xl`.
-  The probe-driven `html[data-plan="program"]` face swap is **deleted** — stage
-  1 aliased `--font-mono` to the system face, which killed the face half, and
-  one size kills the rest. `data-plan` is still load-bearing for
-  `--plan-courses` and the reservations.
-- **The verdict is a run of chips**, on its own line between the plan's name and
-  the week: a mark and a sentence, never a filled pill. The colour is in the
-  sign; the words stay ink. "Ingen forelesninger kolliderer" says which thing
-  DR-1 actually checked. An over-full load is a chip here too.
-- **The deadline is on screen (D13/c3-1).** `Oppmelding stenger 15. september —
-  45 dager igjen`, at the far end of the verdict line. The whole positioning is
-  "before the registration deadline" and it had been in zero of six flows.
-  `src/lib/planner/deadline.ts` holds NTNU's two standing dates and says why
-  they are not crawled; a passed deadline says nothing at all.
-- **Uke.** Weekday headers are three uppercase tracked letters with the full
-  word left in the accessibility tree; today's is the accent, over a column
-  washed in 5 % of it. Blocks carry **the course and the room, and nothing
-  else** — the clock is already drawn, and the room is the only fact position
-  cannot state, so it never drops out (the type shrinks instead). The needle is
-  the accent with a 1 px page-coloured halo and a dot at the rail.
-- **Liste.** The day head says when the day starts and ends (`08:15–17:00`)
-  rather than how many hours are in it. The row you are inside is washed in the
-  accent and carries a `nå` tag, placed on a timer by `syncBoardNow` — the same
-  contract as the needle: an ordinary minute may not rebuild the week.
-- **Under the week**: one rule between the week and what follows, two equal
-  columns divided by one hairline, and pane heads with no rule of their own.
-  The exam date is typography (`**21.** nov`) with the weekday at the far end,
-  and the reading-day gaps are the only rules in that list — each a hairline
-  running from its own words to the edge. The vertical rule with exams as knots
-  on it is gone: the same idea, turned the way the list runs.
-- **The load track marks 30 sp** when the plan has run past it.
-
-**2026-08-01, stage 4 — the week's own surface.** Stage 3 moved the page's
-structure and left the thing you actually look at alone.
-
-- **A block's edges are its facts** — left and right are the day, top and bottom
-  are the start and the end — so it carries no ring. The separation is real
-  air, and each side does a different job: 3px in from the left so the block
-  does not sit on the day's own rule, 6px of channel at the right so the hour
-  ruling runs unbroken past it, 2px off the bottom so the line a session *ends*
-  on is never covered. **4px of corner**: the old note beside `border-radius: 0`
-  was right about pills and wrong about zero — at zero two touching blocks fuse
-  into one column of ink.
-- **The øving layer is tinted, not printed**, with its label in the course hue
-  pulled toward ink — one treatment in both geometries. This is **the one
-  sanctioned exception to "course hues never color text"** and it is measured,
-  not assumed: `tokens.test.ts` checks both block pairs across all six hues in
-  both themes, and rejected 22 % and 15 % dark tints at 3.94:1 and 4.42:1.
-- **52px an hour, not 72.** A student reads a timetable for the *shape* of a
-  week; at 72 an eight-hour day was 576px of column. Plus a tick per hour on the
-  rail, because the ruling is painted behind the blocks as a calendar's is.
-- **Drop-in windows moved to an all-day row.** A window is 08:15–14:00 every
-  weekday — not an appointment at a time — so it has no honest place on the time
-  axis. It was a rotated strip down the column's edge, which kept it out of the
-  lane accounting but spent width the days need and set its label sideways. The
-  row is drawn **at zero height** when the plan has no window, because a row
-  that is absent in one state and present in the next cannot animate, and its
-  rule is an inset shadow so at zero it draws nothing.
-
-**2026-08-01, stage 5 — the rest of it.**
-
-- **The week is dated.** Day headers carry the day-of-month beside the weekday,
-  today's in a filled accent disc, and the context line leads with `Uke 38`.
-  The week the grid draws is still a *pattern* — a block stands for every week
-  in its own range — but the page is opened in exactly one of them, and a
-  calendar that will not say which is a diagram. The honesty problem this
-  creates is answered where it already was: a block whose weeks read "uke
-  34–40, 42–47" is drawn under a date in week 41 where it does not occur, and
-  the margin notes and the provenance line are what name that. A date numeral
-  claims which Monday the column is, not that everything under it happens.
-  `weekDates.ts` is ISO 8601 (NTNU publishes timetables in ISO week numbers)
-  and unit-tested across both year boundaries.
-- **The session popover is labelled rows** — `Tid`, `Sted`, and a `Merk` when
-  there is something a clock cannot state ("Åpent vindu — du kan stikke innom
-  når du vil"). The clock stopped being the card's largest figure: in a grid
-  the time is already drawn, since it IS the block's place in the week you just
-  clicked. The title names the *session* — code, course, activity — because
-  "which of this course's five sessions is this" is the one thing the block has
-  no width to say. It keeps the collision sentence and the edit action, which
-  the artifact's card does not have.
-- **The exam list closes with its own caveat** ("Første eksamen om N dager.
-  Eksamensrom tildeles noen dager før."), because NTNU publishes exam dates
-  months before rooms and a list that never mentions rooms reads like a fetch
-  that failed.
-- **The load track's mark is labelled** ("streken er 30 sp"), shown only when
-  the track actually draws one.
-- **The collision verdict is a shortcut to the collision.** "2 kollisjoner denne
-  uka" is a button that scrolls the week to the first clash mark, in whichever
-  view is drawing it — the one thing a student does after reading that sentence
-  is look for them, and the week is a scroller. Underlined on hover only: at
-  rest it is a verdict and must read as one.
-- **The course rail carries a swatch, not a printed chip.** The dot already
-  carries a course's identity in the exam list, in Liste's rows and in the
-  session card; the rail was the one place that fused the hue and the code into
-  one filled shape, which made the same course two different objects on one
-  page. A dropped course keeps the swatch as a ring, so the column of marks
-  never develops a hole.
-- **The phone pays for the bar.** The controls that moved up cost rows the week
-  used to have: the context line is clamped to one line at ≤46rem — with the
-  week number moved to its front so the 42-character programme name is what
-  gets cut — and the bar's rows tightened. The gate is now a fraction of the
-  screen rather than a pixel count: the week must begin inside the first 35 %,
-  which is the claim that was always meant. Measured at 277 of 844.
-
-**2026-08-01, stage 6 — one shape, everywhere.** Stage 5 gave the course rail
-the artifact's rounded 12px swatch and left the exam list on a 7px hard square,
-Liste on `.np-dot`'s 8px/1px one, and `/emne/`'s bars on `border-radius: 0`.
-Making one of four match is worse than matching none: it says the difference is
-meaningful when it is an oversight.
-
-- **The course mark is one primitive**: a rounded square, 10px in a row of text
-  (`.np-dot`, the exam knot) and 12px where it leads a block of it (the rail).
-  Not a circle — that is a bullet, and belongs to lists of sentences. The
-  corner is what makes it the same object as the blocks in the week.
-- **Both week geometries round their sessions to 4px.** The transposed grid's
-  bars were still square, so the same session was two shapes depending on which
-  page drew it.
-- **The hour rail prints whole times** (`08:00`, not `08`) and is wide enough
-  for them: an axis you read a time off, not a column of numbers you have to be
-  told are hours. Day columns keep their edge up through the header.
-- **The load track is 8px and fully rounded.** At 15px it was a bar chart of one
-  bar, competing with the course rows it introduces.
-- **Today's day name in Liste is the accent**, matching the week's own header
-  and the needle. It was full ink, which is what every other day would be if the
-  rest were not deliberately washed back.
-
-**2026-08-01, stage 8 — the marks and the floating surfaces.**
-
-- **A row's actions are `ellipsis-vertical`, not `settings-2`.** The plan's own
-  control in the bar wears `settings-2`; the same mark at two scopes said the
-  two do the same kind of thing at different levels, and they do not. The row is
-  also where every list a student uses puts exactly this mark.
-- **A card about a course carries a swatch, not a coloured band.** See
-  `.np-head` in §5 — the `--printed` / `--reduced` variants are gone.
-- **The popover is three parts divided by two hairlines**: head, labelled rows,
-  foot. The foot had only a top margin, which left the button floating in the
-  same box as the facts.
-
-**2026-08-01, stage 7 — the course palette.**
-
-The hues were deep jewel tones: `#0d47a1` navy, `#00695c` teal, `#8d6e00`
-olive. Legible, and the colours of a spreadsheet rather than of the thing every
-student already has open in another tab. They are the calendar set now —
-`--hue-blue` `#027cb8`, `--hue-cyan` `#00818c`, `--hue-purple` `#8e24aa`,
-`--hue-indigo` `#3f51b5`, `--hue-orange` `#d93c0b`, `--hue-green` `#0b8043`.
-
-Two of the reference's five fail AA with the code knocked out of them
-(`#039be5` measures 3.08:1 under white, `#f4511e` 3.48), so **those two are
-darkened along their own hue until they clear, and the other four are the
-reference's exactly**. That is the shape of the trade throughout this pass: the
-family is the design decision and is kept; the value is measured and bought.
-Dark-theme indigo went one step up its own ramp for the same reason — it is the
-darkest of the six, and a tint of it under its own label was 4.02:1.
-
-`--hue-magenta` and `--hue-yellow` were renamed to `--hue-indigo` and
-`--hue-green`, because with these values the old names were lies.
-
-**A note on how this doc read before.** Three stages of this change log carried
-a paragraph explaining what was "deliberately NOT the artifact", including this
-palette. That framing had it backwards: the artifact was the design decision,
-not a proposal to be reconciled against what was already here. Where the
-reference and this repo disagree, the reference wins unless something
-measurable says it cannot — and then the fix is to buy the value, not to keep
-the old design. The one thing that genuinely does not port is its 14px body on
-a 1240px page, and only because the reference is a single self-contained file
-with no other pages to be consistent with; every type step it actually uses
-(13, 18, 15) is already in §3's scale.
+- **The reference wins, unless something measurable says it cannot.** When the
+  design reference and this repo disagreed, three change logs used to explain
+  what was "deliberately not the reference". That had it backwards: the
+  reference was the design decision, not a proposal to be reconciled against
+  what was already here. Where they conflict, take the reference — and when a
+  measurement blocks it, buy the value rather than keeping the old design.

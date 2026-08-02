@@ -662,7 +662,7 @@ html[data-view="tavle"] #planner-grid-frame[data-reserve] {
    it may not replay the strike-in. What was already there TRAVELS.
 
    These are the only transitions in the project on layout properties, which
-   DESIGN §6 otherwise rules out. The reason is the bar: its width IS its
+   DESIGN §7 otherwise rules out. The reason is the bar: its width IS its
    duration, and a transform-based FLIP would reach that width with `scaleX`,
    squashing the course code for the length of the move. It is bounded to one
    week's ~50 elements, on an explicit toggle, and `layerMotion.ts` skips the
@@ -892,8 +892,8 @@ html[data-view="tavle"] #planner-grid-frame[data-reserve] {
    custom property inside repeat(). */
 .planner-cols {
   --planner-days: 5;
-  /* The floor a lane may never go under: seven characters of Spline Sans Mono
-     at --text-xs (~49 px) plus the block's padding and air. Lower it and the
+  /* The floor a lane may never go under: seven characters of a course code at
+     --text-xs (~49 px) plus the block's padding and air. Lower it and the
      code breaks, which is the regression this view exists to escape. */
   --planner-lane-min: 4.25rem;
   /* The air EVERY lane carries: 3px in from its left and 6px of open channel at
@@ -1076,7 +1076,7 @@ html[data-view="tavle"] #planner-grid-frame[data-reserve] {
   color: var(--fg);
 }
 
-/* Today is the accent's other job (DESIGN §8): "you are here", the same colour
+/* Today is the accent's other job (DESIGN §2's One-Job-Accent): "you are here", the same colour
    as the needle below it, so the column and the minute agree. The weekday
    takes the colour and the date takes the fill — one of them has to be the
    quieter half or the header out-shouts the week under it. */
@@ -1398,7 +1398,7 @@ html[data-view="tavle"] #planner-grid-frame[data-reserve] {
    arrives strikes in after the room for it exists, what leaves wipes out first.
    `layerMotion.ts` rewinds the properties; these are the transitions.
 
-   Same exception to DESIGN §6 as the transposed week's: a block's height IS its
+   Same exception to DESIGN §7 as the transposed week's: a block's height IS its
    duration, so a transform-based FLIP would squash the type inside it. */
 .planner-cols.is-settling .planner-cols-block,
 .planner-cols.is-settling .planner-cols-band,
@@ -1677,7 +1677,7 @@ button.planner-board-row:hover {
 
 /* The list is flow layout with no geometry in properties, so its half of the
    layer change is a plain FLIP. Translation only — a row does not change size
-   between states, so DESIGN §6's transform restriction holds. `background`
+   between states, so DESIGN §7's transform restriction holds. `background`
    stays or the row loses its hover for the length of the move.
 
    The list box travels too (`beginListChange`): without it the container is

@@ -146,7 +146,7 @@ describe("isRoomCode", () => {
   });
 });
 
-describe("data-motion-key (REWORK-2026-07-29g)", () => {
+describe("data-motion-key (the layer-motion contract, DESIGN §7)", () => {
   // One lecture and one øving group. A course offering exactly ONE non-lecture
   // group counts as picked, which is what puts the øving in the list at all
   // when the layer is revealed.

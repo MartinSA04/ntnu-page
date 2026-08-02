@@ -1,6 +1,7 @@
 /**
- * Ruteark base — element defaults. Load order: fonts → tokens → base →
- * primitives → site.
+ * Element defaults. Load order: tokens → base → primitives → site (+
+ * planner-week on the two pages that draw a week). There is no fonts.css —
+ * type is the platform UI face, see docs/DESIGN.md §3.
  */
 
 *,

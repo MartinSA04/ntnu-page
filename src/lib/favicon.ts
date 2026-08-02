@@ -1,12 +1,16 @@
 /**
- * The Ruteark mark: a 2x2 ruled square (hairline grid) with one cell filled
- * in the verdict green — "the squared paper every Norwegian student sketches
- * a timetable on" (docs/DESIGN.md §1). Rendered on a fixed dark ground so
- * the tab icon reads the same regardless of the page's current theme.
- * Inlined as a `data:` URI so there is no per-build asset to manage.
+ * The site mark: a 2x2 ruled square with one cell filled in the verdict green —
+ * a term that fits, drawn on the squared paper a timetable gets sketched on.
+ * It outlived the warm-paper direction that named itself after that paper, and
+ * is kept because it is a distinctive 16px silhouette, not because the ruling
+ * is still a design signature (it is not — docs/DESIGN.md §4).
+ *
+ * Rendered on a FIXED dark ground so the tab icon reads the same regardless of
+ * the page's current theme, and inlined as a `data:` URI so there is no
+ * per-build asset to manage.
  */
 
-/** Flexoki black ground (matches tokens.css's dark-mode `--bg`). */
+/** Near-black ground. Deliberately theme-independent — see above. */
 export const GROUND = "#100f0f";
 
 /** Neutral hairline color for the ruling strokes (theme-independent). */
