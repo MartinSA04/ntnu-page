@@ -245,6 +245,9 @@ const IDS = [
   "planner-direction-actions",
   "planner-direction-btn",
   "planner-others-toggle",
+  "planner-others-pending",
+  "planner-share",
+  "planner-share-label",
   "planner-view-kolonner",
   "planner-view-tavle",
   "planner-grid-frame",
@@ -543,6 +546,46 @@ describe("mountPlannerApp — audit repro", () => {
     // The state moved onto the chip when the verdict became a run of them; the
     // phone rule that hides a clean pass matches it with `:has()`.
     expect(status.querySelector(".is-clean")).not.toBeNull();
+  });
+
+  /**
+   * The other way a green verdict can lie, and the one that shipped: not a
+   * MISSING timetable (pc-3 above) but a present one the lecture-only check has
+   * nothing to compare in. BSPL kull 2024's period is entirely activities NTNU
+   * never marks as `forelesning`, so `findConflicts` ran over an empty set,
+   * returned 0, and the page printed Green-Means-Fits over fifteen visibly
+   * overlapping bars — with the note explaining it folded 800 px below.
+   *
+   * `conflictCount === 0` is only a verdict when something was checked.
+   */
+  it("never prints a green verdict over a plan with no lectures in it", async () => {
+    const lab = (code: string, day: number, start: string, end: string) => ({
+      ...entry(code, day, start, end),
+      title: "Øving",
+      name: "Øving",
+    });
+    await mount(
+      {
+        "/data/search-index.json": () => ({ year: 2026, courses: [] }),
+        // Two courses whose only sessions overlap on Monday morning, and not
+        // one of them a lecture.
+        "/api/course/MH2000/timetable": () => [lab("MH2000", 1, "08:15", "12:00")],
+        "/api/course/MH2001/timetable": () => [lab("MH2001", 1, "09:00", "11:00")],
+        "/api/course/": () => ({
+          courseCode: "X",
+          courseName: "X",
+          credits: 7.5,
+          location: null,
+          assessmentScheme: null,
+          exams: [],
+        }),
+      },
+      "#26h;-;%2BMH2000,%2BMH2001",
+    );
+    const status = find("planner-grid-status");
+    expect(status.textContent).toBe("kan ikke sjekkes, ingen forelesninger i planen");
+    expect(status.querySelector(".is-clean")).toBeNull();
+    expect(status.classList.contains("np-note-clash")).toBe(false);
   });
 
   it("the provenance line is silent when the join has no gap to admit", async () => {

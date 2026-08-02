@@ -50,6 +50,15 @@ export interface CourseSettingsContext {
    * to pick. See `pickableGroups`.
    */
   drawnLectures: string[];
+  /**
+   * The plan's programme code, so the picker can find the student in its own
+   * list. NTNU titles a split lecture with the programmes it is for
+   * ("Forelesning 1 MTDT, MTIØT, MTKOM"), and TMA4400 publishes seventeen such
+   * rows — twelve parallels, Plenumsregning and five Mattelab groups — flat,
+   * unsorted and unmarked. The app knew the student was MTDT the whole time
+   * and made them read for it.
+   */
+  programCode?: string | null;
   source: CourseSource;
   dropped: boolean;
   /**
@@ -132,6 +141,29 @@ export function nextSelection(args: {
   if (exclusive) return checked ? [key, ...otherLayer] : otherLayer;
   const layer = shown.filter((k) => k !== key);
   return checked ? [...layer, key, ...otherLayer] : [...layer, ...otherLayer];
+}
+
+/**
+ * Does a group's own label name this programme?
+ *
+ * NTNU titles a split lecture with the programmes it serves — "Forelesning 1
+ * MTDT, MTIØT, MTKOM" — so the student's row is findable, and the picker was
+ * making them find it by eye among seventeen.
+ *
+ * Whole-token match, never `includes`: programme codes nest ("MTDT" sits
+ * inside no real code, but "BAT" is inside "BATEK" and "MIBIOT5" inside
+ * nothing you can rely on), and marking the wrong row is worse than marking
+ * none — it would send a student to another programme's lecture with our
+ * label on it. The separators are what upstream actually uses: commas,
+ * slashes, ampersands, spaces. Æ/Ø/Å are letters here, so `\b` is no good.
+ */
+export function namesProgramme(label: string, programCode: string | null | undefined): boolean {
+  const code = programCode?.trim().toUpperCase();
+  if (!code) return false;
+  return label
+    .toUpperCase()
+    .split(/[^0-9A-ZÆØÅ]+/)
+    .includes(code);
 }
 
 /**
@@ -324,7 +356,27 @@ export function mountCourseSettings(store: PlanStore, signal: AbortSignal): Cour
       );
     }
 
-    for (const option of [...lectures, ...others]) {
+    // The student's own row first, and said so. Everything below is unchanged
+    // in content — no option is hidden, and a parallel tagged for another
+    // programme stays pickable, which is a documented capability.
+    const mine = (option: GroupOption): boolean => namesProgramme(option.label, ctx.programCode);
+    const byOwn = (a: GroupOption, b: GroupOption): number => Number(mine(b)) - Number(mine(a));
+    const ordered: [heading: string, options: GroupOption[]][] = [
+      ["Forelesning", [...lectures].sort(byOwn)],
+      ["Øving og lab", [...others].sort(byOwn)],
+    ];
+
+    for (const [heading, options] of ordered) {
+      if (options.length === 0) continue;
+      // A heading only when there are two kinds to tell apart. One list of
+      // øving groups does not need to be told it is a list of øving groups.
+      if (lectures.length > 0 && others.length > 0) {
+        list.append(el("p", "np-note course-settings-group-heading", heading));
+      }
+      for (const option of options) buildRow(option);
+    }
+
+    function buildRow(option: GroupOption): void {
       const isLecture = option.kind === "lecture";
       const row = el("label", "course-settings-group-row");
       const input = el("input");
@@ -344,9 +396,17 @@ export function mountCourseSettings(store: PlanStore, signal: AbortSignal): Cour
       });
       row.append(input);
       const isDefault = ctx.defaults.includes(option.key) && ctx.resolved !== false;
-      row.append(
-        el("span", undefined, isDefault ? `${option.label} (din parallell)` : option.label),
-      );
+      const label = el("span", undefined, option.label);
+      // Two different claims, and only one of them was ever made. "(din
+      // parallell)" says WE PICKED THIS FOR YOU, and is suppressed exactly when
+      // the pick was a guess (`resolved: false`) — which is the ambiguous
+      // multi-programme case, i.e. the seventeen-row list where the student
+      // most needs help. "ditt program" says something weaker and always true:
+      // this row names your programme. It is available in the case the other
+      // one is not, which is the point.
+      if (isDefault) label.append(" (din parallell)");
+      else if (mine(option)) label.append(el("span", "course-settings-group-own", "ditt program"));
+      row.append(label);
       list.append(row);
     }
     section.append(list);

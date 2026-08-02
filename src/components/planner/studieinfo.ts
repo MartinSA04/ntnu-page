@@ -244,6 +244,11 @@ export function mountStudieinfo(deps: StudieinfoDeps, signal: AbortSignal): Stud
   const kullSection = el("div", "studieinfo-field");
   kullSection.hidden = true;
   kullSection.append(el("p", "np-kicker studieinfo-label", "Kull"));
+  // The caption shipped on the homepage picker and did not move when that
+  // picker was deleted (§0 addendum 11) — so this modal, now the ONLY place a
+  // programme and kull are ever chosen, offered a first-year five bare year
+  // chips and no way to know which one was theirs.
+  kullSection.append(el("p", "np-hint studieinfo-kull-hint", "Året du begynte på programmet."));
   const kullChips = el("div", "studieinfo-kull-chips");
   kullChips.id = "studieinfo-kull-chips";
   kullChips.setAttribute("role", "group");
@@ -807,6 +812,20 @@ export function mountStudieinfo(deps: StudieinfoDeps, signal: AbortSignal): Stud
     const chipRemove = chipHost.querySelector<HTMLButtonElement>(".studieinfo-chip-remove");
     if (chipRemove) chipRemove.focus();
     else semesterSelect.focus();
+    // A control that is hidden, disabled or not yet rendered refuses focus
+    // WITHOUT complaining, and the dialog then opens with focus on <body> —
+    // outside itself, so the first Tab starts at the top of the document
+    // instead of in the modal. Measured on an MTDT plan, where the chip this
+    // reaches for is rendered by a fetch that has not landed yet. Of the four
+    // floating surfaces this was the only one that did it, and it is the one
+    // §0.1 calls path number one.
+    if (!dialog.contains(document.activeElement)) {
+      dialog
+        .querySelector<HTMLElement>(
+          'button:not([disabled]), input:not([disabled]), select:not([disabled]), [href], [tabindex]:not([tabindex="-1"])',
+        )
+        ?.focus();
+    }
   }
 
   function open(): void {

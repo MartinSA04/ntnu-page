@@ -158,9 +158,84 @@ describe.each(["light", "dark"] as const)("contrast: %s theme", (theme) => {
     expect(contrast(ink, fill)).toBeGreaterThanOrEqual(AA);
   });
 
-  /* And the printed block it stands next to: knocked-out text on the full hue. */
-  it.each(HUES)("a printed %s block's knocked-out code clears AA", (hue) => {
+  /* And the printed block it stands next to: knocked-out text on the full hue.
+     BOTH lines, since 2026-08-01 — the code and the room under it. The room was
+     `--on-block 72%` and measured 3.01:1 on orange; the sweep that replaced it
+     is the next test, which is why this one may not be weakened into "the code
+     only". A course block's room is the fact a student came for. */
+  it.each(HUES)("a printed %s block's knocked-out text clears AA", (hue) => {
     const fill = mix(hex(theme, hue), hex(theme, "--block-base"), pct(theme, "--block-mix"));
     expect(contrast(hex(theme, "--on-block"), fill)).toBeGreaterThanOrEqual(AA);
+  });
+
+  /* WHY THERE IS NO SECOND STOP ON THAT RAMP.
+     `.planner-cols-room` is ONE declaration serving all six hues, so a quieter
+     step has to clear AA on the WORST of them, and the worst clears AA at FULL
+     strength by almost nothing (light orange 4.56, blue 4.59, cyan 4.65). Some
+     hues do survive an alpha — light purple is still 5.98 at 90% — which is
+     exactly the trap: a value checked against purple ships 3.97 on orange, and
+     that is how `--on-block 72%` got in. So the claim is per-PALETTE, not per
+     hue: no single alpha under full strength clears AA on all six. This is what
+     turned "make the room quieter" from a colour decision into a weight one.
+
+     Light is the binding theme. Dark's hues are light enough that ~80% would
+     survive there — but the declaration is one rule for both, so it has to hold
+     where the ramp is tightest, and that is light. */
+  it("no single alpha under 100% clears AA on all six hues", () => {
+    const worst = (p: number): number =>
+      Math.min(
+        ...HUES.map((hue) => {
+          const fill = mix(hex(theme, hue), hex(theme, "--block-base"), pct(theme, "--block-mix"));
+          return contrast(mix(hex(theme, "--on-block"), fill, p), fill);
+        }),
+      );
+    if (theme === "light") {
+      for (let p = 0.5; p < 1; p += 0.05) expect(worst(p)).toBeLessThan(AA);
+    }
+    expect(worst(1)).toBeGreaterThanOrEqual(AA);
+  });
+
+  /* WHY THE TINTED BLOCK'S SECOND LINE MAY NOT BE A GREY.
+     `--muted` is a ramp stop for PAPER, and it had never been measured against
+     a hue tint — so `.is-muted .planner-cols-room` (the room inside an øving
+     block) shipped at 3.76:1 on purple through 3.96 on blue while the code
+     directly above it passed at 6.04–8.05. It survived the printed block's fix
+     four lines away because a grey does not look like an alpha.
+
+     Asserted as a PROHIBITION rather than a floor: the fix is `inherit`, so
+     what has to stay true is that reaching for the paper ramp here is wrong. If
+     a future palette makes `--muted` clear AA on all six tints this test fails
+     loudly and can be retired on purpose. */
+  it("--muted does not clear AA on the tinted blocks, which is why they inherit", () => {
+    const failures = HUES.filter((hue) => {
+      const fill = mix(hex(theme, hue), hex(theme, "--card"), pct(theme, "--block-muted"));
+      return contrast(hex(theme, "--muted"), fill) < AA;
+    });
+    if (theme === "light") expect(failures).toEqual([...HUES]);
+    // And the ink they inherit instead clears on every one of them — that is
+    // the pair "a tinted %s block's own label" above already measures.
+    for (const hue of HUES) {
+      const dot = hex(theme, hue);
+      const fill = mix(dot, hex(theme, "--card"), pct(theme, "--block-muted"));
+      const ink = mix(dot, hex(theme, "--block-ink-base"), pct(theme, "--block-ink-mix"));
+      expect(contrast(ink, fill)).toBeGreaterThanOrEqual(AA);
+    }
+  });
+
+  /* --faint IS NOT A TEXT COLOUR (tokens.css says why). It cannot clear AA —
+     --muted is 5.07, so a third AA-clearing step would have to live inside
+     4.5–5.07 and would stop being a step — so what is pinned instead is the
+     floor that keeps it usable for a mark you merely have to SEE: WCAG 1.4.11's
+     3:1. It shipped at #98989d / 2.87:1 on --bg while carrying a credit figure,
+     a dropped course's title, the exam months and an icon button. */
+  const NON_TEXT = 3;
+  it.each(["--bg", "--card"])("--faint clears the 3:1 non-text floor on %s", (surface) => {
+    expect(contrast(hex(theme, "--faint"), hex(theme, surface))).toBeGreaterThanOrEqual(NON_TEXT);
+  });
+
+  it("--faint stays a step below --muted rather than converging on it", () => {
+    expect(contrast(hex(theme, "--faint"), hex(theme, "--bg"))).toBeLessThan(
+      contrast(hex(theme, "--muted"), hex(theme, "--bg")),
+    );
   });
 });

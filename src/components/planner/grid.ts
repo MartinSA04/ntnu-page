@@ -213,6 +213,43 @@ export interface GridRenderResult {
    * answer), so the verdict line must stay quiet about "ingen kollisjoner".
    */
   partial: boolean;
+  /**
+   * How many entries the (lecture-only, DR-1) collision check actually
+   * compared. **Zero means nothing was checked**, and `conflictCount: 0` is
+   * then the arithmetic of an empty set rather than a verdict — which is how a
+   * plan whose courses NTNU never marked as `forelesning` (BSPL kull 2024's
+   * period is all of them) drew fifteen overlapping bars under a green "ingen
+   * forelesninger kolliderer". The auto-reveal note explaining it was folded
+   * 800 px below. `mutedLayerAutoRevealed` is NOT the signal to read here: it
+   * is false once the student turns the øving layer on themselves, and the
+   * check is just as empty then.
+   */
+  checkedLectureCount: number;
+  /**
+   * Courses whose øving/lab layer is revealed but still un-narrowed — the
+   * student has not said which group is theirs, so nothing of theirs is drawn.
+   *
+   * The narrowing is right and stays (drawing every group put 41 blocks in one
+   * week — see `visibleLayer`). What was wrong is that it was SILENT: ticking
+   * «Øvinger og labber» on a five-course plan added two blocks, and a control
+   * that visibly does almost nothing reads as "I have no øvinger" rather than
+   * as "four of these are waiting on you". The margin says it per course; the
+   * control has to say it too, because the control is what was just pressed.
+   */
+  pendingGroupCourses: string[];
+  /**
+   * Courses that published sessions but not one classifiable as a lecture, so
+   * the (lecture-only, DR-1) check passed OVER them rather than on them.
+   *
+   * Distinct from `incompleteCourses`, which is a fetch that failed: this is a
+   * fetch that succeeded and returned nothing the engine can compare. The
+   * verdict must say so — "Ingen forelesninger kolliderer" over a plan where
+   * one course was never in the comparison is a claim about four courses
+   * printed as a claim about five, and the note admitting it was 570 px below
+   * and, on a phone, collapsed behind a disclosure while the pass itself was
+   * hidden by CSS.
+   */
+  uncheckedCourses: string[];
 }
 
 function roomLabel(rooms: { building: string | null; room: string | null }[]): string {
@@ -1018,6 +1055,12 @@ export function renderGrid(
 ): GridRenderResult {
   const loading = options.loading ?? false;
   const rawEntries = collectEntries(courses, options.showAllGroups ?? false);
+  // Courses that published sessions but not one this app can call a lecture,
+  // computed unconditionally rather than only inside the note branch below:
+  // the VERDICT needs it too. A plan where four of five courses were compared
+  // and the fifth contributed nothing is not a clean plan, it is a clean
+  // comparison of four — and it was printing an unqualified green.
+  const uncheckedCourses = lectureLessCourses(rawEntries);
   // What the week has no answer for, from each fetch's own outcome. Only a
   // failed or never-made fetch makes the collision check incomplete.
   const gaps = planGaps(courses);
@@ -1035,6 +1078,9 @@ export function renderGrid(
       state,
       incompleteCourses,
       partial: loading || incompleteCourses.length > 0,
+      checkedLectureCount: 0,
+      pendingGroupCourses: [],
+      uncheckedCourses,
     };
   };
 
@@ -1059,6 +1105,9 @@ export function renderGrid(
       state: "loading",
       incompleteCourses,
       partial: true,
+      checkedLectureCount: 0,
+      pendingGroupCourses: [],
+      uncheckedCourses,
     };
   }
   if (rawEntries.length === 0) {
@@ -1092,7 +1141,8 @@ export function renderGrid(
   }
 
   // Hard conflicts are lecture×lecture only (DR-1); øving/lab entries never clash.
-  const conflicts = findConflicts(entries.filter((e) => e.isLecture));
+  const checkedLectures = entries.filter((e) => e.isLecture);
+  const conflicts = findConflicts(checkedLectures);
   const conflictGroups = groupConflicts(conflicts);
   const groupsByEntry = new Map<ScheduleEntry, ConflictGroup[]>();
   for (const group of conflictGroups) {
@@ -1319,7 +1369,7 @@ export function renderGrid(
   } else if (!revealOthers) {
     // The plan-global auto-reveal did not fire because SOME course has a
     // lecture — exactly when a lecture-less course disappears without a word.
-    const silent = lectureLessCourses(rawEntries);
+    const silent = uncheckedCourses;
     if (silent.length > 0) {
       folded.push(
         gapNote(
@@ -1405,5 +1455,8 @@ export function renderGrid(
     state: "grid",
     incompleteCourses,
     partial: loading || incompleteCourses.length > 0,
+    checkedLectureCount: checkedLectures.length,
+    pendingGroupCourses: [...unpickedGroups.keys()],
+    uncheckedCourses,
   };
 }

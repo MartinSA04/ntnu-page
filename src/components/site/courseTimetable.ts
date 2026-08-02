@@ -19,7 +19,7 @@ import {
   decodeEntities,
   type TimetableEntry as PlannerTimetableEntry,
 } from "../../lib/planner/data.js";
-import { hueForIndex } from "../../lib/planner/hues.js";
+import { naturalHue } from "../../lib/planner/hues.js";
 import { entriesInSemester } from "../../lib/planner/schedule.js";
 import { el } from "../planner/dom.js";
 import { fitBlockLabels, renderGrid, setScrollFade } from "../planner/grid.js";
@@ -243,7 +243,10 @@ export async function mountCourseTimetable(
   // *different* courses, so a single course can never paint itself red here.
   const state: PlanCourseState = {
     course: { code: options.code, name: options.name, version: options.version, source: "manual" },
-    hueVar: hueForIndex(0),
+    // The course's OWN hue, so the block a student sees here is the block they
+    // will see in the planner once they add it — same course, same colour,
+    // across surfaces. It was hue #0 (blue) for every course on the site.
+    hueVar: naturalHue(options.code),
     // `bundleFromEntries` rather than an object literal: it is the one place
     // the honest fields are filled in, so this surface cannot omit them.
     bundle: bundleFromEntries(shown),

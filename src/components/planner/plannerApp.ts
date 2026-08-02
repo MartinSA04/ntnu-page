@@ -39,7 +39,7 @@ import {
   groupOptions,
   resolveLectureDefaults,
 } from "../../lib/planner/groups.js";
-import { hueForIndex } from "../../lib/planner/hues.js";
+import { assignHues } from "../../lib/planner/hues.js";
 import { entriesForProgram, entriesInSemester, semesterYear } from "../../lib/planner/schedule.js";
 import {
   type AddCourseInput,
@@ -245,6 +245,9 @@ interface PlannerElements {
   directionActions: HTMLElement;
   directionButton: HTMLButtonElement;
   othersToggle: HTMLButtonElement;
+  othersPending: HTMLElement;
+  share: HTMLButtonElement;
+  shareLabel: HTMLElement;
   viewKolonner: HTMLButtonElement;
   viewTavle: HTMLButtonElement;
   gridFrame: HTMLElement;
@@ -283,6 +286,9 @@ function getElements(): PlannerElements | null {
     directionActions: byId<HTMLElement>("planner-direction-actions"),
     directionButton: byId<HTMLButtonElement>("planner-direction-btn"),
     othersToggle: byId<HTMLButtonElement>("planner-others-toggle"),
+    othersPending: byId<HTMLElement>("planner-others-pending"),
+    share: byId<HTMLButtonElement>("planner-share"),
+    shareLabel: byId<HTMLElement>("planner-share-label"),
     viewKolonner: byId<HTMLButtonElement>("planner-view-kolonner"),
     viewTavle: byId<HTMLButtonElement>("planner-view-tavle"),
     gridFrame: byId<HTMLElement>("planner-grid-frame"),
@@ -552,6 +558,7 @@ export async function mountPlannerApp(
       selected,
       defaults: lectures.keys,
       resolved: lectures.resolved,
+      programCode: state.programCode,
       // What the week actually draws, through the SAME call the grid and board
       // render from — not `lectures.keys`, which is empty both for a course
       // with nothing to switch to and for one whose other parallels are another
@@ -652,8 +659,25 @@ export async function mountPlannerApp(
   const hashHasPlan =
     hashPlan !== null && (hashPlan.program !== null || hashPlan.courses.length > 0);
   let plan: PlanState = store.loadPlan();
+  /**
+   * The plan a shared link overwrote, kept so the student can have it back.
+   *
+   * Opening a link REPLACES local state (§7's "hash wins over storage"), which
+   * is right — a link that did not show its own plan would be pointless — but
+   * it was doing so silently and irreversibly, over a plan the recipient may
+   * have spent the evening on. PRODUCT §3 flow 6 asks for three actions here
+   * (bruk denne / slå sammen / behold min egen); the merge half is Phase 3 and
+   * unbuilt, but the destructive half is live TODAY, so the way back is what
+   * ships now. Null whenever there was nothing to lose, or the link carries
+   * what is already stored — which is every ordinary reload, since this page
+   * writes its own plan into the hash on every change.
+   */
+  let replacedPlan: PlanState | null = null;
   if (hashPlan && hashHasPlan) {
-    plan = withStoredFacts(planFromHash(hashPlan), plan);
+    const storedHadPlan = plan.program !== undefined || plan.courses.length > 0;
+    const incoming = withStoredFacts(planFromHash(hashPlan), plan);
+    if (storedHadPlan && formatPlanHash(plan) !== formatPlanHash(incoming)) replacedPlan = plan;
+    plan = incoming;
     // A program-less link must CLEAR any stored profile, not just omit one:
     // `savePlan` can only ever write `np:profile`, never clear it, so the
     // header chip would keep naming the old programme.
@@ -826,7 +850,23 @@ export async function mountPlannerApp(
     // its dates, so the number that names it has to be visible — and on a phone
     // this line is clamped to one, so anything at its end is the thing that
     // gets cut. A 42-character programme name is the right thing to lose there.
-    append(el("span", "np-data", `Uke ${isoWeekNumber(new Date())}`));
+    // Inside the teaching period this names the week the day headers are dated
+    // to. Outside it there are no dates to name, so it names what the week IS
+    // instead — and says when the dates start meaning something.
+    if (inTeachingWeek()) {
+      append(el("span", "np-data", `Uke ${isoWeekNumber(new Date())}`));
+    } else {
+      const first = currentSemester()?.teachingWeeks?.[0];
+      append(
+        first === undefined
+          ? "Mønsteruke"
+          : (() => {
+              const span = el("span", undefined, "Mønsteruke · undervisning fra ");
+              span.append(el("span", "np-data", `uke ${first}`));
+              return span;
+            })(),
+      );
+    }
     if (program) {
       const named = program.name !== "" && program.name !== program.code;
       if (named) append(program.name);
@@ -845,6 +885,86 @@ export async function mountPlannerApp(
       "aria-label",
       program ? `Endre studieinfo for ${program.code}` : "Velg studieprogram og kull",
     );
+    // ONE ACCENT ON SCREEN, AND ON THE RIGHT ACTION (§8's One-Job-Accent).
+    // "Legg til emne" is the primary action of a plan that EXISTS. With no plan
+    // it is the secondary route — §0.1 ranks programme + kull first — and while
+    // it kept the accent there, the loudest thing on the empty page was the
+    // path the mandate ranks second, over an empty-state card whose own primary
+    // was grey paper. The card takes the accent back for that one state.
+    const hasPlan = plan.program !== undefined || plan.courses.length > 0;
+    elements.addCourseBtn.classList.toggle("np-btn--primary", hasPlan);
+    elements.share.hidden = !hasPlan;
+  }
+
+  /**
+   * Hand the plan over. `syncHash` has kept `location` current all along, so
+   * this is only the missing verb — the Web Share sheet where the platform has
+   * one (a phone, which is where a plan actually gets sent), the clipboard
+   * everywhere else.
+   *
+   * The label reports what happened and then goes back to what it does, which
+   * is the whole of the feedback: a copy has no other visible consequence, and
+   * a student who does not see one presses again.
+   */
+  let shareResetTimer: ReturnType<typeof setTimeout> | undefined;
+  let shareWidthReserved = false;
+
+  /**
+   * Holds the button at the width of its longest state, once, before the label
+   * ever changes.
+   *
+   * `Del` → `Lenke kopiert` grew the button and shoved the Uke/Liste switch
+   * ~22px sideways at the exact moment it was pressed — a control moving the
+   * controls next to it. Measured rather than guessed at, because the label is
+   * set in the platform UI face and its width is whatever this device's font
+   * is; and measured on the real element, so it includes the icon and padding.
+   */
+  function reserveShareWidth(): void {
+    if (shareWidthReserved) return;
+    const label = elements.shareLabel;
+    const original = label.textContent ?? "";
+    let widest = elements.share.getBoundingClientRect().width;
+    for (const text of ["Del", "Lenke kopiert"]) {
+      label.textContent = text;
+      widest = Math.max(widest, elements.share.getBoundingClientRect().width);
+    }
+    label.textContent = original;
+    elements.share.style.minWidth = `${Math.ceil(widest)}px`;
+    shareWidthReserved = true;
+  }
+
+  async function sharePlan(): Promise<void> {
+    const url = location.href;
+    const title = elements.title.textContent?.trim() || "Semesterplan";
+    if (typeof navigator.share === "function") {
+      try {
+        await navigator.share({ title, url });
+        return;
+      } catch {
+        // A dismissed sheet is not a failure and must not fall through to a
+        // silent clipboard write the student did not ask for.
+        return;
+      }
+    }
+    try {
+      await navigator.clipboard.writeText(url);
+    } catch {
+      // The failure goes to the line that is already about the link, not into
+      // the button: it needs a sentence, and a sentence in a toolbar button is
+      // what made this control resize its neighbours in the first place.
+      // States what failed and what to do next, in ink, without apology (§7).
+      linkNote = "Kunne ikke kopiere lenken. Den står i adressefeltet.";
+      renderLinkNote();
+      return;
+    }
+    // WHAT was copied, not just that something was: "Kopiert" alone never says
+    // a *link* went to the clipboard, which is the entire point of the control.
+    reserveShareWidth();
+    elements.shareLabel.textContent = "Lenke kopiert";
+    clearTimeout(shareResetTimer);
+    shareResetTimer = setTimeout(() => {
+      elements.shareLabel.textContent = "Del";
+    }, 2400);
   }
 
   /**
@@ -1129,8 +1249,31 @@ export async function mountPlannerApp(
 
   /** Today as a weekday number (1 = mandag), or `null` at the weekend. */
   function todayWeekday(): number | null {
+    if (!inTeachingWeek()) return null;
     const day = new Date().getDay();
     return day >= 1 && day <= 6 ? day : null;
+  }
+
+  /**
+   * Is the page open inside a week the semester actually teaches?
+   *
+   * This is the question the drawn week's dates depend on, and nothing asked
+   * it. `weekdayDates(new Date())` ran unconditionally, so through the whole
+   * planning window — from the moment a student can plan until teaching starts,
+   * which is precisely when this tool is used — the header read `MAN 27 … FRE
+   * 31` over blocks that every one of them runs `uke 34–47`. Every block on
+   * screen was false under its own date, and the page said nothing.
+   *
+   * `weekDates.ts` defends dating the week for the case where one block skips
+   * one week; a date numeral is a claim about which Monday a column is, and
+   * that claim is true *inside* the teaching period. Outside it there is no
+   * Monday to name — the week is a pattern and nothing else — so the numerals
+   * come off and the context line says which thing you are looking at.
+   */
+  function inTeachingWeek(): boolean {
+    const weeks = currentSemester()?.teachingWeeks;
+    if (!weeks || weeks.length === 0) return false;
+    return weeks.includes(isoWeekNumber(new Date()));
   }
 
   /**
@@ -1251,7 +1394,11 @@ export async function mountPlannerApp(
       return;
     }
     elements.direction.hidden = false;
+    // An `<h2>` with no text is still a heading to a screen reader, announced
+    // as an empty level-2 landmark in the middle of the page. Some questions
+    // carry only a note, so the heading has to be able to not exist.
     elements.directionTitle.textContent = question.title;
+    elements.directionTitle.hidden = question.title.trim() === "";
     elements.directionNote.textContent = question.note;
 
     questionAction = question.action?.run ?? null;
@@ -1305,6 +1452,9 @@ export async function mountPlannerApp(
   }
 
   elements.addCourseBtn.addEventListener("click", () => addCourseDialog.open());
+  elements.share.addEventListener("click", () => {
+    void sharePlan();
+  });
   elements.gapButton.addEventListener("click", openAddFromQuestion);
 
   // --- Course bundle state (timetable + details per active course) -------
@@ -1327,11 +1477,16 @@ export async function mountPlannerApp(
     const seen = new Set<string>();
     const active = activeCourses(plan);
     const programCode = plan.program?.code ?? null;
-    active.forEach((course, index) => {
+    // One assignment for the whole plan, from the SET of codes — see hues.ts.
+    // Per-course `hueForIndex(index)` here is what made every add and drop
+    // repaint the courses after it.
+    const hues = assignHues(active.map((course) => course.code));
+    active.forEach((course) => {
       seen.add(course.code);
+      const hueVar = hues.get(course.code) ?? "--muted";
       const existing = courseStates.get(course.code);
       if (existing) {
-        existing.hueVar = hueForIndex(index);
+        existing.hueVar = hueVar;
         existing.course = course;
         // The programme can change under a persisted state, and grid group
         // narrowing depends on its code.
@@ -1339,7 +1494,7 @@ export async function mountPlannerApp(
       } else {
         courseStates.set(course.code, {
           course,
-          hueVar: hueForIndex(index),
+          hueVar,
           // A course previewed in the add dialog already has its bundle in
           // `fetchCourseBundle`'s module-level memo — this fetch is free.
           bundle: null,
@@ -1631,25 +1786,46 @@ export async function mountPlannerApp(
   }
 
   /**
-   * Once per mount: put today's column in view rather than always Monday's.
-   * Only the column view has columns to scroll to; it no-ops in the other two,
-   * which have no day headers to find.
+   * Once per mount: put something WORTH SEEING in view rather than always
+   * Monday's column. Only the column view has columns to scroll to; it no-ops
+   * in the other two, which have no day headers to find.
+   *
+   * It scrolled to today, and had two holes that met on a phone. At 390 px the
+   * frame is 343 px over a 1529 px week — 4.4 screens — so whatever this lands
+   * on is the whole of what the student sees. (a) It returned early on a
+   * weekend, and (b) it scrolled to today's column whether or not that column
+   * held anything. Through the entire pre-semester planning window — which is
+   * when this tool is used at all — today is not in the drawn week in the first
+   * place, so it did nothing and the week opened parked on Monday. A plan whose
+   * only two sessions are on Friday therefore opened as an EMPTY GRID.
+   *
+   * So: today when today has sessions (a student mid-semester is asking about
+   * today), otherwise the first day that has any, otherwise leave it alone —
+   * there is nothing to prefer in a week with nothing in it.
    */
-  let didScrollToToday = false;
+  let didScrollWeek = false;
 
-  function scrollToToday(): void {
-    if (didScrollToToday) return;
+  function scrollWeekIntoView(): void {
+    if (didScrollWeek) return;
     const frame = elements.gridFrame;
     if (frame.scrollWidth - frame.clientWidth <= 1) return;
-    const weekday = new Date().getDay(); // 0 = Sunday
-    const dayNumber = weekday === 0 ? 7 : weekday;
-    if (dayNumber > 5) return;
     // `Array.from`, not a spread: this module is reachable from the Node
     // typecheck pass (tsconfig.test.json), whose `lib` has no `DOM.Iterable`.
-    const headers = Array.from(frame.querySelectorAll<HTMLElement>(".planner-cols-day-header"));
-    const header = headers[dayNumber - 1];
+    const columns = Array.from(frame.querySelectorAll<HTMLElement>(".planner-cols-day[data-day]"));
+    const withSessions = columns
+      .filter((column) => column.querySelector(".planner-cols-block") !== null)
+      .map((column) => Number(column.dataset.day))
+      .filter((day) => Number.isFinite(day))
+      .sort((a, b) => a - b);
+    if (withSessions.length === 0) return;
+    const weekday = new Date().getDay(); // 0 = Sunday
+    const today = weekday === 0 ? 7 : weekday;
+    const target = withSessions.includes(today) ? today : (withSessions[0] as number);
+    const header = frame.querySelector<HTMLElement>(
+      `.planner-cols-day-header[data-day="${target}"]`,
+    );
     if (!header) return;
-    didScrollToToday = true;
+    didScrollWeek = true;
     const offset = header.getBoundingClientRect().left - frame.getBoundingClientRect().left;
     frame.scrollTo({
       left: Math.max(0, frame.scrollLeft + offset - RAIL_WIDTH_PX),
@@ -1716,10 +1892,43 @@ export async function mountPlannerApp(
     }
     // Anything still in flight (`partial` without an incomplete course).
     if (grid.partial) return;
+    // NOTHING WAS CHECKED. `conflictCount: 0` over an empty lecture set is
+    // arithmetic, not a verdict, and printing Green-Means-Fits over it is the
+    // one failure this whole surface cannot afford: a plan NTNU marks no
+    // `forelesning` in drew its week and answered "ingen forelesninger
+    // kolliderer" over bars that visibly overlap. The margin already explains
+    // WHY (the auto-reveal note, or the unpicked-group notes) — the verdict's
+    // job is only to stop claiming a check it never ran.
+    if (grid.checkedLectureCount === 0) {
+      host.append(
+        el("span", "planner-chip is-unknown", "kan ikke sjekkes, ingen forelesninger i planen"),
+      );
+      renderLoadChip(host);
+      return;
+    }
     if (grid.conflictCount === 0) {
       const chip = el("span", "planner-chip is-clean");
       chip.append(icon("circleCheck"));
       chip.append("Ingen forelesninger kolliderer");
+      // A PASS THAT SAYS WHAT IT PASSED ON. Some courses publish sessions but
+      // nothing this app can call a lecture, so the DR-1 check goes over them
+      // rather than on them — and an unqualified green then claims five
+      // courses on the strength of four. The admission existed only as a
+      // margin note 570 px below, which on a phone was collapsed behind a
+      // disclosure while a CSS rule hid the pass itself: the small screen
+      // showed the caveat and never the answer it qualifies. `.is-qualified`
+      // is what that rule now tests, so a pass carrying a caveat survives.
+      const unchecked = grid.uncheckedCourses.length;
+      if (unchecked > 0) {
+        chip.classList.add("is-qualified");
+        chip.append(
+          el(
+            "span",
+            "planner-chip-caveat",
+            ` · ${unchecked} ${unchecked === 1 ? "emne" : "emner"} ikke sjekket`,
+          ),
+        );
+      }
       host.append(chip);
       renderLoadChip(host);
       return;
@@ -1751,6 +1960,33 @@ export async function mountPlannerApp(
       ".planner-cols-clash, .planner-clash-zone, .planner-board-row.is-clashing",
     );
     mark?.scrollIntoView({ behavior: "smooth", block: "center", inline: "center" });
+  }
+
+  /**
+   * What the øving layer is still waiting on, said ON the control that reveals
+   * it.
+   *
+   * The layer draws PICKED groups only, and that narrowing is right — drawing
+   * every group of every course put 41 blocks in one week (`visibleLayer`). But
+   * it made the control dishonest: on a five-course plan, ticking «Øvinger og
+   * labber» added two blocks, because the four courses with a real choice in
+   * them drew nothing at all. A toggle that visibly does nothing reads as "I
+   * have no øvinger", which is the opposite of true.
+   *
+   * So the control carries the count, and the margin keeps naming the courses
+   * and staying clickable. Only while the layer is ON: beside an unticked box
+   * "3 mangler gruppe" would be a fact about something not on screen.
+   */
+  function renderOthersPending(codes: string[]): void {
+    const host = elements.othersPending;
+    const on = elements.othersToggle.getAttribute("aria-pressed") === "true";
+    if (!on || codes.length === 0) {
+      host.replaceChildren();
+      host.hidden = true;
+      return;
+    }
+    host.replaceChildren(el("span", "np-data", String(codes.length)), " mangler gruppe");
+    host.hidden = false;
   }
 
   /**
@@ -1897,18 +2133,31 @@ export async function mountPlannerApp(
     if (noProfile) {
       // State 1: no plan at all.
       renderWeekCard((card) => {
-        card.append(el("p", "np-hint planner-week-card-hint", "Ingen plan ennå."));
-        const primary = el("button", "np-btn", "Velg studieprogram");
+        // DESIGN §7: an empty state is an invitation to act. "Ingen plan ennå."
+        // is a STATUS — it named the absence and left the page saying nothing
+        // about what the tool is for, on the one screen where the student has
+        // no other evidence. This is §0.1's mandate in one sentence.
+        card.append(
+          el(
+            "p",
+            "np-hint planner-week-card-hint",
+            "Velg studieprogram og kull, så tegner vi uka di — med forelesninger, kollisjoner og eksamensdatoer.",
+          ),
+        );
+        // THE ACCENT GOES ON THE MANDATE'S OWN PATH. This was a paper button
+        // while "Legg til emne" wore the accent in the bar above — so on the
+        // empty state the loudest thing on the page was the SECONDARY route,
+        // and the primary one read as its footnote. `renderBanner` demotes the
+        // bar's button while there is no plan, so there is still exactly one
+        // accent on screen (§8's One-Job-Accent).
+        const primary = el("button", "np-btn np-btn--primary", "Velg studieprogram");
         primary.type = "button";
         primary.addEventListener("click", () => studieinfo.open());
         card.append(primary);
         // The modal is the way in; the dialog is the "I already know a code"
-        // escape hatch.
-        const secondary = el(
-          "button",
-          "np-navlink planner-week-card-secondary",
-          "Eller legg til emner med emnekode",
-        );
+        // escape hatch. A paper button rather than `.np-navlink`, which at
+        // --muted with no underline did not read as pressable at all.
+        const secondary = el("button", "np-btn planner-week-card-secondary", "Jeg har emnekodene");
         secondary.type = "button";
         secondary.addEventListener("click", () => openAddFromQuestion());
         card.append(secondary);
@@ -1982,7 +2231,10 @@ export async function mountPlannerApp(
           todayNumber: todayWeekday(),
           animate: pendingViewAnimation,
           onBlockClick: openBlockPopover,
-          dates: weekdayDates(new Date()),
+          // Only inside the teaching period — see `inTeachingWeek`. Undefined
+          // leaves `columnGrid` drawing bare weekday names, which is what a
+          // pattern week is.
+          dates: inTeachingWeek() ? weekdayDates(new Date()) : undefined,
         },
       );
       // Nothing to draw is a message branch, not an empty frame. The messages
@@ -2035,6 +2287,7 @@ export async function mountPlannerApp(
       "aria-pressed",
       String(showOthers || gridResult?.mutedLayerAutoRevealed === true),
     );
+    renderOthersPending(gridResult?.pendingGroupCourses ?? []);
 
     // `anyLoading` stays in: the list reads `bundle.details.exams` to tell an
     // ordinary sitting from an "Utsatt" one, so a list painted before the
@@ -2085,7 +2338,12 @@ export async function mountPlannerApp(
     // sentence. Held longer, an apology sits atop five courses of reserved air.
     if (!examLoading) delete elements.examList.dataset.reserve;
     syncGridScroll();
-    if (gridResult?.state === "grid") scrollToToday();
+    // Only once the bundles are in. A week drawn while a fetch is still in
+    // flight is drawn on PROVISIONAL geometry — and worse, the re-render when
+    // the rest lands replaces the grid's DOM, which resets `scrollLeft` and
+    // strands a smooth scroll part-way. Measured: it left the phone at 198 px
+    // of a 1529 px week whose only sessions start at 1035.
+    if (gridResult?.state === "grid" && !anyLoading) scrollWeekIntoView();
     if (!anyLoading) settleWeekBox();
   }
 
@@ -2270,12 +2528,45 @@ export async function mountPlannerApp(
     loadIndex();
   }
 
+  /**
+   * The line above the week that is about the LINK rather than about the plan:
+   * a semester we substituted (C4), or a plan this link replaced.
+   *
+   * The second carries a verb, because it is the only way back to something the
+   * page took away without asking. It is not "Angre" — nothing the student did
+   * is being undone — and not "Fjern", which §7 reserves for an outright
+   * removal. It names the thing you get: your own plan.
+   */
+  function renderLinkNote(): void {
+    const host = elements.linkNote;
+    host.replaceChildren();
+    if (linkNote !== null) host.append(linkNote);
+    if (replacedPlan !== null) {
+      if (linkNote !== null) host.append(" ");
+      host.append("Denne delte planen erstattet din egen. ");
+      const restore = el("button", "np-navlink planner-link-restore", "Behold min egen");
+      restore.type = "button";
+      restore.addEventListener("click", () => {
+        const mine = replacedPlan;
+        if (!mine) return;
+        // Cleared FIRST: `savePlan` re-enters through `onPlanChange` → renderAll
+        // → here, and a note still offering the plan it just restored would
+        // hand the shared one back on a second press.
+        replacedPlan = null;
+        linkNote = null;
+        if (mine.program === undefined) store.removeProgram();
+        store.savePlan(mine);
+      });
+      host.append(restore);
+    }
+    host.hidden = linkNote === null && replacedPlan === null;
+  }
+
   function renderAll(): void {
     syncCourseStates();
     // An empty plan is not a dead end: the week frame shows the onboarding card
     // and the Emner rail keeps its "Legg til emne" button mounted.
-    elements.linkNote.textContent = linkNote ?? "";
-    elements.linkNote.hidden = linkNote === null;
+    renderLinkNote();
     renderBanner();
     renderDeadline();
     renderCreditLine();
@@ -2488,6 +2779,11 @@ export async function mountPlannerApp(
     // studieinfo's Lagre goes through `savePlan` and `syncHash`'s replaceState,
     // which fires no `hashchange`.
     if (next.semesterId !== plan.semesterId) linkNote = null;
+    // Once the student edits the arrived plan they have chosen it, and an offer
+    // to "keep my own" would by then throw away the shared plan AND the edits
+    // they just made on top of it — a destructive action wearing the word
+    // recovery. The restore path clears this itself before saving.
+    replacedPlan = null;
     plan = next;
     syncHash();
     renderAll();
@@ -2515,12 +2811,27 @@ export async function mountPlannerApp(
       if (!parsed) return;
       if (parsed.program === null && parsed.courses.length === 0) return;
       linkNote = null;
+      // Same merge as the initial load: a pasted link re-stating courses
+      // already in the plan must not strip their credits.
+      const incoming = withStoredFacts(planFromHash(parsed), plan);
+      // …and the same rescue. Pasting a link into an ALREADY-OPEN planner
+      // replaces the plan exactly as arriving on one does, so it owes the same
+      // way back — `onPlanChange` below clears this, so it is captured here and
+      // re-set after the save that triggers it.
+      const displaced =
+        plan.program !== undefined || plan.courses.length > 0
+          ? formatPlanHash(plan) !== formatPlanHash(incoming)
+            ? plan
+            : null
+          : null;
       // Same as the initial load: a program-less link clears the stored profile
       // (savePlan cannot), so the chip stops naming the old programme.
       if (parsed.program === null) store.removeProgram();
-      // Same merge as the initial load: a pasted link re-stating courses
-      // already in the plan must not strip their credits.
-      store.savePlan(withStoredFacts(planFromHash(parsed), plan));
+      store.savePlan(incoming);
+      if (displaced) {
+        replacedPlan = displaced;
+        renderLinkNote();
+      }
     },
     { signal },
   );

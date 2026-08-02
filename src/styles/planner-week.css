@@ -1185,9 +1185,20 @@ html[data-view="tavle"] #planner-grid-frame[data-reserve] {
   white-space: nowrap;
 }
 
-/* The room, and on a drop-in strip the room and the activity. Quieter than the
-   code but on the block's own ink, never a grey: a knocked-out label on a
-   printed field has only one ramp to move along. */
+/* The room, and on a drop-in strip the room and the activity. On the block's
+   own ink, never a grey: a knocked-out label on a printed field has only one
+   ramp to move along.
+
+   That ramp turned out to have ONE stop. This was `--on-block 72%`, and the
+   room — the single fact a week's position cannot state, the reason a
+   first-year opens this page — measured 3.01:1 on orange, 3.12 on blue, 3.16
+   on cyan, 3.38 on green. It is 11.52px, so AA's 4.5 applies. Sweeping the mix
+   says the fix is not a smaller step but no step at all: the light hues clear
+   AA by so little at FULL strength (orange 4.56, blue 4.59, cyan 4.65) that
+   90% already fails. So the quieting is carried by weight instead — the code
+   is `--weight-medium`, this inherits the block's 400 — which costs nothing a
+   ratio can measure. Do not reintroduce an alpha here; measure first, and the
+   measurement is in tests/site/tokens.test.ts. */
 .planner-cols-room,
 .planner-cols-sub {
   font-size: var(--text-xs);
@@ -1195,12 +1206,22 @@ html[data-view="tavle"] #planner-grid-frame[data-reserve] {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  color: color-mix(in srgb, var(--on-block) 72%, transparent);
+  color: var(--on-block);
 }
 
+/* `inherit`, i.e. the tinted block's OWN ink — the one pair on this surface a
+   test already measures (`tokens.test.ts`'s "a tinted block's own label"),
+   because both sides of it are a mix of the same hue.
+
+   It was `--muted`, which is a ramp stop for PAPER and had never been measured
+   against a hue tint: 3.76:1 on purple, 3.86 indigo, 3.90 orange, 3.92 green,
+   3.94 cyan, 3.96 blue, at 11.52px. The block's own code passed at 6.04–8.05
+   directly above it. Same defect as the printed block's 72% mix four lines up,
+   in the same file, and it survived that fix because a grey does not look like
+   an alpha. */
 .planner-cols-block.is-muted .planner-cols-room,
 .planner-cols-block.is-muted .planner-cols-sub {
-  color: var(--muted);
+  color: inherit;
 }
 
 /* Under 45 minutes there is no room for two lines at full size, so both lines
@@ -1305,9 +1326,12 @@ html[data-view="tavle"] #planner-grid-frame[data-reserve] {
   filter: brightness(0.96);
 }
 
+/* No alpha. `opacity: 0.78` here was the same mistake in its third disguise —
+   blue 3.90, cyan 3.92, orange 4.04, green 4.05 — and an alpha on block text is
+   what DESIGN §9 now forbids by name. The band is already the quiet layer; its
+   second line does not need to be quieter than the layer it is in. */
 .planner-cols-band .planner-cols-sub {
   color: inherit;
-  opacity: 0.78;
 }
 
 /* NÅLEN, turned with the axis. Same reasoning as the transposed one — today
@@ -1489,7 +1513,7 @@ html[data-view="tavle"] #planner-grid-frame[data-reserve] {
 .planner-board-sum {
   margin-inline-start: auto;
   font-size: var(--text-xs);
-  color: var(--faint);
+  color: var(--muted);
 }
 
 /* `display: none` until the row is live, which takes it out of the
@@ -1537,7 +1561,7 @@ button.planner-board-row:hover {
 .planner-board-to {
   font-size: var(--text-xs);
   line-height: 1;
-  color: var(--faint);
+  color: var(--muted);
 }
 
 .planner-board-what {

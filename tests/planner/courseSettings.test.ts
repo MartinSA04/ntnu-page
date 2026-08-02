@@ -2,6 +2,7 @@ import { describe, expect, test } from "vitest";
 import {
   courseFacts,
   lecturesAreExclusive,
+  namesProgramme,
   nextSelection,
   pickableGroups,
 } from "../../src/components/planner/courseSettings.js";
@@ -377,5 +378,48 @@ describe("courseFacts", () => {
       figure: null,
       provenance: "Fra programmet",
     });
+  });
+});
+
+/**
+ * Which row is the student's own.
+ *
+ * The picker sorts this row to the top and marks it "ditt program", so a false
+ * positive is not cosmetic: it puts our label on another programme's lecture
+ * and sends someone to the wrong room. Hence whole-token matching, and hence
+ * this file rather than a glance at the regex.
+ */
+describe("namesProgramme", () => {
+  test("finds the programme in NTNU's own comma-separated title", () => {
+    expect(namesProgramme("Forelesning 1 MTDT, MTIØT, MTKOM", "MTDT")).toBe(true);
+    expect(namesProgramme("Forelesning 1 MTDT, MTIØT, MTKOM", "MTIØT")).toBe(true);
+    expect(namesProgramme("Forelesning 1 MTDT, MTIØT, MTKOM", "MTKOM")).toBe(true);
+  });
+
+  test("does not match a code that merely sits inside another", () => {
+    // The whole reason this is a token match. "BAT" inside "BATEK" would put
+    // "ditt program" on a lecture for a different degree.
+    expect(namesProgramme("Forelesning 2 BATEK", "BAT")).toBe(false);
+    expect(namesProgramme("Forelesning 2 MTDTX", "MTDT")).toBe(false);
+    expect(namesProgramme("Forelesning 2 XMTDT", "MTDT")).toBe(false);
+  });
+
+  test("handles the separators upstream actually uses", () => {
+    expect(namesProgramme("Forelesning 2 MTELSYS & MTTK", "MTTK")).toBe(true);
+    expect(namesProgramme("Forelesning 2 MTELSYS/MTTK", "MTELSYS")).toBe(true);
+    expect(namesProgramme("Forelesningsparallell 2 Trondheim MTDT", "MTDT")).toBe(true);
+  });
+
+  test("Æ/Ø/Å are letters, not separators", () => {
+    // A `\b`-based regex splits MTIØT in two and matches "MTI" against it.
+    expect(namesProgramme("Forelesning 1 MTIØT", "MTI")).toBe(false);
+    expect(namesProgramme("Forelesning 1 BØA1100", "BØA1100")).toBe(true);
+  });
+
+  test("is case-insensitive and unbothered by no programme at all", () => {
+    expect(namesProgramme("forelesning 1 mtdt", "MTDT")).toBe(true);
+    expect(namesProgramme("Forelesning 1 MTDT", null)).toBe(false);
+    expect(namesProgramme("Forelesning 1 MTDT", undefined)).toBe(false);
+    expect(namesProgramme("Forelesning 1 MTDT", "  ")).toBe(false);
   });
 });

@@ -1455,6 +1455,40 @@ test("ett navn: the plan is named once, and the switch is not a third toggle", a
   await expect(others).toHaveAttribute("aria-pressed", "true");
 });
 
+/**
+ * The block popover is NON-MODAL by design (`dialog.show()`), so nothing native
+ * keeps focus inside it — and tabbing off its last control walked into the
+ * document behind, landing on the skip link at the top of the page with the
+ * popover still painted over the week.
+ *
+ * Gated because the fix has now been wrong twice: first reading
+ * `relatedTarget === null` as "focus left the document" when Chromium also
+ * reports it for focus landing on `body`, then guarding on
+ * `document.hasFocus()`, which is false in a headless browser whatever the page
+ * is doing — so the handler existed, read correctly, and never ran.
+ */
+test("the block popover closes when you tab off its end", async ({ page }) => {
+  await page.goto("/planlegger/#26h;MTDT.2026;");
+  const block = gridBlocks(page).first();
+  await expect(block).toBeVisible({ timeout: 45_000 });
+  await block.click();
+  const popover = page.locator("#planner-block-popover");
+  await expect(popover).toBeVisible();
+
+  const stillOpen = () => popover.evaluate((d: HTMLDialogElement) => d.open);
+  let tabs = 0;
+  while (tabs < 12 && (await stillOpen())) {
+    await page.keyboard.press("Tab");
+    await page.waitForTimeout(60);
+    tabs++;
+  }
+  expect(await stillOpen()).toBe(false);
+  // It must close by LEAVING, not immediately: its own controls are still
+  // tabbable, so a popover that shut on the first Tab would be unusable by
+  // keyboard.
+  expect(tabs).toBeGreaterThan(1);
+});
+
 test.describe("target sizes", () => {
   /**
    * WCAG 2.5.8 Target Size (Minimum), AA: every pointer target is at least
@@ -1499,6 +1533,24 @@ test.describe("target sizes", () => {
 
       await page.locator("#planner-view-tavle").click();
       await expect(page.locator(".planner-board").first()).toBeVisible();
+      expect(await undersized(page)).toEqual([]);
+    });
+
+    /**
+     * THE VERDICT'S OWN BUTTON, which the pass above structurally could not
+     * see: `button.planner-chip.is-jump` exists only when there is a collision
+     * to jump to, and MTDT kull 2026 has none. So the one control on the page
+     * that was under the floor — 153x21, the sentence a student is most meant
+     * to press, with a source comment claiming it "clears 24px on its own at
+     * this size" — sat outside the gate that exists to catch exactly that.
+     */
+    test(`the clash verdict's jump target clears ${MIN}px — ${label}`, async ({ page }) => {
+      await page.setViewportSize({ width, height });
+      await page.goto("/planlegger/#26h;-;%2BTDT4109,%2BTDT4120");
+      const jump = page.locator("button.planner-chip.is-jump");
+      await expect(jump).toBeVisible({ timeout: 45_000 });
+      const box = await jump.boundingBox();
+      expect(box?.height ?? 0).toBeGreaterThanOrEqual(MIN);
       expect(await undersized(page)).toEqual([]);
     });
   }
@@ -1739,8 +1791,15 @@ test.describe("the banner's pair", () => {
     // Every control is below the whole name, never inside it.
     expect(edit.top).toBeGreaterThanOrEqual(hint.bottom);
     expect(tabs.top).toBeGreaterThanOrEqual(hint.bottom);
-    // A clean verdict is still not printed on a phone at all.
-    expect(verdict.bottom - verdict.top).toBe(0);
+    // MTDT's pass is QUALIFIED — HMS0002 publishes nothing classifiable as a
+    // lecture, so the check went over it rather than on it — and a qualified
+    // pass is printed on a phone. The rule that hides a clean verdict was
+    // written about the pass that says nothing ("ingen kollisjoner" answers a
+    // question nobody asked); it was hiding this one too, so the phone showed
+    // "kollisjonssjekken er ufullstendig" in the margin with no verdict on
+    // screen for it to qualify — a bare warning about nothing.
+    expect(verdict.bottom - verdict.top).toBeGreaterThan(0);
+    await expect(page.locator("#planner-grid-status")).toContainText("ikke sjekket");
     // WHAT IS SPENT BEFORE THE WEEK, which is the number that matters and the
     // one the old 138px finding was about. Measured to the frame's top rather
     // than to the banner's bottom: the bar carries the view switch and the
@@ -1752,8 +1811,16 @@ test.describe("the banner's pair", () => {
     // that is the actual claim: the week has to start in the first third-ish,
     // or the thing the page is for is below the fold. From the viewport's top,
     // so the site topbar is inside the budget too. Measured at 277 of 844.
+    //
+    // Raised 0.35 → 0.37 when the qualified pass started printing on a phone:
+    // the verdict and the deadline cannot share one 390px row, so a qualified
+    // plan spends 27px more here (304 of 844, 36%) than a plan whose pass says
+    // nothing. That is the trade, made deliberately — the alternative was a
+    // margin note reading "kollisjonssjekken er ufullstendig" with no verdict
+    // on screen for it to qualify. An UNQUALIFIED pass is still hidden and
+    // still costs nothing, which is what the sibling test below pins.
     const viewport = page.viewportSize();
-    expect(frame.top).toBeLessThan((viewport?.height ?? 844) * 0.35);
+    expect(frame.top).toBeLessThan((viewport?.height ?? 844) * 0.37);
   });
 
   test("the verdict appears on a phone exactly when it has something to report", async ({
@@ -1768,6 +1835,23 @@ test.describe("the banner's pair", () => {
     const verdict = page.locator("#planner-grid-status");
     await expect(verdict).toBeVisible({ timeout: 30_000 });
     await expect(verdict).toContainText("kollisjon");
+  });
+
+  test("an unqualified clean verdict is still not printed on a phone", async ({ page }) => {
+    // The other half of the narrowed rule, and the half that was there first.
+    // TDT4110 and TDT4120 both publish real lectures and do not collide, so
+    // the pass has nothing to qualify — "ingen forelesninger kolliderer" and
+    // nothing else, which is the line that spends a row of the first screen
+    // saying nothing is wrong.
+    await page.goto("/planlegger/#26h;-;%2BTDT4110,%2BTDT4120");
+    await expect(gridBlocks(page).first()).toBeVisible({ timeout: 45_000 });
+    const status = page.locator("#planner-grid-status");
+    await expect
+      .poll(async () => (await status.textContent())?.trim() ?? "", { timeout: 45_000 })
+      .toContain("Ingen forelesninger kolliderer");
+    await expect(status).not.toContainText("ikke sjekket");
+    const height = await status.evaluate((el: HTMLElement) => el.getBoundingClientRect().height);
+    expect(height).toBe(0);
   });
 });
 

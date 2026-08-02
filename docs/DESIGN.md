@@ -372,6 +372,72 @@ apology. Empty states are invitations to act.
 
 ## 9. Change log
 
+**2026-08-01 — the second critique pass.** Re-run scored 26/40. Four of its
+findings were defects in the first pass, which is the useful part of the
+result; three more rules follow from them.
+
+- **A pass says what it passed on.** `conflictCount: 0` over a plan where one
+  course contributed no classifiable lecture is a claim about four courses
+  printed as a claim about five. The chip now carries `· N emner ikke sjekket`
+  in `--muted`, and — the half that made it urgent — the phone rule that hides a
+  clean verdict is narrowed to an **unqualified** one
+  (`:not(:has(.is-qualified))`). It was hiding the qualified pass too, so a
+  phone showed "kollisjonssjekken er ufullstendig" with no verdict on screen for
+  it to qualify. Costs 27px of the phone's first screen; the week's budget moved
+  0.35 → 0.37 deliberately, and only a qualified plan spends it.
+- **The week is a MØNSTERUKE outside the teaching period.** `weekdayDates(new
+  Date())` ran unconditionally, so through the whole planning window the header
+  read `MAN 27 … FRE 31` over blocks that every one of them runs `uke 34–47` —
+  every block false under its own date, on the default state of the surface.
+  Inside the teaching period the dates stay (a numeral is a true claim about
+  which Monday a column is); outside it the numerals come off and the context
+  line reads `Mønsteruke · undervisning fra uke 34`.
+- **A picker may not make the student read for themselves.** NTNU titles a split
+  lecture with the programmes it serves, and TMA4400 publishes seventeen such
+  rows flat and unsorted. The rows naming the plan's own programme sort to the
+  top and are marked `ditt program` (`namesProgramme`, whole-token — marking the
+  wrong row would send someone to another programme's lecture), and the list is
+  grouped under `Forelesning` / `Øving og lab`. This is weaker and always true
+  where `(din parallell)` is suppressed for being a guess — which is exactly the
+  ambiguous case where the help is needed.
+
+And the corrections to the pass above: `--muted` on a hue TINT fails AA on all
+six hues (3.76–3.96), so the tinted block's second line inherits the block's own
+ink; `.planner-cols-band .planner-cols-sub`'s `opacity: 0.78` was the same
+mistake in a third disguise and is gone. `tokens.test.ts` now pins the
+prohibition, not just the floor.
+
+**2026-08-01 — the critique pass.** `/impeccable critique` on `/planlegger/`,
+scored 24/40. Three rules changed rather than three call sites patched:
+
+- **`--faint` is not a text colour, and is now written down as one.** It
+  measured 2.87:1 on `--bg` while carrying a credit figure, a dropped course's
+  title, the exam months and an icon button. It is NOT raised to AA, because it
+  cannot be — `--muted` is 5.07, so a third AA-clearing step would have to live
+  inside 4.5–5.07 and would stop being a step. It buys back the 3:1 non-text
+  floor (`#98989d` → `#8a8a8f`) and everything a student *reads* moved to
+  `--muted`. `tokens.test.ts` pins both halves.
+- **Block text has one ink, and the quieting is weight.** The room and activity
+  under a block's code were `--on-block 72%` and failed AA on all six hues in
+  light (orange 3.01). The light hues clear AA at FULL strength by so little —
+  orange 4.56 — that no alpha survives on all six, so there is no quieter
+  colour to be had and the code's `--weight-medium` against the room's 400 is
+  the whole hierarchy. Measured in `tokens.test.ts`; do not re-introduce a mix.
+- **A course's hue comes from its CODE, not its position** (`hues.ts`). Cycling
+  by insertion order meant every add or drop repainted the plan — dropping one
+  course moved 1.95 of the other four, and two people opening the same shared
+  link could see different colours. The assignment is now a deterministic
+  function of the plan's code SET (so order of adding cannot matter, and a
+  recipient sees the sender's week), which brings that to 0.55. It is not zero
+  and cannot be: six buckets and five courses collide, and a displaced course
+  has to go somewhere.
+
+Also: the verdict may not print green when nothing was checked (a plan NTNU
+marks no `forelesning` in drew fifteen overlapping bars under "ingen
+forelesninger kolliderer"); `--warn` finally carries the over-full load that
+was wearing `--clash`; and the empty state takes the accent back from the bar,
+because the mandate's first path was grey paper under a blue secondary one.
+
 **2026-08-01 — Ruteark → the calendar.** Adopted after four direction rounds;
 the owner chose the category standard played straight, over three concept-led
 worlds. Landed in this pass:

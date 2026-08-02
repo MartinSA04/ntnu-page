@@ -68,6 +68,12 @@ const programOptionsJson = JSON.stringify(programOptions).replaceAll("<", "\\u00
           </svg>
         </span>
         Øvinger og labber
+        {/* What the layer is still waiting on. The narrowing that makes this
+            necessary is deliberate (drawing every group put 41 blocks in one
+            week) — what was not deliberate is that the control said nothing
+            about it, so ticking the box on a five-course plan appeared to do
+            nothing at all. Filled by `renderOthersPending`. */}
+        <span class="planner-others-pending" id="planner-others-pending" hidden></span>
       </button>
 
       {/* "Uke" is the timetable shape a student already knows from every other
@@ -103,6 +109,29 @@ const programOptionsJson = JSON.stringify(programOptions).replaceAll("<", "\\u00
             course rows — "settings for this thing", one scope up. It was a
             hand-drawn approximation of that icon, which is worse than either
             using it or using something else. */}
+      {/* THE PLAN IS THE URL, AND NOTHING ON THE PAGE SAID SO. Shared-link
+          creations are PRODUCT §1's north-star metric, `syncHash` has kept the
+          address bar current since the beginning, and there was no way to act
+          on that short of knowing to select the address bar. Hidden until
+          there is a plan — an empty plan is not a thing to send anyone. */}
+      <button type="button" class="np-btn planner-share" id="planner-share" hidden>
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          aria-hidden="true"
+          focusable="false"
+        >
+          <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" />
+          <path d="M16 6l-4-4-4 4" />
+          <path d="M12 2v13" />
+        </svg>
+        <span id="planner-share-label">Del</span>
+      </button>
+
       <button type="button" class="np-btn planner-edit-plan" id="planner-edit-plan">
         <svg
             viewBox="0 0 24 24"
@@ -309,13 +338,51 @@ const programOptionsJson = JSON.stringify(programOptions).replaceAll("<", "\\u00
     flex: none;
   }
 
+  /* The caveat rides the pass rather than replacing it: the mark and the words
+     stay a verdict, and this is the qualifier in the quieter ink — one chip,
+     one reading, "it holds, and here is what I did not look at". */
+  /* A heading inside the picker's list, not above it: the list is one column of
+     rows and the two kinds are told apart in that column, where the eye already
+     is. First one gets no space above it — it is the top of the list. */
+  :global(.course-settings-group-heading) {
+    margin: var(--space-3) 0 var(--space-1);
+  }
+
+  :global(.course-settings-group-heading:first-child) {
+    margin-top: 0;
+  }
+
+  /* "ditt program", on the row that names it. Ink and small, never a colour:
+     it is a fact about the label beside it, not a verdict about the plan. */
+  :global(.course-settings-group-own) {
+    margin-inline-start: var(--gap-2);
+    color: var(--muted);
+    font-size: var(--text-xs);
+  }
+
+  :global(.course-settings-group-own)::before {
+    content: "· ";
+  }
+
+  :global(.planner-chip-caveat) {
+    color: var(--muted);
+    font-weight: var(--weight-normal);
+  }
+
   :global(.planner-chip.is-clean svg) {
     color: var(--verdict);
   }
 
-  :global(.planner-chip.np-note-clash svg),
-  :global(.planner-chip.is-over svg) {
+  :global(.planner-chip.np-note-clash svg) {
     color: var(--clash);
+  }
+
+  /* An over-full load is worth a look, not a stop — DESIGN §2's whole reason
+     for --warn existing ("amber exists so red is never spent on something
+     merely worth a look"). It wore --clash here, which put the identical mark
+     on "45 av 30 sp" and on "2 kollisjoner denne uka". */
+  :global(.planner-chip.is-over svg) {
+    color: var(--warn);
   }
 
   /* "kan ikke sjekkes" carries no mark at all: a sign would have to be one of
@@ -327,13 +394,21 @@ const programOptionsJson = JSON.stringify(programOptions).replaceAll("<", "\\u00
 
   /* The verdict you can follow. Underlined ON HOVER only: at rest it is a
      verdict and must read as one, and a permanently underlined sentence in the
-     page's most important line would look like a footnote. The target is the
-     whole sentence, which clears 24px on its own at this size. */
+     page's most important line would look like a footnote.
+
+     The target is the whole sentence — and it did NOT clear 24px on its own,
+     which this comment claimed for as long as the button existed: measured
+     153×20.8 at every width, the one control on the page under WCAG 2.5.8's
+     floor, and the one you most want pressed. The padding is what makes the
+     claim true. `.planner-chip` is already `inline-flex; align-items: center`,
+     so a min-height grows the box around the centred sentence — no padding
+     math, and nothing moves but this control's own hit area. */
   :global(button.planner-chip.is-jump) {
     font-family: inherit;
     cursor: pointer;
     text-align: start;
     text-decoration-color: transparent;
+    min-height: 24px;
   }
 
   :global(button.planner-chip.is-jump:hover) {
@@ -460,8 +535,16 @@ const programOptionsJson = JSON.stringify(programOptions).replaceAll("<", "\\u00
 
        Scoped to the VERDICT, not to `.planner-status` around it — the deadline
        shares that row now, and hiding the row took the one date the whole
-       positioning rests on down with a clean week (D13). */
-    .planner-verdict:has(.is-clean) {
+       positioning rests on down with a clean week (D13).
+
+       `:not(:has(.is-qualified))` is load-bearing: a pass that carries a
+       caveat ("· 1 emne ikke sjekket") is NOT the pass this rule was written
+       about. Without it the phone hid the answer and kept the caveat — the
+       margin note still said "kollisjonssjekken er ufullstendig" with nothing
+       on screen for it to qualify, which reads as a bare warning. A qualified
+       pass must survive to the small screen; only an unqualified one is the
+       line that says nothing. */
+    .planner-verdict:has(.is-clean):not(:has(.is-qualified)) {
       display: none;
     }
   }
@@ -699,6 +782,19 @@ const programOptionsJson = JSON.stringify(programOptions).replaceAll("<", "\\u00
     color: var(--fg);
   }
 
+  /* Not a badge and not a warning — a count the label finishes on. Amber would
+     make an ordinary unmade choice look like a problem (§2's Red-Is-Collision
+     and its amber sibling are both about the PLAN, not about our narrowing), so
+     it is quiet ink set off by a middle dot. */
+  .planner-others-pending:not([hidden]) {
+    display: inline;
+    color: var(--muted);
+  }
+
+  .planner-others-pending::before {
+    content: " · ";
+  }
+
   .planner-check {
     display: grid;
     place-items: center;
@@ -790,7 +886,12 @@ const programOptionsJson = JSON.stringify(programOptions).replaceAll("<", "\\u00
   }
 
   :global(.planner-week-card-secondary) {
-    /* A quiet text action under the primary button, not a second button. */
+    /* The second route, and it has to LOOK like a route. It was `.np-navlink`
+       — --muted, no underline, no surface — under a paper primary, so the one
+       screen a student with five codes and no programme lands on offered them
+       a sentence rather than a control. Paper against the card's accent
+       primary is the ordinary two-button hierarchy; the size step keeps it
+       second without making it a footnote. */
     font-size: var(--text-sm);
   }
 
@@ -861,7 +962,7 @@ const programOptionsJson = JSON.stringify(programOptions).replaceAll("<", "\\u00
     font-size: var(--text-xs);
     letter-spacing: var(--tracking);
     text-transform: uppercase;
-    color: var(--faint);
+    color: var(--muted);
     text-align: right;
   }
 
@@ -983,7 +1084,7 @@ const programOptionsJson = JSON.stringify(programOptions).replaceAll("<", "\\u00
   /* "dato ikke satt", and nothing else — see `.exam-row.exam-dateless`. */
   :global(.exam-away) {
     font-size: var(--text-xs);
-    color: var(--faint);
+    color: var(--muted);
     white-space: nowrap;
   }
 
@@ -1023,7 +1124,7 @@ const programOptionsJson = JSON.stringify(programOptions).replaceAll("<", "\\u00
   }
 
   :global(.exam-dateless) :global(.exam-date) {
-    color: var(--faint);
+    color: var(--muted);
   }
 
   /* The one caveat that is true of every row and belongs on none of them. */
@@ -1127,7 +1228,7 @@ const programOptionsJson = JSON.stringify(programOptions).replaceAll("<", "\\u00
      touch size the tokens define, revealed to full ink on hover. Quiet at rest
      because five of them down a rail would out-shout the courses. */
   :global(.planner-course-open) {
-    color: var(--faint);
+    color: var(--muted);
     flex: none;
     transition:
       color var(--dur-fast) var(--ease),
@@ -1179,7 +1280,7 @@ const programOptionsJson = JSON.stringify(programOptions).replaceAll("<", "\\u00
   }
 
   :global(.planner-course-row.is-dropped .planner-course-title) {
-    color: var(--faint);
+    color: var(--muted);
     text-decoration: line-through;
     text-decoration-color: var(--border-strong);
   }
@@ -1188,7 +1289,7 @@ const programOptionsJson = JSON.stringify(programOptions).replaceAll("<", "\\u00
      student can add up by eye. */
   :global(.planner-course-sp) {
     font-size: var(--text-xs);
-    color: var(--faint);
+    color: var(--muted);
     text-align: right;
     white-space: nowrap;
   }

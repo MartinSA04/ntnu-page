@@ -22,10 +22,20 @@
   --card-nested: #f0f0f2;
   --card-hover: #f0f0f2;
 
-  /* Ink ramp. */
+  /* Ink ramp.
+
+     --faint IS NOT A TEXT COLOUR. At #98989d it measured 2.87:1 on --bg and
+     2.68 on --card, and the planner was spending it on a credit figure, a
+     dropped course's title, the exam months and an icon button — text and UI,
+     all of it under AA and most under the 3:1 non-text floor too. It is not
+     raised to 4.5 because it cannot be: --muted is already 5.07, so a third
+     AA-clearing step would have to live in the 4.5–5.07 window and would stop
+     being a step. So the rule is the fix, and the value only buys back the
+     non-text floor: use --muted for anything a student reads, and --faint for
+     marks that merely have to be visible. tokens.test.ts pins both halves. */
   --fg: #1d1d1f;
   --muted: #6e6e73;
-  --faint: #98989d;
+  --faint: #8a8a8f;
 
   /* Structural hairlines. With no cards, these carry the structure the
      containers used to: a day boundary must be heavier than the rows inside

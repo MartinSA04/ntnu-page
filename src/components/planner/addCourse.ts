@@ -306,6 +306,15 @@ export function mountAddCourse(deps: AddCourseDeps, signal: AbortSignal): AddCou
         hidden > 0
           ? `Ingen treff undervises i ${index.year}. ${subject} i emnekatalogen passer søket, men undervises ikke i år.`
           : "0 treff.";
+      // A true zero was the whole state: a sentence and a Lukk button, with the
+      // register that searches more than this dialog does — it keeps the
+      // not-taught rows this one drops — one page away and unmentioned.
+      if (hidden === 0) {
+        const out = el("a", "np-link-out add-course-register") as HTMLAnchorElement;
+        out.href = `/emner/?q=${encodeURIComponent(query)}`;
+        out.textContent = "Søk i hele emnekatalogen →";
+        status.append(" ", out);
+      }
       return;
     }
 
@@ -321,7 +330,47 @@ export function mountAddCourse(deps: AddCourseDeps, signal: AbortSignal): AddCou
   }
 
   searchInput.addEventListener("input", render);
-  searchForm.addEventListener("submit", (event) => event.preventDefault());
+  /**
+   * Enter adds, when the query names exactly one course.
+   *
+   * The five-codes flow is the one PRODUCT §2's persona B arrives on — paste a
+   * code, add it, next — and Enter did nothing at all, so each code cost a
+   * select-all, a retype and a trip to the mouse. It commits only on an
+   * unambiguous query: an exact code, or a single remaining match. Anything
+   * else and the student is still choosing, and adding for them would be
+   * guessing with their plan.
+   *
+   * The field clears on success (and only on success) because the next thing
+   * typed here is the next code, never a correction to the one that worked.
+   */
+  searchForm.addEventListener("submit", (event) => {
+    event.preventDefault();
+    const index = deps.index;
+    const query = searchInput.value.trim();
+    if (!index || query === "") return;
+    const taught = index.courses.filter(isTaught);
+    const matched = searchCatalog(taught, query);
+    const exact = matched.filter((course) => course[0].toUpperCase() === query.toUpperCase());
+    const target = exact.length === 1 ? exact[0] : matched.length === 1 ? matched[0] : undefined;
+    if (!target) return;
+    const [code, name, , , version] = target;
+    const control = addCourseRowControl(deps.store, { code, name, version: version ?? undefined });
+    // Enter may only ever put a course IN the plan. On a course already there
+    // `run()` is Fjern or Dropp — pressing Enter on the code you just typed and
+    // having it removed is the opposite of what the key means here.
+    if (control.stateKind !== "none" && control.stateKind !== "dropped") return;
+    const confirmation = control.run();
+    searchInput.value = "";
+    // AFTER the re-render, not before. `render()` writes its own status for the
+    // now-empty query ("Skriv for å søke i 4767 emner."), so setting the
+    // confirmation first threw it away — the keyboard path cleared the field,
+    // emptied the list and said nothing, which is indistinguishable from a
+    // cancelled search even though the plan had just changed. The mouse path
+    // never had this because it does not re-render.
+    render();
+    status.textContent = confirmation;
+    searchInput.focus();
+  });
   closeBtn.addEventListener("click", () => dialog.close());
   dialog.addEventListener("close", () => {
     invoker?.focus?.();

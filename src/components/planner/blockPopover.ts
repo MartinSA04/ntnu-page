@@ -131,6 +131,45 @@ export function mountBlockPopover(
     if (dialog.open) dialog.close();
   }
 
+  /**
+   * Tabbing off the end of a NON-MODAL dialog walks straight out of it — into
+   * the document behind, which for this one meant landing on the skip link at
+   * the very top of the page with an open popover still painted over the week.
+   *
+   * Closing rather than trapping: a trap is what the three modals do because
+   * they are modal, and building one here would make a surface that is
+   * deliberately not modal behave as if it were. A popover you have tabbed out
+   * of is a popover you are done with — which is already how a click elsewhere
+   * treats it.
+   */
+  dialog.addEventListener("focusout", (event) => {
+    if (!dialog.open) return;
+    const next = (event as FocusEvent).relatedTarget as Node | null;
+    if (next !== null) {
+      if (!dialog.contains(next)) close();
+      return;
+    }
+    // `relatedTarget: null` is TWO different things, and reading it as one is
+    // what made the first version of this handler inert: focus really leaving
+    // the document (a tab switch, devtools — the popover should survive that
+    // and still be there on the way back), and focus landing on `BODY`, which
+    // is what Chromium reports when you Tab off the last control of a
+    // NON-MODAL dialog. Measured: last control → BODY → skip link → brand,
+    // with the popover still painted over the week the whole way.
+    //
+    // `document.activeElement` tells them apart on its own, once the focus move
+    // has settled — hence the next frame. Tabbing off the end moves it to
+    // `body`, which the dialog does not contain; a window or tab losing focus
+    // LEAVES it on whatever was focused inside the dialog, which the dialog
+    // does contain. No `document.hasFocus()`: it answers false in a headless
+    // browser whatever the page is doing, so a guard built on it never fires
+    // in the one place this behaviour can be tested.
+    requestAnimationFrame(() => {
+      if (!dialog.open) return;
+      if (!dialog.contains(document.activeElement)) close();
+    });
+  });
+
   function render(ctx: BlockPopoverContext): void {
     dialog.replaceChildren();
     const { detail } = ctx;
