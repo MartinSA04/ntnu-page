@@ -86,22 +86,31 @@ export function deviceLabel(ua: string): string {
 }
 
 /**
- * Norwegian copy for a `SyncResult`'s failure `reason`. `taken` and `bad_pin`
- * are the brief's exact strings; the rest of `SyncClient`'s documented reasons
- * (`no_account`, `too_many_attempts`, `unavailable`) get the same sentence-case
- * treatment. Anything else — `failed`, and `login`'s `undecryptable`, which the
- * Task 6 review found not reachable today but real in the type — falls back to
- * the generic retry sentence rather than leaking a code the student cannot act
- * on.
+ * Norwegian copy for a `SyncResult`'s failure `reason`. `bad_pin` is the
+ * brief's exact string; the rest of `SyncClient`'s documented reasons
+ * (`no_account`, `too_many_attempts`, `unavailable`) get the same
+ * sentence-case treatment. Anything else — `failed`, and `login`'s
+ * `undecryptable`, which the Task 6 review found not reachable today but real
+ * in the type — falls back to the generic retry sentence rather than leaking
+ * a code the student cannot act on.
+ *
+ * `taken` and `no_account` name the OTHER action rather than stopping at the
+ * fact, e.g. "Det navnet er tatt. Har du kontoen alt? Logg inn i stedet."
+ * (the brief's original "Velg et annet." is gone). Both fields feed both
+ * `signup` and `login` (see `signupBtn.type = "submit"`'s comment below) and
+ * the same pair of buttons sits under either message, so a returning
+ * student who lands on `taken` by pressing Enter, or by clicking Opprett
+ * konto on a name they already own, is one sentence away from the control
+ * that actually works — not just told what went wrong.
  */
 function reasonCopy(reason: string): string {
   switch (reason) {
     case "taken":
-      return "Det navnet er tatt. Velg et annet.";
+      return "Det navnet er tatt. Har du kontoen alt? Logg inn i stedet.";
     case "bad_pin":
       return "Feil PIN.";
     case "no_account":
-      return "Fant ingen konto med det navnet.";
+      return "Fant ingen konto med det navnet. Opprett konto i stedet.";
     case "too_many_attempts":
       return "For mange forsøk. Prøv igjen senere.";
     case "unavailable":
@@ -300,6 +309,19 @@ export function mountProfilePanel(deps: ProfilePanelDeps): ProfilePanelHandle {
     // than needing a second, separately-bound click handler. It is also the
     // button already carrying `.np-btn--primary` — Enter deferring to the
     // same action a mouse click defaults to, not a second convention.
+    //
+    // Which action Enter picks is ARBITRARY: the same three fields feed both
+    // signup and login, and a returning student setting up a second device —
+    // the single most likely keyboard flow in a sync feature — is exactly as
+    // probable as a first-time student, so there is no "more correct" default
+    // to route Enter to. Swapping which button carries `type="submit"` only
+    // moves the mis-route from one population to the other; it does not
+    // remove it. What actually makes either landing survivable is
+    // `reasonCopy`'s `taken`/`no_account` cases naming the OTHER action —
+    // whichever button Enter (or a mismatched mouse click) reaches, a wrong
+    // guess names its way out rather than dead-ending. Do not "fix" this by
+    // moving `type="submit"` to `loginBtn` without also reverting that copy;
+    // the two changes are one decision.
     const signupBtn = el("button", "np-btn np-btn--primary", "Opprett konto") as HTMLButtonElement;
     signupBtn.type = "submit";
     signupBtn.setAttribute("aria-describedby", "profile-panel-hint");

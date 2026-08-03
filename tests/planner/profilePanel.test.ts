@@ -72,6 +72,36 @@ describe("attemptAuth", () => {
   });
 
   /**
+   * The same three fields feed both buttons, and Enter's `type="submit"`
+   * routes to `signup` regardless of which the student meant (see the
+   * comment above `signupBtn.type = "submit"` in `profilePanel.ts`) — so a
+   * returning student setting up a second device is exactly as likely to
+   * land on `taken` as a first-time student is to land on `no_account`.
+   * Stopping at the fact ("Det navnet er tatt.") tells a student who already
+   * owns the account nothing about how to get in; the copy has to name the
+   * other button, on both sides, or one of the two populations dead-ends.
+   */
+  it("taken names Logg inn — the account already exists, so the way out is the other button", async () => {
+    const sync = fakeSyncClient({
+      signup: async () => ({ ok: false, reason: "taken" }) as SyncResult,
+    });
+    await expect(attemptAuth(sync, "signup", "Ola", "482913", "Mac · Safari")).resolves.toEqual({
+      ok: false,
+      hint: "Det navnet er tatt. Har du kontoen alt? Logg inn i stedet.",
+    });
+  });
+
+  it("no_account names Opprett konto — the mirror of `taken`", async () => {
+    const sync = fakeSyncClient({
+      login: async () => ({ ok: false, reason: "no_account" }) as SyncResult,
+    });
+    await expect(attemptAuth(sync, "login", "Ola", "482913", "Mac · Safari")).resolves.toEqual({
+      ok: false,
+      hint: "Fant ingen konto med det navnet. Opprett konto i stedet.",
+    });
+  });
+
+  /**
    * The regression this function exists to close: `syncClient.ts`'s
    * `signup`/`login` wrap no try/catch around their `fetch`, so offline/DNS/
    * CORS reject the promise outright instead of resolving
