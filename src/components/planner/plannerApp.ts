@@ -53,6 +53,7 @@ import {
   type PlanStore,
   parsePlanHash,
 } from "../../lib/planner/store.js";
+import { createSyncClient, type SyncSession } from "../../lib/planner/syncClient.js";
 import { isoWeekNumber, weekdayDates } from "../../lib/planner/weekDates.js";
 import { syncPlanProbe } from "../../lib/planProbe.js";
 import { type AddCourseDeps, type AddCourseHandle, mountAddCourse } from "./addCourse.js";
@@ -85,6 +86,7 @@ import {
   unresolvedLectureChoices,
 } from "./grid.js";
 import { beginLayerChange } from "./layerMotion.js";
+import { mountProfilePanel } from "./profilePanel.js";
 import {
   type ClassifiedCourse,
   findProgramPlan,
@@ -231,6 +233,7 @@ function saveWeekBox(view: WeekView, width: number, height: number): void {
 interface PlannerElements {
   title: HTMLElement;
   contextLine: HTMLElement;
+  profileEntry: HTMLButtonElement;
   editPlan: HTMLButtonElement;
   editPlanLabel: HTMLElement;
   linkNote: HTMLElement;
@@ -272,6 +275,7 @@ function getElements(): PlannerElements | null {
   const found = {
     title: byId<HTMLElement>("planner-title"),
     contextLine: byId<HTMLElement>("planner-context-line"),
+    profileEntry: byId<HTMLButtonElement>("planner-profile-entry"),
     editPlan: byId<HTMLButtonElement>("planner-edit-plan"),
     editPlanLabel: byId<HTMLElement>("planner-edit-plan-label"),
     linkNote: byId<HTMLElement>("planner-link-note"),
@@ -399,6 +403,16 @@ function sameProgramSet(courses: PlanCourse[], next: AddCourseInput[]): boolean 
 }
 
 /**
+ * The stale-tab guard, and the only reason `visibilitychange` is wired at all.
+ * An iPad left open for a week holds a plan the server has moved past; pulling
+ * on the way back in is what stops the next edit writing over the newer copy.
+ * Not an optimisation — do not remove it as one.
+ */
+export function shouldPullOnVisible(session: SyncSession | null, hidden: boolean): boolean {
+  return session !== null && !hidden;
+}
+
+/**
  * Mounts the planner page. `semestersFile` is `data/semesters.json`,
  * `programOptions` the trimmed catalog from `data/programs.json` (both
  * build-time crawler artifacts imported by the caller, not fetched).
@@ -438,6 +452,65 @@ export async function mountPlannerApp(
   // course" — so it opens a read popover anchored to the bar, carrying a way
   // through to the editor rather than being it.
   const blockPopover = mountBlockPopover(openCourseSettings, lifeSignal);
+
+  // --- Account sync: the opt-in account's join into this page --------------
+  //
+  // Three triggers, and no polling loop: on plan change (debounced 1s), on
+  // `visibilitychange` → visible, and on load. The visibility pull is
+  // load-bearing, not an optimisation — see `shouldPullOnVisible`'s own
+  // comment for why. There is no offline queue and there must never be one:
+  // this is a webpage with no service worker, so a push either lands or it
+  // reports that it did not.
+  const sync = createSyncClient({ storage: localStorage, fetch: globalThis.fetch });
+  const profile = mountProfilePanel({
+    store,
+    sync,
+    onEditProgram: () => studieinfo.open(),
+    signal: lifeSignal,
+  });
+  elements.profileEntry.addEventListener("click", () => profile.show(), { signal: lifeSignal });
+
+  let pushTimer: ReturnType<typeof setTimeout> | null = null;
+  /** Debounced so a fast run of edits (adding five courses in a row) pushes once. */
+  function schedulePush(): void {
+    if (sync.session() === null) return;
+    if (pushTimer !== null) clearTimeout(pushTimer);
+    pushTimer = setTimeout(() => void runPush(), 1000);
+  }
+  lifeSignal.addEventListener("abort", () => {
+    if (pushTimer !== null) clearTimeout(pushTimer);
+  });
+
+  async function runPush(): Promise<void> {
+    let result = await sync.push();
+    // A stale push means another device moved first: take its copy, then
+    // re-push our edit on top. There is no merge here and there must not be
+    // one. `result` is reassigned here — the brief's own snippet left it
+    // `const` and threw the retry's outcome away, so a stale push that the
+    // retry actually landed still rendered "Ikke synkronisert · prøv igjen"
+    // forever. The UI has to reflect whichever push was the LAST one tried.
+    if (!result.ok && result.reason === "stale") {
+      if ((await sync.pull()).ok) result = await sync.push();
+    }
+    profile.setSyncState(result.ok ? "ok" : "failed");
+  }
+
+  document.addEventListener(
+    "visibilitychange",
+    () => {
+      // The stale-tab guard: an iPad left open for a week pulls the server's
+      // copy the moment it is looked at again, before the next edit can push
+      // a week-old plan over it. Do not remove this or "simplify" it into the
+      // debounced push above — a tab that has been hidden for a week has no
+      // pending edit to debounce, only a stale read to correct.
+      if (shouldPullOnVisible(sync.session(), document.hidden)) void sync.pull();
+    },
+    { signal: lifeSignal },
+  );
+
+  // On load: a signed-in student's other device may have moved since this
+  // tab's `localStorage` copy was written.
+  if (sync.session() !== null) void sync.pull();
 
   /** Opens the session popover for a clicked bar or board row. */
   function openBlockPopover(detail: BlockDetail, anchor: HTMLElement): void {
@@ -2787,6 +2860,10 @@ export async function mountPlannerApp(
     plan = next;
     syncHash();
     renderAll();
+    // The debounced push trigger: every plan write (add/drop a course, change
+    // a group, edit studieinfo) reaches the store through here, so wiring it
+    // once at the top of the fan-out covers all of them.
+    schedulePush();
     void loadBundles();
     const key = derivationKey();
     if (key !== lastDerivationKey) {

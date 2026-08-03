@@ -13,6 +13,7 @@
  * Anything visual, focus-related or CSS-dependent belongs in `e2e/*.pw.ts`.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { shouldPullOnVisible } from "../../src/components/planner/plannerApp.js";
 
 class FakeClassList {
   private set = new Set<string>();
@@ -232,6 +233,7 @@ class FakeEl {
 const IDS = [
   "planner-title",
   "planner-context-line",
+  "planner-profile-entry",
   "planner-edit-plan",
   "planner-edit-plan-label",
   "planner-link-note",
@@ -1389,5 +1391,28 @@ describe("mountPlannerApp — audit repro", () => {
     releaseIndex();
     await mounted;
     for (let i = 0; i < 20; i++) await new Promise((r) => setTimeout(r, 0));
+  });
+});
+
+describe("shouldPullOnVisible", () => {
+  const session = {
+    navn: "martin",
+    authKey: "a",
+    encKeyRaw: "b",
+    version: 1,
+    deviceId: "d",
+    label: "Mac · Safari",
+  };
+
+  it("pulls when a signed-in tab becomes visible — the stale-tab guard", () => {
+    expect(shouldPullOnVisible(session, false)).toBe(true);
+  });
+
+  it("does not pull while the tab is hidden", () => {
+    expect(shouldPullOnVisible(session, true)).toBe(false);
+  });
+
+  it("does nothing at all when signed out", () => {
+    expect(shouldPullOnVisible(null, false)).toBe(false);
   });
 });
