@@ -1,36 +1,33 @@
 /**
- * The profile panel — the ONE surface everything about the STUDENT lives on:
- * studieinfo (programme, kull, studieretning) and the opt-in account
- * (signup/login, the device registry, changing the PIN). It is reached from
- * one control, the topbar's account button, which stands on every page —
- * because the state behind it (`np:profile`, `np:plans`, `np:lastSemester`) is
- * read by all four of them, and because `/emne/[code]/` is the largest
- * cold-traffic surface on the site and a student landing there must be able to
- * sign in without navigating away first.
+ * The profile panel — the opt-in ACCOUNT: signup/login, the device registry,
+ * changing the PIN. It is reached from one control, the topbar's account
+ * button, which stands on every page, because `np:plans` is read by all four
+ * of them and because `/emne/[code]/` is the largest cold-traffic surface on
+ * the site: a student landing there must be able to sign in without navigating
+ * away first.
  *
  * Nothing here nags: the account is strictly opt-in and never a prerequisite
- * for using the planner (see the plan's product framing). Studieinfo is not
- * optional in the same way — it is PRODUCT mandate 1's own path — so it comes
- * first in the panel and carries the panel's one accent.
+ * for using the planner (see the plan's product framing).
  *
- * WHAT IS NOT HERE: the semester. It describes the PLAN, not the student, so
- * it is a control in the planner's own bar (`#planner-semester-select`). The
- * studieinfo section reads the stored semester (kull relevance and the
- * studieretning question both depend on the term) and writes it never.
+ * WHAT IS NOT HERE, and the line both departures were sorted along is *what
+ * the thing is about*. The SEMESTER describes the plan, so it is a control in
+ * the planner's own bar (`#planner-semester-select`). STUDIEINFO — programme,
+ * kull, studieretning — describes the plan too, and moved out on 2026-08-03 to
+ * `studieinfoDialog.ts`, opened from the plan's own name on `/planlegger/`.
+ * What is left here is the one thing that describes the PERSON rather than any
+ * plan, which is why it alone kept a door on every page.
  *
- * Four states, switched on `sync.session()` and a pending collision:
- *  - signed out — studieinfo, then Navn/PIN/Gjenta PIN, the two terms lines,
- *    Opprett konto / Logg inn.
+ * Three states, switched on `sync.session()` and a pending collision:
+ *  - signed out — Navn/PIN/Gjenta PIN, the two terms lines, Opprett konto /
+ *    Logg inn.
  *  - a login collision (§6 step 5) — the one prompt this design keeps: two
  *    independent histories met, and the student picks which one wins. Shown
  *    ONLY when `describeCollision` says so; an ordinary "add my second
  *    device" login never reaches it.
- *  - signed in — studieinfo, then "Sist synkronisert …", the device
- *    registry (`SyncSession.devices`, labelled by platform and browser —
- *    two browsers on one Mac are two entries), Bytt PIN, Logg ut på denne
- *    enheten.
- *  - Bytt PIN, which replaces the body outright: a focused sub-task, so
- *    studieinfo is not drawn under it.
+ *  - signed in — "Sist synkronisert …", the device registry
+ *    (`SyncSession.devices`, labelled by platform and browser — two browsers
+ *    on one Mac are two entries), Bytt PIN, Logg ut på denne enheten.
+ *  - Bytt PIN replaces the body outright: a focused sub-task.
  *
  * There is no per-device revocation (§4 / §6 step 8): Bytt PIN is the only
  * way to drop a device, and it is honest about the cost — every OTHER
@@ -55,7 +52,6 @@ import {
   type SyncSession,
 } from "../../lib/planner/syncClient.js";
 import { el, formatCreditNumber, icon } from "./dom.js";
-import { buildStudieinfoSection, type StudieinfoSectionHandle } from "./studieinfo.js";
 
 /**
  * Fired on `document` whenever the session may have changed — a signup, a
@@ -112,10 +108,8 @@ const REAUTH_COPY = "PIN-en er endret. Logg inn på nytt.";
  * elsewhere and answered here, so the answer's own control is what has to be
  * under the caret when the panel opens.
  */
-export type ProfileFocus = "program" | "direction";
-
 export interface ProfilePanelHandle {
-  show(focus?: ProfileFocus): void;
+  show(): void;
   setSyncState(state: SyncUiState): void;
 }
 
@@ -473,36 +467,9 @@ export function mountProfilePanel(deps: ProfilePanelDeps): ProfilePanelHandle {
     return head;
   }
 
-  /**
-   * Studieinfo, built ONCE and re-appended into each rendered body.
-   *
-   * Built once because it stages edits and holds two in-flight fetch tokens:
-   * rebuilding it on every `render()` would throw away a half-picked programme
-   * every time a sync state changed underneath it. `replaceChildren` detaches
-   * it rather than destroying it, and re-appending a detached element keeps
-   * every listener bound to it.
-   *
-   * It used to be a modal of its own reached through an "Endre" link here —
-   * two doors into the same room, one nested inside the other, and a
-   * `<dialog>` opened on top of a `<dialog>`. Now there is one room.
-   */
-  const studieinfo: StudieinfoSectionHandle = buildStudieinfoSection({
-    store: deps.store,
-    // A saved studieinfo is a finished errand: the plan behind the modal has
-    // already redrawn, so keeping the panel open would leave the student
-    // looking at the form they just submitted instead of at the answer.
-    onSaved: () => close(),
-  });
-
-  /** The hairline that says "different subject below". */
-  function renderDivider(): HTMLElement {
-    return el("hr", "profile-panel-divider");
-  }
-
   function renderSignedOut(): void {
     dialog.replaceChildren(renderHead());
     const body = el("div", "profile-panel-body");
-    body.append(studieinfo.element, renderDivider());
 
     // A <form>, not a <div>: `addCourse.ts`'s search field sets this
     // precedent (`searchForm`, addCourse.ts:169) for exactly this reason —
@@ -654,7 +621,6 @@ export function mountProfilePanel(deps: ProfilePanelDeps): ProfilePanelHandle {
   function renderSignedIn(session: SyncSession): void {
     dialog.replaceChildren(renderHead());
     const body = el("div", "profile-panel-body");
-    body.append(studieinfo.element, renderDivider());
 
     const account = el("div", "profile-panel-account");
     // The account names itself here, where "Konto" alone would be a heading
@@ -899,17 +865,10 @@ export function mountProfilePanel(deps: ProfilePanelDeps): ProfilePanelHandle {
   deps.signal.addEventListener("abort", () => dialog.remove());
 
   return {
-    show(focus?: ProfileFocus): void {
-      // Studieinfo is re-staged from the store on every open, so a half-picked
-      // programme abandoned last time is gone rather than resurrected.
-      studieinfo.reset();
+    show(): void {
       render();
       dialog.scrollTop = 0;
       if (!dialog.open) dialog.showModal();
-      // The caller sent the student here to answer one question; put the caret
-      // on the control that answers it.
-      if (focus === "direction") studieinfo.focusDirection();
-      else if (focus === "program") studieinfo.focusProgram();
     },
     setSyncState(state: SyncUiState): void {
       syncState = state;

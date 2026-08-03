@@ -235,9 +235,9 @@ class FakeEl {
 const IDS = [
   "planner-title",
   "planner-context-line",
-  // The plan's own semester control. Programme, kull and studieretning left
-  // this page for the profile panel the topbar opens; the semester stayed,
-  // because it describes the plan rather than the student.
+  // The plan's own semester control. It sits beside programme, kull and
+  // studieretning again — all four describe the PLAN, and all four are the
+  // planner's. What left this page for the topbar was the account alone.
   "planner-semester-select",
   "planner-link-note",
   "planner-credit-line",
@@ -1401,8 +1401,8 @@ describe("mountPlannerApp — audit repro", () => {
     expect(slots()).not.toContain("08:15");
   });
 
-  // KNOAND/MTPROD: NTNU publishes no study plan at all. The modal now saves
-  // such a programme (studieinfo's half of), so the planner is where
+  // KNOAND/MTPROD: NTNU publishes no study plan at all. The studieinfo dialog
+  // now saves such a programme (studieinfo's half of), so the planner is where
   // the student lands — and it used to say nothing about why the week is bare.
   it("ux-fail-5: a programme with no study plan says so and offers the way out", async () => {
     await mount(

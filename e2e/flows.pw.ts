@@ -2086,3 +2086,26 @@ test.describe("the account on a phone", () => {
     await expect(page.locator("#planner-profile-panel")).toBeVisible();
   });
 });
+
+test.describe("the programme picker lives on the planner", () => {
+  test("the plan's title opens it, and the profile panel no longer carries it", async ({
+    page,
+  }) => {
+    await page.goto("/planlegger/");
+    // The empty state's own primary route still lands in the programme field.
+    await page.getByRole("button", { name: "Velg studieprogram" }).click();
+    const dialog = page.locator("#planner-studieinfo");
+    await expect(dialog).toBeVisible();
+    await expect(page.locator("#studieinfo-program-input")).toBeFocused();
+    await page.keyboard.press("Escape");
+    await expect(dialog).toBeHidden();
+
+    // The account's door opens a room with no programme field IN it. Scoped to
+    // the panel, not to the document: the picker's own dialog is mounted at
+    // page load and holds that input the whole time — it is just somewhere
+    // else now, which is the entire point of the change.
+    await page.locator("#site-account-btn").click();
+    await expect(page.locator("#planner-profile-panel")).toBeVisible();
+    await expect(page.locator("#planner-profile-panel #studieinfo-program-input")).toHaveCount(0);
+  });
+});

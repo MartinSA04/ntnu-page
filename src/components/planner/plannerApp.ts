@@ -85,7 +85,6 @@ import {
   unresolvedLectureChoices,
 } from "./grid.js";
 import { beginLayerChange } from "./layerMotion.js";
-import type { ProfileFocus } from "./profilePanel.js";
 import {
   type ClassifiedCourse,
   findProgramPlan,
@@ -95,6 +94,7 @@ import {
   resolvePeriodFor,
 } from "./programPlan.js";
 import { publishMonthFor } from "./studieinfo.js";
+import { mountStudieinfoDialog, type StudieinfoFocus } from "./studieinfoDialog.js";
 import type { PlanCourseState } from "./types.js";
 
 export interface SemesterSummary {
@@ -447,14 +447,16 @@ export async function mountPlannerApp(
   setAccountRepaint(() => onAuthenticated());
   lifeSignal.addEventListener("abort", () => setAccountRepaint(null));
 
+  const studieinfoDialog = mountStudieinfoDialog(store, lifeSignal);
+
   /**
-   * Opens the profile panel, on the control that answers whatever asked. It
-   * is mounted by the layout, so it is `null` in a context that has no topbar
-   * (the unit-test shim) — the planner degrades to doing nothing rather than
-   * to throwing.
+   * Opens the programme picker, with the caret on whichever control asked for
+   * it. It is the planner's OWN dialog now — the topbar's door leads to the
+   * account, which is a different room: a programme is a fact about the plan,
+   * and sign-in is a fact about the person.
    */
-  function openProfile(focus?: ProfileFocus): void {
-    accountPanel()?.show(focus);
+  function openStudieinfo(focus?: StudieinfoFocus): void {
+    studieinfoDialog.open(focus);
   }
 
   const courseSettings = mountCourseSettings(store, lifeSignal);
@@ -1791,7 +1793,7 @@ export async function mountPlannerApp(
         // panel opens with focus on the select — so the student presses one
         // control and the next thing under their hand is the one that closes
         // the question.
-        action: { label: "Velg studieretning", run: () => openProfile("direction") },
+        action: { label: "Velg studieretning", run: () => openStudieinfo("direction") },
         weekMessage: prompt,
       };
     }
@@ -2602,7 +2604,7 @@ export async function mountPlannerApp(
         // belongs.
         const primary = el("button", "np-btn np-btn--primary", "Velg studieprogram");
         primary.type = "button";
-        primary.addEventListener("click", () => openProfile("program"));
+        primary.addEventListener("click", () => openStudieinfo("program"));
         card.append(primary);
         // The panel is the way in; the dialog is the "I already know a code"
         // escape hatch. A paper button rather than `.np-navlink`, which at

@@ -610,6 +610,48 @@
   background: color-mix(in srgb, var(--fg) 45%, transparent);
 }
 
+/* --- Studieinfo, the planner's own dialog --------------------------------
+   The room the picker moved into when it left the profile panel. Same surface
+   grammar as the panel it came out of, and deliberately the same width: it is
+   the same typeahead, whose rows are a code, a name and a level on one line.
+
+   `[open] { display: flex }` is not optional — a `<dialog>` is `display: none`
+   at UA origin until open, and any author `display` on the base rule would
+   defeat that and paint the card closed. Same trap `.profile-panel-dialog`
+   documents one rule up. */
+.studieinfo-dialog {
+  width: min(30rem, calc(100vw - 2rem));
+  max-width: calc(100vw - 2rem);
+  max-height: min(84vh, 42rem);
+  margin: min(8vh, 4rem) auto auto;
+  padding: 0;
+  color: var(--fg);
+}
+
+.studieinfo-dialog[open] {
+  display: flex;
+  flex-direction: column;
+}
+
+.studieinfo-dialog::backdrop {
+  background: color-mix(in srgb, var(--fg) 45%, transparent);
+}
+
+/* The head stays put while a long programme list scrolls under it, so the way
+   out is never scrolled off. */
+.studieinfo-dialog-head {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  padding: var(--space-4) var(--space-4) var(--space-3);
+  background: var(--bg);
+}
+
+.studieinfo-dialog-body {
+  overflow-y: auto;
+  padding: 0 var(--space-4) var(--space-4);
+}
+
 .profile-panel-head {
   padding-inline-start: var(--space-5);
 }
