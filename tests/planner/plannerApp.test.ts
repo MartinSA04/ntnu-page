@@ -2110,6 +2110,224 @@ describe("mountPlannerApp — an edit survives a race inside the pull/push machi
   }, 10_000);
 });
 
+/**
+ * The window every other sync test in this file steps over: an edit made
+ * inside a PULL's own round trip — not before the visibility flip (covered
+ * above), not inside a PUSH's round trip (covered above), but between the GET
+ * going out and its answer coming back.
+ *
+ * `pull()` used to apply the response the moment it landed, unconditionally.
+ * The dirty guard runs before `pullAndRefresh()` is CALLED, so nothing sat
+ * between the GET returning and the wholesale overwrite of `np:plans` — and
+ * `applySyncable` also resynced `session.version` to the server's, so the
+ * debounced push that followed re-read the clobbered storage, landed a clean
+ * 200 with no 409, and set "Sist synkronisert nå". The edit was gone from
+ * screen, storage AND server, reported as a success.
+ *
+ * The fix is structural: `fetchRemote()` writes nothing, and the caller
+ * refuses to apply an answer whose `planGen` has moved.
+ */
+describe("mountPlannerApp — an edit inside a pull's own round trip is not destroyed", () => {
+  beforeEach(() => {
+    installDom();
+    vi.resetModules();
+  });
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("the edit survives on screen, in storage and on the server, and is not reported as saved", async () => {
+    const server = makeSyncServer();
+    // The server holds the pre-edit (empty) plan throughout. One device, no
+    // conflict — the race is purely about ordering on this tab.
+    const storageA = fakeStorage({ "np:plans": '{"26h":[]}' });
+    const deviceA = createSyncClient({
+      storage: storageA,
+      fetch: server.handle as unknown as typeof fetch,
+    });
+    await deviceA.signup("martin", "482913", "Mac");
+
+    (globalThis as unknown as Record<string, unknown>).location = {
+      hash: "",
+      search: "",
+      pathname: "/planlegger/",
+    };
+
+    // The FIRST sync GET after `armGate()` hangs until the test releases it —
+    // the pull's own round trip, from the inside. Everything else, including
+    // the mount's on-load pull, passes straight through.
+    let gateActive = false;
+    let releaseGet = (): void => {};
+    let gate: Promise<void> = Promise.resolve();
+    function armGate(): void {
+      gate = new Promise<void>((resolve) => {
+        releaseGet = resolve;
+      });
+      gateActive = true;
+    }
+    (globalThis as unknown as Record<string, unknown>).fetch = vi.fn(
+      async (url: string, init?: RequestInit) => {
+        if (url.startsWith("/api/sync/")) {
+          if ((init?.method ?? "GET") === "GET" && gateActive) {
+            gateActive = false;
+            await gate;
+          }
+          return server.handle(url, init);
+        }
+        if (url.includes("/data/search-index.json"))
+          return jsonResponse({ year: 2026, courses: [] });
+        if (url.includes("/api/course/TDT4109/timetable")) {
+          return jsonResponse([entry("TDT4109", 1, "08:15", "10:00")]);
+        }
+        if (url.includes("/api/course/")) return jsonResponse(DETAILS);
+        return { ok: false, status: 404, json: async () => ({ error: "Not found" }) };
+      },
+    );
+
+    const localStorageLike = (globalThis as unknown as { localStorage: StorageLike }).localStorage;
+    const deviceB = createSyncClient({
+      storage: localStorageLike,
+      fetch: server.handle as unknown as typeof fetch,
+    });
+    await deviceB.login("martin", "482913", "Tavle · nettleser");
+
+    const { mountPlannerApp } = await import("../../src/components/planner/plannerApp.js");
+    const { clearCourseBundleMemo, clearPlannerIndexMemo } = await import(
+      "../../src/lib/planner/data.js"
+    );
+    clearCourseBundleMemo();
+    clearPlannerIndexMemo();
+
+    await mountPlannerApp(SEMESTERS as never, [], undefined);
+    for (let i = 0; i < 20; i++) await new Promise((r) => setTimeout(r, 0));
+
+    // Nothing is dirty, so the visibility flip goes straight to the pull —
+    // whose GET is now held open.
+    armGate();
+    fireVisibilityChange(true);
+    fireVisibilityChange(false);
+    for (let i = 0; i < 5; i++) await new Promise((r) => setTimeout(r, 0));
+
+    // The student drops a course in — inside the GET's own round trip. The
+    // response already on its way back knows nothing about it.
+    planStorage.set(
+      "np:plans",
+      '{"26h":[{"code":"TDT4109","name":"TDT4109 navn","version":"1","source":"manual"}]}',
+    );
+    (
+      globalThis as unknown as { window: { dispatchEvent: (ev: { type: string }) => void } }
+    ).window.dispatchEvent({ type: PLAN_CHANGE_EVENT });
+    for (let i = 0; i < 5; i++) await new Promise((r) => setTimeout(r, 0));
+
+    releaseGet();
+    for (let i = 0; i < 20; i++) await new Promise((r) => setTimeout(r, 0));
+    // Real time, past `schedulePush`'s 1s debounce, so the edit's own push
+    // actually fires inside this test.
+    await new Promise((r) => setTimeout(r, 1100));
+
+    // The edit is still in storage — the stale answer did not overwrite it…
+    expect(planStorage.get("np:plans")).toContain("TDT4109");
+    // …it is still on screen…
+    const row = find("planner-course-rows")
+      .descendants()
+      .find((e) => e.dataset.code === "TDT4109");
+    expect(row).toBeDefined();
+    // …and it actually reached the server, rather than a green "synced" over
+    // a plan the pull had already emptied.
+    await deviceA.pull();
+    expect(storageA.getItem("np:plans")).toContain("TDT4109");
+  }, 10_000);
+});
+
+/**
+ * The same race, arriving from the other side: the shared-link branch writes
+ * a `#…` plan into storage SYNCHRONOUSLY, but it runs long after the on-load
+ * pull was fired and long before `store.onPlanChange`'s subscriber is
+ * registered — so nothing bumped `planGen` and the tab read as clean. The
+ * pull's answer then overwrote the friend's plan, `applyPlanUpdate` cleared
+ * `replacedPlan` and `syncHash()` rewrote the URL: the link, the plan and the
+ * way back all vanished after a ~200 ms flash. The link application bumps the
+ * counter now, so the pull guard covers this case with no separate logic.
+ */
+describe("mountPlannerApp — an on-load pull does not eat a shared link", () => {
+  beforeEach(() => {
+    installDom();
+    vi.resetModules();
+  });
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("keeps the link's plan and the way back to the student's own", async () => {
+    const server = makeSyncServer();
+    // The account holds a DIFFERENT plan (TDT4136) from both the link
+    // (TDT4109) and this device's stored one (TMA4400).
+    const storageA = fakeStorage({
+      "np:plans":
+        '{"26h":[{"code":"TDT4136","name":"TDT4136 navn","version":"1","source":"manual"}]}',
+    });
+    const deviceA = createSyncClient({
+      storage: storageA,
+      fetch: server.handle as unknown as typeof fetch,
+    });
+    await deviceA.signup("martin", "482913", "Mac");
+
+    (globalThis as unknown as Record<string, unknown>).location = {
+      hash: "#26h;-;%2BTDT4109",
+      search: "",
+      pathname: "/planlegger/",
+    };
+    (globalThis as unknown as Record<string, unknown>).fetch = vi.fn(
+      async (url: string, init?: RequestInit) => {
+        if (url.startsWith("/api/sync/")) return server.handle(url, init);
+        if (url.includes("/data/search-index.json"))
+          return jsonResponse({ year: 2026, courses: [] });
+        if (url.includes("/api/course/TDT4109/timetable")) {
+          return jsonResponse([entry("TDT4109", 1, "08:15", "10:00")]);
+        }
+        if (url.includes("/api/course/TDT4136/timetable")) {
+          return jsonResponse([entry("TDT4136", 2, "10:15", "12:00")]);
+        }
+        if (url.includes("/api/course/")) return jsonResponse(DETAILS);
+        return { ok: false, status: 404, json: async () => ({ error: "Not found" }) };
+      },
+    );
+
+    const localStorageLike = (globalThis as unknown as { localStorage: StorageLike }).localStorage;
+    const deviceB = createSyncClient({
+      storage: localStorageLike,
+      fetch: server.handle as unknown as typeof fetch,
+    });
+    await deviceB.login("martin", "482913", "Tavle · nettleser");
+    // This device had a plan of its own before the link arrived — which is
+    // what makes `replacedPlan` (the "Behold min egen" way back) real.
+    planStorage.set(
+      "np:plans",
+      '{"26h":[{"code":"TMA4400","name":"TMA4400 navn","version":"1","source":"manual"}]}',
+    );
+
+    const { mountPlannerApp } = await import("../../src/components/planner/plannerApp.js");
+    const { clearCourseBundleMemo, clearPlannerIndexMemo } = await import(
+      "../../src/lib/planner/data.js"
+    );
+    clearCourseBundleMemo();
+    clearPlannerIndexMemo();
+
+    await mountPlannerApp(SEMESTERS as never, [], undefined);
+    for (let i = 0; i < 20; i++) await new Promise((r) => setTimeout(r, 0));
+
+    // The link's plan is what is on screen and in storage — not the account's.
+    expect(planStorage.get("np:plans")).toContain("TDT4109");
+    expect(planStorage.get("np:plans")).not.toContain("TDT4136");
+    const rows = find("planner-course-rows").descendants();
+    expect(rows.find((e) => e.dataset.code === "TDT4109")).toBeDefined();
+    // …and the way back to the student's own plan is still offered.
+    const note = find("planner-link-note");
+    expect(note.hidden).toBe(false);
+    expect(note.textContent).toContain("Denne delte planen erstattet din egen.");
+  }, 10_000);
+});
+
 describe("shouldPullOnVisible", () => {
   const session = {
     navn: "martin",

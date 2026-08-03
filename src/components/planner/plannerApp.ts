@@ -546,14 +546,44 @@ export async function mountPlannerApp(
   }
 
   /**
-   * `sync.pull()`, plus the repaint it does not do on its own (above).
-   * Returns the same `SyncResult` `sync.pull()` did, so `pushOnce`'s
-   * stale-retry branch can still branch on `.ok`.
+   * A pull, guarded against its OWN round trip.
+   *
+   * `sync.pull()` used to fetch and overwrite `np:plans` in one call, so an
+   * edit made between the GET going out and the answer coming back was
+   * destroyed by a response that predated it — and then REPORTED AS SAVED:
+   * `applySyncable` had resynced `session.version` to the server's, so the
+   * debounced push that followed re-read the clobbered storage, landed a
+   * clean 200 with no 409, and set "Sist synkronisert nå". Gone from screen,
+   * storage and server, under a green light. A guard placed after
+   * `await sync.pull()` cannot fix that; storage is already overwritten.
+   *
+   * Hence `sync.fetchRemote()` (writes nothing) + an explicit
+   * `sync.applyRemote()`: `planGen` is snapshotted BEFORE the request and the
+   * answer is refused if it moved. Refusing is safe and self-healing — every
+   * bump of `planGen` comes from `store.onPlanChange`, which also arms
+   * `schedulePush`, so the newer local edit is already on its way out and the
+   * next pull (visibility, or the stale-retry inside `pushOnce`) sees a
+   * settled tab. `"superseded"` is deliberately NOT reported as a sync
+   * failure: nothing is wrong, this answer was simply about an older plan.
+   *
+   * Returns a `SyncResult` so `pushOnce`'s stale-retry branch can still
+   * branch on `.ok`.
    */
   async function pullAndRefresh(): Promise<SyncResult> {
-    const result = await sync.pull();
-    if (result.ok) applyPulledPlan();
-    return result;
+    const sentGen = planGen;
+    const fetched = await sync.fetchRemote();
+    if (!fetched.ok) {
+      // A pull that failed used to say nothing at all, so a session revoked by
+      // a PIN change on another device kept reading "Sist synkronisert nå"
+      // while every request 401'd.
+      profile.setSyncState(fetched.reason === "unauthorised" ? "unauthorised" : "failed");
+      return { ok: false, reason: fetched.reason };
+    }
+    if (planGen !== sentGen) return { ok: false, reason: "superseded" };
+    sync.applyRemote(fetched.snapshot);
+    applyPulledPlan();
+    profile.setSyncState("ok");
+    return { ok: true };
   }
 
   let pushTimer: ReturnType<typeof setTimeout> | null = null;
@@ -583,12 +613,12 @@ export async function mountPlannerApp(
    * timing from destroying ITS OWN unsent edit, which is `ensurePush`'s job,
    * below.
    */
-  async function pushOnce(): Promise<boolean> {
+  async function pushOnce(): Promise<SyncResult> {
     let result = await sync.push();
     if (!result.ok && result.reason === "stale") {
       if ((await pullAndRefresh()).ok) result = await sync.push();
     }
-    return result.ok;
+    return result;
   }
 
   /**
@@ -608,6 +638,13 @@ export async function mountPlannerApp(
     if (!isDirty()) return Promise.resolve(true);
     pushInFlight = (async () => {
       let ok = true;
+      // The third `SyncUiState` was unreachable until now — nothing ever set
+      // it, so `syncStatusLine`/`syncSuffix`'s "Synkroniserer …" branches were
+      // dead copy. This is the one window it describes.
+      profile.setSyncState("syncing");
+      /** The reason the LAST failing attempt gave, so the panel can tell a
+       *  revoked session ("Logg inn på nytt") from a retryable one. */
+      let reason = "";
       try {
         for (;;) {
           if (sync.session() === null) {
@@ -615,15 +652,19 @@ export async function mountPlannerApp(
             break;
           }
           const sentGen = planGen;
-          ok = await pushOnce();
-          if (!ok) break;
+          const result = await pushOnce();
+          if (!result.ok) {
+            ok = false;
+            reason = result.reason;
+            break;
+          }
           syncedGen = sentGen;
           if (planGen === sentGen) break; // nothing moved while that send was in flight
         }
       } finally {
         pushInFlight = null;
       }
-      profile.setSyncState(ok ? "ok" : "failed");
+      profile.setSyncState(ok ? "ok" : reason === "unauthorised" ? "unauthorised" : "failed");
       return ok;
     })();
     return pushInFlight;
@@ -673,8 +714,16 @@ export async function mountPlannerApp(
   );
 
   // On load: a signed-in student's other device may have moved since this
-  // tab's `localStorage` copy was written. Nothing can be dirty this early
-  // (this runs before the first paint), so there is nothing to flush first.
+  // tab's `localStorage` copy was written.
+  //
+  // This used to carry a comment claiming nothing can be dirty this early. It
+  // is not true, and the two ways it is false are the two ways this pull could
+  // destroy work: the shared-link branch a few hundred lines below runs
+  // SYNCHRONOUSLY after this call is made but before its GET resolves, and
+  // `loadPeriodCourses()` reaches `store.setProgramPlan` a few hundred ms into
+  // the same mount while the studieretning buttons have been live since first
+  // paint. `pullAndRefresh`'s own `planGen` guard covers all of it — which is
+  // why there is no separate check here.
   if (sync.session() !== null) void pullAndRefresh();
 
   /** Opens the session popover for a clicked bar or board row. */
@@ -921,10 +970,24 @@ export async function mountPlannerApp(
     // header chip would keep naming the old programme.
     if (hashPlan.program === null) store.removeProgram();
     store.savePlan(plan);
+    // A shared link IS an edit, and this one is invisible to the counter
+    // otherwise: `store.onPlanChange`'s subscriber is not registered until the
+    // very end of this function, so the `savePlan` above fires an event nobody
+    // is listening to and `planGen` would stay 0. The on-load pull was fired a
+    // few hundred lines above and its GET is on the wire right now — with the
+    // tab reading as clean, its answer overwrote the friend's plan,
+    // `applyPlanUpdate` cleared `replacedPlan` and `syncHash()` rewrote the
+    // URL, so the link, the plan and the way back all vanished after a ~200 ms
+    // flash. Bumping the counter here is the whole fix: `pullAndRefresh`'s
+    // guard sees the generation move and refuses the stale answer.
+    planGen++;
   } else if (!knownSemester(plan.semesterId)) {
     // Stored state can outlive a semester too — silently, since no link lied.
     plan = { ...plan, semesterId: defaultSemesterId };
     store.savePlan(plan);
+    // Same reason as the branch above: nothing is subscribed yet, and this
+    // write is real local content the server has not seen.
+    planGen++;
   }
 
   let plannerIndex: PlannerIndex | null = null;
