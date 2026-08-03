@@ -4,6 +4,8 @@ import {
   type CourseTimetableOptions,
   decodeEntry,
   entriesForSemester,
+  narrowingChangesWeek,
+  scopeNote,
   termLabel,
   termNote,
 } from "../../src/components/site/courseTimetable.js";
@@ -134,5 +136,67 @@ describe("decodeEntry", () => {
   it("keeps an untouched entry's identity", () => {
     const plain = entry("2026_HØST");
     expect(decodeEntry(plain)).toBe(plain);
+  });
+});
+
+describe("scopeNote — the week says what slice of the course it is drawing", () => {
+  it("with no programme, says what it shows and where the answer lives", () => {
+    expect(scopeNote({ programCode: null, inPlan: false, scope: "all" })).toBe(
+      "Uka viser alle paralleller og grupper for emnet. Velg studieprogram i planleggeren for å se din egen undervisning.",
+    );
+  });
+
+  it("with a programme but no plan entry, names the thing a plan would add", () => {
+    expect(scopeNote({ programCode: "MTDT", inPlan: false, scope: "all" })).toBe(
+      "Uka viser alle paralleller og grupper for emnet. Legg emnet i planen for å velge øvingsgruppe.",
+    );
+  });
+
+  it("drops the nudge once the course is in the plan — it has been acted on", () => {
+    expect(scopeNote({ programCode: "MTDT", inPlan: true, scope: "all" })).toBe(
+      "Uka viser alle paralleller og grupper for emnet.",
+    );
+  });
+
+  it("narrowed, it names the programme it narrowed to", () => {
+    expect(scopeNote({ programCode: "MTDT", inPlan: true, scope: "mine" })).toBe(
+      "Viser undervisningen for MTDT.",
+    );
+    expect(scopeNote({ programCode: "MTDT", inPlan: false, scope: "mine" })).toBe(
+      "Viser undervisningen for MTDT. Legg emnet i planen for å velge øvingsgruppe.",
+    );
+  });
+});
+
+describe("narrowingChangesWeek — the guard on the switch", () => {
+  /** A lecture entry carrying the programme cluster upstream partitions by. */
+  const forProgram = (keys: string[] | undefined, title = "Forelesning"): CourseTimetableEntry => ({
+    ...entry("2026_HØST"),
+    title,
+    studyProgramKeys: keys,
+  });
+
+  it("is false with no programme — there is nothing to narrow to", () => {
+    expect(narrowingChangesWeek([forProgram(["MTDT"])], undefined, null)).toBe(false);
+  });
+
+  it("is false when no entry names a programme, so the control would do nothing", () => {
+    // `entriesForProgram` is a no-op here, which is the majority of courses —
+    // rendering the switch anyway is a control that visibly does nothing.
+    const entries = [forProgram(undefined), forProgram(undefined)];
+    expect(narrowingChangesWeek(entries, undefined, "MTDT")).toBe(false);
+  });
+
+  it("is true when the programme filter actually drops an entry", () => {
+    const entries = [
+      forProgram(["MTDT"], "Forelesning 1 MTDT"),
+      forProgram(["MTFYMA"], "Forelesning 1 MTFYMA"),
+    ];
+    expect(narrowingChangesWeek(entries, undefined, "MTDT")).toBe(true);
+  });
+
+  it("is false for a programme none of the entries name — the filter never empties a week", () => {
+    const entries = [forProgram(["MTFYMA"]), forProgram(["MTIOT"])];
+    expect(narrowingChangesWeek(entries, undefined, "MTDT")).toBe(false);
   });
 });

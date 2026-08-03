@@ -19,6 +19,7 @@ import {
   decodeEntities,
   type TimetableEntry as PlannerTimetableEntry,
 } from "../../lib/planner/data.js";
+import { applyGroupSelection } from "../../lib/planner/groups.js";
 import { naturalHue } from "../../lib/planner/hues.js";
 import { entriesInSemester } from "../../lib/planner/schedule.js";
 import { el } from "../planner/dom.js";
@@ -138,6 +139,59 @@ export function termNote(entries: CourseTimetableEntry[], options: CourseTimetab
   const shown = terms.map(termLabel).join(", ");
   if (terms.includes(plannedTerm)) return `Viser ${shown}.`;
   return `Viser ${shown}. Ikke undervist i ${semester.label}.`;
+}
+
+/** Which slice of the course's teaching the week is drawing. */
+export type TimetableScope = "all" | "mine";
+
+export interface ScopeState {
+  /** The stored programme, or null when the student has not said. */
+  programCode: string | null;
+  /** Whether this course is in the plan — the only thing that can hold a group pick. */
+  inPlan: boolean;
+  scope: TimetableScope;
+}
+
+/**
+ * The line under the week: what it is showing, and what would change it.
+ *
+ * This page draws EVERY parallel and every group by default, deliberately —
+ * it is the course's own reference page, not one student's plan — and until
+ * now nothing on it said so, which left a student to assume the six lectures
+ * in front of them were six lectures they had to attend.
+ *
+ * Three rungs, and they differ by what the student can actually do next. With
+ * no programme stored nothing can be narrowed at all, so the line points at
+ * the planner. With one, lectures narrow to that programme's section and other
+ * programmes' øving groups drop. Only a PLAN entry can carry the student's own
+ * group pick, which is what the second sentence is for and why it goes away
+ * once the course is in the plan.
+ */
+export function scopeNote(state: ScopeState): string {
+  if (state.programCode === null) {
+    return "Uka viser alle paralleller og grupper for emnet. Velg studieprogram i planleggeren for å se din egen undervisning.";
+  }
+  const nudge = state.inPlan ? "" : " Legg emnet i planen for å velge øvingsgruppe.";
+  if (state.scope === "mine") return `Viser undervisningen for ${state.programCode}.${nudge}`;
+  return `Uka viser alle paralleller og grupper for emnet.${nudge}`;
+}
+
+/**
+ * Would narrowing actually change this week?
+ *
+ * `entriesForProgram` is a no-op for a course whose entries name no programme
+ * in `studyProgramKeys` — which is most of them — so without this guard the
+ * switch would be a control that visibly does nothing on the majority of
+ * course pages. That is the exact failure the layer box was fixed for, and it
+ * is worth a filter pass at mount to avoid repeating.
+ */
+export function narrowingChangesWeek(
+  entries: CourseTimetableEntry[],
+  selected: string[] | undefined,
+  programCode: string | null,
+): boolean {
+  if (!programCode) return false;
+  return applyGroupSelection(entries, selected, programCode).length !== entries.length;
 }
 
 /**
