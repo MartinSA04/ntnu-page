@@ -14,7 +14,7 @@
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { shouldPullOnVisible } from "../../src/components/planner/plannerApp.js";
-import type { StorageLike } from "../../src/lib/planner/store.js";
+import { PLAN_CHANGE_EVENT, type StorageLike } from "../../src/lib/planner/store.js";
 import { createSyncClient } from "../../src/lib/planner/syncClient.js";
 
 class FakeClassList {
@@ -275,6 +275,7 @@ let byId: Map<string, FakeEl>;
 let body: FakeEl;
 let replaceStateCalls: { state: unknown; url: string }[] = [];
 let winListeners: Map<string, ((e: unknown) => void)[]> = new Map();
+let docListeners: Map<string, ((e: unknown) => void)[]> = new Map();
 let planStorage: Map<string, string>;
 
 /** `document.getElementById`, but a miss is a test bug, not a `null`. */
@@ -282,6 +283,22 @@ function find(id: string): FakeEl {
   const el = byId.get(id);
   if (!el) throw new Error(`no element #${id} in the shim`);
   return el;
+}
+
+/**
+ * Flips the shim's `document.hidden` and fires `visibilitychange` on every
+ * listener bound to it — the tab-switch-and-back this file's sync tests need
+ * to drive `plannerApp.ts`'s own `document.addEventListener("visibilitychange",
+ * …)` handlers (the day-rollover tick and the pull trigger both listen here).
+ */
+function fireVisibilityChange(hidden: boolean): void {
+  const doc = (
+    globalThis as unknown as {
+      document: { hidden: boolean; dispatchEvent: (ev: { type: string }) => void };
+    }
+  ).document;
+  doc.hidden = hidden;
+  doc.dispatchEvent({ type: "visibilitychange" });
 }
 
 function installDom(): void {
@@ -294,10 +311,16 @@ function installDom(): void {
     body.append(e);
   }
   replaceStateCalls = [];
+  docListeners = new Map();
   const doc = {
     body,
     documentElement: new FakeEl("html"),
     activeElement: null as FakeEl | null,
+    // Page Visibility API surface: real by default (unlike the no-op
+    // `addEventListener` below used to be) because the sync-trigger tests
+    // need to actually fire `visibilitychange` on `plannerApp.ts`'s own
+    // listeners, not just have the call silently swallowed.
+    hidden: false,
     createElement: (tag: string) => new FakeEl(tag),
     // The course rows build an inline SVG for their settings control, so the
     // shim has to answer the namespaced constructor too. Namespace ignored:
@@ -307,8 +330,16 @@ function installDom(): void {
       byId.get(id) ?? body.descendants().find((e) => e.id === id) ?? null,
     querySelector: (s: string) => body.querySelector(s),
     querySelectorAll: (s: string) => body.querySelectorAll(s),
-    addEventListener: () => {},
+    addEventListener: (t: string, fn: (e: unknown) => void) => {
+      const l = docListeners.get(t) ?? [];
+      l.push(fn);
+      docListeners.set(t, l);
+    },
     removeEventListener: () => {},
+    dispatchEvent: (ev: { type: string }) => {
+      for (const fn of docListeners.get(ev.type) ?? []) fn(ev);
+      return true;
+    },
   };
   const store = new Map<string, string>();
   planStorage = store;
@@ -1463,6 +1494,25 @@ describe("mountPlannerApp — audit repro", () => {
  * of one) shows up as a clean +1 or +0 rather than something inferred from
  * DOM content that a différent render could produce by coincidence.
  */
+/** Wires the fake sync server behind `/api/sync/*` and the ordinary course
+ *  fixtures behind everything else, onto the one global `fetch` the
+ *  planner's own `createSyncClient` and `loadBundles` both call through.
+ *  Shared by every describe block below that mounts the planner with a sync
+ *  session already in `localStorage`. */
+function installCombinedFetch(server: ReturnType<typeof makeSyncServer>): void {
+  (globalThis as unknown as Record<string, unknown>).fetch = vi.fn(
+    async (url: string, init?: RequestInit) => {
+      if (url.startsWith("/api/sync/")) return server.handle(url, init);
+      if (url.includes("/data/search-index.json")) return jsonResponse({ year: 2026, courses: [] });
+      if (url.includes("/api/course/TDT4109/timetable")) {
+        return jsonResponse([entry("TDT4109", 1, "08:15", "10:00")]);
+      }
+      if (url.includes("/api/course/")) return jsonResponse(DETAILS);
+      return { ok: false, status: 404, json: async () => ({ error: "Not found" }) };
+    },
+  );
+}
+
 describe("mountPlannerApp — a successful sync pull re-renders without pushing", () => {
   beforeEach(() => {
     installDom();
@@ -1471,24 +1521,6 @@ describe("mountPlannerApp — a successful sync pull re-renders without pushing"
   afterEach(() => {
     vi.unstubAllGlobals();
   });
-
-  /** Wires the fake sync server behind `/api/sync/*` and the ordinary course
-   *  fixtures behind everything else, onto the one global `fetch` the
-   *  planner's own `createSyncClient` and `loadBundles` both call through. */
-  function installCombinedFetch(server: ReturnType<typeof makeSyncServer>): void {
-    (globalThis as unknown as Record<string, unknown>).fetch = vi.fn(
-      async (url: string, init?: RequestInit) => {
-        if (url.startsWith("/api/sync/")) return server.handle(url, init);
-        if (url.includes("/data/search-index.json"))
-          return jsonResponse({ year: 2026, courses: [] });
-        if (url.includes("/api/course/TDT4109/timetable")) {
-          return jsonResponse([entry("TDT4109", 1, "08:15", "10:00")]);
-        }
-        if (url.includes("/api/course/")) return jsonResponse(DETAILS);
-        return { ok: false, status: 404, json: async () => ({ error: "Not found" }) };
-      },
-    );
-  }
 
   it("a pull that finds a changed plan repaints once and never pushes", async () => {
     const server = makeSyncServer();
@@ -1595,6 +1627,217 @@ describe("mountPlannerApp — a successful sync pull re-renders without pushing"
     expect(replaceStateCalls.length).toBe(1);
     expect(server.puts.length).toBe(putsBefore);
   });
+});
+
+/**
+ * Single device, single tab, no second device needed: an edit arms the 1s
+ * debounced push, and — inside that same second — the tab goes hidden and
+ * comes back. Before the fix, the visibility handler pulled unconditionally:
+ * `sync.pull()` overwrites `localStorage` with the server's PRE-edit copy and
+ * adopts the server's version, `applyPulledPlan` repaints the edit away, and
+ * the still-armed timer then pushes the now edit-free copy — landing clean
+ * (the version already matches) and reporting "ok" while the edit is gone
+ * from screen, storage and server. `handleVisibilityPull` closes this by
+ * flushing a pending push BEFORE pulling.
+ */
+describe("mountPlannerApp — a pending edit survives a visibility pull in the same second", () => {
+  beforeEach(() => {
+    installDom();
+    vi.resetModules();
+  });
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("an edit still waiting to be pushed is not clobbered by a pull that fires before it", async () => {
+    const server = makeSyncServer();
+    // No second device required — the server just holds the pre-edit
+    // (empty) plan throughout; the race is purely about ordering on this one
+    // tab.
+    const storageA = fakeStorage({ "np:plans": '{"26h":[]}' });
+    const deviceA = createSyncClient({
+      storage: storageA,
+      fetch: server.handle as unknown as typeof fetch,
+    });
+    await deviceA.signup("martin", "482913", "Mac");
+
+    (globalThis as unknown as Record<string, unknown>).location = {
+      hash: "",
+      search: "",
+      pathname: "/planlegger/",
+    };
+    installCombinedFetch(server);
+    const localStorageLike = (globalThis as unknown as { localStorage: StorageLike }).localStorage;
+    const deviceB = createSyncClient({
+      storage: localStorageLike,
+      fetch: server.handle as unknown as typeof fetch,
+    });
+    await deviceB.login("martin", "482913", "Tavle · nettleser");
+
+    const { mountPlannerApp } = await import("../../src/components/planner/plannerApp.js");
+    const { clearCourseBundleMemo, clearPlannerIndexMemo } = await import(
+      "../../src/lib/planner/data.js"
+    );
+    clearCourseBundleMemo();
+    clearPlannerIndexMemo();
+
+    await mountPlannerApp(SEMESTERS as never, [], undefined);
+    for (let i = 0; i < 20; i++) await new Promise((r) => setTimeout(r, 0));
+    const putsBefore = server.puts.length;
+
+    // The student adds a course — the same effect `store.addCourse` has,
+    // driven through the same event `savePlan` dispatches. `onCustom` falls
+    // back to a fresh `loadPlan()` read when `detail` is absent, so writing
+    // storage first and then dispatching reproduces a real edit without
+    // driving the add-course dialog's search flow, which is not what this
+    // test is about.
+    planStorage.set(
+      "np:plans",
+      '{"26h":[{"code":"TDT4109","name":"TDT4109 navn","version":"1","source":"manual"}]}',
+    );
+    (
+      globalThis as unknown as { window: { dispatchEvent: (ev: { type: string }) => void } }
+    ).window.dispatchEvent({ type: PLAN_CHANGE_EVENT });
+
+    // Still well inside the 1s debounce window: the tab goes hidden and
+    // comes back.
+    fireVisibilityChange(true);
+    fireVisibilityChange(false);
+
+    for (let i = 0; i < 20; i++) await new Promise((r) => setTimeout(r, 0));
+
+    // The edit is still on screen and in local storage…
+    expect(planStorage.get("np:plans")).toContain("TDT4109");
+    const row = find("planner-course-rows")
+      .descendants()
+      .find((e) => e.dataset.code === "TDT4109");
+    expect(row).toBeDefined();
+    // …and it actually reached the server: a third client on the same
+    // account, pulling fresh, decrypts to a plan that still has it.
+    await deviceA.pull();
+    expect(storageA.getItem("np:plans")).toContain("TDT4109");
+    expect(server.puts.length).toBeGreaterThan(putsBefore);
+  });
+});
+
+/**
+ * `applyPlanUpdate` calls `loadPeriodCourses()` when a pull changes the
+ * derivation key (semester|programme|cohort|direction) — and
+ * `loadPeriodCourses` can itself call `store.setProgramPlan`, which
+ * dispatches `PLAN_CHANGE_EVENT` and re-enters `store.onPlanChange`'s
+ * subscriber. That subscriber calls `schedulePush()` for a REAL edit, but
+ * this re-entry is not one — it is the pull's own consequence — so
+ * `suppressPush` must hold `schedulePush()` off for the whole async tail,
+ * not just the synchronous repaint.
+ */
+describe("mountPlannerApp — a pull that changes the programme does not schedule a push", () => {
+  beforeEach(() => {
+    installDom();
+    vi.resetModules();
+  });
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("loadPeriodCourses's own setProgramPlan write never reaches schedulePush", async () => {
+    const server = makeSyncServer();
+    // Device A: another device, already on this account, no programme set yet.
+    const storageA = fakeStorage({ "np:plans": '{"26h":[]}' });
+    const deviceA = createSyncClient({
+      storage: storageA,
+      fetch: server.handle as unknown as typeof fetch,
+    });
+    await deviceA.signup("martin", "482913", "Mac");
+
+    // This tab logs in before device A ever sets a programme — the starting
+    // point a returning tab's on-load pull needs to find something to do.
+    (globalThis as unknown as Record<string, unknown>).location = {
+      hash: "",
+      search: "",
+      pathname: "/planlegger/",
+    };
+    const localStorageLike = (globalThis as unknown as { localStorage: StorageLike }).localStorage;
+    const deviceB = createSyncClient({
+      storage: localStorageLike,
+      fetch: server.handle as unknown as typeof fetch,
+    });
+    await deviceB.login("martin", "482913", "Tavle · nettleser");
+
+    // Device A now picks MTDT kull 2026 (no courses yet — the derive below
+    // is what is supposed to fill them in) and pushes it.
+    storageA.setItem("np:profile", '{"program":{"code":"MTDT","name":"MTDT","cohort":2026}}');
+    await deviceA.push();
+
+    (globalThis as unknown as Record<string, unknown>).fetch = vi.fn(
+      async (url: string, init?: RequestInit) => {
+        if (url.startsWith("/api/sync/")) return server.handle(url, init);
+        if (url.includes("/data/search-index.json"))
+          return jsonResponse({ year: 2026, courses: [] });
+        // MTDT kull 2026's period 1 (26h is the cohort's first autumn) —
+        // same fixture shape as app-4/D3 above, obligatory course swapped
+        // for TDT4109 so it shares the timetable route below.
+        if (url.includes("/api/program/MTDT/plan")) {
+          return jsonResponse({
+            code: "MTDT",
+            name: "Datateknologi",
+            year: 2026,
+            startTerm: "AUTUMN",
+            updated: null,
+            publishedYears: [2026],
+            periods: [
+              {
+                periodNumber: 1,
+                direction: {
+                  code: null,
+                  name: null,
+                  courseGroups: [
+                    {
+                      name: null,
+                      description: null,
+                      type: "O",
+                      courses: [obligatory("TDT4109", "TDT4109 navn", 7.5)],
+                    },
+                  ],
+                  waypoints: [],
+                },
+              },
+            ],
+          });
+        }
+        if (url.includes("/api/course/TDT4109/timetable")) {
+          return jsonResponse([entry("TDT4109", 1, "08:15", "10:00")]);
+        }
+        if (url.includes("/api/course/")) return jsonResponse(DETAILS);
+        return { ok: false, status: 404, json: async () => ({ error: "Not found" }) };
+      },
+    );
+
+    const { mountPlannerApp } = await import("../../src/components/planner/plannerApp.js");
+    const { clearCourseBundleMemo, clearPlannerIndexMemo } = await import(
+      "../../src/lib/planner/data.js"
+    );
+    const { clearProgramPlanMemo } = await import("../../src/components/planner/programPlan.js");
+    clearCourseBundleMemo();
+    clearPlannerIndexMemo();
+    clearProgramPlanMemo();
+    const putsBefore = server.puts.length;
+
+    await mountPlannerApp(SEMESTERS as never, [], undefined);
+    for (let i = 0; i < 20; i++) await new Promise((r) => setTimeout(r, 0));
+    // Real time, past `schedulePush`'s 1s debounce: if `setProgramPlan`'s
+    // re-entry into `onPlanChange` had armed a push (the un-suppressed
+    // behaviour), it would fire in this window. A short flush loop would not
+    // reach it.
+    await new Promise((r) => setTimeout(r, 1100));
+
+    // The derive actually ran — TDT4109 is on screen — so the "no push"
+    // assertion below is not vacuously true because nothing happened.
+    const row = find("planner-course-rows")
+      .descendants()
+      .find((e) => e.dataset.code === "TDT4109");
+    expect(row).toBeDefined();
+    expect(server.puts.length).toBe(putsBefore);
+  }, 10_000);
 });
 
 describe("shouldPullOnVisible", () => {

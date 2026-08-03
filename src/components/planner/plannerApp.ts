@@ -475,6 +475,21 @@ export async function mountPlannerApp(
   elements.profileEntry.addEventListener("click", () => profile.show(), { signal: lifeSignal });
 
   /**
+   * True from the moment a pull decides to repaint until that repaint's full
+   * tail — including the async `loadPeriodCourses()` it may kick off — has
+   * settled. `loadPeriodCourses` can itself call `store.savePlan`/
+   * `setProgramPlan` (when a pulled plan carries a new programme/cohort),
+   * which re-enters `store.onPlanChange`'s subscriber below and would
+   * otherwise call `schedulePush()` on data this tab only just adopted from
+   * the server — pushing it straight back for no reason. `schedulePush`
+   * checks this and no-ops while it is held; a REAL edit made in that same
+   * narrow window is not lost, only delayed to the student's next genuine
+   * edit (push always re-reads storage fresh, never a snapshot) — the same
+   * trade this makes for `loadPeriodCourses`'s own enrichment on purpose.
+   */
+  let suppressPush = false;
+
+  /**
    * What a successful pull needs that a same-tab edit gets for free through
    * `store.onPlanChange`: `applySyncable` (syncClient.ts) writes straight
    * through `storage.setItem`, never through `store.savePlan`, so no
@@ -485,22 +500,28 @@ export async function mountPlannerApp(
    * pull.
    *
    * Two things this deliberately does NOT do:
-   *  - Call `schedulePush()`. `applyPlanUpdate` (defined with the
-   *    `onPlanChange` subscriber further down) is the one shared paint step;
-   *    only that subscriber's own callback schedules a push. Routing a pull
-   *    through it too would push the plan this tab just pulled straight back
-   *    to the server — bumping the version for no reason, and ping-ponging
-   *    between two open devices for no reason beyond that.
+   *  - Call `schedulePush()` itself, and holds `suppressPush` so nothing
+   *    reached indirectly through `applyPlanUpdate` can either (see that
+   *    flag's own comment). `applyPlanUpdate`'s subscriber (further down) is
+   *    the one place that schedules a push, and only for a real edit — a
+   *    pull pushing the plan it just adopted straight back to the server
+   *    would bump the version for no reason and ping-pong between two open
+   *    devices for no reason beyond that.
    *  - Repaint when nothing changed. `formatPlanHash` is the same identity
    *    check the `hashchange` handler below already uses for "is this
    *    actually different" — a pull that came back identical to what is
    *    already on screen must not spend the week's layer-motion animation or
    *    CLS budget on a no-op.
    */
-  function applyPulledPlan(): void {
+  async function applyPulledPlan(): Promise<void> {
     const next = store.loadPlan();
     if (formatPlanHash(next) === formatPlanHash(plan)) return;
-    applyPlanUpdate(next);
+    suppressPush = true;
+    try {
+      await applyPlanUpdate(next);
+    } finally {
+      suppressPush = false;
+    }
   }
 
   /**
@@ -510,22 +531,43 @@ export async function mountPlannerApp(
    */
   async function pullAndRefresh(): Promise<SyncResult> {
     const result = await sync.pull();
-    if (result.ok) applyPulledPlan();
+    if (result.ok) void applyPulledPlan();
     return result;
   }
 
   let pushTimer: ReturnType<typeof setTimeout> | null = null;
-  /** Debounced so a fast run of edits (adding five courses in a row) pushes once. */
+  /**
+   * Debounced so a fast run of edits (adding five courses in a row) pushes
+   * once. Nulls `pushTimer` the moment the timer actually fires (not just
+   * when a later call replaces it) — `handleVisibilityPull` below reads
+   * `pushTimer !== null` as "is there an edit still waiting to be pushed",
+   * and that check is only honest if a timer that has already fired stops
+   * counting as pending.
+   */
   function schedulePush(): void {
+    if (suppressPush) return;
     if (sync.session() === null) return;
     if (pushTimer !== null) clearTimeout(pushTimer);
-    pushTimer = setTimeout(() => void runPush(), 1000);
+    pushTimer = setTimeout(() => {
+      pushTimer = null;
+      void runPush();
+    }, 1000);
   }
   lifeSignal.addEventListener("abort", () => {
     if (pushTimer !== null) clearTimeout(pushTimer);
   });
 
-  async function runPush(): Promise<void> {
+  /** Runs the debounced push now, if one is armed, and cancels the timer. */
+  function flushPendingPush(): Promise<boolean> | null {
+    if (pushTimer === null) return null;
+    clearTimeout(pushTimer);
+    pushTimer = null;
+    return runPush();
+  }
+
+  /** Returns whether the push landed — `runPush` reassigns `result` on the
+   *  stale-retry path, so this is the LAST push tried, not just the first. */
+  async function runPush(): Promise<boolean> {
     let result = await sync.push();
     // A stale push means another device moved first: take its copy, then
     // re-push our edit on top. There is no merge here and there must not be
@@ -537,6 +579,28 @@ export async function mountPlannerApp(
       if ((await pullAndRefresh()).ok) result = await sync.push();
     }
     profile.setSyncState(result.ok ? "ok" : "failed");
+    return result.ok;
+  }
+
+  /**
+   * The stale-tab guard's real entry point. A tab holding an unflushed edit
+   * — `pushTimer` still armed — is NOT the stale tab the guard exists for:
+   * pulling first would overwrite that edit's `localStorage` with the
+   * server's pre-edit copy (`applySyncable` is unconditional) and adopt the
+   * server's version number, so the still-armed timer would then push the
+   * now-overwritten, edit-free copy back — and because the pull just
+   * advanced the version to match, that push lands clean and reports "ok"
+   * while the edit is gone from screen, storage AND server. Flush first;
+   * only pull if the flush landed. A flush that fails leaves "Ikke
+   * synkronisert · prøv igjen" standing rather than pulling over data this
+   * tab could not save — an honest failure beats a silent loss. The common
+   * case (nothing pending) is untouched: `flushPendingPush` returns `null`
+   * and this falls straight through to the pull exactly as before.
+   */
+  async function handleVisibilityPull(): Promise<void> {
+    const flush = flushPendingPush();
+    if (flush !== null && !(await flush)) return;
+    void pullAndRefresh();
   }
 
   document.addEventListener(
@@ -546,14 +610,16 @@ export async function mountPlannerApp(
       // copy the moment it is looked at again, before the next edit can push
       // a week-old plan over it. Do not remove this or "simplify" it into the
       // debounced push above — a tab that has been hidden for a week has no
-      // pending edit to debounce, only a stale read to correct.
-      if (shouldPullOnVisible(sync.session(), document.hidden)) void pullAndRefresh();
+      // pending edit to debounce, only a stale read to correct. (A tab that
+      // DOES have one is `handleVisibilityPull`'s own job, immediately above.)
+      if (shouldPullOnVisible(sync.session(), document.hidden)) void handleVisibilityPull();
     },
     { signal: lifeSignal },
   );
 
   // On load: a signed-in student's other device may have moved since this
-  // tab's `localStorage` copy was written.
+  // tab's `localStorage` copy was written. No edit can be pending this early
+  // (this runs before the first paint), so there is nothing to flush first.
   if (sync.session() !== null) void pullAndRefresh();
 
   /** Opens the session popover for a clicked bar or board row. */
@@ -2897,8 +2963,15 @@ export async function mountPlannerApp(
    * which also schedules a push) and a successful sync pull
    * (`applyPulledPlan`, near the sync setup above, which deliberately does
    * not — see its own comment).
+   *
+   * Returns the `loadPeriodCourses()` promise when the derivation key moved
+   * (`Promise.resolve()` otherwise) — not for its resolved value, which is
+   * always `void`, but so `applyPulledPlan` can `await` the full tail of a
+   * pull-driven update, including the async re-derive it may kick off,
+   * before releasing `suppressPush`. `loadPeriodCourses` can itself call
+   * `store.savePlan`/`setProgramPlan`, which re-enters this very subscriber.
    */
-  function applyPlanUpdate(next: PlanState): void {
+  function applyPlanUpdate(next: PlanState): Promise<void> {
     // C4's note only explains a semester we SUBSTITUTED for the link's own, so
     // a deliberate switch is when it stops being true. Nothing else clears it:
     // studieinfo's Lagre goes through `savePlan` and `syncHash`'s replaceState,
@@ -2916,15 +2989,18 @@ export async function mountPlannerApp(
     const key = derivationKey();
     if (key !== lastDerivationKey) {
       lastDerivationKey = key;
-      void loadPeriodCourses();
+      return loadPeriodCourses();
     }
+    return Promise.resolve();
   }
 
   const unsubscribe = store.onPlanChange((next) => {
-    applyPlanUpdate(next);
+    void applyPlanUpdate(next);
     // The debounced push trigger: every plan write (add/drop a course, change
     // a group, edit studieinfo) reaches the store through here, so wiring it
-    // once at the top of the fan-out covers all of them.
+    // once at the top of the fan-out covers all of them. `schedulePush`
+    // itself is a no-op while `suppressPush` is held (a pull-driven update in
+    // progress, further up) — this is a REAL edit, not one, so it never is.
     schedulePush();
   });
   signal?.addEventListener("abort", unsubscribe);
