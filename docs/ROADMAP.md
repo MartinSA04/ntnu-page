@@ -40,9 +40,9 @@ passed on ("· N emner ikke sjekket"). Every failure carries a ready Norwegian
 sentence; no upstream English reaches the UI. Memoisation is per part and
 failures are never cached.
 
-**The planner surface.** The profile panel's studieinfo section is the only
-picker for programme, kull and retning; the semester is the planner bar's own
-select. One editing surface per course
+**The planner surface.** The studieinfo dialog, opened from the plan's own
+name in the bar, is the only picker for programme, kull and retning; the
+semester is the planner bar's own select. One editing surface per course
 (`courseSettings.ts`); a read-only session popover on the bars; a catalog
 search modal for adding. Display-level parallel and øving group selection,
 narrowed per *session family* so a pick of one kind can never delete the

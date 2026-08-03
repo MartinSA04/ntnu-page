@@ -40,13 +40,21 @@ conflict.
    breakage.
 8. **Programme/kull/retning editing gets a real settings surface**, because
    people have webpage patterns they are used to. **Delivered**, as the
-   profile panel: one room, holding studieinfo (programme, kull,
-   studieretning) *and* the optional account, opened by one door — the
-   topbar's account button, which stands on every page and prints the account
-   name when there is a session. It replaced two nested doors (an account
-   entrance and a studieinfo entrance into the same room) sitting on one page
-   of four. The semester did **not** follow: it describes the plan, not the
-   student, so it is a control in the planner's own bar.
+   planner's studieinfo dialog: one room holding programme, kull and
+   studieretning, opened from the plan's own name in the bar — press the fact
+   to change the fact. The **account** (signup/login, devices, PIN) is a
+   *separate* door, in the topbar, on every page: it governs `np:plans`
+   synchronisation, which is site-wide, and `/emne/[code]/` is the largest
+   cold-traffic surface there is, so a student landing there must be able to
+   sign in without navigating away first.
+
+   The two were briefly one room on 2026-08-03, on the argument that both are
+   "about the student". They are not the same kind of thing, and the line that
+   separates them is *what the setting is about*: a programme is a fact about
+   the PLAN — like the semester, which never followed it out of the planner
+   — and sign-in is a fact about the PERSON. Only the second earns a door on
+   all four pages. What that day's merge did fix stays fixed: there is still
+   exactly one entrance to the picker, not the two nested doors it replaced.
 9. **Manual adds are semester-specific.** A course added in one semester
    must not leak into another.
 10. **No versioning or compat apparatus — delete old code outright.**
@@ -158,9 +166,11 @@ handoff (5)**. The second is the growth loop, not plumbing.
 1. **On-ramp.** `/` is a landing: it shows the student's own next session and
    room when a plan exists, and otherwise one CTA into `/planlegger/`. The
    planner owns onboarding through its own empty states — its "Velg
-   studieprogram" opens the profile panel with the caret already in the
-   programme field, and that panel's studieinfo section is the only picker on
-   the site.
+   studieprogram" opens the studieinfo dialog with the caret already in the
+   programme field, and that dialog is the only picker on the site. Once a
+   programme is stored the plan's own name in the bar is the way back into it;
+   while none is, the title is a word rather than a fact and is inert, so the
+   empty state's card is the single entrance.
 
 2. **Elective decide-loop (CO-PRIMARY, not built — ROADMAP Phase 4).**
    Choice group → "legg alle til vurdering" (shortlist tier) → **inline in
@@ -253,9 +263,13 @@ is not the killed chip in another costume: an account is not a plan, and the
 state behind the door (`np:profile`, `np:plans`, `np:lastSemester`) is read by
 `/`, `/emner/` and `/emne/[code]/` as much as by the planner. `/emne/[code]/`
 is the largest cold-traffic surface on the site, so a student arriving from a
-search engine must be able to sign in — and to say which programme they are
-on — without navigating away first. Behind it is the one settings surface
-(mandate 8).
+search engine must be able to sign in without navigating away first.
+
+**Saying which programme you are on is NOT behind that door**, and that is
+deliberate: the picker is the planner's (mandate 8). What the course page owes
+a student who has not said is a straight answer about what it is showing them
+— its week draws every parallel and every group, it says so, and a stored
+programme buys a switch to their own slice.
 
 **`/studier/[code]/` and `/studier/` are deleted, no redirects.** Their
 surviving logic moved: kull relevance and plan fetch into the studieinfo
@@ -551,7 +565,7 @@ Do not re-litigate or silently re-add these.
 | D11 | **Grade stats only in a decision context.** The fork point *is* one, so the season-split figure ships there under §9's constraints. | Browsable grade trivia: a sortable column, a cross-course leaderboard, hue-tinted bars, a derived difficulty score, or any figure divorced from the fork CTA. That is DBH-mirror parasitism. |
 | D12 | **The deadline and "next plannable term" are MUST** (DR-9). | Leaving the deadline off-screen — it was in zero of six flows — and "next term" as an invisible default. |
 | D13 | **No week-scrubber, no personal fixed blocks, no assessment-mix workload count.** | All three were SHOULD/COULD in an early draft. A during-semester concern in a before-semester tool; breaks shared-URL parity; wrong side of no-fabricated-scores. **A block-level popover is explicitly in scope** and is not covered by this row. |
-| D14 | **`/studier/` and `/studier/[code]/` are deleted outright, no redirects.** | Migrating them, or sequencing entrances before deletion. Pre-launch breakage is acceptable (mandate 10); the surviving logic moved into the studieinfo section of the profile panel and the planner's study-plan panel. |
+| D14 | **`/studier/` and `/studier/[code]/` are deleted outright, no redirects.** | Migrating them, or sequencing entrances before deletion. Pre-launch breakage is acceptable (mandate 10); the surviving logic moved into the planner's studieinfo dialog and its study-plan panel. |
 | D15 | **The hash grammar is unversioned, with no compat parse** (mandate 10). | A frozen `#v2;…` grammar with a v1-compat branch. Suspended, not abandoned: it resumes when there are external links worth not breaking. |
 
 ---

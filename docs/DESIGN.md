@@ -229,7 +229,7 @@ a global 2 px `--ui` outline.
   `chevron-down` put in its place, turned over while `:open`. The icon is a
   sibling so it inherits `currentColor`; `--select-inset` is the one number
   both sides are measured from. Live users: the planner's semester control and
-  the profile panel's studieretning picker.
+  the studieinfo dialog's studieretning picker.
 
 **Surfaces**
 - **`.np-panel`** — paper panel on `--card`.
@@ -492,14 +492,28 @@ Settled, with the reasoning, so they are not re-opened by the next reviewer.
   headline** (1.25 rem / 600).
 
   Two of the bar's original five left on 2026-08-03, and the line they were
-  sorted along is *what the control is about*. **Profil** went to the site
-  topbar: it opens programme, kull, studieretning and the account, all of
-  which describe the STUDENT and are read by all four pages, and a door that
-  exists on one of four is not a settings surface. **"Legg til emne"** went
-  back to the foot of the Emner column, under the rows it appends to. The
-  semester came the other way, out of the studieinfo modal, because a term is
-  a fact about the plan. The bar is one control lighter than it was and the
-  week still starts inside §6's 37 % (304 px of 844 at 390 px).
+  sorted along is *what the control is about*. **"Legg til emne"** went back to
+  the foot of the Emner column, under the rows it appends to. **Profil** went
+  to the site topbar. The semester came the other way, out of the studieinfo
+  modal, because a term is a fact about the plan.
+
+  **Later the same day the split was cut again, in the same place but along a
+  truer line.** "Profil" had carried programme, kull, studieretning *and* the
+  account up to the topbar together, on the argument that all four describe
+  the STUDENT. They do not divide that way. A programme is a fact about the
+  PLAN — exactly like the semester, which had just moved the other direction
+  for that reason — and only sign-in is a fact about the person. So studieinfo
+  came back as **the planner's own dialog**, and what stayed in the topbar is
+  the account alone, which earns its door on all four pages because
+  `np:plans` is read on all four.
+
+  **The picker's entrance is the plan's own name**, not a sixth control: the
+  title states programme and kull, and pressing it is how you change them.
+  That is what makes the entrance free — a control in the action run would
+  have cost a slot the phone's ⋯ menu then has to fold. With no programme
+  stored the title is a word rather than a fact, so it is **disabled**: the
+  empty state's card already says "Velg studieprogram", and an enabled door
+  beside it put two controls with one accessible name on one screen.
 
 - **The title is `MTFYMA Kull 24` — the programme and the kull, and NOT the
   semester.** It was `MTFYMA Kull 24 H26` until the bar grew a `<select>` for
