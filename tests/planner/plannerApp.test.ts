@@ -2341,6 +2341,83 @@ describe("mountPlannerApp — an on-load pull does not eat a shared link", () =>
     expect(note.hidden).toBe(false);
     expect(note.textContent).toContain("Denne delte planen erstattet din egen.");
   }, 10_000);
+
+  /**
+   * The other direction, and the worse one. Opening a link REPLACES
+   * `np:plans`, and the tab was left dirty with no push armed — `schedulePush`
+   * needs the `onPlanChange` subscriber, which is registered long after the
+   * link branch runs. So the friend's plan sat there as unsent work until
+   * something flushed it: the first visibility flip, or the search-index name
+   * backfill a few hundred ms later (which fires for EVERY link, since a hash
+   * carries codes and not names). Either one pushed a plan the student had
+   * merely looked at into their own account, over their own plan on every
+   * device.
+   *
+   * A viewed link is now a viewer: this tab neither sends nor receives until
+   * the student settles it.
+   */
+  it("never pushes a link the student only opened", async () => {
+    const server = makeSyncServer();
+    const storageA = fakeStorage({
+      "np:plans":
+        '{"26h":[{"code":"TDT4136","name":"TDT4136 navn","version":"1","source":"manual"}]}',
+    });
+    const deviceA = createSyncClient({
+      storage: storageA,
+      fetch: server.handle as unknown as typeof fetch,
+    });
+    await deviceA.signup("martin", "482913", "Mac");
+
+    (globalThis as unknown as Record<string, unknown>).location = {
+      hash: "#26h;-;%2BTDT4109",
+      search: "",
+      pathname: "/planlegger/",
+    };
+    installCombinedFetch(server);
+
+    const localStorageLike = (globalThis as unknown as { localStorage: StorageLike }).localStorage;
+    const deviceB = createSyncClient({
+      storage: localStorageLike,
+      fetch: server.handle as unknown as typeof fetch,
+    });
+    await deviceB.login("martin", "482913", "Tavle · nettleser");
+    planStorage.set(
+      "np:plans",
+      '{"26h":[{"code":"TMA4400","name":"TMA4400 navn","version":"1","source":"manual"}]}',
+    );
+
+    const { mountPlannerApp } = await import("../../src/components/planner/plannerApp.js");
+    const { clearCourseBundleMemo, clearPlannerIndexMemo } = await import(
+      "../../src/lib/planner/data.js"
+    );
+    clearCourseBundleMemo();
+    clearPlannerIndexMemo();
+    const putsBefore = server.puts.length;
+
+    await mountPlannerApp(SEMESTERS as never, [], undefined);
+    for (let i = 0; i < 20; i++) await new Promise((r) => setTimeout(r, 0));
+
+    // Trigger one: a write the PAGE makes on the link's behalf — the name
+    // backfill's `savePlan`, reaching the subscriber like any other change.
+    (
+      globalThis as unknown as { window: { dispatchEvent: (ev: { type: string }) => void } }
+    ).window.dispatchEvent({ type: PLAN_CHANGE_EVENT });
+    // Trigger two: the student switches tabs and comes back.
+    fireVisibilityChange(true);
+    fireVisibilityChange(false);
+
+    // Real time, past `schedulePush`'s 1s debounce, so a push that WAS armed
+    // would have fired inside this test rather than after it.
+    await new Promise((r) => setTimeout(r, 1100));
+    for (let i = 0; i < 20; i++) await new Promise((r) => setTimeout(r, 0));
+
+    // Nothing was sent…
+    expect(server.puts.length).toBe(putsBefore);
+    // …and the account still holds the student's own plan, not the friend's.
+    await pullNow(deviceA);
+    expect(storageA.getItem("np:plans")).toContain("TDT4136");
+    expect(storageA.getItem("np:plans")).not.toContain("TDT4109");
+  }, 10_000);
 });
 
 /**

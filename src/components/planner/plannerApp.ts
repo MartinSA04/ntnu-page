@@ -519,6 +519,43 @@ export async function mountPlannerApp(
   const isDirty = () => planGen !== syncedGen;
 
   /**
+   * This tab is showing a plan it only OPENED — a shared link whose content
+   * differed from what this device had stored — and the student has not acted
+   * on it. Set a few hundred lines below, where the link is applied.
+   *
+   * While it is true the tab is a VIEWER: it neither sends (`schedulePush`)
+   * nor receives (`handleVisibilityPull`). Sending is the data loss: opening a
+   * link writes it straight into `np:plans` (§7's "hash wins over storage"),
+   * and a signed-in tab then pushed the friend's plan into the student's own
+   * account and over their plan on every device — a link they merely looked
+   * at, adopted account-wide, with no action of theirs anywhere in the chain.
+   * Not receiving is the other half of the same rule: the account's own plan
+   * arriving mid-visit would silently repaint the link away (`applyPulledPlan`
+   * → `applyPlanUpdate` also clears `replacedPlan` and rewrites the URL),
+   * which is a worse answer to "here is my week" than showing it.
+   *
+   * A flag rather than a one-line settle at the write itself, because a link
+   * does not stop there: the search-index name backfill (`loadIndex`) fires
+   * for every link — a hash carries codes, not names — and a link carrying a
+   * programme reaches `loadPeriodCourses`' own `savePlan`/`setProgramPlan` a
+   * few hundred ms later. Each of those goes through the ordinary subscriber
+   * and would have armed exactly the push this exists to prevent.
+   *
+   * Cleared by "Behold min egen" (`renderLinkNote`), the one gesture the UI
+   * offers for settling a link. There is deliberately nothing else: PRODUCT §4
+   * flow 5's adoption half ("bruk denne") is unbuilt, and the sync design's §5
+   * deletes this branch outright — a viewed link stops touching the
+   * recipient's storage at all, which is the durable form of this rule. The
+   * known limit until then: this page writes its own plan back into the hash
+   * on every change, so RELOADING a link the student kept re-enters the branch
+   * with hash and storage agreeing and the flag off, i.e. the ordinary path.
+   * That is the same "a link you keep becomes your plan" this branch has
+   * always had; what is fixed here is the visit where the student chose
+   * nothing at all.
+   */
+  let viewingSharedLink = false;
+
+  /**
    * What a successful pull needs that a same-tab edit gets for free through
    * `store.onPlanChange`: `applySyncable` (syncClient.ts) writes straight
    * through `storage.setItem`, never through `store.savePlan`, so no
@@ -629,6 +666,11 @@ export async function mountPlannerApp(
    *  armed at the moment it is asked. */
   function schedulePush(): void {
     if (sync.session() === null) return;
+    // A plan this device only opened is not this device's to send — see
+    // `viewingSharedLink`. Every write that follows a link (the name backfill,
+    // a programme derive, an edit on top of it) arrives here through the same
+    // subscriber, so this one line covers all of them.
+    if (viewingSharedLink) return;
     if (pushTimer !== null) clearTimeout(pushTimer);
     pushTimer = setTimeout(() => {
       pushTimer = null;
@@ -728,6 +770,11 @@ export async function mountPlannerApp(
    * before: `isDirty()` is false and this reaches the pull immediately.
    */
   async function handleVisibilityPull(): Promise<void> {
+    // A tab viewing a shared link is neither stale nor dirty in the sense
+    // either half of this function means: there is nothing of the student's to
+    // flush (`schedulePush` never armed one) and nothing to correct, since
+    // what is on screen is a link and not this account's plan.
+    if (viewingSharedLink) return;
     if (isDirty()) {
       if (pushTimer !== null) {
         clearTimeout(pushTimer);
@@ -1003,23 +1050,37 @@ export async function mountPlannerApp(
   if (hashPlan && hashHasPlan) {
     const storedHadPlan = plan.program !== undefined || plan.courses.length > 0;
     const incoming = withStoredFacts(planFromHash(hashPlan), plan);
-    if (storedHadPlan && formatPlanHash(plan) !== formatPlanHash(incoming)) replacedPlan = plan;
+    // `differs` is the whole question for BOTH flags: identical hash and
+    // storage is every ordinary reload (this page writes its own plan into the
+    // hash on every change), which must keep behaving exactly as before —
+    // including staying dirty, since that is how an edit whose push failed in
+    // a previous session is recovered by the next flush.
+    const differs = formatPlanHash(plan) !== formatPlanHash(incoming);
+    if (storedHadPlan && differs) replacedPlan = plan;
+    // A link that brought something else is a plan this device is VIEWING, and
+    // sync stops in both directions until the student settles it — see
+    // `viewingSharedLink` up in the sync block.
+    viewingSharedLink = differs;
     plan = incoming;
     // A program-less link must CLEAR any stored profile, not just omit one:
     // `savePlan` can only ever write `np:profile`, never clear it, so the
     // header chip would keep naming the old programme.
     if (hashPlan.program === null) store.removeProgram();
     store.savePlan(plan);
-    // A shared link IS an edit, and this one is invisible to the counter
-    // otherwise: `store.onPlanChange`'s subscriber is not registered until the
-    // very end of this function, so the `savePlan` above fires an event nobody
-    // is listening to and `planGen` would stay 0. The on-load pull was fired a
-    // few hundred lines above and its GET is on the wire right now — with the
-    // tab reading as clean, its answer overwrote the friend's plan,
-    // `applyPlanUpdate` cleared `replacedPlan` and `syncHash()` rewrote the
-    // URL, so the link, the plan and the way back all vanished after a ~200 ms
-    // flash. Bumping the counter here is the whole fix: `pullAndRefresh`'s
-    // guard sees the generation move and refuses the stale answer.
+    // A shared link is a write to `np:plans`, and this one is invisible to the
+    // counter otherwise: `store.onPlanChange`'s subscriber is not registered
+    // until the very end of this function, so the `savePlan` above fires an
+    // event nobody is listening to and `planGen` would stay 0. The on-load
+    // pull was fired a few hundred lines above and its GET is on the wire
+    // right now — with the tab reading as clean, its answer overwrote the
+    // friend's plan, `applyPlanUpdate` cleared `replacedPlan` and `syncHash()`
+    // rewrote the URL, so the link, the plan and the way back all vanished
+    // after a ~200 ms flash. Bumping the counter is what makes
+    // `pullAndRefresh`'s guard see the generation move and refuse that answer.
+    // It cannot also arm a push — `schedulePush` needs the subscriber that is
+    // registered at the end of this function — which left the tab dirty with
+    // nothing scheduled; `viewingSharedLink` (above) is what stops the first
+    // visibility flip from flushing that as the student's own work.
     planGen++;
   } else if (!knownSemester(plan.semesterId)) {
     // Stored state can outlive a semester too — silently, since no link lied.
@@ -2895,6 +2956,11 @@ export async function mountPlannerApp(
         // hand the shared one back on a second press.
         replacedPlan = null;
         linkNote = null;
+        // The link is settled, and settled toward the student's own plan: this
+        // tab stops being a viewer and syncs again from the write below. The
+        // only gesture that clears this — there is no "Bruk denne" yet, and §5
+        // of the sync design deletes the whole branch rather than adding one.
+        viewingSharedLink = false;
         if (mine.program === undefined) store.removeProgram();
         store.savePlan(mine);
       });
