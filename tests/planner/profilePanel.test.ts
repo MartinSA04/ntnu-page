@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { attemptAuth, deviceLabel, pinIsValid } from "../../src/components/planner/profilePanel.js";
-import type { SyncClient, SyncResult } from "../../src/lib/planner/syncClient.js";
+import type {
+  LoginResult,
+  SyncClient,
+  SyncPayload,
+  SyncResult,
+} from "../../src/lib/planner/syncClient.js";
 
 describe("pinIsValid", () => {
   it("accepts exactly six digits", () => {
@@ -46,6 +51,8 @@ function fakeSyncClient(overrides: Partial<SyncClient> = {}): SyncClient {
     session: () => null,
     signup: async () => ({ ok: true }),
     login: async () => ({ ok: true }),
+    resolveLogin: async () => ({ ok: true }),
+    changePin: async () => ({ ok: true }),
     push: async () => ({ ok: true }),
     pull: async () => ({ ok: true }),
     logout: () => {},
@@ -124,6 +131,24 @@ describe("attemptAuth", () => {
     await expect(attemptAuth(sync, "signup", "Ola", "482913", "Mac · Safari")).resolves.toEqual({
       ok: false,
       hint: "Noe gikk galt. Prøv igjen.",
+    });
+  });
+
+  /**
+   * §6 step 5's collision is a THIRD outcome, not a failure: it must reach
+   * the caller with `local`/`remote` intact so the panel can render the
+   * question, not collapse into `reasonCopy`'s generic retry hint the way
+   * every other named `reason` does.
+   */
+  it("passes a login collision through as its own outcome, not a generic hint", async () => {
+    const local: SyncPayload = { profile: "{}", plans: "{}", lastSemester: "26h", devices: [] };
+    const remote: SyncPayload = { profile: "{}", plans: "{}", lastSemester: "26h", devices: [] };
+    const sync = fakeSyncClient({
+      login: async () => ({ ok: false, reason: "collision", local, remote }) as LoginResult,
+    });
+    await expect(attemptAuth(sync, "login", "Ola", "482913", "Mac · Safari")).resolves.toEqual({
+      ok: false,
+      collision: { local, remote },
     });
   });
 });

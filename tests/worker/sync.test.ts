@@ -95,6 +95,52 @@ describe("sync account lifecycle", () => {
     expect(await stale.json()).toMatchObject({ blob: "v2", version: 2 });
   });
 
+  it("replaces authHash when the PUT body carries a new authKey — a PIN change", async () => {
+    const kv = fakeKv();
+    await handleSyncClaim("martin", { authKey: AUTH, blob: "v1" }, deps(kv));
+
+    const changed = await handleSyncPut(
+      "martin",
+      AUTH,
+      { blob: "v2", version: 1, authKey: OTHER },
+      deps(kv),
+    );
+    expect(changed.status).toBe(200);
+    expect(await changed.json()).toEqual({ version: 2 });
+
+    // The old credential no longer authorises this record...
+    expect((await handleSyncGet("martin", AUTH, deps(kv))).status).toBe(401);
+    // ...and the new one does, reading back the blob the same request wrote.
+    const withNewKey = await handleSyncGet("martin", OTHER, deps(kv));
+    expect(withNewKey.status).toBe(200);
+    expect(await withNewKey.json()).toMatchObject({ blob: "v2", version: 2 });
+  });
+
+  it("leaves authHash untouched when the PUT body omits authKey", async () => {
+    const kv = fakeKv();
+    await handleSyncClaim("martin", { authKey: AUTH, blob: "v1" }, deps(kv));
+    await handleSyncPut("martin", AUTH, { blob: "v2", version: 1 }, deps(kv));
+    expect((await handleSyncGet("martin", AUTH, deps(kv))).status).toBe(200);
+  });
+
+  it("does not swap the credential on a stale write — the old PIN still works", async () => {
+    const kv = fakeKv();
+    await handleSyncClaim("martin", { authKey: AUTH, blob: "v1" }, deps(kv));
+
+    // Version 1 is already gone (the record is at version 1, so a PUT
+    // claiming version 2 is stale) — the credential swap it was carrying
+    // must not have happened.
+    const stale = await handleSyncPut(
+      "martin",
+      AUTH,
+      { blob: "v2", version: 2, authKey: OTHER },
+      deps(kv),
+    );
+    expect(stale.status).toBe(409);
+    expect((await handleSyncGet("martin", AUTH, deps(kv))).status).toBe(200);
+    expect((await handleSyncGet("martin", OTHER, deps(kv))).status).toBe(401);
+  });
+
   it("deletes only with the right authKey", async () => {
     const kv = fakeKv();
     await handleSyncClaim("martin", { authKey: AUTH, blob: "cipher" }, deps(kv));

@@ -2118,6 +2118,7 @@ describe("shouldPullOnVisible", () => {
     version: 1,
     deviceId: "d",
     label: "Mac · Safari",
+    devices: [],
   };
 
   it("pulls when a signed-in tab becomes visible — the stale-tab guard", () => {

@@ -211,16 +211,35 @@ export async function handleSyncPut(
   const fields = asRecord(body);
   const blob = fields?.blob;
   const version = fields?.version;
+  // Optional: a PIN change re-credentialing this record. `authKey` here is
+  // the NEW credential to swap in, not the one that just authorised this
+  // request (that one travelled in the header, as always) — the two are
+  // deliberately different fields so a PIN change is one PUT rather than a
+  // separate route.
+  const newAuthKey = fields?.authKey;
   if (typeof blob !== "string" || typeof version !== "number") {
+    return json({ error: "bad_body" }, 400);
+  }
+  if (newAuthKey !== undefined && typeof newAuthKey !== "string") {
     return json({ error: "bad_body" }, 400);
   }
   // Stale write: hand back the server's copy so the client can reconcile
   // rather than guess. This is the stale-tab guard, not an offline merge.
+  // Checked BEFORE any credential swap: a stale PUT writes nothing at all,
+  // so a PIN change that loses this race leaves `authHash` untouched and the
+  // caller's OLD credential still works — the atomicity `syncClient.ts`'s
+  // `changePin` relies on.
   if (version !== found.version) {
     return json({ error: "stale", blob: found.blob, version: found.version }, 409);
   }
 
-  const next: SyncRecord = { ...found, blob, version: found.version + 1, updatedAt: deps.now() };
+  const next: SyncRecord = {
+    ...found,
+    blob,
+    version: found.version + 1,
+    updatedAt: deps.now(),
+    ...(newAuthKey !== undefined ? { authHash: await sha256Hex(newAuthKey) } : {}),
+  };
   await deps.kv.put(recordKey(name), JSON.stringify(next));
   return json({ version: next.version }, 200);
 }

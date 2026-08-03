@@ -4,6 +4,8 @@ import {
   applySyncable,
   collectSyncable,
   createSyncClient,
+  describeCollision,
+  type SyncPayload,
 } from "../../src/lib/planner/syncClient.js";
 
 function fakeStorage(
@@ -28,6 +30,7 @@ describe("collectSyncable", () => {
       profile: '{"program":{"code":"MTDT","name":"Datateknologi","cohort":2026}}',
       plans: '{"26h":[{"code":"TDT4120","name":"Algoritmer"}]}',
       lastSemester: "26h",
+      devices: [],
     });
   });
 
@@ -37,9 +40,9 @@ describe("collectSyncable", () => {
       "np:weekView": "tavle",
       "np:weekBox": '{"kolonner":829}',
     });
-    // `SyncPayload` is a closed interface (three known string fields), so a
-    // direct `as Record<string, unknown>` is a type error under strict mode
-    // (no index signature to satisfy the target). The `unknown` hop is the
+    // `SyncPayload` is a closed interface (four known fields), so a direct
+    // `as Record<string, unknown>` is a type error under strict mode (no
+    // index signature to satisfy the target). The `unknown` hop is the
     // standard way to assert past that without weakening `SyncPayload` itself
     // — the test's job is checking absence of stray keys, which needs the
     // object treated as an open record.
@@ -53,7 +56,12 @@ describe("collectSyncable", () => {
 describe("applySyncable", () => {
   it("writes the three keys and leaves view state alone", () => {
     const storage = fakeStorage({ "np:weekView": "tavle" });
-    applySyncable(storage, { profile: "{}", plans: '{"26h":[]}', lastSemester: "26h" });
+    applySyncable(storage, {
+      profile: "{}",
+      plans: '{"26h":[]}',
+      lastSemester: "26h",
+      devices: [],
+    });
     expect(storage.map.get("np:plans")).toBe('{"26h":[]}');
     expect(storage.map.get("np:weekView")).toBe("tavle");
   });
@@ -137,4 +145,70 @@ describe("createSyncClient", () => {
     expect(await client.push()).toEqual({ ok: false, reason: "stale" });
     expect(client.session()?.version).toBe(7);
   }, 30_000);
+});
+
+const payload = (codes: string[]): SyncPayload => ({
+  profile: "{}",
+  plans: JSON.stringify({ "26h": codes.map((code) => ({ code, name: code })) }),
+  lastSemester: "26h",
+  devices: [],
+});
+
+describe("describeCollision", () => {
+  it("is null when this device has nothing to lose", () => {
+    expect(describeCollision(payload([]), payload(["TDT4120"]), "26h")).toBeNull();
+  });
+
+  it("is null when the two sides already agree", () => {
+    expect(describeCollision(payload(["TDT4120"]), payload(["TDT4120"]), "26h")).toBeNull();
+  });
+
+  it("counts both sides and names what the remote is missing", () => {
+    const summary = describeCollision(payload(["TDT4120", "TDT4100"]), payload(["TDT4100"]), "26h");
+    expect(summary).toMatchObject({
+      localCount: 2,
+      remoteCount: 1,
+      missingFromRemote: ["TDT4120"],
+    });
+  });
+});
+
+describe("changePin", () => {
+  it("re-encrypts under the new PIN and leaves the old one unable to read", async () => {
+    const storage = fakeStorage({ "np:plans": '{"26h":[{"code":"TDT4120","name":"Algo"}]}' });
+    let stored = "";
+    let authHashSeen = "";
+    const fetchMock = vi.fn(async (_url: string, init?: RequestInit) => {
+      const body = init?.body ? JSON.parse(String(init.body)) : {};
+      if (init?.method === "POST") {
+        stored = body.blob;
+        authHashSeen = body.authKey;
+        return new Response(JSON.stringify({ version: 1 }), { status: 201 });
+      }
+      if (init?.method === "PUT") {
+        stored = body.blob;
+        if (body.authKey) authHashSeen = body.authKey;
+        return new Response(JSON.stringify({ version: 2 }), { status: 200 });
+      }
+      return new Response(JSON.stringify({ blob: stored, version: 1 }), { status: 200 });
+    }) as unknown as typeof fetch;
+
+    const client = createSyncClient({ storage, fetch: fetchMock });
+    await client.signup("martin", "482913", "Mac");
+    const before = authHashSeen;
+
+    expect(await client.changePin("482913", "999111")).toEqual({ ok: true });
+    expect(authHashSeen).not.toBe(before);
+    expect(client.session()?.encKeyRaw).toBeTruthy();
+  }, 60_000);
+
+  it("refuses when the old PIN is wrong, without touching the stored blob", async () => {
+    const storage = fakeStorage({ "np:plans": "{}" });
+    const fetchMock = vi.fn(
+      async () => new Response(JSON.stringify({ version: 1 }), { status: 201 }),
+    ) as unknown as typeof fetch;
+    const client = createSyncClient({ storage, fetch: fetchMock });
+    await client.signup("martin", "482913", "Mac");
+    expect(await client.changePin("000000", "999111")).toEqual({ ok: false, reason: "bad_pin" });
+  }, 60_000);
 });

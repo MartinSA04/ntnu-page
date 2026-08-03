@@ -679,6 +679,21 @@
   font-size: var(--text-sm);
 }
 
+/* §6 step 5's collision question: two full-width choices rather than a row
+   of short actions, because each carries a sentence ("Denne enheten — 5
+   emner · 30 sp"), not a verb. */
+.profile-panel-collision-options {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap-2);
+}
+
+.profile-panel-collision-options .np-btn {
+  width: 100%;
+  justify-content: flex-start;
+  text-align: left;
+}
+
 /* --- Session popover ---------------------------------------------------
    What a bar in the week says when you click it: the facts the bar could not
    fit, anchored to the bar. A READ surface — the course editor is one verb

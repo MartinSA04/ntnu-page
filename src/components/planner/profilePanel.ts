@@ -1,24 +1,27 @@
 /**
  * The profile panel — the ONE surface the opt-in account lives on: the
  * programme/kull summary a student already set in studieinfo, signup/login,
- * and (today) this device's own sync line. It is reached from one control
+ * the device registry, and changing the PIN. It is reached from one control
  * ("Profil", in the planner's title block) and nothing else nags about it —
  * the account is strictly opt-in and never a prerequisite for using the
  * planner (see the plan's product framing).
  *
- * Two states, switched on `sync.session()`:
+ * Three states, switched on `sync.session()` and a pending collision:
  *  - signed out — programme block, Navn/PIN/Gjenta PIN, the two terms lines,
  *    Opprett konto / Logg inn.
- *  - signed in — programme block, "Sist synkronisert …", this device's own
- *    row, Logg ut på denne enheten.
+ *  - a login collision (§6 step 5) — the one prompt this design keeps: two
+ *    independent histories met, and the student picks which one wins. Shown
+ *    ONLY when `describeCollision` says so; an ordinary "add my second
+ *    device" login never reaches it.
+ *  - signed in — programme block, "Sist synkronisert …", the device
+ *    registry (`SyncSession.devices`, labelled by platform and browser —
+ *    two browsers on one Mac are two entries), Bytt PIN, Logg ut på denne
+ *    enheten.
  *
- * There is no *device list* here yet in the plural sense the name suggests:
- * `SyncSession` (Task 6) carries only this device's own `label`, and the
- * server keeps no registry of other devices — that is `SyncPayload.devices`,
- * Task 10's job (plan file, Task 10 header: "leave room for it; do not design
- * it away here"). Rendering a one-row list today, rather than inventing a
- * fetch this client cannot make, is the honest state; Task 10 grows the same
- * `<ul>` to more rows without changing this file's shape.
+ * There is no per-device revocation (§4 / §6 step 8): Bytt PIN is the only
+ * way to drop a device, and it is honest about the cost — every OTHER
+ * device is logged out until given the new PIN, because they all share one
+ * derived key.
  *
  * Follows `courseSettings.ts`'s modal pattern: a `<dialog>` built with `el`,
  * `showModal()`, `closedby="any"`, appended to `document.body`, idempotent
@@ -28,8 +31,15 @@
  * the native `showModal()`/`close()` focus return needs no manual fallback.
  */
 import type { PlanStore } from "../../lib/planner/store.js";
-import type { SyncClient, SyncResult, SyncSession } from "../../lib/planner/syncClient.js";
-import { el, icon } from "./dom.js";
+import {
+  type DeviceEntry,
+  describeCollision,
+  type SyncClient,
+  type SyncPayload,
+  type SyncResult,
+  type SyncSession,
+} from "../../lib/planner/syncClient.js";
+import { el, formatCreditNumber, icon } from "./dom.js";
 
 export interface ProfilePanelDeps {
   store: PlanStore;
@@ -134,37 +144,55 @@ function reasonCopy(reason: string): string {
 
 /**
  * Calls `sync.signup`/`sync.login` and turns whatever happens — a normal
- * `{ ok: true }`, a normal `{ ok: false, reason }`, or an outright promise
- * REJECTION — into one outcome that always resolves.
+ * `{ ok: true }`, a normal `{ ok: false, reason }`, `login`'s third outcome
+ * (§6 step 5's collision), or an outright promise REJECTION — into one
+ * outcome that always resolves.
  *
- * `syncClient.ts`'s `signup`/`login` wrap no try/catch around their `fetch`
- * (that file is Task 6's, already reviewed, and its result-contract gap is
- * tracked separately), so offline/DNS/CORS reject the promise instead of
- * resolving `{ ok: false, reason: "unavailable" }` — exactly the connectivity
- * hiccup a student on a phone is most likely to hit. `submit()` awaits this
- * function and unconditionally re-enables both buttons right after; before
- * this existed, that bare `await` could throw straight past the re-enable
- * lines, leaving the student staring at two permanently dead buttons with no
- * message. A caught rejection is folded into the same "failed" reason
- * `signup`/`login` already use for a non-2xx response, so it renders the same
- * generic retry copy through the one `reasonCopy` path rather than a second
- * one.
+ * The reject-to-`"failed"` fold below is belt and braces, not the fix: Task
+ * 10 made `syncClient.ts`'s own `fetch` calls total (every method resolves
+ * `{ ok: false, reason: "failed" }` on a network error rather than rejecting
+ * the promise), which is the actual close of the gap this function was first
+ * built to paper over. The `try`/`catch` stays anyway — `submit()` awaits
+ * this function and unconditionally re-enables both buttons right after, and
+ * a second line of defence here costs nothing.
+ *
+ * The collision branch is picked out with `isCollisionResult`, a proper type
+ * predicate, rather than `result.reason === "collision"` or an `"local" in
+ * result` check: `LoginResult`'s generic failure member types `reason` as a
+ * bare `string`, so neither form actually excludes that member — TS keeps it
+ * around as an intersection with a `Record<"local", unknown>` (or similar),
+ * which still fails `result.local`/`result.remote` against `SyncPayload`. An
+ * explicit predicate sidesteps that structural-narrowing gap entirely.
  */
+function isCollisionResult(
+  result: SyncResult | Awaited<ReturnType<SyncClient["login"]>>,
+): result is { ok: false; reason: "collision"; local: SyncPayload; remote: SyncPayload } {
+  return !result.ok && "local" in result && "remote" in result;
+}
+
 export async function attemptAuth(
   sync: SyncClient,
   kind: "signup" | "login",
   navn: string,
   pin: string,
   label: string,
-): Promise<{ ok: true } | { ok: false; hint: string }> {
-  let result: SyncResult;
+): Promise<
+  | { ok: true }
+  | { ok: false; hint: string }
+  | { ok: false; collision: { local: SyncPayload; remote: SyncPayload } }
+> {
+  let result: SyncResult | Awaited<ReturnType<SyncClient["login"]>>;
   try {
     result =
       kind === "signup" ? await sync.signup(navn, pin, label) : await sync.login(navn, pin, label);
   } catch {
     result = { ok: false, reason: "failed" };
   }
-  return result.ok ? { ok: true } : { ok: false, hint: reasonCopy(result.reason) };
+  if (result.ok) return { ok: true };
+  if (isCollisionResult(result)) {
+    return { ok: false, collision: { local: result.local, remote: result.remote } };
+  }
+  return { ok: false, hint: reasonCopy(result.reason) };
 }
 
 /** The "Sist synkronisert" line's text for each `SyncUiState`. */
@@ -179,6 +207,59 @@ function syncSuffix(state: SyncUiState): string {
   if (state === "syncing") return "synkroniserer";
   if (state === "failed") return "prøv igjen";
   return "nå";
+}
+
+/**
+ * A device row's relative-time suffix ("2 t siden", "i går" — §6 step 6) for
+ * every row EXCEPT this one, which keeps `syncSuffix` (it reflects live sync
+ * state, not a stored timestamp). Buckets rather than an exact duration,
+ * matching the rest of the planner's copy register.
+ */
+function relativeSince(iso: string): string {
+  const then = new Date(iso).getTime();
+  if (Number.isNaN(then)) return "";
+  const minutes = Math.floor((Date.now() - then) / 60_000);
+  if (minutes < 1) return "nå";
+  if (minutes < 60) return `${minutes} min siden`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours} t siden`;
+  const days = Math.floor(hours / 24);
+  return days === 1 ? "i går" : `${days} dager siden`;
+}
+
+/** "1 emne" / "5 emner" — the same singular/plural rule `plannerApp.ts` uses
+ *  for every other course count. */
+function courseWord(n: number): string {
+  return n === 1 ? "emne" : "emner";
+}
+
+/**
+ * A payload's credit total for one semester, parsed straight from the
+ * plaintext `plans` JSON the same defensive way `describeCollision` reads
+ * `code` — malformed or missing rows count as nothing rather than throwing,
+ * since this only ever runs on a payload this client just decrypted or holds
+ * locally, never on something a mistake elsewhere should crash the panel over.
+ */
+function creditsFor(payload: SyncPayload, semesterId: string): number {
+  try {
+    const plans = JSON.parse(payload.plans) as Record<string, Array<{ credits?: unknown }>>;
+    return (plans[semesterId] ?? []).reduce(
+      (sum, row) => sum + (typeof row.credits === "number" ? row.credits : 0),
+      0,
+    );
+  } catch {
+    return 0;
+  }
+}
+
+/** The most recently active OTHER device, for naming the remote side of the
+ *  collision question ("MacBook — …"). `undefined` when the account has no
+ *  registry yet — a fresh signup nobody else has ever pushed to. */
+function latestDevice(devices: DeviceEntry[]): DeviceEntry | undefined {
+  return devices.reduce<DeviceEntry | undefined>(
+    (latest, candidate) => (!latest || candidate.lastSeen > latest.lastSeen ? candidate : latest),
+    undefined,
+  );
 }
 
 /** One labelled `.np-field` text input; `extra` carries attributes `el` has no dedicated setter for. */
@@ -380,6 +461,14 @@ export function mountProfilePanel(deps: ProfilePanelDeps): ProfilePanelHandle {
       signupBtn.disabled = false;
       loginBtn.disabled = false;
       if (!outcome.ok) {
+        // §6 step 5: not a failure — this device and the account it just
+        // authenticated against each hold a plan, and the student has to
+        // pick. `resolveLogin` (inside `renderCollision`) finishes the login
+        // `attemptAuth` deliberately left pending.
+        if ("collision" in outcome) {
+          renderCollision(outcome.collision.local, outcome.collision.remote);
+          return;
+        }
         hint.textContent = outcome.hint;
         return;
       }
@@ -411,12 +500,30 @@ export function mountProfilePanel(deps: ProfilePanelDeps): ProfilePanelHandle {
     body.append(el("p", "np-hint profile-panel-sync-line", syncStatusLine(syncState)));
 
     const list = el("ul", "profile-panel-devices");
-    const row = el("li", "profile-panel-device-row");
-    row.append(el("span", undefined, `${session.label} — ${syncSuffix(syncState)}`));
-    list.append(row);
+    // This device first — it is the only row that reflects LIVE sync state
+    // (`syncSuffix`: "nå"/"synkroniserer"/"prøv igjen") rather than a stored
+    // timestamp — then the rest by most recently seen.
+    const sorted = [...session.devices].sort((a, b) => {
+      if (a.id === session.deviceId) return -1;
+      if (b.id === session.deviceId) return 1;
+      return b.lastSeen.localeCompare(a.lastSeen);
+    });
+    for (const device of sorted) {
+      const row = el("li", "profile-panel-device-row");
+      const suffix =
+        device.id === session.deviceId ? syncSuffix(syncState) : relativeSince(device.lastSeen);
+      row.append(el("span", undefined, `${device.label} — ${suffix}`));
+      list.append(row);
+    }
     body.append(list);
 
     const actions = el("div", "np-actions profile-panel-actions");
+    // §4 / §6 step 8: the only way to drop a device — no per-device control
+    // exists in the list above, on purpose. There is no per-device
+    // revocation, and this UI must not imply one.
+    const changePinBtn = el("button", "np-btn profile-panel-change-pin", "Bytt PIN");
+    changePinBtn.type = "button";
+    changePinBtn.addEventListener("click", () => renderChangePin());
     const logoutBtn = el("button", "np-btn profile-panel-logout", "Logg ut på denne enheten");
     logoutBtn.type = "button";
     logoutBtn.addEventListener("click", () => {
@@ -424,10 +531,177 @@ export function mountProfilePanel(deps: ProfilePanelDeps): ProfilePanelHandle {
       syncState = "ok";
       render();
     });
-    actions.append(logoutBtn);
+    actions.append(changePinBtn, logoutBtn);
     body.append(actions);
 
     dialog.append(body);
+  }
+
+  /**
+   * §4 / §6 step 8: re-credentials the account under a new PIN. Honest about
+   * the one real consequence — every OTHER device is logged out until given
+   * the new PIN, because all of them share one derived key and there is no
+   * finer-grained revocation. `changePin` itself is atomic (its own doc
+   * comment): a failure here leaves the session exactly as it was, so
+   * `Avbryt` and a failed attempt both just fall back to `render()`.
+   */
+  function renderChangePin(): void {
+    dialog.replaceChildren(renderHead());
+    const body = el("form", "profile-panel-body") as HTMLFormElement;
+    body.autocomplete = "off";
+    body.append(el("h3", "profile-panel-heading", "Bytt PIN"));
+    body.append(
+      el(
+        "p",
+        "np-hint",
+        "Da lager vi en ny kobling. Du må logge inn på nytt på enhetene du beholder.",
+      ),
+    );
+
+    const oldPin = buildField("Nåværende PIN", "profile-panel-old-pin", {
+      inputmode: "numeric",
+      maxlength: "6",
+    });
+    const newPin = buildField("Ny PIN", "profile-panel-new-pin", {
+      inputmode: "numeric",
+      maxlength: "6",
+    });
+    const repeatPin = buildField("Gjenta ny PIN", "profile-panel-repeat-new-pin", {
+      inputmode: "numeric",
+      maxlength: "6",
+    });
+    body.append(oldPin.wrapper, newPin.wrapper, repeatPin.wrapper);
+
+    const hint = el("p", "np-hint profile-panel-hint", "");
+    hint.id = "profile-panel-change-pin-hint";
+    hint.setAttribute("aria-live", "polite");
+    body.append(hint);
+
+    const actions = el("div", "np-actions profile-panel-actions");
+    const cancelBtn = el("button", "np-btn", "Avbryt");
+    cancelBtn.type = "button";
+    cancelBtn.addEventListener("click", () => render());
+    const confirmBtn = el("button", "np-btn np-btn--primary", "Bytt PIN") as HTMLButtonElement;
+    confirmBtn.type = "submit";
+    confirmBtn.setAttribute("aria-describedby", "profile-panel-change-pin-hint");
+    actions.append(cancelBtn, confirmBtn);
+    body.append(actions);
+
+    dialog.append(body);
+
+    async function submit(): Promise<void> {
+      const oldValue = oldPin.input.value.trim();
+      const newValue = newPin.input.value.trim();
+      if (!pinIsValid(oldValue)) {
+        hint.textContent = "Skriv inn PIN-en du bruker i dag.";
+        oldPin.input.focus();
+        return;
+      }
+      if (!pinIsValid(newValue)) {
+        hint.textContent = "Ny PIN må være 6 siffer.";
+        newPin.input.focus();
+        return;
+      }
+      if (newValue !== repeatPin.input.value.trim()) {
+        hint.textContent = "PIN-ene er ikke like.";
+        repeatPin.input.focus();
+        return;
+      }
+      hint.textContent = "";
+      cancelBtn.disabled = true;
+      confirmBtn.disabled = true;
+      // `changePin` never rejects (same total `SyncResult` contract as every
+      // other `SyncClient` method), so these two lines are unconditional.
+      const result = await deps.sync.changePin(oldValue, newValue);
+      cancelBtn.disabled = false;
+      confirmBtn.disabled = false;
+      if (!result.ok) {
+        hint.textContent = reasonCopy(result.reason);
+        return;
+      }
+      syncState = "ok";
+      render();
+    }
+
+    body.addEventListener("submit", (event) => {
+      event.preventDefault();
+      void submit();
+    });
+  }
+
+  /**
+   * §6 step 5's collision question — the one prompt this design keeps.
+   * `login()` only returns here when its own `describeCollision` call
+   * already found something to ask about, so the recompute below (needed for
+   * the counts and the "mangler …" list, which `LoginResult` does not carry)
+   * cannot itself come back null.
+   */
+  function renderCollision(local: SyncPayload, remote: SyncPayload): void {
+    dialog.replaceChildren(renderHead());
+    const body = el("div", "profile-panel-body");
+    body.append(
+      el("h3", "profile-panel-heading", "Begge enhetene har en plan. Hvilken vil du beholde?"),
+    );
+
+    const semesterId = local.lastSemester;
+    const summary = describeCollision(local, remote, semesterId) ?? {
+      localCount: 0,
+      remoteCount: 0,
+      missingFromRemote: [] as string[],
+    };
+    const remoteLabel = latestDevice(remote.devices)?.label ?? "Den andre enheten";
+    const missingSuffix =
+      summary.missingFromRemote.length > 0
+        ? ` · mangler ${summary.missingFromRemote.join(", ")}`
+        : "";
+
+    const hint = el("p", "np-hint profile-panel-hint", "");
+    hint.id = "profile-panel-collision-hint";
+    hint.setAttribute("aria-live", "polite");
+
+    const options = el("div", "profile-panel-collision-options");
+    const localBtn = el(
+      "button",
+      "np-btn np-btn--primary",
+      `Denne enheten — ${summary.localCount} ${courseWord(summary.localCount)} · ${formatCreditNumber(creditsFor(local, semesterId))} sp`,
+    ) as HTMLButtonElement;
+    localBtn.type = "button";
+    localBtn.setAttribute("aria-describedby", "profile-panel-collision-hint");
+    const remoteBtn = el(
+      "button",
+      "np-btn",
+      `${remoteLabel} — ${summary.remoteCount} ${courseWord(summary.remoteCount)} · ${formatCreditNumber(creditsFor(remote, semesterId))} sp${missingSuffix}`,
+    ) as HTMLButtonElement;
+    remoteBtn.type = "button";
+    remoteBtn.setAttribute("aria-describedby", "profile-panel-collision-hint");
+    options.append(localBtn, remoteBtn);
+    body.append(options);
+    body.append(hint);
+
+    dialog.append(body);
+
+    async function resolve(choice: "local" | "remote"): Promise<void> {
+      localBtn.disabled = true;
+      remoteBtn.disabled = true;
+      // `resolveLogin` never rejects either — same contract as the rest of
+      // `SyncClient`.
+      const result = await deps.sync.resolveLogin(choice);
+      if (!result.ok) {
+        hint.textContent = reasonCopy(result.reason);
+        localBtn.disabled = false;
+        remoteBtn.disabled = false;
+        return;
+      }
+      syncState = "ok";
+      render();
+      // "remote" just overwrote this device's plan; "local" did not. Calling
+      // this unconditionally is harmless either way — see `onAuthenticated`'s
+      // own doc comment on `ProfilePanelDeps`.
+      deps.onAuthenticated();
+    }
+
+    localBtn.addEventListener("click", () => void resolve("local"));
+    remoteBtn.addEventListener("click", () => void resolve("remote"));
   }
 
   /** Full idempotent rebuild, driven by `sync.session()` — mirrors `renderContent` in `courseSettings.ts`. */
