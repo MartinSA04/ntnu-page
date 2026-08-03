@@ -356,10 +356,16 @@ interface PendingLogin {
   version: number;
   remote: SyncPayload;
   /**
-   * Minted here rather than in `resolveLogin`, so a retried resolve reuses
-   * this device's id instead of inventing a second one. `mergeDevice` matches
-   * by id, so a fresh id per attempt would have grown the registry a phantom
-   * row for every failed "Denne enheten".
+   * Minted here rather than in `resolveLogin`, so this device keeps ONE
+   * identity across a retried resolve: the id is what `mergeDevice` matches on
+   * for every later push, and a failed attempt has already written a session
+   * carrying it.
+   *
+   * It does NOT prevent a duplicate registry row, which an earlier comment
+   * here claimed — `resolveLogin`'s `writeSession` rebuilds the list from
+   * `p.remote.devices` on every attempt, so even a fresh id per attempt would
+   * still yield exactly one row for this device. That is why the test on this
+   * asserts the stable id itself rather than a row count that cannot move.
    */
   deviceId: string;
 }

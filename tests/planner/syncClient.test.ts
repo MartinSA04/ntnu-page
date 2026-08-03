@@ -573,11 +573,23 @@ describe("resolveLogin", () => {
 
     failNextPut = true;
     expect(await deviceB.resolveLogin("local")).toEqual({ ok: false, reason: "failed" });
+    // The failed attempt still wrote a session — this device IS logged in, it
+    // just has not pushed yet — so its device id is observable from here on.
+    const idAfterFailure = deviceB.session()?.deviceId;
+    expect(idAfterFailure).toBeTruthy();
+
     // The retry the panel's own "Prøv igjen" invites now works, instead of
     // answering `no_pending` forever.
     expect(await deviceB.resolveLogin("local")).toEqual({ ok: true });
 
-    // One device row for this device, not one per attempt.
+    // …and it is the same device throughout. This used to be asserted as "one
+    // registry row per device, not one per attempt", which no `resolveLogin`
+    // could ever fail: `writeSession` rebuilds the list from
+    // `p.remote.devices` on every attempt, so a fresh id per attempt still
+    // produced exactly one row. `p.deviceId`'s real job is the identity
+    // itself — the key `mergeDevice` matches on for every later push, and the
+    // id a failed attempt already committed to storage.
+    expect(deviceB.session()?.deviceId).toBe(idAfterFailure);
     const devices = deviceB.session()?.devices ?? [];
     expect(devices.filter((d) => d.label === "iPhone")).toHaveLength(1);
   }, 60_000);
