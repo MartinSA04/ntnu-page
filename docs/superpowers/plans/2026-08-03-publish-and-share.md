@@ -10,6 +10,42 @@
 
 **Tech Stack:** Cloudflare Workers + KV, Astro static shell with a worker rewrite, TypeScript, vitest, Playwright.
 
+## Carried from the sync plan (landed 2026-08-03) — read before Task 5
+
+Four facts from the sync build that this plan collides with. None are
+rediscoverable from the code alone.
+
+1. **`formatPlanHash` has a second job now.** The planner's pull-repaint gate
+   compares `formatPlanHash(next)` against `formatPlanHash(plan)` to decide
+   whether a pulled plan is actually different, so it can repaint once and not
+   at all when nothing moved. Task 5 deletes `formatPlanHash` with the rest of
+   the grammar. Replace the comparison with an equivalent — serialising the
+   `SyncPayload` will do — and do **not** simply drop the gate: without it every
+   pull repaints the week, which is the gratuitous-repaint problem the sync
+   plan spent a fix round closing.
+2. **Two live defects will disappear with the hash; confirm they do.** Fix wave
+   2 found and deliberately left them, because this plan deletes their home:
+   the search-index name backfill clears `replacedPlan`, so "Behold min egen"
+   vanishes shortly after a real shared link loads; and signing up while
+   viewing a link uploads *the link's* plan as the new account's. Verify both
+   are gone once §5 lands rather than assuming it.
+3. **The viewed-link sync suppression is vestigial after §5.** Sync currently
+   carries a mechanism ensuring a tab showing a link it only *opened* neither
+   pushes nor pulls — needed because a one-line settle was defeated by the name
+   backfill re-arming the push for every link. Once the hash is gone there are
+   no viewed links, so that flag and its tests must be removed with it, not
+   left behind as a mystery.
+4. **The e2e fixture layer has a `/api/sync/*` carve-out.** If this plan adds
+   `/api/plan/:navn` or `/api/sync/:navn/public`, decide deliberately whether
+   they join it. The public read is our own surface too, so the same reasoning
+   applies — see `CLAUDE.md`'s note.
+
+One methodological warning, earned the hard way: **`git stash` is not a
+baseline.** A regression this session introduced was called "pre-existing" for
+many turns because three agents verified it against a `main` that already
+contained the commit that caused it. To test whether something predates your
+work, check out the session's true starting commit in a worktree.
+
 ## Global Constraints
 
 - UI copy is **Norwegian bokmål, sentence case, comma decimals** ("7,5 sp").
