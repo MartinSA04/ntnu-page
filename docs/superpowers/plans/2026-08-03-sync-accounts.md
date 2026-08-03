@@ -878,7 +878,7 @@ export async function deriveKeys(
   // NUL between the fields so ("ab", "1") and ("a", "b1") cannot derive alike.
   const material = await crypto.subtle.importKey(
     "raw",
-    ENC.encode(`${navn} ${pin}`),
+    ENC.encode(`${navn}\u0000${pin}`),
     "PBKDF2",
     false,
     ["deriveBits"],
