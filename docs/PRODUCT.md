@@ -39,7 +39,10 @@ conflict.
    deliberately take colliding courses; overlap is a *supported state*, not
    breakage.
 8. **Programme/kull/retning editing gets a real settings surface**, because
-   people have webpage patterns they are used to.
+   people have webpage patterns they are used to. **Delivered**, as the
+   profile panel: the planner's action bar carries one door into it
+   ("Profil") rather than the two nested doors — an account entrance and a
+   studieinfo entrance into the same room — that preceded it.
 9. **Manual adds are semester-specific.** A course added in one semester
    must not leak into another.
 10. **No versioning or compat apparatus — delete old code outright.**
@@ -57,7 +60,7 @@ conflict.
 Studentweb* — where an NTNU student assembles a candidate set of courses and
 finds out, before the registration deadline, whether that semester holds
 together: lectures don't collide, exams aren't stacked, credits reach a full
-load. Unofficial, free, account-less. It composes data no official tool
+load. Unofficial, free, no account required. It composes data no official tool
 composes together — catalog, timetable, exam, study plan and grade history
 as **one shareable object**.
 
@@ -65,7 +68,7 @@ as **one shareable object**.
 (ntnu.no), timetable-merge (TP), grade stats (DBH). None owns the *row* — the
 join across columns for a set of courses in a chosen semester. That join is
 ours, and it comes with one thing absent everywhere else: **a single
-shareable stateful URL with no login.**
+shareable stateful URL, no account required.**
 
 But the join is only worth more than four correct single-column tools *if it
 tells the truth about its own thinness.* Three of the five columns are soft:
@@ -231,9 +234,11 @@ prefix-match of `/emner/`) still lights the right item.
 **The topbar carries no plan state.** Three successive attempts at a sitewide
 plan affordance — a plan strip, a plan-count link, and a studieinfo chip —
 were each built and each removed. The planner is where the plan is named, and
-`/planlegger/`'s own "Endre" button is the single entrance to the studieinfo
-modal. **Do not re-add a sitewide plan bar of any kind.** Any credits shown
-outside `/planlegger/` are best-effort, not authoritative.
+`/planlegger/`'s own "Profil" button (formerly "Endre") is the single
+entrance to it — programme/kull/retning editing and the optional account open
+through the same door (mandate 8). **Do not re-add a sitewide plan bar of any
+kind.** Any credits shown outside `/planlegger/` are best-effort, not
+authoritative.
 
 **`/studier/[code]/` and `/studier/` are deleted, no redirects.** Their
 surviving logic moved: kull relevance and plan fetch into the studieinfo
@@ -422,9 +427,10 @@ branch on nothing (DR-3).
 
 ## 8. Non-goals
 
-No accounts or server storage. No Studentweb integration (always "bekreft i
-Studentweb"). **No fabricated signals** — no workload or difficulty scores,
-no thesis-relevance, no auto "best 2 of 5", no seat/capacity/popularity data.
+No accounts required. Optional sync stores only client-encrypted blobs. No
+Studentweb integration (always "bekreft i Studentweb"). **No fabricated
+signals** — no workload or difficulty scores, no thesis-relevance, no auto
+"best 2 of 5", no seat/capacity/popularity data.
 No cross-course grade leaderboard. **No compare matrix** — facts inline, not
 a spreadsheet. No multi-year planning in the planner. No ICS, push, maps or
 solver. No bilingual UI chrome. No wizard, glossary or FAQ. No

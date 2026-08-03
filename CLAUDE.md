@@ -183,7 +183,23 @@
   refreshes the store; `mise run e2e:live` runs everything against live.
   `/api/health` is deliberately NOT intercepted — `navigation.pw.ts` reads the
   worker's real security headers off it, and a replayed response would answer
-  that with headers captured at some past moment.
+  that with headers captured at some past moment. `/api/sync/*` is the other
+  carve-out, for a different reason: it's our own surface, not NTNU's, so
+  replaying it would assert against a recording of our own worker instead of
+  exercising it. It runs against `wrangler dev`'s local KV instead, which
+  provisions a namespace from the `SYNC` binding with no Cloudflare account
+  needed, so `mise run e2e` round-trips real accounts through the real
+  handler and stays offline.
+- `wrangler.jsonc` binds `SYNC` to the placeholder id `local-sync-dev` for
+  local dev only — `wrangler dev` (no `--remote`) accepts a placeholder with
+  no Cloudflare account, which is what the previous bullet's local-KV e2e run
+  depends on; a `--remote` run or a real `wrangler deploy` rejects it.
+  `release.yml` has a precheck, run right after the version-tag check and
+  before the build, that greps `wrangler.jsonc` for `local-sync-dev` and
+  fails the release outright if it's still there. Replace it with a real
+  namespace id (`npx wrangler kv namespace create SYNC`) before tagging a
+  release; don't remove or loosen the precheck to unblock a tag — that is
+  exactly the failure it exists to catch.
 - Two-pass typecheck (Workers vs Node ambient types clash):
   `worker/tsconfig.json` + `tsconfig.test.json`; keep Workers-only ambient
   types out of files the Node pass includes (structural interfaces instead).

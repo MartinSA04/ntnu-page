@@ -8,8 +8,12 @@ order. Do not re-litigate what PRODUCT.md §10 already decided against.
 trivially editable, shareable — works end to end against live data, with the
 collision engine, exam list, credit line and provenance all correct. The
 design direction is settled (`docs/DESIGN.md`), the week has two views, and
-the registration deadline is on screen. What has *not* been started is the
-growth loop past a share button, and the whole decide-loop.
+the registration deadline is on screen. Accounts and sync have landed too,
+opt-in and never a prerequisite. What has *not* been started is the growth
+loop past a share button, the whole decide-loop, and publishing
+(`/user/<navn>`) — specified in
+`docs/superpowers/specs/2026-08-02-accountless-sync-design.md` §5, the next
+plan now that accounts exist, but not yet built.
 
 ---
 
@@ -60,6 +64,15 @@ direction codes; `hashchange` applies a pasted link live; a Del button copies
 the link or invokes the native share sheet; and the plan an incoming link
 overwrote is offered back, because the destructive half of §3 flow 5 was live
 while the merge half was not.
+
+**Accounts and sync.** An opt-in account — name plus a 6-digit PIN — carries
+a student's plan between phone, PC and iPad; the planner is unchanged until
+Profil is opened and asked for it. That single door replaces what mandate 8
+promised and what used to be two nested ones (PRODUCT §1). `localStorage`
+stays the write target and the server mirrors it — no offline queue, no
+polling — and the worker contract (routes, crypto, KV record) is
+`docs/SPEC.md`'s. There is no per-device revocation; dropping a device is a
+PIN change, which logs every other device out until it is given the new one.
 
 **Course and catalog pages.** `/emne/[code]/` reordered around the fork CTA,
 with the clash sentence, the shared week renderer, one exam block, the

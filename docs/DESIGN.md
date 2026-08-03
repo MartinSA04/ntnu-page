@@ -480,7 +480,7 @@ Settled, with the reasoning, so they are not re-opened by the next reviewer.
 
 - **One bar at the top of the page.** The plan's name and every control that
   acts on it share a row: the layer checkbox, the Uke/Liste switch, Del,
-  Endre, and the primary "Legg til emne". They came up out of the week's own
+  Profil, and the primary "Legg til emne". They came up out of the week's own
   section head — a second bar 200 px lower saying the same kind of thing — and
   that head is gone with them. **The title is a name, not a headline**
   (1.25 rem / 600).

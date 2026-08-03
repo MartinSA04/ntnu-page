@@ -402,9 +402,10 @@ are absent.
 
 ## Worker API contract
 
-Base: same origin as the site. **GET/HEAD only** — anything else is
-`405 {"error":"Method not allowed"}` with `Allow: GET, HEAD`. JSON responses,
-`content-type: application/json; charset=utf-8`.
+Base: same origin as the site. **GET/HEAD only, except `/api/sync/*`** (its
+own contract below) — anything else is `405 {"error":"Method not allowed"}`
+with `Allow: GET, HEAD`. JSON responses, `content-type: application/json;
+charset=utf-8`.
 
 | Route | Upstream call | TTL | Notes |
 |---|---|---|---|
@@ -477,6 +478,79 @@ Base: same origin as the site. **GET/HEAD only** — anything else is
   `types: ["@cloudflare/workers-types"]`; keep Workers-only ambient types out
   of shared files (use structural interfaces).
 
+### `/api/sync/*` — the opt-in account surface
+
+An account is optional and never a prerequisite: name plus a 6-digit PIN,
+syncing a student's plan between devices. The client derives one 256-bit
+master key from `navn + PIN` via PBKDF2 (600 000 iterations, SHA-256, salt
+`"np-sync-v1:" + navn`), then HKDF-splits it into `authKey` (sent as the
+write credential; the server stores only `sha256(authKey)`) and `encKeyRaw`
+(never leaves the browser). The plan is AES-GCM sealed client-side
+(`base64(iv ‖ ciphertext)`) before it is written, so the server can prove who
+is writing and cannot read what is written.
+
+| Route | Behaviour |
+| --- | --- |
+| `POST /api/sync/:navn` | Claim. `201 {version:1}`; `409` if the name is taken; `413` if `blob` exceeds the bound. |
+| `GET /api/sync/:navn` | Requires `x-np-auth`. `200 {blob, version, updatedAt}` (`Vary: x-np-auth`); `401` on mismatch; `404` if unclaimed. |
+| `PUT /api/sync/:navn` | Write. `200 {version}`; `409 {error:"stale", blob, version}` if the caller's `version` is behind the server's — the stale-tab guard, not an offline merge. An optional `authKey` field re-credentials the record (a PIN change): the version check runs first, so a stale write leaves the old credential untouched. |
+| `DELETE /api/sync/:navn` | Delete everything. `204`, no confirmation. |
+
+The credential travels in the `x-np-auth` header on `GET`/`PUT`/`DELETE`;
+`POST` carries the initial `authKey` in its JSON body instead, since
+claiming an unclaimed name has no existing credential to present against.
+These four routes are the exception to this section's own **GET/HEAD only**
+rule — `worker/src/server.ts` dispatches them before that gate applies. They
+spend from the **same per-IP token bucket** as the rest of `/api`; on top of
+it, a per-name `AuthLimiter` — 10 failed credentials per 15 minutes,
+in-memory and therefore approximate per isolate — throttles PIN guessing
+across however many IPs an attacker spreads requests over. `env.SYNC` absent
+(no KV binding provisioned) answers every sync route `503
+{"error":"sync_unavailable"}` rather than degrading to memory-only, because a
+plan that looks saved but isn't is worse than one that says it cannot be.
+
+KV key: `user:<navn>`. Record shape:
+
+```jsonc
+{
+  "authHash": "…",       // sha256(authKey)
+  "version": 7,           // monotonic, bumped by the writer
+  "updatedAt": "2026-08-02T09:14:00Z",
+  "blob": "…",            // AES-GCM ciphertext of the synced payload
+  "public": false,         // always false today — read only by the unbuilt publishing plan
+  "plain": null             // always null today — ditto
+}
+```
+
+`blob` is bounded at **512 KB** (`MAX_BLOB_CHARS`), checked before the KV
+read on every claim and write, so an oversized body costs nothing but the
+parse. **No TTL.** Programme and kull are set once and are still true next
+semester, and `np:plans` already holds every semester, so an account expiring
+between terms would make a student redo the one thing they should never have
+to redo.
+
+What syncs is three of the five `localStorage` keys the payload is built
+from: `np:profile`, `np:plans` (the whole map, not just the active
+semester), `np:lastSemester`. **`np:weekView` and `np:weekBox` never sync** —
+the first is *how* a student is looking at the plan, not *what* they are
+looking at, and the second is a per-device, per-width layout measurement; a
+remembered box from the wrong geometry costs 0.14 CLS, worse than reserving
+nothing (see CLAUDE.md's layout-shift-reservations note).
+
+**What a KV dump is actually worth, stated plainly.** The blob's
+confidentiality rests on the entropy of a 6-digit PIN — about 20 bits —
+stretched by 600 000 PBKDF2 iterations, with AES-GCM's authentication tag
+serving as a free verification oracle per guess: roughly a minute per account
+on one consumer GPU for an attacker who already holds the dump. That is
+acceptable because the contents are a course timetable, not because the
+number is small, and it is why this store must never be extended to carry
+anything else.
+
+**`encKeyRaw` lives in `localStorage`**, and the origin's CSP carries
+`script-src 'unsafe-inline'` (this section's own CSP note, above), so HTML
+injection on this origin yields the key. The key's security is bounded by the
+site's, not by the crypto.
+
 ---
 
 ## Pages
@@ -492,7 +566,7 @@ Islands are **vanilla `<script>` modules** (no framework) fetching relative
   one line of sub-copy, and one CTA to `/planlegger/`. No picker, no proof
   fragment.
 - **`/planlegger/`** — the app. One bar at the top carries the plan's name and
-  every control that acts on it (layer toggle, Uke/Liste, Del, Endre, and the
+  every control that acts on it (layer toggle, Uke/Liste, Del, Profil, and the
   primary "Legg til emne"); the verdict chips and the deadline sit on the line
   under it; then the week and exam list against the course rail. Verdict
   states are **three, not two**: clean, "N kollisjoner", and "kan ikke
