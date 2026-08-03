@@ -36,6 +36,11 @@
   //      npx wrangler kv namespace create CACHE
   //    then add:
   //      "kv_namespaces": [{ "binding": "CACHE", "id": "<id>" }],
-  // 2. Custom domain:
+  // 2. Sync accounts (worker answers 503 on /api/sync/* without it, rather
+  //    than pretending to save):
+  //      npx wrangler kv namespace create SYNC
+  //    then add:
+  //      "kv_namespaces": [{ "binding": "SYNC", "id": "<id>" }],
+  // 3. Custom domain:
   //      "routes": [{ "pattern": "ntnu.martinsundal.no", "custom_domain": true }],
 }

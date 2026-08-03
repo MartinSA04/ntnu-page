@@ -20,6 +20,15 @@ import {
   type RouteDeps,
   withSecurityHeaders,
 } from "./routes.js";
+import {
+  AuthLimiter,
+  handleSyncClaim,
+  handleSyncDelete,
+  handleSyncGet,
+  handleSyncPut,
+  type SyncDeps,
+  type SyncKv,
+} from "./sync.js";
 
 /**
  * Cloudflare Workers Assets + optional KV cache bindings, typed structurally
@@ -29,10 +38,21 @@ import {
 export interface Env {
   ASSETS: { fetch(request: Request): Promise<Response> };
   CACHE?: KVCacheBinding;
+  SYNC?: SyncKv;
 }
 
 const client = new NTNUClient();
 const memoryCache = new TTLCache();
+
+/**
+ * Per-isolate, like `client` and `memoryCache` above. `limiter` and
+ * `monotonic` below must always be supplied together: `authorise` in
+ * `sync.ts` falls back to a frozen `now` of 0 when `monotonic` is missing,
+ * so a `SyncDeps` with a limiter but no clock produces a lockout `until`
+ * that a frozen `now` can never reach — a silent permanent lock until the
+ * isolate recycles.
+ */
+const authLimiter = new AuthLimiter(10, 15 * 60_000);
 
 /**
  * Bounds how fast one client can make this worker fetch from NTNU. Tokens are
@@ -78,6 +98,53 @@ export function canonicalCoursePath(pathname: string): string | null {
   return `/emne/${encodeURIComponent(upper)}/`;
 }
 
+/** `/api/sync/<navn>` → the name, or null when the shape does not match. */
+function syncName(pathname: string): string | null {
+  const match = /^\/api\/sync\/([^/]+)\/?$/.exec(pathname);
+  if (!match?.[1]) return null;
+  // Same reason as `parseCode` in routes.ts: the WHATWG URL spec keeps path
+  // segments percent-encoded, and a name is validated after decoding.
+  try {
+    return decodeURIComponent(match[1]);
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Dispatches one `/api/sync/<navn>` request. `env.SYNC` absent is reported
+ * as 503 rather than silently falling back to memory — a planner that
+ * looked like it saved but didn't is worse than one that says it cannot.
+ */
+async function handleSync(request: Request, env: Env, name: string): Promise<Response> {
+  if (!env.SYNC) {
+    return new Response(JSON.stringify({ error: "sync_unavailable" }), {
+      status: 503,
+      headers: { "content-type": "application/json; charset=utf-8" },
+    });
+  }
+  const deps: SyncDeps = {
+    kv: env.SYNC,
+    now: () => new Date().toISOString(),
+    limiter: authLimiter,
+    monotonic: () => Date.now(),
+  };
+  const auth = request.headers.get("x-np-auth");
+
+  switch (request.method) {
+    case "POST":
+      return handleSyncClaim(name, await request.json().catch(() => null), deps);
+    case "GET":
+      return handleSyncGet(name, auth, deps);
+    case "PUT":
+      return handleSyncPut(name, auth, await request.json().catch(() => null), deps);
+    case "DELETE":
+      return handleSyncDelete(name, auth, deps);
+    default:
+      return methodNotAllowed();
+  }
+}
+
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url);
@@ -98,6 +165,11 @@ export default {
       }
       return withSecurityHeaders(assetResponse);
     }
+
+    // `/api/sync/*` is the one part of `/api` that is not read-only, so it is
+    // dispatched before the GET/HEAD-only gate below applies to everything else.
+    const name = syncName(pathname);
+    if (name !== null) return withSecurityHeaders(await handleSync(request, env, name));
 
     // Read-only surface: anything but GET/HEAD used to be served as a GET,
     // payload and all, marked publicly cacheable.

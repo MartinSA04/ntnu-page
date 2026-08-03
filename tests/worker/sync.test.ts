@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import worker, { type Env } from "../../worker/src/server.js";
 import {
   AuthLimiter,
   handleSyncClaim,
@@ -152,4 +153,57 @@ it("429s a locked-out name without touching KV", async () => {
   expect((await handleSyncGet("martin", OTHER, withLimiter)).status).toBe(429);
   // …and a correct key is refused too while the lockout stands.
   expect((await handleSyncGet("martin", AUTH, withLimiter)).status).toBe(429);
+});
+
+function envWith(kv: SyncKv): Env {
+  return {
+    ASSETS: { fetch: async () => new Response("asset", { status: 200 }) },
+    SYNC: kv,
+  } as Env;
+}
+
+describe("worker dispatch for /api/sync", () => {
+  it("claims, reads back and rejects a wrong key end to end", async () => {
+    const kv = fakeKv();
+    const env = envWith(kv);
+
+    const claim = await worker.fetch(
+      new Request("https://x/api/sync/martin", {
+        method: "POST",
+        body: JSON.stringify({ authKey: AUTH, blob: "cipher" }),
+      }),
+      env,
+    );
+    expect(claim.status).toBe(201);
+
+    const read = await worker.fetch(
+      new Request("https://x/api/sync/martin", { headers: { "x-np-auth": AUTH } }),
+      env,
+    );
+    expect(read.status).toBe(200);
+    expect(await read.json()).toMatchObject({ blob: "cipher" });
+
+    const wrong = await worker.fetch(
+      new Request("https://x/api/sync/martin", { headers: { "x-np-auth": OTHER } }),
+      env,
+    );
+    expect(wrong.status).toBe(401);
+  });
+
+  it("503s when no KV namespace is bound rather than pretending to save", async () => {
+    const env = { ASSETS: { fetch: async () => new Response("asset") } } as Env;
+    const res = await worker.fetch(
+      new Request("https://x/api/sync/martin", { headers: { "x-np-auth": AUTH } }),
+      env,
+    );
+    expect(res.status).toBe(503);
+  });
+
+  it("405s an unsupported method", async () => {
+    const res = await worker.fetch(
+      new Request("https://x/api/sync/martin", { method: "PATCH" }),
+      envWith(fakeKv()),
+    );
+    expect(res.status).toBe(405);
+  });
 });
