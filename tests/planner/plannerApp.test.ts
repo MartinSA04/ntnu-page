@@ -15,7 +15,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { shouldPullOnVisible } from "../../src/components/planner/plannerApp.js";
 import { PLAN_CHANGE_EVENT, type StorageLike } from "../../src/lib/planner/store.js";
-import { createSyncClient } from "../../src/lib/planner/syncClient.js";
+import { createSyncClient, type SyncClient } from "../../src/lib/planner/syncClient.js";
 
 class FakeClassList {
   private set = new Set<string>();
@@ -535,6 +535,21 @@ function makeSyncServer() {
     return jsonResponse({ blob: current.blob, version: current.version });
   }
   return { handle, puts };
+}
+
+/**
+ * What another device would see right now: `fetchRemote` + `applyRemote`, the
+ * two halves of a pull composed by hand.
+ *
+ * `SyncClient` has no `pull()` — an unguarded fetch-and-overwrite is the exact
+ * defect the split exists to remove, and leaving the composition on the public
+ * interface kept inviting the next caller to reintroduce it. The APP has a
+ * generation counter to check between the halves (`pullAndRefresh`); these
+ * "other device" clients have nothing concurrent to protect.
+ */
+async function pullNow(client: SyncClient): Promise<void> {
+  const fetched = await client.fetchRemote();
+  if (fetched.ok) client.applyRemote(fetched.snapshot);
 }
 
 describe("mountPlannerApp — audit repro", () => {
@@ -1714,7 +1729,7 @@ describe("mountPlannerApp — a pending edit survives a visibility pull in the s
     expect(row).toBeDefined();
     // …and it actually reached the server: a third client on the same
     // account, pulling fresh, decrypts to a plan that still has it.
-    await deviceA.pull();
+    await pullNow(deviceA);
     expect(storageA.getItem("np:plans")).toContain("TDT4109");
     expect(server.puts.length).toBeGreaterThan(putsBefore);
   });
@@ -1845,7 +1860,7 @@ describe("mountPlannerApp — a pull-driven programme derive converges to one pu
     expect(server.puts.length).toBe(putsBefore + 1);
     // …and what a fresh pull from another client decrypts to is the same
     // derived content, not something a stale/duplicate push corrupted.
-    await deviceA.pull();
+    await pullNow(deviceA);
     expect(storageA.getItem("np:plans")).toContain("TDT4109");
   }, 10_000);
 });
@@ -1995,7 +2010,7 @@ describe("mountPlannerApp — an edit survives a race inside the pull/push machi
     expect(server.puts.length).toBeGreaterThan(putsBefore);
     // …and BOTH courses reached the server, not just whichever one a race
     // happened to send first.
-    await deviceA.pull();
+    await pullNow(deviceA);
     expect(storageA.getItem("np:plans")).toContain("TDT4109");
     expect(storageA.getItem("np:plans")).toContain("TDT4136");
   }, 10_000);
@@ -2104,7 +2119,7 @@ describe("mountPlannerApp — an edit survives a race inside the pull/push machi
     // it) landed.
     expect(planStorage.get("np:plans")).toContain("TDT4109");
     expect(planStorage.get("np:plans")).toContain("TDT4136");
-    await deviceA.pull();
+    await pullNow(deviceA);
     expect(storageA.getItem("np:plans")).toContain("TDT4109");
     expect(storageA.getItem("np:plans")).toContain("TDT4136");
   }, 10_000);
@@ -2234,7 +2249,7 @@ describe("mountPlannerApp — an edit inside a pull's own round trip is not dest
     expect(row).toBeDefined();
     // …and it actually reached the server, rather than a green "synced" over
     // a plan the pull had already emptied.
-    await deviceA.pull();
+    await pullNow(deviceA);
     expect(storageA.getItem("np:plans")).toContain("TDT4109");
   }, 10_000);
 });

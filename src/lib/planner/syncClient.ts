@@ -241,7 +241,7 @@ function isValidSession(value: unknown): value is SyncSession {
  * `fetchRemote` for the caller to apply LATER — or never.
  *
  * The split exists because a GET has a round trip and the student keeps
- * editing during it. `pull()` used to fetch and overwrite `np:plans` in one
+ * editing during it. A single `pull()` fetched and overwrote `np:plans` in one
  * uninterruptible-looking step, so an edit made inside that window was
  * destroyed by the response to a request that predated it — and the push
  * that followed reported success, because it re-read the clobbered storage
@@ -281,11 +281,18 @@ export interface SyncClient {
   push(): Promise<SyncResult>;
   /** Fetches and decrypts the account's copy. Writes nothing — see `RemoteSnapshot`. */
   fetchRemote(): Promise<FetchResult>;
-  /** Applies a snapshot `fetchRemote` returned. The caller owns the decision. */
+  /**
+   * Applies a snapshot `fetchRemote` returned. The caller owns the decision.
+   *
+   * There is deliberately NO `pull()` convenience that does both: an
+   * unguarded fetch-and-overwrite is the exact Critical this split exists to
+   * remove, and while it stayed on the interface — with a doc comment
+   * inviting its use — it was a standing invitation to relocate the bug into
+   * the next caller. A caller with nothing concurrent to protect (a test)
+   * composes the two itself, which costs one line and cannot be reached by
+   * accident from the app.
+   */
   applyRemote(snapshot: RemoteSnapshot): void;
-  /** `fetchRemote` + `applyRemote`, for a caller that genuinely wants both in
-   *  one step and has nothing concurrent to protect. */
-  pull(): Promise<SyncResult>;
   logout(): void;
 }
 
@@ -415,7 +422,8 @@ export function createSyncClient(deps: { storage: StorageLike; fetch: typeof fet
     return { ok: true };
   }
 
-  /** `fetchRemote`, as a plain function so `pull()` can reuse it. */
+  /** `fetchRemote`, as a plain declaration so it can sit beside the other half
+   *  of a pull, `applyRemoteInternal`. */
   async function fetchRemoteInternal(): Promise<FetchResult> {
     if (!session) return { ok: false, reason: "no_session" };
     const res = await safeFetch(`/api/sync/${encodeURIComponent(session.navn)}`, {
@@ -432,7 +440,7 @@ export function createSyncClient(deps: { storage: StorageLike; fetch: typeof fet
     };
   }
 
-  /** `applyRemote`, as a plain function so `pull()` can reuse it. */
+  /** `applyRemote`, as a plain declaration for the same reason. */
   function applyRemoteInternal(snapshot: RemoteSnapshot): void {
     // `fetchRemote` and this call are separated by a network round trip the
     // caller may have spent logging out (or being logged out by a 401 on
@@ -638,13 +646,6 @@ export function createSyncClient(deps: { storage: StorageLike; fetch: typeof fet
     fetchRemote: fetchRemoteInternal,
 
     applyRemote: applyRemoteInternal,
-
-    async pull() {
-      const fetched = await fetchRemoteInternal();
-      if (!fetched.ok) return { ok: false, reason: fetched.reason };
-      applyRemoteInternal(fetched.snapshot);
-      return { ok: true };
-    },
 
     logout() {
       writeSession(null);

@@ -5,9 +5,27 @@ import {
   collectSyncable,
   createSyncClient,
   describeCollision,
+  type SyncClient,
   type SyncPayload,
 } from "../../src/lib/planner/syncClient.js";
 import { open } from "../../src/lib/planner/syncCrypto.js";
+
+/**
+ * `fetchRemote` + `applyRemote`, composed by hand.
+ *
+ * There is no `pull()` on `SyncClient` any more, and this helper is why it can
+ * stay gone: the app's caller has a generation counter to check BETWEEN the two
+ * halves (`pullAndRefresh` in `plannerApp.ts`), and a test has nothing
+ * concurrent to protect. Keeping the unguarded composition here rather than on
+ * the public interface is the whole point — it cannot be reached by accident
+ * from the product.
+ */
+async function pullNow(client: SyncClient): Promise<{ ok: boolean; reason?: string }> {
+  const fetched = await client.fetchRemote();
+  if (!fetched.ok) return { ok: false, reason: fetched.reason };
+  client.applyRemote(fetched.snapshot);
+  return { ok: true };
+}
 
 function fakeStorage(
   seed: Record<string, string> = {},
@@ -137,7 +155,7 @@ describe("createSyncClient", () => {
     await client.signup("martin", "482913", "Mac");
     storage.map.set("np:plans", '{"26h":[{"code":"WRONG","name":"x"}]}');
 
-    expect(await client.pull()).toEqual({ ok: true });
+    expect(await pullNow(client)).toEqual({ ok: true });
     expect(storage.map.get("np:plans")).toBe('{"26h":[]}');
   }, 30_000);
 
@@ -390,7 +408,7 @@ describe("a revoked session", () => {
 
   it("does NOT drop the session on a 429 — that is the lockout, not a wrong key", async () => {
     const { client } = await signedIn(429);
-    expect(await client.pull()).toEqual({ ok: false, reason: "too_many_attempts" });
+    expect(await pullNow(client)).toEqual({ ok: false, reason: "too_many_attempts" });
     expect(client.session()).not.toBeNull();
   }, 30_000);
 
