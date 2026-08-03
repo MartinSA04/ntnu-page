@@ -44,14 +44,7 @@ export interface Env {
 const client = new NTNUClient();
 const memoryCache = new TTLCache();
 
-/**
- * Per-isolate, like `client` and `memoryCache` above. `limiter` and
- * `monotonic` below must always be supplied together: `authorise` in
- * `sync.ts` falls back to a frozen `now` of 0 when `monotonic` is missing,
- * so a `SyncDeps` with a limiter but no clock produces a lockout `until`
- * that a frozen `now` can never reach — a silent permanent lock until the
- * isolate recycles.
- */
+/** Per-isolate, like `client` and `memoryCache` above. */
 const authLimiter = new AuthLimiter(10, 15 * 60_000);
 
 /**
@@ -126,6 +119,11 @@ async function handleSync(request: Request, env: Env, name: string): Promise<Res
   const deps: SyncDeps = {
     kv: env.SYNC,
     now: () => new Date().toISOString(),
+    // `limiter` and `monotonic` must always be supplied as a pair:
+    // `authorise` in sync.ts falls back to a frozen `now` of 0 when
+    // `monotonic` is missing, so a limiter without a clock produces a
+    // lockout `until` that a frozen `now` can never reach — a silent
+    // permanent lock until the isolate recycles.
     limiter: authLimiter,
     monotonic: () => Date.now(),
   };
