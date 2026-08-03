@@ -14,6 +14,8 @@
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { shouldPullOnVisible } from "../../src/components/planner/plannerApp.js";
+import type { StorageLike } from "../../src/lib/planner/store.js";
+import { createSyncClient } from "../../src/lib/planner/syncClient.js";
 
 class FakeClassList {
   private set = new Set<string>();
@@ -453,6 +455,55 @@ function jsonResponse(bodyValue: unknown) {
     status: 200,
     json: async () => bodyValue,
   };
+}
+
+/** A `StorageLike` with nothing else attached — one "other device"'s own storage. */
+function fakeStorage(seed: Record<string, string> = {}): StorageLike {
+  const map = new Map(Object.entries(seed));
+  return {
+    getItem: (key) => map.get(key) ?? null,
+    setItem: (key, value) => void map.set(key, value),
+  };
+}
+
+/**
+ * A minimal in-memory stand-in for `/api/sync/*`: claim (POST), read (GET),
+ * write (PUT) against one map — enough for two real `createSyncClient`s
+ * sharing an account (real PBKDF2/AES-GCM, same as `syncClient.test.ts`) to
+ * round-trip through it, which is what lets "device A" hand "device B" a
+ * plan it can actually decrypt. It does not check `x-np-auth` — that
+ * contract is exercised by the worker's own tests, not this one.
+ */
+function makeSyncServer() {
+  const accounts = new Map<string, { blob: string; version: number }>();
+  /** Every PUT this fake server has answered, in order — the signal the sync
+   *  trigger tests key off: a pull-triggered render must never add to it. */
+  const puts: string[] = [];
+  async function handle(url: string, init?: RequestInit) {
+    const navn = decodeURIComponent(url.replace("/api/sync/", ""));
+    const method = init?.method ?? "GET";
+    if (method === "POST") {
+      const body = JSON.parse(String(init?.body)) as { blob: string };
+      accounts.set(navn, { blob: body.blob, version: 1 });
+      return jsonResponse({ version: 1 });
+    }
+    if (method === "PUT") {
+      puts.push(navn);
+      const body = JSON.parse(String(init?.body)) as { blob: string; version: number };
+      const current = accounts.get(navn);
+      if (!current) return { ok: false, status: 404, json: async () => ({ error: "not found" }) };
+      if (body.version !== current.version) {
+        return { ok: false, status: 409, json: async () => ({ version: current.version }) };
+      }
+      const next = { blob: body.blob, version: current.version + 1 };
+      accounts.set(navn, next);
+      return jsonResponse({ version: next.version });
+    }
+    const current = accounts.get(navn);
+    if (!current) return { ok: false, status: 404, json: async () => ({ error: "not found" }) };
+    return jsonResponse({ blob: current.blob, version: current.version });
+  }
+  return { handle, puts };
 }
 
 describe("mountPlannerApp — audit repro", () => {
@@ -1391,6 +1442,158 @@ describe("mountPlannerApp — audit repro", () => {
     releaseIndex();
     await mounted;
     for (let i = 0; i < 20; i++) await new Promise((r) => setTimeout(r, 0));
+  });
+});
+
+/**
+ * `applySyncable` (syncClient.ts) writes a pull's result straight into
+ * storage, never through `store.savePlan` — so `store.onPlanChange` never
+ * fires on its own and the page would otherwise keep drawing the pre-pull
+ * week until an unrelated re-render happened to occur. These two tests cover
+ * `plannerApp.ts`'s own fix for that (`applyPulledPlan`/`pullAndRefresh`,
+ * mounted alongside the sync client): a pull that actually changes the plan
+ * must repaint, a pull that does not must stay quiet, and neither may ever
+ * schedule a push of its own.
+ *
+ * `replaceStateCalls.length` is the signal for "did a repaint happen":
+ * `syncHash()` calls `history.replaceState` unconditionally exactly once
+ * per `applyPlanUpdate`, including the one unconditional call every ordinary
+ * mount already makes before its first paint — so the baseline after a
+ * plain mount is 1, and a pull-triggered repaint (or the deliberate absence
+ * of one) shows up as a clean +1 or +0 rather than something inferred from
+ * DOM content that a différent render could produce by coincidence.
+ */
+describe("mountPlannerApp — a successful sync pull re-renders without pushing", () => {
+  beforeEach(() => {
+    installDom();
+    vi.resetModules();
+  });
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  /** Wires the fake sync server behind `/api/sync/*` and the ordinary course
+   *  fixtures behind everything else, onto the one global `fetch` the
+   *  planner's own `createSyncClient` and `loadBundles` both call through. */
+  function installCombinedFetch(server: ReturnType<typeof makeSyncServer>): void {
+    (globalThis as unknown as Record<string, unknown>).fetch = vi.fn(
+      async (url: string, init?: RequestInit) => {
+        if (url.startsWith("/api/sync/")) return server.handle(url, init);
+        if (url.includes("/data/search-index.json"))
+          return jsonResponse({ year: 2026, courses: [] });
+        if (url.includes("/api/course/TDT4109/timetable")) {
+          return jsonResponse([entry("TDT4109", 1, "08:15", "10:00")]);
+        }
+        if (url.includes("/api/course/")) return jsonResponse(DETAILS);
+        return { ok: false, status: 404, json: async () => ({ error: "Not found" }) };
+      },
+    );
+  }
+
+  it("a pull that finds a changed plan repaints once and never pushes", async () => {
+    const server = makeSyncServer();
+    // Device A: another device, already on this account, plan empty at first.
+    const storageA = fakeStorage({ "np:plans": '{"26h":[]}' });
+    const deviceA = createSyncClient({
+      storage: storageA,
+      fetch: server.handle as unknown as typeof fetch,
+    });
+    await deviceA.signup("martin", "482913", "Mac");
+
+    // This tab logs in while the server still only has the empty plan — the
+    // same starting point a session restored from a week-old login would have.
+    (globalThis as unknown as Record<string, unknown>).location = {
+      hash: "",
+      search: "",
+      pathname: "/planlegger/",
+    };
+    installCombinedFetch(server);
+    const localStorageLike = (globalThis as unknown as { localStorage: StorageLike }).localStorage;
+    const deviceB = createSyncClient({
+      storage: localStorageLike,
+      fetch: server.handle as unknown as typeof fetch,
+    });
+    await deviceB.login("martin", "482913", "Tavle · nettleser");
+
+    // Device A now adds a course and pushes — the server has moved on, which
+    // is exactly the state a returning tab's on-load pull exists to notice.
+    storageA.setItem(
+      "np:plans",
+      '{"26h":[{"code":"TDT4109","name":"TDT4109 navn","version":"1","source":"manual"}]}',
+    );
+    await deviceA.push();
+
+    const { mountPlannerApp } = await import("../../src/components/planner/plannerApp.js");
+    const { clearCourseBundleMemo, clearPlannerIndexMemo } = await import(
+      "../../src/lib/planner/data.js"
+    );
+    clearCourseBundleMemo();
+    clearPlannerIndexMemo();
+    const putsBefore = server.puts.length;
+
+    await mountPlannerApp(SEMESTERS as never, [], undefined);
+    for (let i = 0; i < 20; i++) await new Promise((r) => setTimeout(r, 0));
+    // Real time, past `schedulePush`'s 1s debounce: if the pull's repaint
+    // had gone through the `onPlanChange` path instead of its own
+    // `applyPulledPlan`, a push would fire in this window. A short flush
+    // loop of 0ms ticks would not reach it, so this has to be a real wait.
+    await new Promise((r) => setTimeout(r, 1100));
+
+    // The pull landed and repainted: the course device A added is on screen…
+    const row = find("planner-course-rows")
+      .descendants()
+      .find((e) => e.dataset.code === "TDT4109");
+    expect(row).toBeDefined();
+    // …the repaint happened exactly once on top of the mount's own first
+    // paint (2 = 1 baseline + 1 from the pull)…
+    expect(replaceStateCalls.length).toBe(2);
+    // …and none of that repainting scheduled or fired a push of the plan
+    // this tab just pulled back to the server.
+    expect(server.puts.length).toBe(putsBefore);
+  }, 10_000);
+
+  it("a pull that finds the same plan does not repaint", async () => {
+    const server = makeSyncServer();
+    const storageA = fakeStorage({
+      "np:plans":
+        '{"26h":[{"code":"TDT4109","name":"TDT4109 navn","version":"1","source":"manual"}]}',
+    });
+    const deviceA = createSyncClient({
+      storage: storageA,
+      fetch: server.handle as unknown as typeof fetch,
+    });
+    await deviceA.signup("martin", "482913", "Mac");
+
+    (globalThis as unknown as Record<string, unknown>).location = {
+      hash: "",
+      search: "",
+      pathname: "/planlegger/",
+    };
+    installCombinedFetch(server);
+    const localStorageLike = (globalThis as unknown as { localStorage: StorageLike }).localStorage;
+    const deviceB = createSyncClient({
+      storage: localStorageLike,
+      fetch: server.handle as unknown as typeof fetch,
+    });
+    // Logs in to the exact version the server still holds — nothing moves
+    // between this and the planner's own on-load pull below.
+    await deviceB.login("martin", "482913", "Tavle · nettleser");
+
+    const { mountPlannerApp } = await import("../../src/components/planner/plannerApp.js");
+    const { clearCourseBundleMemo, clearPlannerIndexMemo } = await import(
+      "../../src/lib/planner/data.js"
+    );
+    clearCourseBundleMemo();
+    clearPlannerIndexMemo();
+    const putsBefore = server.puts.length;
+
+    await mountPlannerApp(SEMESTERS as never, [], undefined);
+    for (let i = 0; i < 20; i++) await new Promise((r) => setTimeout(r, 0));
+
+    // Only the mount's own unconditional first paint — the pull found
+    // nothing new and stayed quiet rather than spending a repaint on a no-op.
+    expect(replaceStateCalls.length).toBe(1);
+    expect(server.puts.length).toBe(putsBefore);
   });
 });
 

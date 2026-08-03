@@ -53,7 +53,11 @@ import {
   type PlanStore,
   parsePlanHash,
 } from "../../lib/planner/store.js";
-import { createSyncClient, type SyncSession } from "../../lib/planner/syncClient.js";
+import {
+  createSyncClient,
+  type SyncResult,
+  type SyncSession,
+} from "../../lib/planner/syncClient.js";
 import { isoWeekNumber, weekdayDates } from "../../lib/planner/weekDates.js";
 import { syncPlanProbe } from "../../lib/planProbe.js";
 import { type AddCourseDeps, type AddCourseHandle, mountAddCourse } from "./addCourse.js";
@@ -470,6 +474,46 @@ export async function mountPlannerApp(
   });
   elements.profileEntry.addEventListener("click", () => profile.show(), { signal: lifeSignal });
 
+  /**
+   * What a successful pull needs that a same-tab edit gets for free through
+   * `store.onPlanChange`: `applySyncable` (syncClient.ts) writes straight
+   * through `storage.setItem`, never through `store.savePlan`, so no
+   * `PLAN_CHANGE_EVENT` fires and nothing here re-renders on its own. Without
+   * this, the iPad-left-open-for-a-week scenario the visibility trigger
+   * exists for only "works" up to a reload: the pulled plan sits correctly in
+   * `localStorage` while the screen keeps drawing the week from before the
+   * pull.
+   *
+   * Two things this deliberately does NOT do:
+   *  - Call `schedulePush()`. `applyPlanUpdate` (defined with the
+   *    `onPlanChange` subscriber further down) is the one shared paint step;
+   *    only that subscriber's own callback schedules a push. Routing a pull
+   *    through it too would push the plan this tab just pulled straight back
+   *    to the server — bumping the version for no reason, and ping-ponging
+   *    between two open devices for no reason beyond that.
+   *  - Repaint when nothing changed. `formatPlanHash` is the same identity
+   *    check the `hashchange` handler below already uses for "is this
+   *    actually different" — a pull that came back identical to what is
+   *    already on screen must not spend the week's layer-motion animation or
+   *    CLS budget on a no-op.
+   */
+  function applyPulledPlan(): void {
+    const next = store.loadPlan();
+    if (formatPlanHash(next) === formatPlanHash(plan)) return;
+    applyPlanUpdate(next);
+  }
+
+  /**
+   * `sync.pull()`, plus the repaint it does not do on its own (above).
+   * Returns the same `SyncResult` `sync.pull()` did, so `runPush`'s
+   * stale-retry branch can still branch on `.ok`.
+   */
+  async function pullAndRefresh(): Promise<SyncResult> {
+    const result = await sync.pull();
+    if (result.ok) applyPulledPlan();
+    return result;
+  }
+
   let pushTimer: ReturnType<typeof setTimeout> | null = null;
   /** Debounced so a fast run of edits (adding five courses in a row) pushes once. */
   function schedulePush(): void {
@@ -490,7 +534,7 @@ export async function mountPlannerApp(
     // retry actually landed still rendered "Ikke synkronisert · prøv igjen"
     // forever. The UI has to reflect whichever push was the LAST one tried.
     if (!result.ok && result.reason === "stale") {
-      if ((await sync.pull()).ok) result = await sync.push();
+      if ((await pullAndRefresh()).ok) result = await sync.push();
     }
     profile.setSyncState(result.ok ? "ok" : "failed");
   }
@@ -503,14 +547,14 @@ export async function mountPlannerApp(
       // a week-old plan over it. Do not remove this or "simplify" it into the
       // debounced push above — a tab that has been hidden for a week has no
       // pending edit to debounce, only a stale read to correct.
-      if (shouldPullOnVisible(sync.session(), document.hidden)) void sync.pull();
+      if (shouldPullOnVisible(sync.session(), document.hidden)) void pullAndRefresh();
     },
     { signal: lifeSignal },
   );
 
   // On load: a signed-in student's other device may have moved since this
   // tab's `localStorage` copy was written.
-  if (sync.session() !== null) void sync.pull();
+  if (sync.session() !== null) void pullAndRefresh();
 
   /** Opens the session popover for a clicked bar or board row. */
   function openBlockPopover(detail: BlockDetail, anchor: HTMLElement): void {
@@ -2846,7 +2890,15 @@ export async function mountPlannerApp(
    */
   let lastDerivationKey: string | null = null;
 
-  const unsubscribe = store.onPlanChange((next) => {
+  /**
+   * Paints `next` onto the page: the in-memory `plan`, the address bar, both
+   * rendered views, and — if the derivation key moved — a re-fetch of the
+   * study plan. The one shared step between a same-tab plan write (below,
+   * which also schedules a push) and a successful sync pull
+   * (`applyPulledPlan`, near the sync setup above, which deliberately does
+   * not — see its own comment).
+   */
+  function applyPlanUpdate(next: PlanState): void {
     // C4's note only explains a semester we SUBSTITUTED for the link's own, so
     // a deliberate switch is when it stops being true. Nothing else clears it:
     // studieinfo's Lagre goes through `savePlan` and `syncHash`'s replaceState,
@@ -2860,16 +2912,20 @@ export async function mountPlannerApp(
     plan = next;
     syncHash();
     renderAll();
-    // The debounced push trigger: every plan write (add/drop a course, change
-    // a group, edit studieinfo) reaches the store through here, so wiring it
-    // once at the top of the fan-out covers all of them.
-    schedulePush();
     void loadBundles();
     const key = derivationKey();
     if (key !== lastDerivationKey) {
       lastDerivationKey = key;
       void loadPeriodCourses();
     }
+  }
+
+  const unsubscribe = store.onPlanChange((next) => {
+    applyPlanUpdate(next);
+    // The debounced push trigger: every plan write (add/drop a course, change
+    // a group, edit studieinfo) reaches the store through here, so wiring it
+    // once at the top of the fan-out covers all of them.
+    schedulePush();
   });
   signal?.addEventListener("abort", unsubscribe);
 
