@@ -2,7 +2,9 @@
  * The profile panel — the ONE surface the opt-in account lives on: the
  * programme/kull summary a student already set in studieinfo, signup/login,
  * the device registry, and changing the PIN. It is reached from one control
- * ("Profil", in the planner's title block) and nothing else nags about it —
+ * ("Profil", in the planner's action bar — the same button that used to open
+ * studieinfo directly, before the two doors into programme + kull merged
+ * into one) and nothing else nags about it —
  * the account is strictly opt-in and never a prerequisite for using the
  * planner (see the plan's product framing).
  *
@@ -443,9 +445,9 @@ export function mountProfilePanel(deps: ProfilePanelDeps): ProfilePanelHandle {
   /**
    * The plan's own identity, at the top of both states — the same fact the
    * planner's title bar names, so the account panel never contradicts it. No
-   * programme set gets the same fallback label `renderBanner` already uses
-   * for the page's own "Endre" control, rather than a second phrase for the
-   * same empty state.
+   * programme set swaps "Endre" for "Velg studieprogram" — the same verb pair
+   * the top bar's control carried when it opened studieinfo directly, kept
+   * here now that this link is the route onward.
    */
   function renderProgramBlock(): HTMLElement {
     const program = deps.store.loadPlan().program;

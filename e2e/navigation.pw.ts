@@ -218,13 +218,18 @@ test.describe("the topbar carries no plan state", () => {
 
     await navTo(page, "/planlegger/");
     await expect(page.locator("#studieinfo-chip")).toHaveCount(0);
-    // The planner still names whose plan it is, in its own title, and its
-    // "Endre" button is the one way into the modal anywhere on the site.
+    // The planner still names whose plan it is, in its own title, and "Profil"
+    // is the one way into the modal anywhere on the site now — through the
+    // profile panel's own "Endre" link, since the two doors into programme +
+    // kull merged into one control.
     await expect(page.locator("#planner-title")).toHaveText("BIT Kull 25 H26", {
       timeout: 30_000,
     });
     await expect(page.locator("#studieinfo-dialog")).toBeHidden();
-    await page.locator("#planner-edit-plan").click();
+    await page.locator("#planner-profile-btn").click();
+    const profilePanel = page.locator("#planner-profile-panel");
+    await expect(profilePanel).toBeVisible();
+    await profilePanel.locator(".profile-panel-edit").click();
     await expect(page.locator("#studieinfo-dialog")).toBeVisible();
 
     await page.goto("/emne/TDT4100/");

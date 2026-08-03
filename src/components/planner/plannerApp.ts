@@ -237,9 +237,8 @@ function saveWeekBox(view: WeekView, width: number, height: number): void {
 interface PlannerElements {
   title: HTMLElement;
   contextLine: HTMLElement;
-  profileEntry: HTMLButtonElement;
-  editPlan: HTMLButtonElement;
-  editPlanLabel: HTMLElement;
+  profileBtn: HTMLButtonElement;
+  profileBtnLabel: HTMLElement;
   linkNote: HTMLElement;
   creditLine: HTMLElement;
   loadLegend: HTMLElement;
@@ -279,9 +278,8 @@ function getElements(): PlannerElements | null {
   const found = {
     title: byId<HTMLElement>("planner-title"),
     contextLine: byId<HTMLElement>("planner-context-line"),
-    profileEntry: byId<HTMLButtonElement>("planner-profile-entry"),
-    editPlan: byId<HTMLButtonElement>("planner-edit-plan"),
-    editPlanLabel: byId<HTMLElement>("planner-edit-plan-label"),
+    profileBtn: byId<HTMLButtonElement>("planner-profile-btn"),
+    profileBtnLabel: byId<HTMLElement>("planner-profile-btn-label"),
     linkNote: byId<HTMLElement>("planner-link-note"),
     creditLine: byId<HTMLElement>("planner-credit-line"),
     loadLegend: byId<HTMLElement>("planner-load-legend"),
@@ -489,7 +487,7 @@ export async function mountPlannerApp(
     onAuthenticated: () => onAuthenticated(),
     signal: lifeSignal,
   });
-  elements.profileEntry.addEventListener("click", () => profile.show(), { signal: lifeSignal });
+  elements.profileBtn.addEventListener("click", () => profile.show(), { signal: lifeSignal });
 
   /**
    * The one fact everything below is built on: has the plan changed since
@@ -1282,10 +1280,14 @@ export async function mountPlannerApp(
     if (semester && !semester.timetablePublished) {
       append(`timeplan publiseres ~${publishMonthFor(semester.id)}`);
     }
-    elements.editPlanLabel.textContent = program ? "Endre" : "Velg studieprogram";
-    elements.editPlan.setAttribute(
+    // The label no longer varies with `program`: this button always opens
+    // Profil, never studieinfo directly (that door is now the panel's own
+    // "Endre" link). The aria-label still names the programme where there is
+    // one, for the icon-only square at ≤46rem.
+    elements.profileBtnLabel.textContent = "Profil";
+    elements.profileBtn.setAttribute(
       "aria-label",
-      program ? `Endre studieinfo for ${program.code}` : "Velg studieprogram og kull",
+      program ? `Profil for ${program.code}` : "Profil",
     );
     // ONE ACCENT ON SCREEN, AND ON THE RIGHT ACTION (§8's One-Job-Accent).
     // "Legg til emne" is the primary action of a plan that EXISTS. With no plan
@@ -1594,7 +1596,6 @@ export async function mountPlannerApp(
     { signal: lifeSignal },
   );
 
-  elements.editPlan.addEventListener("click", () => studieinfo.open(), { signal });
   elements.viewKolonner.addEventListener("click", () => setWeekView("kolonner"));
   elements.viewTavle.addEventListener("click", () => setWeekView("tavle"));
   // The travelling rule is measured, so re-measure whenever the measurement

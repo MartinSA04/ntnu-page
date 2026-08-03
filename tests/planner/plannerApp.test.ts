@@ -235,9 +235,8 @@ class FakeEl {
 const IDS = [
   "planner-title",
   "planner-context-line",
-  "planner-profile-entry",
-  "planner-edit-plan",
-  "planner-edit-plan-label",
+  "planner-profile-btn",
+  "planner-profile-btn-label",
   "planner-link-note",
   "planner-credit-line",
   "planner-load-legend",

@@ -58,8 +58,20 @@ const firstBlockCode = async (page: Page): Promise<string> =>
  * page. The chip is still the assertion on every other page.
  */
 const planTitle = (page: Page) => page.locator("#planner-title");
-const editPlan = (page: Page) => page.locator("#planner-edit-plan");
-const editPlanLabel = (page: Page) => page.locator("#planner-edit-plan-label");
+const profileBtn = (page: Page) => page.locator("#planner-profile-btn");
+const profilePanel = (page: Page) => page.locator("#planner-profile-panel");
+
+/**
+ * Opens studieinfo through the merged control: "Profil" opens the account
+ * panel first, and its own "Endre" link (`profilePanel.ts`'s
+ * `renderProgramBlock`) is what carries on into studieinfo — the two doors
+ * into programme + kull merged into one control on 2026-08-03.
+ */
+async function openStudieinfoViaProfile(page: Page): Promise<void> {
+  await profileBtn(page).click();
+  await expect(profilePanel(page)).toBeVisible();
+  await profilePanel(page).locator(".profile-panel-edit").click();
+}
 
 /**
  * Waits for `#planner-grid-status` to settle and returns it, failing loudly if
@@ -178,7 +190,11 @@ test("share: a program-less link clears the profile chip", async ({ page }) => {
   // its own name — and the hint carries the invitation instead of a programme.
   await expect(planTitle(page)).toHaveText("Semesterplan");
   await expect(planTitle(page)).not.toContainText("MTDT");
-  await expect(editPlanLabel(page)).toHaveText("Velg studieprogram");
+  // The top bar's own button always reads "Profil" now; the studieinfo verb
+  // that used to sit there lives inside the panel it opens.
+  await profileBtn(page).click();
+  await expect(profilePanel(page).locator(".profile-panel-edit")).toHaveText("Velg studieprogram");
+  await profilePanel(page).locator(".profile-panel-close").click();
 });
 
 test("overlap: two colliding courses take a lane each, both readable", async ({ page }) => {
@@ -442,8 +458,9 @@ test("course settings: complementary lecture sessions are not offered as a choic
 
 test("one control opens studieinfo, and semester lives only inside it", async ({ page }) => {
   // The page used to carry three permanent openers for one modal plus a "Bytt
-  // semester" disclosure duplicating the modal's own select. "endre" in the
-  // hint line is the one that remains.
+  // semester" disclosure duplicating the modal's own select. "Profil" — which
+  // absorbed the studieinfo door outright on 2026-08-03 — is the one that
+  // remains, routed through the profile panel's own "Endre" link.
   await page.goto("/planlegger/#26h;MTDT.2026;");
   await expect(courseRows(page).first()).toBeVisible({ timeout: 30_000 });
 
@@ -457,12 +474,12 @@ test("one control opens studieinfo, and semester lives only inside it", async ({
   await expect(page.locator("#planner-context-line")).toContainText("Datateknologi");
 
   // With a plan set, the week is a real grid — so no empty-state card is on
-  // screen and "endre" is the only thing left that opens the modal.
+  // screen and "Profil" is the only thing left that opens the modal.
   await expect(page.locator("#planner-grid-frame .planner-week-card")).toHaveCount(0);
 
   const dialog = page.locator("#studieinfo-dialog");
   await expect(dialog).toBeHidden();
-  await editPlan(page).click();
+  await openStudieinfoViaProfile(page);
   await expect(dialog).toBeVisible();
   await expect(page.locator("#studieinfo-semester-select")).toBeVisible();
 });
@@ -910,7 +927,7 @@ test("modals: a click on the backdrop dismisses every one of them", async ({ pag
 
   for (const [name, open] of [
     ["#planner-add-dialog", () => page.click("#planner-add-course-btn")],
-    ["#studieinfo-dialog", () => page.click("#planner-edit-plan")],
+    ["#studieinfo-dialog", () => openStudieinfoViaProfile(page)],
     ["#planner-course-settings", () => settingsFromBlock(page)],
   ] as const) {
     await open();
@@ -1135,7 +1152,7 @@ test("manual adds stay in their semester", async ({ page }) => {
   // toggle-and-add): manual adds are scoped per semester in `np:plans`, so a
   // switch away must drop this course from view without deleting it.
   const dialog = page.locator("#studieinfo-dialog");
-  await editPlan(page).click();
+  await openStudieinfoViaProfile(page);
   await expect(dialog).toBeVisible();
   await page.selectOption("#studieinfo-semester-select", "27v");
   await page.click("#studieinfo-save");
@@ -1143,7 +1160,7 @@ test("manual adds stay in their semester", async ({ page }) => {
 
   await expect(courseRows(page)).toHaveCount(0);
 
-  await editPlan(page).click();
+  await openStudieinfoViaProfile(page);
   await expect(dialog).toBeVisible();
   await page.selectOption("#studieinfo-semester-select", "26h");
   await page.click("#studieinfo-save");
@@ -1782,7 +1799,7 @@ test.describe("the banner's pair", () => {
     const title = await box("#planner-title");
     const hint = await box("#planner-context-line");
     const verdict = await box("#planner-grid-status");
-    const edit = await box("#planner-edit-plan");
+    const edit = await box("#planner-profile-btn");
     const tabs = await box(".planner-view-tabs");
     const frame = await box("#planner-grid-frame");
 
