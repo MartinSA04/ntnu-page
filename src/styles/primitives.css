@@ -566,6 +566,23 @@ button.np-tag:hover {
   overflow: hidden;
 }
 
+/* --- Chrome menus --------------------------------------------------
+   The dim behind an open `☰`/`⋯` panel, and the surface that catches the click
+   that closes it — one element to hit-test instead of document-level geometry.
+
+   Below the open bar (which raises itself to 21 while the menu is up, so its
+   own trigger stays visible and hittable) and above everything else. 32 %
+   matches `.course-settings::backdrop`: a dropdown is a lighter surface than a
+   modal, and these two are the same idiom. It cannot BE a `::backdrop` — that
+   pseudo-element belongs to the top layer, and a menu that has to become an
+   inline row again above its breakpoint cannot live there. */
+.np-menu-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 19;
+  background: color-mix(in srgb, var(--fg) 32%, transparent);
+}
+
 /* There is no `.np-ruled` primitive. The week hand-rolls its surviving hour
    line in planner-week.css, anchored to the box whose top edge IS the grid's
    origin; a shared 15-minute square field tiled from a different origin was a
