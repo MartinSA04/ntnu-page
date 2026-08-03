@@ -486,9 +486,9 @@ Settled, with the reasoning, so they are not re-opened by the next reviewer.
 
 - **One bar at the top of the page, and it carries the PLAN.** The plan's name
   and the controls that act on *it* share a row: the layer checkbox, the
-  Uke/Liste switch, Del, and the semester select. They came up out of the
-  week's own section head — a second bar 200 px lower saying the same kind of
-  thing — and that head is gone with them. **The title is a name, not a
+  Uke/Liste switch, "Del lenke", and the semester select. They came up out of
+  the week's own section head — a second bar 200 px lower saying the same kind
+  of thing — and that head is gone with them. **The title is a name, not a
   headline** (1.25 rem / 600).
 
   Two of the bar's original five left on 2026-08-03, and the line they were
@@ -501,11 +501,65 @@ Settled, with the reasoning, so they are not re-opened by the next reviewer.
   a fact about the plan. The bar is one control lighter than it was and the
   week still starts inside §6's 37 % (304 px of 844 at 390 px).
 
+- **The title is `MTFYMA Kull 24` — the programme and the kull, and NOT the
+  semester.** It was `MTFYMA Kull 24 H26` until the bar grew a `<select>` for
+  the term four controls along the same row, at which point the page stated
+  `H26` twice: once as a label and once as a control you can act on. **A title
+  restating the setting beside it is redundancy, not reinforcement** — the
+  control is the authority, so the title stops competing with it. This
+  supersedes the three-part shape recorded here before 2026-08-03.
+
+  It buys **no vertical space**: measured at 390 px the week's frame starts at
+  304 px before and after, because the title's row is a full-width block whose
+  height comes from one line of 1.25 rem plus the context line, not from how
+  many words are on it. The bar still wraps to three rows. That is the honest
+  result and the reason to make the change is the redundancy, not the budget.
+
+  The one string that still names the term in short form is gone with it:
+  `semesterShort` was deleted with its only caller. Everything that names a
+  term now says it in full ("Høst 2026"), **including the share sheet's own
+  title**, which is the one string that travels off the page and therefore the
+  one that cannot lean on the control beside it.
+
 - **The topbar carries the account, and still no plan state.** The name it
   prints is the account's own; there is no semester, no course count and no
   programme code up there, and the three killed plan affordances stay killed.
   A long name ellipsises — the bar is one row at 390 px or §6's phone gate
   fails, since that gate measures from the viewport's top.
+
+  **Below the site's mobile breakpoint (480 px) it is the mark alone.** The
+  name used to stay visible on the argument that saying who you are is the
+  whole point of it; capped at 6ch it stopped doing that ("Martin…" beside a
+  glyph that already says "you"), and signed out it spent the same room on the
+  word "Profil" beside a person mark — a label naming its own icon. The
+  information **moves rather than goes**: `aria-label` carries "Profil ·
+  {navn}" at every width, so the constraint costs a sighted phone user a
+  truncated word and costs a screen reader nothing. The target is **44 px
+  square** there — alone in the bar it has nothing beside it to forgive a miss,
+  and the topbar is 64 px tall so the room is already paid for. The mark is
+  `user` at every width: the room behind the door is programme, kull,
+  studieretning and the session — who you are, not what the page is set to — so
+  a cog would claim settings, and `settings-2` is spoken for by the plan's own
+  control.
+
+- **The hand-over is "Del lenke" → "Kopiert", and the resting state is the
+  wider one.** That ordering is the whole decision. The pair was "Del" →
+  "Lenke kopiert", which grew the button and shoved the Uke/Liste switch
+  ~22 px sideways at the moment it was pressed; pinning the button to the
+  *wider* of the two stopped the jump and bought a permanent slab of dead space
+  after the short word for the rest of the visit. Naming the object in the
+  resting label makes the rest state the widest, so the pin costs nothing at
+  rest and only stops the button shrinking while it holds the confirmation.
+  The mark swaps with the word — `share` → `check` — because a check is the
+  half of "it worked" that is read before any word.
+
+  Its icon is drawn from `Icon.astro` like every other mark, and that is not
+  bookkeeping: as a hand-inlined `<svg>` with no width, no height and no CSS it
+  was a flex child with no intrinsic size and **computed to 0×0**, so the
+  button painted the word with an 8 px hole where the mark should be, and the
+  mark appeared — oversized — only in the state where the label wrapped the box
+  open. **A mark in this system carries its own size**; do not inline one that
+  leaves sizing to the layout it lands in.
 
 - **The view switch is a segmented control**, a recessed track with the live
   view raised out of it. A travelling underline was right when it lived in a
@@ -545,6 +599,32 @@ Settled, with the reasoning, so they are not re-opened by the next reviewer.
   and the list is grouped under `Forelesning` / `Øving og lab`. This is weaker
   and always true where `(din parallell)` is suppressed for being a guess,
   which is exactly the ambiguous case where the help is needed.
+
+- **One door into the picker, and the study plan is a FILTER on it.** There used
+  to be a second: "Velg fra studieplanen (8)" in the credit-gap line, `hidden`
+  until the plan was short of credits and sitting one row above the standing
+  "Legg til emne". Two things were wrong with it and the second is the fatal
+  one: it competed with the primary action, and it opened *the same dialog*, on
+  the whole catalog — so the pool its label promised was on neither surface.
+  It is a `.np-toggle--text` facet beside the dialog's search field now, and
+  the dialog **opens with the facet engaged in exactly the state that button
+  used to render in** (`openScoped` = the plan is short of credits), so the one
+  press the door cost still lands on the study plan's courses and now actually
+  arrives. Scoped, the empty query lists the pool rather than prompting; a
+  scoped search that finds nothing **names the filter** and says how many the
+  catalog has, because a scope must never escape on its own. The facet is
+  **absent, not merely unpressed**, when the pool is empty — persona B has no
+  programme and must not be shown a control that can only subtract.
+
+  The gap line keeps its informative half ("Mangler 7,5 sp"): a dialog you have
+  not opened cannot tell you it is worth opening. It is a sentence now, with no
+  control in it.
+
+  The collapsed "Fra studieplanen" panel at the foot of the column is not a
+  third door and is untouched: it is the study plan's groups with their
+  **verbatim prose** (DR-5) and a row per offered course. It answers "what does
+  the study plan say", which a flat search result cannot; the facet answers
+  "show me those courses here", which the prose panel is the wrong shape for.
 
 - **Under the week: one rule, two equal columns, one hairline.** The sections
   were already card-less; what was left was a gap doing a rule's job. The

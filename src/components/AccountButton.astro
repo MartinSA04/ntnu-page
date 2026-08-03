@@ -23,6 +23,16 @@
  * bar — a door, not an action on the page. The mark disambiguates it from the
  * nav beside it, which matters once the label is a person's name rather than
  * a noun.
+ *
+ * **Below the site's mobile breakpoint it is the mark and nothing else**
+ * (site.css, 480px). The name is not dropped, it MOVES: `aria-label` carries
+ * "Profil · {navn}" at every width, written by the pre-paint script below and
+ * kept true by `renderName` in `account.ts`, so the constraint costs a sighted
+ * phone user a truncated word and costs a screen reader nothing. The mark stays
+ * `user` at every width — the room behind this door is programme, kull,
+ * studieretning and the session, which is who you are and not what the page is
+ * set to; a cog would claim settings, and `settings-2` is already spoken for by
+ * the plan's own control (DESIGN §9).
  */
 import { SYNC_STORAGE_KEY } from "../lib/planner/syncClient.js";
 import Icon from "./Icon.astro";

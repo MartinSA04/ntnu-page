@@ -246,7 +246,9 @@ plan is named. Any credits shown outside `/planlegger/` are best-effort, not
 authoritative.
 
 What the bar does carry is the **account's own door**, on every page, printing
-the account name when there is a session and "Profil" when there is not. That
+the account name when there is a session and "Profil" when there is not —
+and below 480 px printing neither, because there is no room: it is the mark
+alone there, with the same words carried by its `aria-label`. That
 is not the killed chip in another costume: an account is not a plan, and the
 state behind the door (`np:profile`, `np:plans`, `np:lastSemester`) is read by
 `/`, `/emner/` and `/emne/[code]/` as much as by the planner. `/emne/[code]/`
@@ -480,7 +482,7 @@ admit-gaps — and they outrank the nouns when something has to give.
 | Season-split grade trend, rendered *in a decision context* | **Shipped on `/emne/[code]/`** — see the constraints below |
 | Registration deadline on screen | **Shipped** — `deadline.ts`; a passed deadline says nothing at all |
 | Two-year catalog union so a course taught last year still gets a page | **Shipped** |
-| Shared plan as a first-class object | **Partial** — the hash round-trips including non-ASCII, `hashchange` applies a pasted link live, a Del button copies or invokes the native share sheet, and an overwritten plan is offered back. No unfurl title and no merge action yet |
+| Shared plan as a first-class object | **Partial** — the hash round-trips including non-ASCII, `hashchange` applies a pasted link live, a "Del lenke" button copies or invokes the native share sheet, and an overwritten plan is offered back. No unfurl title and no merge action yet |
 | Code↔name pairing and code-first entry | **Partial** — the planner's add modal is code-first; the landing page does not offer a paste entry |
 | Pre-publish as a *primary* mode (DR-2) | **Partial** — an unpublished semester is an informed choice, but there is no dedicated pre-publish layout |
 | Decide-loop inline facts in choice-group rows | **Not built** — Phase 4 |

@@ -243,11 +243,18 @@ test.describe("the topbar carries the account, and no plan state", () => {
       await expect(panel, where).toBeHidden();
     }
 
-    // The planner still names whose plan it is, in its own title.
+    // The planner still names whose plan it is, in its own title — programme
+    // and kull, and NOT the semester. That third part came off when the bar
+    // grew a `<select>` for the term: the title stating `H26` two controls away
+    // from the control that sets it was one statement said twice, and the
+    // control is the authority (DESIGN §9). The assertion is exact rather than
+    // a `toContainText`, because the point is what the title no longer says.
     await navTo(page, "/planlegger/");
-    await expect(page.locator("#planner-title")).toHaveText("BIT Kull 25 H26", {
+    await expect(page.locator("#planner-title")).toHaveText("BIT Kull 25", {
       timeout: 30_000,
     });
+    // The term is still on screen — it moved to the control, it did not vanish.
+    await expect(page.locator("#planner-semester-select")).toHaveValue("26h");
   });
 });
 

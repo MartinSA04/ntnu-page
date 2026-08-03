@@ -579,11 +579,17 @@ Islands are **vanilla `<script>` modules** (no framework) fetching relative
   one line of sub-copy, and one CTA to `/planlegger/`. No picker, no proof
   fragment.
 - **`/planlegger/`** — the app. One bar at the top carries the plan's name and
-  the controls that act on the PLAN (layer toggle, Uke/Liste, Del, and the
-  semester select); the verdict chips and the deadline sit on the line under
-  it; then the week and exam list against the course rail. The primary
+  the controls that act on the PLAN (layer toggle, Uke/Liste, "Del lenke", and
+  the semester select); the verdict chips and the deadline sit on the line under
+  it; then the week and exam list against the course rail. The title names the
+  programme and the kull only — the semester is the `<select>` on the same bar,
+  and stating it twice made a label compete with a control. The primary
   "Legg til emne" is at the foot of the Emner column, under the rows it
-  appends to, and the account's door is in the site topbar. Verdict
+  appends to, and it is the **only** door into adding a course: the study plan's
+  choice pool is a filter inside that dialog (`studyPlanCodes`/`openScoped` on
+  `AddCourseDeps`), engaged on open while the plan is short of credits, not a
+  second button in the credit-gap line. The account's door is in the site
+  topbar, icon-only below 480 px with its name carried by `aria-label`. Verdict
   states are **three, not two**: clean, "N kollisjoner", and "kan ikke
   sjekkes — mangler timeplan for N emne(r)" in muted ink whenever `partial` or
   `incompleteCourses` says the counts are a floor.

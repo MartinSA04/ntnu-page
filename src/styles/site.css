@@ -102,8 +102,20 @@
 
 /* Narrow phones: the wordmark, two nav links, the account and the toggle must
    fit 360px without horizontal page scroll — tighten gaps, drop the mono
-   suffix, and cap the name harder. The name stays VISIBLE rather than becoming
-   an icon-only button: that it says who you are is the whole point of it. */
+   suffix, and take the account's TEXT off entirely.
+
+   The name used to stay visible on the argument that saying who you are is the
+   whole point of it. At 6ch it stopped doing that: "Martin Sundal" came out as
+   "Martin…" beside a mark that already said "you", and signed out it spent the
+   same room on the word "Profil" beside a person glyph — a label naming its own
+   icon. The information is not lost, it moves to the `aria-label` the button
+   already carried ("Profil · Martin Sundal"), so a screen reader is not degraded
+   by a visual constraint; it is only sighted text that goes, and only where
+   there is no room for it.
+
+   44px square, not `--control-h`'s 36: alone in the bar it is a phone target
+   with nothing beside it to forgive a miss, and the topbar is 64px tall so the
+   room is already paid for. */
 @media (max-width: 480px) {
   .site-topbar {
     gap: var(--gap-1);
@@ -117,13 +129,19 @@
     gap: 0;
   }
 
-  .site-nav .np-navlink,
-  .site-account {
+  .site-nav .np-navlink {
     padding: 0 var(--space-1);
   }
 
+  .site-account {
+    justify-content: center;
+    min-width: 44px;
+    min-height: 44px;
+    padding: 0;
+  }
+
   .site-account-name {
-    max-width: 6ch;
+    display: none;
   }
 }
 
@@ -382,6 +400,30 @@
   font-family: var(--font-sans);
   font-size: var(--text-lg);
   font-weight: var(--weight-medium);
+}
+
+/* THE FIELD AND ITS ONE FACET, on one row. The filter reads as a filter because
+   it stands beside what it filters; on its own row it would read as a second
+   search. It wraps rather than squeezing the field — at 390 px "Fra
+   studieplanen (8)" plus a usable input is more than the dialog's width, and a
+   text field narrowed to a caret is worse than a filter on its own line. */
+.add-course-search {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--gap-2);
+}
+
+.add-course-field {
+  flex: 1 1 12rem;
+  min-width: 0;
+}
+
+/* Never the thing that shrinks: a count the student cannot read is not a count.
+   `.np-toggle`'s `aria-pressed` fill is the whole of its state — DESIGN §5's
+   grammar, the same one the studieretning picker uses. */
+.add-course-scope {
+  flex: none;
 }
 
 .add-course-status {

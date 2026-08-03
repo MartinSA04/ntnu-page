@@ -150,7 +150,9 @@ test("onboarding: panel → programme + kull + retning → a full week", async (
   await expect(dialog).toBeHidden();
 
   await expect(gridBlocks(page).first()).toBeVisible({ timeout: 45_000 });
-  await expect(planTitle(page)).toHaveText("MTDT Kull 24 H26");
+  // Programme and kull, and no semester: the term is the `<select>` on the same
+  // bar, and a title restating the control beside it is redundancy (DESIGN §9).
+  await expect(planTitle(page)).toHaveText("MTDT Kull 24");
   expect(page.url()).toMatch(/#26h;MTDT\.2024/);
 });
 
@@ -475,9 +477,13 @@ test("one control opens studieinfo, and semester lives only inside it", async ({
   await expect(page.locator("#planner-semester")).toHaveCount(0);
   await expect(page.locator("#planner-title button")).toHaveCount(0);
 
-  // The banner still STATES the term; it just no longer switches it. It is part
-  // of the TITLE now, with the programme's own name demoted to the hint.
-  await expect(planTitle(page)).toHaveText("MTDT Kull 26 H26");
+  // The title names the plan, not the term. It carried `H26` for as long as the
+  // term had no control of its own; once the bar grew a `<select>` for it the
+  // page stated the same fact twice, once as a label and once as something you
+  // can act on, and the label is the one that went (DESIGN §9). The term is
+  // still on screen — asserted on the control, a few lines down.
+  await expect(planTitle(page)).toHaveText("MTDT Kull 26");
+  await expect(page.locator("#planner-semester-select")).toHaveValue("26h");
   await expect(page.locator("#planner-context-line")).toContainText("Datateknologi");
 
   // With a plan set, the week is a real grid — so no empty-state card is on
@@ -1436,7 +1442,9 @@ test("ett navn: the plan is named once, and the switch is not a third toggle", a
   await page.goto("/planlegger/#26h;MTDT.2026;");
   await expect(gridBlocks(page).first()).toBeVisible({ timeout: 45_000 });
 
-  await expect(planTitle(page)).toHaveText("MTDT Kull 26 H26");
+  // ETT NAVN, and one statement of each fact in it: programme and kull here,
+  // the term on its own control in the same bar (DESIGN §9).
+  await expect(planTitle(page)).toHaveText("MTDT Kull 26");
   await expect(page.locator("#studieinfo-chip")).toHaveCount(0);
   // Four topbar children on every page (the ThemeToggle and the account button
   // each ship a <script> beside themselves, which are not children of this
@@ -1969,4 +1977,112 @@ test("the week is not labelled 'Uke', but the region still has that name", async
     "aria-labelledby",
     "planner-week-heading",
   );
+});
+
+/**
+ * "Del lenke" — the mark, and the width.
+ *
+ * The mark was an inline `<svg>` with no width, no height and no CSS of its
+ * own. `base.css` gives every svg `display: block; max-width: 100%`, and as a
+ * flex child of `.np-btn` that resolves to **0×0** — the button painted the word
+ * with an 8 px hole where the icon should be, and the icon appeared, oversized,
+ * only in the state where the label wrapped the box open. Nothing below the
+ * browser could see it: the element was there, the paths were right, and the
+ * layout is what was wrong.
+ *
+ * The width half is the other reported fault. `Del` → `Lenke kopiert` grew the
+ * button and shoved the Uke/Liste switch sideways at the moment it was pressed;
+ * pinning the wider label stopped the jump and left a permanent slab of dead
+ * space after the short word. The pair is `Del lenke` → `Kopiert` now, so the
+ * RESTING state is the widest and the pin costs nothing at rest.
+ */
+test("del: the mark has a size, and confirming moves nothing", async ({ page, context }) => {
+  await context.grantPermissions(["clipboard-read", "clipboard-write"]);
+  await page.goto("/planlegger/#26h;MTDT.2026;");
+  await expect(gridBlocks(page).first()).toBeVisible({ timeout: 45_000 });
+
+  const share = page.locator("#planner-share");
+  await expect(share).toBeVisible();
+  const mark = await share.locator(".planner-share-mark").boundingBox();
+  expect(mark?.width).toBe(16);
+  expect(mark?.height).toBe(16);
+
+  const tabs = page.locator(".planner-view-tabs");
+  const restWidth = (await share.boundingBox())?.width ?? 0;
+  const tabsBefore = (await tabs.boundingBox())?.x ?? 0;
+
+  await share.click();
+  await expect(page.locator("#planner-share-label")).toHaveText("Kopiert");
+  // The mark answers before the word does, and it is a swap, not an addition.
+  await expect(share.locator(".planner-share-check")).toBeVisible();
+  await expect(share.locator(".planner-share-mark")).toBeHidden();
+
+  expect((await share.boundingBox())?.width).toBe(restWidth);
+  expect((await tabs.boundingBox())?.x).toBe(tabsBefore);
+
+  // …and back, with the box still exactly where it was.
+  await expect(page.locator("#planner-share-label")).toHaveText("Del lenke", { timeout: 5000 });
+  expect((await share.boundingBox())?.width).toBe(restWidth);
+});
+
+test.describe("the account on a phone", () => {
+  test.use({ viewport: { width: 390, height: 844 } });
+
+  /** A session shaped as `isValidSession` demands, so `renderName` sees it. */
+  const seedSession = (page: Page) =>
+    page.addInitScript(() => {
+      localStorage.setItem(
+        "np:sync",
+        JSON.stringify({
+          navn: "Kari Nordmann",
+          authKey: "a",
+          encKeyRaw: "b".repeat(64),
+          version: 1,
+          deviceId: "d1",
+          label: "Chrome",
+          devices: [{ id: "d1", label: "Chrome", lastSeen: "2026-08-01" }],
+        }),
+      );
+    });
+
+  test("is the mark alone, and still says who you are", async ({ page }) => {
+    await seedSession(page);
+    await page.goto("/planlegger/");
+    const btn = page.locator("#site-account-btn");
+    await expect(btn).toBeVisible();
+
+    // No visible text at any session state below the breakpoint. At 6ch the
+    // name was "Kari No…" beside a glyph that already says "you", and signed
+    // out it spent the same room on the word "Profil" beside a person mark.
+    await expect(page.locator("#site-account-name")).toBeHidden();
+    // The information MOVED — it did not go. A screen reader is not degraded by
+    // a visual constraint.
+    await expect(btn).toHaveAttribute("aria-label", "Profil · Kari Nordmann");
+
+    const box = await btn.boundingBox();
+    expect(box?.width).toBeGreaterThanOrEqual(44);
+    expect(box?.height).toBeGreaterThanOrEqual(44);
+
+    // ONE ROW. §6's phone gate measures the week's top from the viewport's top,
+    // so a topbar that wrapped would come straight out of the week's budget.
+    const bar = await page.locator(".site-topbar").boundingBox();
+    expect(bar?.height).toBeLessThanOrEqual(64);
+    // And the mark is still drawn — an icon-only button whose icon collapsed is
+    // exactly the failure the share button had.
+    const glyph = await btn.locator("svg").boundingBox();
+    expect(glyph?.width).toBe(16);
+  });
+
+  test("signed out it is the same control, named for what it opens", async ({ page }) => {
+    await page.goto("/planlegger/");
+    const btn = page.locator("#site-account-btn");
+    await expect(page.locator("#site-account-name")).toBeHidden();
+    await expect(btn).toHaveAttribute("aria-label", "Profil");
+    const box = await btn.boundingBox();
+    expect(box?.width).toBeGreaterThanOrEqual(44);
+    expect(box?.height).toBeGreaterThanOrEqual(44);
+    // Still the door: pressing it opens the panel, at every width.
+    await btn.click();
+    await expect(page.locator("#planner-profile-panel")).toBeVisible();
+  });
 });

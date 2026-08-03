@@ -4,6 +4,23 @@
  * with **one persistent action button** whose verb follows the plan entry
  * (`addCourseRowControl`), and the dialog stays open for several adds.
  *
+ * **ONE DOOR INTO THE PICKER, with the study plan as a FILTER on it.** There used
+ * to be a second: "Velg fra studieplanen (8)" in the credit-gap line, `hidden`
+ * until the plan was short of credits — and it opened *this* dialog, unfiltered,
+ * on the whole catalog. So the promise in its label was never kept: the pool it
+ * named was nowhere on the surface it opened. It is a facet beside the search
+ * field now (`studyPlanCodes`), and the dialog opens with the facet already
+ * engaged in exactly the state that button used to render in (`openScoped`), so
+ * the student presses the same one control and lands on the pool instead of on
+ * an empty search. (The planner's collapsed "Fra studieplanen" panel is not a
+ * third door — it is the groups with their verbatim prose, DR-5, which is a
+ * different question from "search among them".)
+ *
+ * The facet SCOPES the search rather than replacing it: with a 300-entry
+ * late-year pool, filtering and then searching is the point. It is absent, not
+ * merely unpressed, when the pool is empty — a filter over nothing is a control
+ * that cannot do anything.
+ *
  * Esc is native `showModal()` behaviour as long as nothing inside eats the key
  * (see `searchInput.type`). Backdrop clicks dismiss via `closedby="any"` —
  * native light dismiss, so a text selection dragged onto the backdrop does not
@@ -37,6 +54,24 @@ export interface AddCourseDeps {
    * over a dead download and offered no way out.
    */
   indexFailed?: boolean;
+  /**
+   * The study plan's choice pool for the planned period, as codes, read at call
+   * time. Empty (or absent) ⇒ no facet is rendered.
+   *
+   * The WHOLE pool, not the pool minus the plan: the facet's count has to name
+   * what pressing it shows, and rows carry their own membership state ("I
+   * planen", "Dropp"), so a course added from the list must stay in it rather
+   * than vanish from under the button that was just pressed.
+   */
+  studyPlanCodes?: () => string[];
+  /**
+   * True when the dialog should open with the facet already engaged — the
+   * planner passes "this plan is short of credits", which is the exact state the
+   * removed "Velg fra studieplanen" button used to render in. Anything else
+   * opens on the whole catalog, so the five-codes flow (PRODUCT §3's persona B,
+   * who has no programme and therefore no pool) is untouched.
+   */
+  openScoped?: () => boolean;
 }
 
 export interface AddCourseHandle {
@@ -166,6 +201,11 @@ export function mountAddCourse(deps: AddCourseDeps, signal: AbortSignal): AddCou
   const body = el("div", "add-course-body");
   dialog.append(body);
 
+  // The field and its one facet share a row: a filter reads as a filter when it
+  // stands beside the thing it filters, and as a second search when it does not.
+  const searchRow = el("div", "add-course-search");
+  body.append(searchRow);
+
   const searchForm = el("form", "np-field add-course-field") as HTMLFormElement;
   searchForm.autocomplete = "off";
   const searchInput = el("input", "add-course-input") as HTMLInputElement;
@@ -182,7 +222,20 @@ export function mountAddCourse(deps: AddCourseDeps, signal: AbortSignal): AddCou
   searchInput.placeholder = "Søk etter emnekode eller emnenavn …";
   searchInput.setAttribute("aria-label", "Søk etter emne");
   searchForm.append(searchInput);
-  body.append(searchForm);
+  searchRow.append(searchForm);
+
+  /**
+   * The facet. `.np-toggle--text` because "Fra studieplanen (8)" is a phrase,
+   * not a code — tracked caps would wrap it to two rows (DESIGN §5). Its state
+   * is `aria-pressed`, which is the primitive's own grammar and what fills it
+   * with ink when it is on.
+   */
+  const scopeBtn = el("button", "np-toggle np-toggle--text add-course-scope") as HTMLButtonElement;
+  scopeBtn.type = "button";
+  searchRow.append(scopeBtn);
+
+  /** Whether the search is scoped to the study plan's pool. */
+  let scoped = false;
 
   // Result count *and* the dialog's only live region: a row's action writes its
   // confirmation here, because the button that did it stays put and silent
@@ -218,6 +271,37 @@ export function mountAddCourse(deps: AddCourseDeps, signal: AbortSignal): AddCou
   function isTaught(course: PlannerIndex["courses"][number]): boolean {
     const year = deps.index?.year ?? null;
     return year === null || course[5].includes(year);
+  }
+
+  /**
+   * The pool as the dialog can actually show it: the study plan's codes
+   * intersected with the taught catalog rows, in catalog order.
+   *
+   * Intersected rather than trusted, because the count on the facet must be the
+   * number of rows pressing it produces. A study-plan course with no catalog row
+   * has nothing for this dialog to add, and counting it would put a number on
+   * the control that the list then fails to reach.
+   */
+  function studyPlanRows(taught: PlannerIndex["courses"]): PlannerIndex["courses"] {
+    const codes = deps.studyPlanCodes?.() ?? [];
+    if (codes.length === 0) return [];
+    const wanted = new Set(codes);
+    return taught.filter((course) => wanted.has(course[0]));
+  }
+
+  /**
+   * The facet's label and state. Absent when the pool is empty — including the
+   * whole of persona B's flow, who has no programme and therefore no study plan
+   * at all, and who must never be shown a filter that can only subtract.
+   */
+  function renderScope(available: number): void {
+    scopeBtn.hidden = available === 0;
+    if (available === 0) {
+      scoped = false;
+      return;
+    }
+    scopeBtn.textContent = `Fra studieplanen (${available})`;
+    scopeBtn.setAttribute("aria-pressed", String(scoped));
   }
 
   /** Builds one row. The caller has already established `isTaught(course)`. */
@@ -277,6 +361,7 @@ export function mountAddCourse(deps: AddCourseDeps, signal: AbortSignal): AddCou
     results.replaceChildren();
 
     if (!index) {
+      renderScope(0);
       // A failed download is not a slow one: "Henter emner …" over a dead fetch
       // never resolves, and this dialog is the only way to add a course by
       // code. The retry lives on the planner's exam panel and repairs both
@@ -288,16 +373,39 @@ export function mountAddCourse(deps: AddCourseDeps, signal: AbortSignal): AddCou
     // Not-taught courses are excluded outright, in the count as well as the
     // list — see the file header.
     const taught = index.courses.filter(isTaught);
+    const pool = studyPlanRows(taught);
+    renderScope(pool.length);
+    const source = scoped ? pool : taught;
+
     if (query === "") {
+      // Scoped, the empty query is not an empty state: the pool IS the answer to
+      // "what does my study plan offer", and it is what the removed door
+      // promised. Unscoped it stays a prompt — 4 767 rows is not a list.
+      if (scoped) {
+        for (const course of pool.slice(0, MAX_ROWS)) results.append(buildRow(course));
+        status.textContent =
+          pool.length > MAX_ROWS
+            ? `Viser ${MAX_ROWS} av ${pool.length} emner fra studieplanen din. Skriv for å filtrere.`
+            : `${pool.length} ${pool.length === 1 ? "emne" : "emner"} fra studieplanen din.`;
+        return;
+      }
       status.textContent = `Skriv for å søke i ${taught.length} emner.`;
       return;
     }
 
-    const matched = searchCatalog(taught, query);
+    const matched = searchCatalog(source, query);
     const shown = matched.slice(0, MAX_ROWS);
     for (const course of shown) results.append(buildRow(course));
 
     if (matched.length === 0) {
+      // The filter is the reason there is nothing here, so the message names it
+      // and the way out is the control beside the field. Silently searching the
+      // whole catalog instead would be the scope escaping on its own.
+      const outside = scoped ? searchCatalog(taught, query).length : 0;
+      if (outside > 0) {
+        status.textContent = `Ingen treff i studieplanen din. ${outside} treff i resten av emnekatalogen — slå av «Fra studieplanen» for å se dem.`;
+        return;
+      }
       // "0 treff" over a query that matched only not-taught courses reads as
       // "no such course", which is wrong and unactionable.
       const hidden = searchCatalog(index.courses, query).length;
@@ -349,7 +457,11 @@ export function mountAddCourse(deps: AddCourseDeps, signal: AbortSignal): AddCou
     const query = searchInput.value.trim();
     if (!index || query === "") return;
     const taught = index.courses.filter(isTaught);
-    const matched = searchCatalog(taught, query);
+    // The key commits what the list is showing. Enter over a scoped, empty
+    // result adding a course the student cannot see would be the filter lying
+    // about what is in scope.
+    const source = scoped ? studyPlanRows(taught) : taught;
+    const matched = searchCatalog(source, query);
     const exact = matched.filter((course) => course[0].toUpperCase() === query.toUpperCase());
     const target = exact.length === 1 ? exact[0] : matched.length === 1 ? matched[0] : undefined;
     if (!target) return;
@@ -371,6 +483,12 @@ export function mountAddCourse(deps: AddCourseDeps, signal: AbortSignal): AddCou
     status.textContent = confirmation;
     searchInput.focus();
   });
+  // Focus stays on the facet, not on the field: a filter is a control a student
+  // presses and then reads the result of, and often presses again.
+  scopeBtn.addEventListener("click", () => {
+    scoped = !scoped;
+    render();
+  });
   closeBtn.addEventListener("click", () => dialog.close());
   dialog.addEventListener("close", () => {
     invoker?.focus?.();
@@ -384,6 +502,10 @@ export function mountAddCourse(deps: AddCourseDeps, signal: AbortSignal): AddCou
   function open(): void {
     invoker = (document.activeElement as HTMLElement | null) ?? null;
     searchInput.value = "";
+    // The one thing `open()` decides: whether this is the "I am short of
+    // credits" opening. `render()` clears the flag again if the pool turns out
+    // to be empty, so a stale yes can never leave the list scoped to nothing.
+    scoped = deps.openScoped?.() ?? false;
     render();
     dialog.showModal();
     searchInput.focus();

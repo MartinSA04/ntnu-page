@@ -61,8 +61,8 @@ drop-in windows, ISO week dating with a mønsteruke outside the teaching
 period, and a whole-days width law expressed in CSS.
 
 **Sharing, as far as it goes.** The hash round-trips including non-ASCII
-direction codes; `hashchange` applies a pasted link live; a Del button copies
-the link or invokes the native share sheet; and the plan an incoming link
+direction codes; `hashchange` applies a pasted link live; a "Del lenke" button
+copies the link or invokes the native share sheet; and the plan an incoming link
 overwrote is offered back, because the destructive half of §3 flow 5 was live
 while the merge half was not.
 

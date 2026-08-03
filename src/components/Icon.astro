@@ -47,8 +47,18 @@ const PATHS = {
   sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/>',
   moon: '<path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/>',
   // `user-round` — the account's own door in the topbar, and nothing else. It
-  // is a person, not a cog: the control opens who you are, not settings.
+  // is a person, not a cog: the control opens who you are, not settings. Below
+  // the site's mobile breakpoint it stands alone, with the name it replaces
+  // carried by the button's `aria-label`.
   user: '<circle cx="12" cy="8" r="4"/><path d="M19.5 21a7.5 7.5 0 0 0-15 0"/>',
+  // `share` — hand this plan over. Faithful Lucide: the stem runs to y=15, three
+  // units past the open tray's walls, which is the mark iOS and every share
+  // sheet already taught. It lived inline in the planner's own markup with no
+  // width, no height and no CSS, so as a flex child of `.np-btn` it computed to
+  // 0x0 — the button painted the word "Del" with an 8px hole where the icon
+  // was. An `<Icon>` carries real width/height attributes; that is the fix.
+  share:
+    '<path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><path d="m16 6-4-4-4 4"/><path d="M12 2v13"/>',
   // Content-block glyphs (worked example, learning goals, exam focus).
   calculator:
     '<rect width="16" height="20" x="4" y="2" rx="2"/><path d="M8 6h8"/><path d="M16 14v4"/><path d="M16 10h.01"/><path d="M12 10h.01"/><path d="M8 10h.01"/><path d="M12 14h.01"/><path d="M8 14h.01"/><path d="M12 18h.01"/><path d="M8 18h.01"/>',

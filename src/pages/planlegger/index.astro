@@ -1,4 +1,5 @@
 ---
+import Icon from "../../components/Icon.astro";
 import Layout from "../../layouts/Layout.astro";
 // The week's geometry and ink live in one stylesheet because two surfaces
 // render it through the same `renderGrid`. Only this page's exam list stays
@@ -94,22 +95,29 @@ const description =
           address bar current since the beginning, and there was no way to act
           on that short of knowing to select the address bar. Hidden until
           there is a plan — an empty plan is not a thing to send anyone. */}
+      {/* TWO MARKS, ONE SHOWN. The confirmation swaps the mark as well as the
+          word, because a check is the half of "it worked" a student reads
+          before any word. Both are authored here rather than built at runtime
+          so neither can arrive a frame late.
+
+          The share mark used to be an inline `<svg>` with no width, no height
+          and no CSS. `base.css` gives every svg `display: block; max-width:
+          100%`, and as a flex child of `.np-btn` that resolves to 0x0 — the
+          button painted "Del" with an 8px gap where the icon should be, and the
+          icon appeared, oversized, only when the label wrapped the box open.
+          `<Icon>` writes real width/height attributes; nothing here relies on
+          CSS to give the mark a size. */}
       <button type="button" class="np-btn planner-share" id="planner-share" hidden>
-        <svg
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="2"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          aria-hidden="true"
-          focusable="false"
-        >
-          <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" />
-          <path d="M16 6l-4-4-4 4" />
-          <path d="M12 2v13" />
-        </svg>
-        <span id="planner-share-label">Del</span>
+        <Icon name="share" size={16} class="planner-share-mark" />
+        <Icon name="check" size={16} class="planner-share-check" />
+        {/* "Del lenke", not "Del" — and that is what makes the confirmation
+            free. The old pair was "Del" → "Lenke kopiert", so the button had to
+            be pinned to the WIDER of the two and then sat in that width holding
+            the shorter word for the rest of the visit: a slab of dead space
+            after "Del". Naming the object in the resting label makes the rest
+            state the widest one, so the pin costs nothing and the confirmation
+            can be a single word. */}
+        <span id="planner-share-label">Del lenke</span>
       </button>
 
       {/* WHICH TERM THIS PLAN IS FOR — the one thing in this bar that is not a
@@ -225,22 +233,28 @@ const description =
 
         <div class="planner-course-rows" id="planner-course-rows" data-reserve></div>
 
+        {/* WHAT THE MODAL CANNOT SAY. "Mangler 7,5 sp" is a fact about the plan
+            you are looking at, and a dialog you have not opened cannot tell you
+            it is worth opening.
+
+            It used to carry "Velg fra studieplanen (8)" beside it — a second,
+            conditional door to picking courses, one row above the standing
+            "Legg til emne" and opening the identical unfiltered dialog, so the
+            pool it promised was on neither surface. The pool is a facet in that
+            dialog now, engaged on open while this line is showing, which is the
+            same one press this button used to cost. */}
         <p class="planner-gap-line" id="planner-gap-line" hidden>
           <span class="np-note" id="planner-gap-text"></span>
-          <button type="button" class="np-btn planner-gap-btn" id="planner-gap-btn">
-            Velg fra studieplanen
-          </button>
         </p>
 
         {/* THE PRIMARY ACTION, AT THE FOOT OF THE LIST IT ADDS TO. It spent a
             while up in the page's bar, on two arguments that have both expired.
 
-            "Indistinguishable from 'Velg fra studieplanen' beside it" — that
-            line is `#planner-gap-line`, `hidden` by default and drawn only when
-            the plan is short of credits, so the objection was about one state,
-            not the general case. In that state the two now differ in weight,
-            not only in words: this is the accent, that is paper, and they are
-            on separate rows.
+            "Indistinguishable from 'Velg fra studieplanen' beside it" — there
+            is no such button any more. It was a second, conditional door to the
+            same dialog this one opens, and the study plan it named is a filter
+            inside that dialog now. `#planner-gap-line` above is the sentence it
+            left behind, and a sentence does not compete with a verb.
 
             "Below the fold on a phone" — the layout it was measured in is
             gone (the Uke/Emner tabs it mentions no longer exist), and the
@@ -481,6 +495,30 @@ const description =
     /* One line, held. `renderBanner` always writes this, so the line is never
        absent once the page is alive. */
     min-height: 1lh;
+  }
+
+  /* THE HAND-OVER. Two marks live in this button and exactly one is drawn: the
+     resting `share`, and the `check` that answers a press. A state class rather
+     than `[hidden]`, because what changes is which of two siblings occupies one
+     slot — the attribute is for something that stops existing.
+
+     `flex: none` on the marks is a guard, not decoration: this control's icon
+     was a flex child with no intrinsic size once already, and the whole failure
+     was invisible until it was measured. */
+  .planner-share :global(svg) {
+    flex: none;
+  }
+
+  .planner-share :global(.planner-share-check) {
+    display: none;
+  }
+
+  .planner-share.is-copied :global(.planner-share-mark) {
+    display: none;
+  }
+
+  .planner-share.is-copied :global(.planner-share-check) {
+    display: block;
   }
 
   /* The semester, at the end of the tool run. `flex: none` because a select
@@ -1286,13 +1324,13 @@ const description =
     color: var(--ui);
   }
 
-  /* --- Credit gap door --------------------------------------------------- */
+  /* --- The credit gap ----------------------------------------------------- */
 
+  /* A sentence, not a door: the button that stood beside it moved into the add
+     dialog as a filter. What is left says what the numbers above it imply, and
+     leads the eye to the one action under it. */
   .planner-gap-line:not([hidden]) {
-    display: flex;
-    align-items: baseline;
-    gap: var(--gap-3);
-    flex-wrap: wrap;
+    display: block;
     margin-bottom: var(--space-4);
   }
 
@@ -1301,11 +1339,10 @@ const description =
      site.css, alongside the profile panel it is modeled on).
 
      At the foot of the Emner column, under the rows it appends to, with a
-     clear gap over it: the credit-gap line above it is a *sentence* with a
-     paper button in it, and this is a control on its own line. Where both are
-     on screen they read as two different weights on two different rows, which
-     is the distinction the bar version was moved up to get and never needed
-     to leave the column for.
+     clear gap over it: the credit-gap line above it is a sentence and this is
+     the only control on this stretch of the column, so there is nothing left
+     for it to be confused with — which is the distinction the bar version was
+     moved up to get and never needed to leave the column for.
 
      Not full width: `.np-btn` is `inline-flex` and stays it. A 100 %-wide
      accent bar under five course rows is a banner, and the button is a verb. */

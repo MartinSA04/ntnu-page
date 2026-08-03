@@ -265,7 +265,10 @@ const IDS = [
   "planner-course-rows",
   "planner-gap-line",
   "planner-gap-text",
-  "planner-gap-btn",
+  // No `planner-gap-btn`: the credit-gap line is a sentence now. Its "Velg fra
+  // studieplanen" button opened the same dialog "Legg til emne" does, on the
+  // whole catalog, so the pool it named was on neither surface. It is a facet
+  // inside that dialog instead — see the `add-course-scope` tests below.
   "planner-add-course-btn",
   "planner-plan-panel",
   "planner-plan-body",
@@ -1231,7 +1234,7 @@ describe("mountPlannerApp — audit repro", () => {
     expect(find("planner-credit-note").textContent).toContain("Fjern det du ikke tar");
   });
 
-  it("plan-8: an empty study-plan pool leaves no stray Velg fra studieplanen", async () => {
+  it("plan-8: an empty study-plan pool renders the gap sentence and no filter", async () => {
     await mount(
       {
         "/data/search-index.json": () => ({ year: 2026, courses: [] }),
@@ -1252,12 +1255,15 @@ describe("mountPlannerApp — audit repro", () => {
       },
       "#26h;MPPR.2026;",
     );
-    const button = find("planner-gap-btn");
+    // The informative half survives — a modal cannot tell you there is a gap
+    // before you open it.
     expect(find("planner-gap-line").hidden).toBe(false);
-    expect(button.hidden).toBe(true);
-    // `.np-btn { display: inline-flex }` beats the UA's `[hidden]`, so the
-    // property alone left a 36 px button on screen.
-    expect(button.style.display).toBe("none");
+    expect(find("planner-gap-text").textContent).toBe("Mangler 30 sp");
+    // And a filter over nothing is absent, not merely unpressed: this is the
+    // state the removed button had to be `display: none`-d out of, because
+    // `.np-btn { display: inline-flex }` beat the UA's `[hidden]`.
+    find("planner-add-course-btn").click();
+    expect(body.querySelector(".add-course-scope")?.hidden).toBe(true);
   });
 
   it("mob-5: no edge mask when the whole grid is on screen", async () => {
@@ -1433,6 +1439,149 @@ describe("mountPlannerApp — audit repro", () => {
     expect(find("planner-provenance").textContent).toContain(
       "Fikk ikke hentet studieplanen for KNOAND.",
     );
+  });
+
+  /**
+   * The credit gap's door, merged into the one add surface as a filter.
+   *
+   * `#planner-gap-btn` ("Velg fra studieplanen (8)") opened the very dialog
+   * `#planner-add-course-btn` opens, on the whole catalog, so the pool it named
+   * appeared on neither surface. These pin what replaced it: the facet exists
+   * only when there is a pool, it opens engaged when the plan is short of
+   * credits, and turning it off is a way back to the catalog that says so.
+   */
+  describe("the study-plan facet in the add dialog", () => {
+    /** A choice-group course: anything whose `studyChoice.code` is not "O". */
+    function elective(code: string, name: string, credits: number) {
+      return {
+        code,
+        version: "1",
+        name,
+        credits,
+        planElement: false,
+        studyChoice: { code: "V", name: "Valgbart emne", description: null },
+      };
+    }
+
+    const PROGRAM = {
+      code: "BIT",
+      name: "Informasjonsbehandling",
+      year: 2026,
+      startTerm: "AUTUMN",
+      updated: null,
+      publishedYears: [2026],
+      periods: [
+        {
+          periodNumber: 1,
+          direction: {
+            code: null,
+            name: null,
+            courseGroups: [
+              {
+                name: null,
+                description: null,
+                type: "O",
+                courses: [obligatory("TDT4109", "Informasjonsteknologi", 7.5)],
+              },
+              {
+                name: "Valgemner",
+                description: "Velg blant emnene under.",
+                type: "V",
+                courses: [
+                  elective("TDT4160", "Datamaskiner og digitalteknikk", 7.5),
+                  elective("TDT4180", "Menneske-maskin-interaksjon", 7.5),
+                ],
+              },
+            ],
+            waypoints: [],
+          },
+        },
+      ],
+    };
+
+    /** Two pool rows plus one course the pool does not name. */
+    const INDEX = {
+      year: 2026,
+      courses: [
+        ["TDT4109", "Informasjonsteknologi", null, [], "1", [2026]],
+        ["TDT4160", "Datamaskiner og digitalteknikk", null, [], "1", [2026]],
+        ["TDT4180", "Menneske-maskin-interaksjon", null, [], "1", [2026]],
+        ["TMA4100", "Matematikk 1", null, [], "1", [2026]],
+      ],
+    };
+
+    const scope = () => body.querySelector(".add-course-scope");
+    const status = () => body.querySelector(".add-course-status");
+    const input = () => body.querySelector(".add-course-input");
+    const rowCodes = () => body.querySelectorAll(".add-course-row-code").map((e) => e.textContent);
+
+    async function open(): Promise<void> {
+      await mount(
+        {
+          "/data/search-index.json": () => INDEX,
+          "/api/program/BIT/plan": () => PROGRAM,
+          "/api/course/": () => DETAILS,
+        },
+        "#26h;BIT.2026;",
+      );
+      find("planner-add-course-btn").click();
+    }
+
+    it("opens engaged on a short plan, and lists the pool instead of an empty search", async () => {
+      await open();
+      // 7,5 of 30 sp prefilled, so the gap sentence is up — the exact state the
+      // removed button rendered in.
+      expect(find("planner-gap-line").hidden).toBe(false);
+      expect(scope()?.hidden).toBe(false);
+      expect(scope()?.textContent).toBe("Fra studieplanen (2)");
+      expect(scope()?.getAttribute("aria-pressed")).toBe("true");
+      // ONE PRESS from "Mangler 22,5 sp" to the study plan's own courses, which
+      // is what the old door cost and never actually delivered.
+      expect(rowCodes()).toEqual(["TDT4160", "TDT4180"]);
+      expect(status()?.textContent).toBe("2 emner fra studieplanen din.");
+    });
+
+    it("scopes the search, and names the filter when that is why there is nothing", async () => {
+      await open();
+      const field = input();
+      if (!field) throw new Error("no search field");
+      field.value = "matematikk";
+      field.dispatch("input", {});
+      expect(rowCodes()).toEqual([]);
+      // Not "0 treff": the catalog has the course and the filter is the reason
+      // it is not here, so the sentence names the control that lets it in.
+      expect(status()?.textContent).toContain("Ingen treff i studieplanen din.");
+      expect(status()?.textContent).toContain("slå av «Fra studieplanen»");
+    });
+
+    it("turning the filter off searches the whole catalog again", async () => {
+      await open();
+      const field = input();
+      if (!field) throw new Error("no search field");
+      field.value = "matematikk";
+      field.dispatch("input", {});
+      scope()?.click();
+      expect(scope()?.getAttribute("aria-pressed")).toBe("false");
+      expect(rowCodes()).toEqual(["TMA4100"]);
+    });
+
+    it("a full plan opens on the catalog, with the facet present but off", async () => {
+      await mount(
+        {
+          "/data/search-index.json": () => INDEX,
+          "/api/program/BIT/plan": () => PROGRAM,
+          "/api/course/": () => ({ ...DETAILS, credits: 30 }),
+        },
+        "#26h;BIT.2026;",
+      );
+      // 30 sp: nothing is missing, so nothing preempts the search the button
+      // says it opens.
+      expect(find("planner-gap-line").hidden).toBe(true);
+      find("planner-add-course-btn").click();
+      expect(scope()?.hidden).toBe(false);
+      expect(scope()?.getAttribute("aria-pressed")).toBe("false");
+      expect(status()?.textContent).toBe("Skriv for å søke i 4 emner.");
+    });
   });
 
   it("pd-3/modals-7: the add dialog names a dead catalog and does not eat Escape", async () => {

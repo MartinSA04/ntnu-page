@@ -258,7 +258,6 @@ interface PlannerElements {
   courseRows: HTMLElement;
   gapLine: HTMLElement;
   gapText: HTMLElement;
-  gapButton: HTMLButtonElement;
   addCourseBtn: HTMLButtonElement;
   planPanel: HTMLDetailsElement;
   planPanelBody: HTMLElement;
@@ -298,7 +297,6 @@ function getElements(): PlannerElements | null {
     courseRows: byId<HTMLElement>("planner-course-rows"),
     gapLine: byId<HTMLElement>("planner-gap-line"),
     gapText: byId<HTMLElement>("planner-gap-text"),
-    gapButton: byId<HTMLButtonElement>("planner-gap-btn"),
     addCourseBtn: byId<HTMLButtonElement>("planner-add-course-btn"),
     planPanel: byId<HTMLDetailsElement>("planner-plan-panel"),
     planPanelBody: byId<HTMLElement>("planner-plan-body"),
@@ -347,17 +345,12 @@ function semesterLabel(semester: SemesterSummary | undefined): string {
   return year !== null ? `${season} ${year}` : semester.name;
 }
 
-/**
- * The semester as a student writes it on a timetable: `H26`, `V27`. Title form
- * only — elsewhere `semesterLabel` says "Høst 2026" in full.
- */
-function semesterShort(semester: SemesterSummary | undefined): string {
-  if (!semester) return "";
-  const year = semesterYear(semester.id);
-  if (year === null) return semester.name;
-  const season = /h$/i.test(semester.id) ? "H" : /s$/i.test(semester.id) ? "S" : "V";
-  return `${season}${String(year).slice(-2)}`;
-}
+/* `semesterShort` — the `H26` / `V27` form — is DELETED with its one caller.
+   It existed for the plan title's third part, and the title stopped carrying a
+   semester when the bar grew a `<select>` for it (DESIGN §9). Everything that
+   still names a term does it in full through `semesterLabel` ("Høst 2026"),
+   including the share sheet's title, which is the one string that leaves this
+   page and therefore the one that cannot lean on the control beside it. */
 
 /**
  * Obligatory courses of a classified period, shaped for `setProgramPlan`.
@@ -1212,7 +1205,13 @@ export async function mountPlannerApp(
    * The banner — ETT NAVN.
    *
    * The title is the plan as a student writes it on a timetable: `MTFYMA Kull
-   * 24 H26` — three facts, no separators, all of them data and therefore mono.
+   * 24` — the two facts that say WHOSE plan this is.
+   *
+   * THE SEMESTER IS NOT ONE OF THEM ANY MORE. It was, until it became a
+   * `<select>` four controls along the same bar: two statements of `H26` on one
+   * row, one of them a control you can act on and one of them not. A title
+   * restating the setting beside it is redundancy, not reinforcement — the
+   * control is the authority, so the title stops competing with it (DESIGN §9).
    *
    * The programme's full name is not lost, it is demoted to the hint line: it
    * is a 42-character database field.
@@ -1225,22 +1224,17 @@ export async function mountPlannerApp(
     const program = plan.program;
     const semester = currentSemester();
 
-    // The title's FACE is CSS's, keyed on the plan probe: grotesk when there is
-    // no plan to name, mono when there is. A class added here would be one
-    // frame too late — the server has already painted the other face. This is
-    // the one function that runs on every later change.
+    // Not the title's face — that swap is gone, the title is one size and one
+    // family. This keeps `--plan-courses` and `data-plan` true for the
+    // reservations, and it is the one function that runs on every later change.
     syncPlanProbe(plan);
 
     const title = elements.title;
     title.replaceChildren();
     if (program) {
-      // `MTFYMA Kull 24 H26`, in three unbreakable parts separated by a space
-      // and nothing else: three facts in a mono face already read as three.
-      const parts = [
-        program.code,
-        `Kull ${String(program.cohort).slice(-2)}`,
-        semesterShort(semester),
-      ].filter(Boolean);
+      // `MTFYMA Kull 24`, in unbreakable parts separated by a space and nothing
+      // else: at this size the facts already read as two.
+      const parts = [program.code, `Kull ${String(program.cohort).slice(-2)}`].filter(Boolean);
       // Each part is unbreakable, so a wrapping title breaks between facts.
       title.append(
         ...parts.flatMap((part, i) => [
@@ -1314,7 +1308,7 @@ export async function mountPlannerApp(
    * one (a phone, which is where a plan actually gets sent), the clipboard
    * everywhere else.
    *
-   * The label reports what happened and then goes back to what it does, which
+   * The button reports what happened and then goes back to what it does, which
    * is the whole of the feedback: a copy has no other visible consequence, and
    * a student who does not see one presses again.
    */
@@ -1322,32 +1316,38 @@ export async function mountPlannerApp(
   let shareWidthReserved = false;
 
   /**
-   * Holds the button at the width of its longest state, once, before the label
-   * ever changes.
+   * Pins the button at its RESTING width, once, before the label ever changes.
    *
-   * `Del` → `Lenke kopiert` grew the button and shoved the Uke/Liste switch
-   * ~22px sideways at the exact moment it was pressed — a control moving the
-   * controls next to it. Measured rather than guessed at, because the label is
-   * set in the platform UI face and its width is whatever this device's font
-   * is; and measured on the real element, so it includes the icon and padding.
+   * A label swap that changes the box shoves the controls beside it at the exact
+   * moment the student presses one — `Del` → `Lenke kopiert` moved the Uke/Liste
+   * switch ~22px sideways. The old fix measured both labels and pinned the
+   * wider, which stopped the jump and bought a permanent slab of dead space
+   * after the short one.
+   *
+   * The pair is `Del lenke` → `Kopiert` now, so the RESTING state is the widest
+   * and the pin costs nothing at rest: the button never grows, and it is only
+   * stopped from shrinking while it holds the shorter word. Measured on the real
+   * element rather than guessed, because the label is set in whatever UI face
+   * this device has and the measurement includes the mark and the padding.
    */
   function reserveShareWidth(): void {
     if (shareWidthReserved) return;
-    const label = elements.shareLabel;
-    const original = label.textContent ?? "";
-    let widest = elements.share.getBoundingClientRect().width;
-    for (const text of ["Del", "Lenke kopiert"]) {
-      label.textContent = text;
-      widest = Math.max(widest, elements.share.getBoundingClientRect().width);
-    }
-    label.textContent = original;
-    elements.share.style.minWidth = `${Math.ceil(widest)}px`;
+    // The measured width verbatim, not rounded up: `Math.ceil` on 104.03 pins
+    // 105 and the button grows a pixel on the first press — small, but it is
+    // the exact class of movement this function exists to stop.
+    elements.share.style.minWidth = `${elements.share.getBoundingClientRect().width}px`;
     shareWidthReserved = true;
   }
 
   async function sharePlan(): Promise<void> {
     const url = location.href;
-    const title = elements.title.textContent?.trim() || "Semesterplan";
+    // The plan's own name plus the term it is for. The title element stopped
+    // carrying the semester when the bar grew a control for it, and the share
+    // sheet is the one place that reads this string with no such control beside
+    // it — a plan handed over as "MTDT Kull 26" alone would not say which term.
+    const name = elements.title.textContent?.trim() || "Semesterplan";
+    const term = semesterLabel(currentSemester());
+    const title = term === "" ? name : `${name} · ${term}`;
     if (typeof navigator.share === "function") {
       try {
         await navigator.share({ title, url });
@@ -1369,13 +1369,18 @@ export async function mountPlannerApp(
       renderLinkNote();
       return;
     }
-    // WHAT was copied, not just that something was: "Kopiert" alone never says
-    // a *link* went to the clipboard, which is the entire point of the control.
+    // The mark answers before the word does, and the word says what happened to
+    // the thing the resting label already named. "Kopiert" under a button that
+    // reads "Del lenke" the rest of the time is not ambiguous about what went to
+    // the clipboard — which is the whole objection "Lenke kopiert" was answering
+    // when it was the label that could not name its own object.
     reserveShareWidth();
-    elements.shareLabel.textContent = "Lenke kopiert";
+    elements.share.classList.add("is-copied");
+    elements.shareLabel.textContent = "Kopiert";
     clearTimeout(shareResetTimer);
     shareResetTimer = setTimeout(() => {
-      elements.shareLabel.textContent = "Del";
+      elements.share.classList.remove("is-copied");
+      elements.shareLabel.textContent = "Del lenke";
     }, 2400);
   }
 
@@ -1531,36 +1536,43 @@ export async function mountPlannerApp(
   }
 
   /**
-   * The gap sentence under the course list, and the door into the picker.
-   * Phrased as remaining credits, never "velg 2 av 5": the study plan carries
-   * no cardinality (DR-5), but the credit arithmetic is real.
+   * How far this plan is from a full load, or `0` when the arithmetic is not
+   * settled enough to say. One source for the gap sentence and for whether the
+   * add dialog opens scoped to the study plan, so the two cannot disagree about
+   * what "short of credits" means.
+   */
+  function creditGap(): number {
+    const summary = creditSummary();
+    if (summary.loading) return 0;
+    // An *empty* plan still counts as short as long as a programme is set —
+    // that is the 3rd-year bachelor whose period prefills nothing at all.
+    const hasContext = plan.program !== undefined || plan.courses.length > 0;
+    if (!hasContext) return 0;
+    return Math.max(0, FULL_LOAD_CREDITS - summary.total);
+  }
+
+  /**
+   * The gap sentence under the course list. Phrased as remaining credits, never
+   * "velg 2 av 5": the study plan carries no cardinality (DR-5), but the credit
+   * arithmetic is real.
+   *
+   * A SENTENCE AND NOTHING ELSE. It used to carry "Velg fra studieplanen (8)"
+   * beside it — a second, conditional entrance to picking courses, competing
+   * with the standing "Legg til emne" one row below and, worse, opening the very
+   * same unfiltered dialog: the pool it named was nowhere on the surface it
+   * opened. The pool is a facet inside that dialog now, engaged on open in
+   * exactly this state, so the one press this line used to cost still lands on
+   * the study plan's courses — and this line is left doing the half a modal
+   * cannot do, which is telling you there is a gap before you go looking.
    */
   function renderGapLine(): void {
-    const summary = creditSummary();
-    const gap = FULL_LOAD_CREDITS - summary.total;
-    const anyLoading = summary.loading;
-    // An *empty* plan still gets the sentence as long as a programme is set —
-    // that is the 3rd-year bachelor whose period prefills nothing at all, for
-    // whom "Mangler 30 sp · velg fra studieplanen (8)" is the whole flow.
-    const hasContext = plan.program !== undefined || plan.courses.length > 0;
-    if (gap <= 0 || anyLoading || !hasContext) {
+    const gap = creditGap();
+    if (gap <= 0) {
       elements.gapLine.hidden = true;
       return;
     }
     elements.gapLine.hidden = false;
     elements.gapText.textContent = `Mangler ${formatCreditNumber(gap)} sp`;
-    // Only worth showing when it goes somewhere the standing "Legg til emne"
-    // button below it does not. With an empty pool it fell back to that same
-    // label and dialog, so the rail carried two identical buttons.
-    const pool = availablePool();
-    const noPool = pool.length === 0;
-    elements.gapButton.hidden = noPool;
-    // `hidden` alone does not hide it: `.np-btn { display: inline-flex }` is an
-    // author rule and beats the UA's `[hidden]`, so the rail kept a count-less
-    // "Velg fra studieplanen" promising the study plan and opening the whole
-    // catalog. Clearing back to "" restores whatever the sheet says.
-    elements.gapButton.style.display = noPool ? "none" : "";
-    if (!noPool) elements.gapButton.textContent = `Velg fra studieplanen (${pool.length})`;
   }
 
   // --- The clock ----------------------------------------------------------
@@ -1827,20 +1839,36 @@ export async function mountPlannerApp(
 
   // --- Add-course dialog ---------------------------------------------------
   //
-  // One button opens `addCourse.ts`'s dialog, which searches the whole catalog
-  // (not just the study plan's choice pool) and stays open for multiple adds.
+  // ONE ADD SURFACE. Every route into adding a course — the standing button at
+  // the foot of the Emner column, the week's empty-state cards, the elective
+  // period's "Velg emner" — opens `addCourse.ts`'s dialog, which searches the
+  // whole catalog and stays open for multiple adds. The study plan is a FACET
+  // inside it rather than a door of its own beside it; the two callbacks below
+  // are the whole of what this page tells it about the study plan.
   //
   // `addCourseDeps` is mutated in place rather than re-passed when the catalog
   // index (still loading at mount) arrives — see addCourse.ts's header for why
-  // that is safe without re-mounting the dialog.
-  const addCourseDeps: AddCourseDeps = { store, index: null };
+  // that is safe without re-mounting the dialog. The callbacks are read at call
+  // time for the same reason, so a study plan that lands after the dialog was
+  // built is picked up on its next open.
+  const addCourseDeps: AddCourseDeps = {
+    store,
+    index: null,
+    // The WHOLE choice pool, not `availablePool()`'s pool-minus-plan: a facet's
+    // count names what it shows, and a row must not disappear from under the
+    // button that was just pressed. Obligatory courses are left out — the
+    // student is already enrolled in those, and the gap is what this is for.
+    studyPlanCodes: () => (periodCourses?.choice ?? []).map((c) => c.code),
+    openScoped: () => creditGap() > 0,
+  };
   const addCourseDialog: AddCourseHandle = mountAddCourse(addCourseDeps, lifeSignal);
 
   /**
    * The study plan's choice pool for this period, minus what is already in the
-   * plan — feeds the gap line's/question's counts and copy only. Memoised on
-   * (period, plan courses): half a dozen callers ask per render and a late-year
-   * pool runs to 300+ entries.
+   * plan — feeds the week question's count and copy only ("8 emner å velge
+   * mellom"), where what is left to choose from is the whole point. The add
+   * dialog's facet reads the pool WHOLE, a few lines up. Memoised on (period,
+   * plan courses): a late-year pool runs to 300+ entries.
    */
   let poolMemo: { period: PeriodCourses | null; codes: string; rows: PickerRow[] } | null = null;
 
@@ -1863,7 +1891,7 @@ export async function mountPlannerApp(
     return rows;
   }
 
-  /** The gap line's/question's button: opens the add-course dialog. */
+  /** The week question's button: opens the add-course dialog. */
   function openAddFromQuestion(): void {
     addCourseDialog.open();
   }
@@ -1872,7 +1900,6 @@ export async function mountPlannerApp(
   elements.share.addEventListener("click", () => {
     void sharePlan();
   });
-  elements.gapButton.addEventListener("click", openAddFromQuestion);
 
   // --- Course bundle state (timetable + details per active course) -------
 
