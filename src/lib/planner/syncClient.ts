@@ -11,8 +11,10 @@
  */
 
 import {
+  activeCourses,
   LAST_SEMESTER_KEY,
   PLANS_STORAGE_KEY,
+  type PlanCourse,
   PROFILE_STORAGE_KEY,
   type StorageLike,
 } from "./store.js";
@@ -82,29 +84,68 @@ export interface CollisionSummary {
 }
 
 /**
+ * The `plans` field parsed back into its semester → courses map. Malformed
+ * JSON reads as an empty map rather than throwing: this only ever runs on a
+ * payload this client just decrypted or holds locally, and a mistake
+ * elsewhere must not crash the login flow.
+ */
+function plansOf(payload: SyncPayload): Record<string, PlanCourse[]> {
+  try {
+    const parsed = JSON.parse(payload.plans) as unknown;
+    if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) return {};
+    return parsed as Record<string, PlanCourse[]>;
+  } catch {
+    return {};
+  }
+}
+
+/**
+ * One semester's course codes, DROPPED ROWS EXCLUDED — `activeCourses` is the
+ * same definition of "what actually counts" the whole planner uses, reused
+ * here rather than re-derived. Counting a deliberately-dropped course would
+ * inflate the collision prompt's own numbers and list a course the student
+ * already said no to under "mangler".
+ */
+export function activeCodesIn(plans: Record<string, PlanCourse[]>, semesterId: string): string[] {
+  const rows = plans[semesterId];
+  if (!Array.isArray(rows)) return [];
+  return activeCourses({ courses: rows })
+    .map((course) => course.code)
+    .filter((code): code is string => typeof code === "string");
+}
+
+/**
  * Two independent histories meeting at login — NOT a conflict, and the one
- * prompt this design keeps. `null` means there is nothing to ask about: either
- * this device is empty, or both sides already say the same thing.
+ * prompt this design keeps. `null` means there is nothing to ask about: this
+ * device holds nothing the account does not already have, so adopting the
+ * remote copy costs nothing and the ordinary "add my second device" login
+ * stays promptless. That property is deliberate; do not regress it.
+ *
+ * The QUESTION is asked about `semesterId` (the counts and the "mangler …"
+ * list the panel prints), but the DECISION to ask is taken across every
+ * semester this device holds. `applySyncable` replaces the whole `np:plans`
+ * map, so a student with a full 25h plan and an empty 26h — `lastSemester`
+ * = "26h" — used to be asked nothing and lose the 25h draft outright. The
+ * spec syncs the whole map precisely so a draft is not stranded; the guard
+ * has to span the same ground the overwrite does.
  */
 export function describeCollision(
   local: SyncPayload,
   remote: SyncPayload,
   semesterId: string,
 ): CollisionSummary | null {
-  const codes = (payload: SyncPayload): string[] => {
-    try {
-      const plans = JSON.parse(payload.plans) as Record<string, Array<{ code?: unknown }>>;
-      return (plans[semesterId] ?? [])
-        .map((row) => row.code)
-        .filter((code): code is string => typeof code === "string");
-    } catch {
-      return [];
-    }
-  };
-  const mine = codes(local);
-  const theirs = codes(remote);
-  if (mine.length === 0) return null;
-  if (mine.length === theirs.length && mine.every((code) => theirs.includes(code))) return null;
+  const localPlans = plansOf(local);
+  const remotePlans = plansOf(remote);
+  const atRisk = Object.keys(localPlans).some((id) => {
+    const mine = activeCodesIn(localPlans, id);
+    if (mine.length === 0) return false;
+    const theirs = activeCodesIn(remotePlans, id);
+    return mine.some((code) => !theirs.includes(code));
+  });
+  if (!atRisk) return null;
+
+  const mine = activeCodesIn(localPlans, semesterId);
+  const theirs = activeCodesIn(remotePlans, semesterId);
   return {
     localCount: mine.length,
     remoteCount: theirs.length,
@@ -195,6 +236,27 @@ function isValidSession(value: unknown): value is SyncSession {
   );
 }
 
+/**
+ * A decrypted remote payload and the version it arrived at, handed back by
+ * `fetchRemote` for the caller to apply LATER — or never.
+ *
+ * The split exists because a GET has a round trip and the student keeps
+ * editing during it. `pull()` used to fetch and overwrite `np:plans` in one
+ * uninterruptible-looking step, so an edit made inside that window was
+ * destroyed by the response to a request that predated it — and the push
+ * that followed reported success, because it re-read the clobbered storage
+ * at the version the pull had just adopted. A check AFTER `pull()` returns
+ * cannot help: storage is already gone. So `fetchRemote` writes NOTHING, and
+ * the caller decides — against its own generation counter — whether the
+ * answer is still about the plan it asked about.
+ */
+export interface RemoteSnapshot {
+  payload: SyncPayload;
+  version: number;
+}
+
+export type FetchResult = { ok: true; snapshot: RemoteSnapshot } | { ok: false; reason: string };
+
 export interface SyncClient {
   session(): SyncSession | null;
   signup(navn: string, pin: string, label: string): Promise<SyncResult>;
@@ -210,10 +272,19 @@ export interface SyncClient {
    * until it is given the new PIN. Atomic from the student's view: nothing
    * about `session` changes unless the re-credentialing PUT actually lands,
    * so a failed attempt leaves this device exactly as logged in as it was a
-   * moment ago, under the OLD pin.
+   * moment ago, under the OLD pin. The one exception is a 401, which is not
+   * a failure to change the PIN but proof someone else already did
+   * (`authFailure`): the old credential is gone, and pretending otherwise is
+   * what wedges a device.
    */
   changePin(oldPin: string, newPin: string): Promise<SyncResult>;
   push(): Promise<SyncResult>;
+  /** Fetches and decrypts the account's copy. Writes nothing — see `RemoteSnapshot`. */
+  fetchRemote(): Promise<FetchResult>;
+  /** Applies a snapshot `fetchRemote` returned. The caller owns the decision. */
+  applyRemote(snapshot: RemoteSnapshot): void;
+  /** `fetchRemote` + `applyRemote`, for a caller that genuinely wants both in
+   *  one step and has nothing concurrent to protect. */
   pull(): Promise<SyncResult>;
   logout(): void;
 }
@@ -232,6 +303,13 @@ interface PendingLogin {
   label: string;
   version: number;
   remote: SyncPayload;
+  /**
+   * Minted here rather than in `resolveLogin`, so a retried resolve reuses
+   * this device's id instead of inventing a second one. `mergeDevice` matches
+   * by id, so a fresh id per attempt would have grown the registry a phantom
+   * row for every failed "Denne enheten".
+   */
+  deviceId: string;
 }
 
 export function createSyncClient(deps: { storage: StorageLike; fetch: typeof fetch }): SyncClient {
@@ -275,6 +353,40 @@ export function createSyncClient(deps: { storage: StorageLike; fetch: typeof fet
     }
   }
 
+  /**
+   * A non-2xx (and non-409) answer to a request that carried `x-np-auth`.
+   *
+   * **401 is the revocation path, not a transient error.** `changePin` is the
+   * feature's only way to drop a device (§4 / §6 step 8) and it works by
+   * making every other device's `authKey` wrong — so a 401 here means this
+   * session is over, permanently, until the student types the new PIN. It was
+   * previously folded into `"failed"`, which left the session in storage:
+   * every load, every visibility flip and every edit retried it, the panel
+   * still read "Sist synkronisert nå", and the advice was "prøv igjen", which
+   * could never work. Worse, the worker's `AuthLimiter` is PER NAME, so ten
+   * of those retries inside 15 minutes locked the account's GOOD devices out
+   * too and made re-login with the new PIN answer "For mange forsøk."
+   *
+   * Dropping the session is what actually stops the retry loop: with
+   * `session` null, `schedulePush` returns early, `shouldPullOnVisible` is
+   * false and a reload starts logged out. The panel then shows the login form
+   * with `"unauthorised"`'s own copy, which is the way back in.
+   *
+   * 429 deliberately does NOT drop the session — that is the lockout above,
+   * and the record was never even read. Nor does 404: the account is not
+   * there right now, which is not proof this credential is wrong.
+   */
+  function authFailure(status: number): { ok: false; reason: string } {
+    if (status === 401) {
+      writeSession(null);
+      return { ok: false, reason: "unauthorised" };
+    }
+    if (status === 404) return { ok: false, reason: "no_account" };
+    if (status === 429) return { ok: false, reason: "too_many_attempts" };
+    if (status === 503) return { ok: false, reason: "unavailable" };
+    return { ok: false, reason: "failed" };
+  }
+
   /** Shared by `push()` and `resolveLogin("local")`, which pushes the local
    *  payload over the remote's after the student keeps this device's plan. */
   async function pushInternal(): Promise<SyncResult> {
@@ -297,10 +409,47 @@ export function createSyncClient(deps: { storage: StorageLike; fetch: typeof fet
       writeSession({ ...session, version: body.version });
       return { ok: false, reason: "stale" };
     }
-    if (!res.ok) return { ok: false, reason: "failed" };
+    if (!res.ok) return authFailure(res.status);
     const { version } = (await res.json()) as { version: number };
     writeSession({ ...session, version, devices: payload.devices });
     return { ok: true };
+  }
+
+  /** `fetchRemote`, as a plain function so `pull()` can reuse it. */
+  async function fetchRemoteInternal(): Promise<FetchResult> {
+    if (!session) return { ok: false, reason: "no_session" };
+    const res = await safeFetch(`/api/sync/${encodeURIComponent(session.navn)}`, {
+      headers: { "x-np-auth": session.authKey },
+    });
+    if (res === null) return { ok: false, reason: "failed" };
+    if (!res.ok) return authFailure(res.status);
+    const body = (await res.json()) as { blob: string; version: number };
+    const plain = await open(session.encKeyRaw, body.blob);
+    if (plain === null) return { ok: false, reason: "undecryptable" };
+    return {
+      ok: true,
+      snapshot: { payload: JSON.parse(plain) as SyncPayload, version: body.version },
+    };
+  }
+
+  /** `applyRemote`, as a plain function so `pull()` can reuse it. */
+  function applyRemoteInternal(snapshot: RemoteSnapshot): void {
+    // `fetchRemote` and this call are separated by a network round trip the
+    // caller may have spent logging out (or being logged out by a 401 on
+    // another request), so the session it was fetched under has to still be
+    // here for the version/registry write below to mean anything.
+    if (!session) return;
+    applySyncable(deps.storage, snapshot.payload);
+    const self: DeviceEntry = {
+      id: session.deviceId,
+      label: session.label,
+      lastSeen: new Date().toISOString(),
+    };
+    writeSession({
+      ...session,
+      version: snapshot.version,
+      devices: mergeDevice(snapshot.payload.devices, self),
+    });
   }
 
   return {
@@ -364,7 +513,14 @@ export function createSyncClient(deps: { storage: StorageLike; fetch: typeof fet
       const local = collectSyncable(deps.storage);
       const summary = describeCollision(local, remote, local.lastSemester);
       if (summary) {
-        pending = { navn, keys, label, version: body.version, remote };
+        pending = {
+          navn,
+          keys,
+          label,
+          version: body.version,
+          remote,
+          deviceId: crypto.randomUUID(),
+        };
         return { ok: false, reason: "collision", local, remote };
       }
 
@@ -382,13 +538,26 @@ export function createSyncClient(deps: { storage: StorageLike; fetch: typeof fet
       return { ok: true };
     },
 
+    /**
+     * `pending` is cleared only once this actually SUCCEEDS.
+     *
+     * Clearing it up front made a failed `resolveLogin("local")` unwinnable:
+     * the panel showed "Prøv igjen", and every retry answered `no_pending`
+     * — the same dead-end class Task 7 fixed on the auth buttons. The session
+     * is still written before the push (that half did land, and this device is
+     * logged in either way); what is held is the material a retry needs.
+     * `p.deviceId` is stable across attempts, so retrying re-writes the same
+     * registry row rather than adding one.
+     */
     async resolveLogin(choice) {
       const p = pending;
       if (!p) return { ok: false, reason: "no_pending" };
-      pending = null;
 
-      const id = crypto.randomUUID();
-      const self: DeviceEntry = { id, label: p.label, lastSeen: new Date().toISOString() };
+      const self: DeviceEntry = {
+        id: p.deviceId,
+        label: p.label,
+        lastSeen: new Date().toISOString(),
+      };
       if (choice === "remote") applySyncable(deps.storage, p.remote);
       // choice === "local": storage already holds this device's own plan,
       // untouched since `login()` — nothing to apply, it is what gets pushed
@@ -398,11 +567,21 @@ export function createSyncClient(deps: { storage: StorageLike; fetch: typeof fet
         authKey: p.keys.authKey,
         encKeyRaw: p.keys.encKeyRaw,
         version: p.version,
-        deviceId: id,
+        deviceId: p.deviceId,
         label: p.label,
         devices: mergeDevice(p.remote.devices, self),
       });
-      if (choice === "local") return pushInternal();
+      if (choice === "local") {
+        const result = await pushInternal();
+        if (!result.ok) {
+          // `pushInternal` corrects `session.version` on a 409; carrying it
+          // back onto the pending login is what lets the retry start from the
+          // version the server actually holds rather than re-sending a stale one.
+          if (session) p.version = session.version;
+          return result;
+        }
+      }
+      pending = null;
       return { ok: true };
     },
 
@@ -436,7 +615,11 @@ export function createSyncClient(deps: { storage: StorageLike; fetch: typeof fet
         writeSession({ ...session, version: body.version });
         return { ok: false, reason: "stale" };
       }
-      if (!res.ok) return { ok: false, reason: "failed" };
+      // 401 here means someone else already changed the PIN — the old
+      // credential this request authorised with is gone. Same revocation, same
+      // honest answer as `push`/`fetchRemote` (see `authFailure`); the
+      // atomicity note above still holds, since nothing was written server-side.
+      if (!res.ok) return authFailure(res.status);
       const { version } = (await res.json()) as { version: number };
       writeSession({
         ...session,
@@ -452,28 +635,14 @@ export function createSyncClient(deps: { storage: StorageLike; fetch: typeof fet
       return pushInternal();
     },
 
+    fetchRemote: fetchRemoteInternal,
+
+    applyRemote: applyRemoteInternal,
+
     async pull() {
-      if (!session) return { ok: false, reason: "no_session" };
-      const res = await safeFetch(`/api/sync/${encodeURIComponent(session.navn)}`, {
-        headers: { "x-np-auth": session.authKey },
-      });
-      if (res === null) return { ok: false, reason: "failed" };
-      if (!res.ok) return { ok: false, reason: "failed" };
-      const body = (await res.json()) as { blob: string; version: number };
-      const plain = await open(session.encKeyRaw, body.blob);
-      if (plain === null) return { ok: false, reason: "undecryptable" };
-      const remote = JSON.parse(plain) as SyncPayload;
-      applySyncable(deps.storage, remote);
-      const self: DeviceEntry = {
-        id: session.deviceId,
-        label: session.label,
-        lastSeen: new Date().toISOString(),
-      };
-      writeSession({
-        ...session,
-        version: body.version,
-        devices: mergeDevice(remote.devices, self),
-      });
+      const fetched = await fetchRemoteInternal();
+      if (!fetched.ok) return { ok: false, reason: fetched.reason };
+      applyRemoteInternal(fetched.snapshot);
       return { ok: true };
     },
 

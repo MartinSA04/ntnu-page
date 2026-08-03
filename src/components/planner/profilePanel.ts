@@ -30,7 +30,7 @@
  * control in the page chrome, which is never removed from the document — so
  * the native `showModal()`/`close()` focus return needs no manual fallback.
  */
-import type { PlanStore } from "../../lib/planner/store.js";
+import { activeCourses, type PlanCourse, type PlanStore } from "../../lib/planner/store.js";
 import {
   type DeviceEntry,
   describeCollision,
@@ -61,9 +61,24 @@ export interface ProfilePanelDeps {
   signal: AbortSignal;
 }
 
-/** What `setSyncState` renders on the "Sist synkronisert" line and this
- *  device's own row. Mirrors the three states a push can end in. */
-export type SyncUiState = "ok" | "failed" | "syncing";
+/**
+ * What `setSyncState` renders on the "Sist synkronisert" line and this
+ * device's own row.
+ *
+ * `"unauthorised"` is not a fourth flavour of failure — it is the end of the
+ * session. `changePin` on another device is this feature's only revocation
+ * (§4 / §6 step 8), and it works by making every other device's `authKey`
+ * wrong, so this device is now signed out whether or not it has noticed.
+ * `syncClient.ts`'s `authFailure` drops the stored session on the 401 that
+ * proves it; this state is what carries the reason across to the panel, which
+ * shows the login form and says why. Without it the panel kept reading "Sist
+ * synkronisert nå" over a session where every request 401'd, and offered
+ * "prøv igjen" — advice that could never succeed.
+ */
+export type SyncUiState = "ok" | "failed" | "syncing" | "unauthorised";
+
+/** The one sentence a revoked session gets, everywhere it can surface. */
+const REAUTH_COPY = "PIN-en er endret. Logg inn på nytt.";
 
 export interface ProfilePanelHandle {
   show(): void;
@@ -137,6 +152,8 @@ function reasonCopy(reason: string): string {
       return "For mange forsøk. Prøv igjen senere.";
     case "unavailable":
       return "Tjenesten er utilgjengelig. Prøv igjen senere.";
+    case "unauthorised":
+      return REAUTH_COPY;
     default:
       return "Noe gikk galt. Prøv igjen.";
   }
@@ -198,6 +215,7 @@ export async function attemptAuth(
 /** The "Sist synkronisert" line's text for each `SyncUiState`. */
 function syncStatusLine(state: SyncUiState): string {
   if (state === "syncing") return "Synkroniserer …";
+  if (state === "unauthorised") return REAUTH_COPY;
   if (state === "failed") return "Ikke synkronisert · prøv igjen";
   return "Sist synkronisert nå";
 }
@@ -205,6 +223,7 @@ function syncStatusLine(state: SyncUiState): string {
 /** What a device row appends after its platform/browser label. */
 function syncSuffix(state: SyncUiState): string {
   if (state === "syncing") return "synkroniserer";
+  if (state === "unauthorised") return "logget ut";
   if (state === "failed") return "prøv igjen";
   return "nå";
 }
@@ -239,11 +258,18 @@ function courseWord(n: number): string {
  * `code` — malformed or missing rows count as nothing rather than throwing,
  * since this only ever runs on a payload this client just decrypted or holds
  * locally, never on something a mistake elsewhere should crash the panel over.
+ *
+ * DROPPED ROWS DO NOT COUNT. `activeCourses` is the one definition of "what
+ * actually counts toward credits" the rest of the planner uses, and this
+ * summed everything — so the one prompt the design keeps printed a total the
+ * page itself contradicts, over courses the student had already dropped.
  */
-function creditsFor(payload: SyncPayload, semesterId: string): number {
+export function creditsFor(payload: SyncPayload, semesterId: string): number {
   try {
-    const plans = JSON.parse(payload.plans) as Record<string, Array<{ credits?: unknown }>>;
-    return (plans[semesterId] ?? []).reduce(
+    const plans = JSON.parse(payload.plans) as Record<string, PlanCourse[]>;
+    const rows = plans[semesterId];
+    if (!Array.isArray(rows)) return 0;
+    return activeCourses({ courses: rows }).reduce(
       (sum, row) => sum + (typeof row.credits === "number" ? row.credits : 0),
       0,
     );
@@ -391,7 +417,17 @@ export function mountProfilePanel(deps: ProfilePanelDeps): ProfilePanelHandle {
 
     // Permanently mounted, never `hidden` — mirrors studieinfo's own hint, so
     // a refused submit is described from the button that caused it (below).
-    const hint = el("p", "np-hint profile-panel-hint", "");
+    // Normally empty. The one exception is a session this device did not end
+    // itself: `syncClient.ts` drops it on the 401 a PIN change elsewhere
+    // produces, which lands the student here with no explanation unless this
+    // form carries one. THIS is the "way back to the login form" — the panel
+    // does not need a separate re-login affordance, because the signed-out
+    // state already is one; what it needed was to say why it is showing.
+    const hint = el(
+      "p",
+      "np-hint profile-panel-hint",
+      syncState === "unauthorised" ? REAUTH_COPY : "",
+    );
     hint.id = "profile-panel-hint";
     hint.setAttribute("aria-live", "polite");
     body.append(hint);
@@ -723,8 +759,13 @@ export function mountProfilePanel(deps: ProfilePanelDeps): ProfilePanelHandle {
       syncState = state;
       // Only re-renders while there is something on screen to correct — Task
       // 8 calls this after every push, most of which happen with the panel
-      // closed or the student mid-signup (not signed in yet).
-      if (dialog.open && deps.sync.session()) render();
+      // closed or the student mid-signup (not signed in yet). The
+      // `"unauthorised"` exception is the case where the session has ALREADY
+      // been dropped, so `session()` is null and the plain check would skip
+      // exactly the render that has to happen: signed-in view → login form,
+      // with the reason on it. It cannot wipe a half-typed signup, because a
+      // session had to exist for the 401 that produced this state.
+      if (dialog.open && (deps.sync.session() !== null || state === "unauthorised")) render();
     },
   };
 }

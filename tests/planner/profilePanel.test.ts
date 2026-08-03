@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { attemptAuth, deviceLabel, pinIsValid } from "../../src/components/planner/profilePanel.js";
+import {
+  attemptAuth,
+  creditsFor,
+  deviceLabel,
+  pinIsValid,
+} from "../../src/components/planner/profilePanel.js";
 import type {
   LoginResult,
   SyncClient,
@@ -44,6 +49,49 @@ describe("deviceLabel", () => {
   });
 });
 
+describe("creditsFor", () => {
+  const withCredits = (rows: unknown[]): SyncPayload => ({
+    profile: "{}",
+    plans: JSON.stringify({ "26h": rows }),
+    lastSemester: "26h",
+    devices: [],
+  });
+
+  it("sums the semester's credits", () => {
+    expect(
+      creditsFor(
+        withCredits([
+          { code: "TDT4100", name: "A", credits: 7.5 },
+          { code: "TDT4120", name: "B", credits: 7.5 },
+        ]),
+        "26h",
+      ),
+    ).toBe(15);
+  });
+
+  // The collision prompt is the one place these numbers are shown, and it
+  // used to contradict the page: `activeCourses` is what "counts" everywhere
+  // else, and a dropped course counts for nothing.
+  it("does not count a dropped course", () => {
+    expect(
+      creditsFor(
+        withCredits([
+          { code: "TDT4100", name: "A", source: "program", credits: 7.5 },
+          { code: "TDT4120", name: "B", source: "program", credits: 7.5, dropped: true },
+        ]),
+        "26h",
+      ),
+    ).toBe(7.5);
+  });
+
+  it("reads a missing or malformed semester as zero rather than throwing", () => {
+    expect(creditsFor(withCredits([]), "27v")).toBe(0);
+    expect(
+      creditsFor({ profile: "{}", plans: "not json", lastSemester: "26h", devices: [] }, "26h"),
+    ).toBe(0);
+  });
+});
+
 /** A `SyncClient` double: every method resolves/no-ops by default, so a test
  *  only has to override the one method it cares about. */
 function fakeSyncClient(overrides: Partial<SyncClient> = {}): SyncClient {
@@ -54,6 +102,8 @@ function fakeSyncClient(overrides: Partial<SyncClient> = {}): SyncClient {
     resolveLogin: async () => ({ ok: true }),
     changePin: async () => ({ ok: true }),
     push: async () => ({ ok: true }),
+    fetchRemote: async () => ({ ok: false, reason: "no_session" }),
+    applyRemote: () => {},
     pull: async () => ({ ok: true }),
     logout: () => {},
     ...overrides,
