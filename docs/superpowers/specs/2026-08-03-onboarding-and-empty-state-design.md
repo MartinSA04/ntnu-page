@@ -2,6 +2,31 @@
 
 Date: 2026-08-03
 
+## Prerequisite: this is built AFTER publish-and-share
+
+**Do not start this until
+`docs/superpowers/plans/2026-08-03-publish-and-share.md` has landed, Task 5
+included.** This spec is written against the world that plan leaves behind, and
+two of its decisions are wrong before it:
+
+1. **The hash is deleted** (the sync design's §5, in
+   `2026-08-02-accountless-sync-design.md`). Sharing becomes publish plus
+   `/user/<navn>`, the recipient *views* it, and nothing is ever written to
+   their storage. So `localStorage` becomes the only way a plan can reach
+   `/planlegger/`, which is what makes this spec's §1 predicate complete. Built
+   before Task 5, the same design needs a hash branch in the pre-paint script,
+   which breaks the sync design's stated invariant that nothing in the CLS
+   machinery depends on the hash, and then has to be unwound.
+2. **The publish flow writes new UI copy**, and it is copy in the old
+   punctuation: `Mac · Safari`, `iPhone · Safari — nå`, `Denne enheten — 5
+   emner · 30 sp`, `Ikke synkronisert · prøv igjen`. Running this spec's §5
+   sweep first would have it re-violated by the next feature to land. Running
+   it second means the sweep covers the publish flow's strings too, and its
+   test gate is what keeps them right afterwards.
+
+The dependency is one-directional: publish-and-share does not need anything
+here.
+
 ## Why
 
 `/planlegger/` with no plan is the one screen where a new student has no other
@@ -35,49 +60,24 @@ Five things, in dependency order.
 
 ### 1. First run is `html:not([data-plan])`, which the probe already writes
 
-No new attribute. `Layout.astro`'s pre-paint script sets `data-plan` to
-`"program"` when a programme is stored, `"courses"` when the count is above
-zero, and **removes it otherwise** — so its absence is already exactly "no
-programme and no courses", written before the first frame and kept true for the
-rest of the visit by `src/lib/planProbe.ts`. `html:not([data-plan])` is the
-first-run predicate, and committing a programme clears it without a reload.
+No new attribute, and no new mechanism. `Layout.astro`'s pre-paint script sets
+`data-plan` to `"program"` when a programme is stored, `"courses"` when the
+count is above zero, and **removes it otherwise** — so its absence is already
+exactly "no programme and no courses", written before the first frame and kept
+true for the rest of the visit by `src/lib/planProbe.ts`.
+`html:not([data-plan])` is the first-run predicate, and committing a programme
+clears it without a reload.
+
+That predicate is complete **because the hash is gone** (see Prerequisite
+above). `localStorage` is the only way a plan can reach `/planlegger/`, so what
+the probe reads is the whole truth about whether this load has one. Nothing is
+added to the pre-paint script, and the sync design's invariant — *"nothing in
+the CLS machinery depends on the hash"* — stays true.
 
 Why a pre-paint attribute rather than JS-built DOM: the probe is the one
 mechanism that runs before the first frame, so a CSS-gated panel paints **with**
 the document. No mount flash, no reserved void, and no reservation to lease and
 release.
-
-#### The one thing the probe does not see yet: a plan arriving by hash
-
-The probe reads localStorage only, so a shared `#26h;…` link pasted into a
-fresh browser has no `data-plan` at pre-paint. Today that costs a reservation
-(`--plan-courses` is 0, so the incoming plan's course rows shift in). Once the
-first-run screen is static markup it would also cost a **visible flash**: the
-picker paints, then the plan replaces it a frame later, on the north-star flow.
-
-So the pre-paint script gains one branch — if `location.hash` matches
-`/^#\d{2}[hv]/i`, the hash's own first gate in `parsePlanHash`, treat the load
-as carrying a plan and leave `data-plan` set. It is a shape test, not a parse:
-the probe is forgiving everywhere else for the same reason, and here the safe
-failure is showing the planner to a student with no plan rather than hiding a
-plan that exists. It does **not** try to count courses out of the hash; that
-would duplicate the hash grammar in a pre-paint script for the sake of code
-with a deletion date.
-
-**This branch has a deletion date.**
-`docs/superpowers/specs/2026-08-02-accountless-sync-design.md` §5 deletes the
-hash outright — sharing becomes publish plus `/user/<navn>`, the recipient
-*views* it, and nothing is ever written to their storage. After that,
-`/planlegger/` can only ever receive a plan from localStorage, the predicate is
-purely `html:not([data-plan])`, and §5's stated invariant ("nothing in the CLS
-machinery depends on the hash") is true again. The branch is therefore listed as
-a deletion site in `docs/superpowers/plans/2026-08-03-publish-and-share.md`
-Task 5 alongside `syncHash`, `parsePlanHash` and the rest, so it cannot be
-orphaned.
-
-**Sequencing:** this work does not depend on the hash deletion and the hash
-deletion does not depend on this. If Task 5 lands first, skip the branch
-entirely and write the predicate as `html:not([data-plan])`.
 
 ### 2. The first-run screen
 
@@ -211,20 +211,23 @@ name the page and nothing else in the tab.
 **"Tegne uka" is struck from the vocabulary**, in UI copy and in new comments.
 The replacement idiom is "så er uka klar".
 
-Scope: strings a student can read, in `src/` and `worker/`. Code comments and
-the four docs keep their existing voice — they are written in a heavily
-em-dashed register, and rewriting ~900 of them would bury this work in a
-mechanical diff without changing anything anyone reads.
+Scope: strings a student can read, in `src/` and `worker/`. That includes
+everything publish-and-share leaves behind — the signup and login copy, the
+device list, the sync-failure line, and the `/user/<navn>` read-only view, all
+of which land before this work starts and all of which are written in the old
+punctuation. Code comments and the four docs keep their existing voice: they
+are written in a heavily em-dashed register, and rewriting ~900 of them would
+bury this work in a mechanical diff without changing anything anyone reads.
 
 ## Architecture
 
 Nothing new is introduced. Every mechanism this uses is one the codebase
 already documents:
 
-- **The probe** (`Layout.astro` pre-paint script + `src/lib/planProbe.ts`)
-  gains no attribute at all — only the hash branch above, which has a deletion
-  date. It keeps its existing contract: forgiving, every failure path landing on
-  the reservation-free answer, re-applied on `astro:after-swap`.
+- **The probe** (`Layout.astro` pre-paint script + `src/lib/planProbe.ts`) is
+  **not touched at all**. It already writes the fact this design reads, and
+  because the hash is gone by then, that fact is complete. This is the whole
+  reason for the sequencing.
 - **The picker** (`studieinfo.ts`) gains one policy field. Its element,
   lifecycle and focus contract are unchanged, and the dialog's behaviour is
   unchanged.
@@ -249,14 +252,9 @@ design.
   reintroduced a mark", which is a real regression rather than a change of
   mind.
 - **Unit:** the probe's first-run predicate, over the cases that decide it —
-  empty storage, courses only, programme only, malformed payload, and a plan
-  hash with empty storage.
+  empty storage, courses only, programme only, and a malformed payload.
 - **e2e:** first run → programme → kull → a drawn week, with no dialog in the
   path.
-- **e2e:** a shared plan link opened on a fresh profile never shows the
-  first-run screen. This one is **deleted with the hash**, not carried forward:
-  after §5 there is no way for `/planlegger/` to receive a plan it did not store
-  itself, and the case it guards stops existing.
 - **e2e:** `cls.pw.ts` gains a first-run budget for `/planlegger/`. The
   existing planner budgets are measured with a plan and do not cover this
   state.
@@ -274,4 +272,5 @@ Real, separate, and deliberately not bundled:
   this makes the onboarding flow untestable in dev and should be fixed before
   the next person iterates on it.
 - **The typeahead's meta line prints "trondheim" lowercase.**
-- **Provenance on `/emne/[code]/`** and everything else in ROADMAP Phase 3+.
+- **Provenance on `/emne/[code]/`** and everything else in ROADMAP Phase 4+.
+  Phase 3 is not out of scope; it is the prerequisite.
