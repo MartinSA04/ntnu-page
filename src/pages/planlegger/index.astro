@@ -35,14 +35,37 @@ const description =
         the view switch and the layer box used to sit in the week's own section
         head, a second bar 200 px lower saying the same kind of thing. */}
     <div class="planner-head">
-      <div class="planner-name">
-        <h1 class="planner-title" id="planner-title">Semesterplan</h1>
-        {/* Always filled by `renderBanner` — the programme's long name, or the
-            semester the empty week is for — so the one line it will occupy is
-            held from first paint rather than appearing at mount and pushing
-            the whole page down 21px. */}
-        <p class="np-hint planner-context-line" id="planner-context-line"></p>
-      </div>
+      {/* THE NAME IS THE DOOR. The title states the plan's programme and kull;
+          pressing it is how you change them. That is what makes the picker's
+          entrance free: a fifth control in the action run would have cost a
+          slot the phone menu then has to fold, and this costs no width at all.
+
+          Underlined on HOVER only, the grammar `.planner-chip.is-jump` already
+          sets for the collision verdict: at rest this is the plan's name and
+          has to read as one. The chevron carries the affordance while nothing
+          is hovering it. */}
+      <button type="button" class="planner-name" id="planner-name-btn">
+        <span class="planner-name-text">
+          <h1 class="planner-title" id="planner-title">Semesterplan</h1>
+          {/* Always filled by `renderBanner` — the programme's long name, or the
+              semester the empty week is for — so the one line it will occupy is
+              held from first paint rather than appearing at mount and pushing
+              the whole page down 21px. */}
+          <p class="np-hint planner-context-line" id="planner-context-line"></p>
+        </span>
+        {/* It does not turn. This opens a modal, not a disclosure under itself,
+            so there is no open state for the mark to reflect. */}
+        <svg
+          class="planner-name-mark"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          aria-hidden="true"
+          focusable="false"><path d="m6 9 6 6 6-6"></path></svg>
+      </button>
 
       {/* The layer is a box you tick; the view is a switch you throw. They read
           as two kinds of control because they are. */}
@@ -314,10 +337,63 @@ const description =
   }
 
   /* Pushes everything else to the far end, and is allowed to shrink first: a
-     42-character programme name may ellipsise, a control may not. */
+     42-character programme name may ellipsise, a control may not.
+
+     A BUTTON THAT DOES NOT LOOK LIKE ONE — no paper, no border, no padding
+     beyond its own text, because what it has to read as is the plan's name.
+     `text-align: start` is load-bearing: a `<button>` centres its content by
+     default, which would have shoved the whole identity block to the middle of
+     the bar. `font: inherit` likewise — the UA's own button font would have
+     taken the title's size with it. */
   .planner-name {
+    display: flex;
+    align-items: center;
+    gap: var(--gap-2);
     margin-inline-end: auto;
     min-width: 0;
+    padding: 0;
+    background: none;
+    border: 0;
+    color: inherit;
+    font: inherit;
+    text-align: start;
+    cursor: pointer;
+  }
+
+  .planner-name-text {
+    min-width: 0;
+  }
+
+  .planner-name-mark {
+    flex: none;
+    width: 18px;
+    height: 18px;
+    color: var(--muted);
+    transition: color var(--dur-fast) var(--ease);
+  }
+
+  /* The affordance arrives on hover and on keyboard focus, never at rest. */
+  .planner-name:not(:disabled):hover .planner-title,
+  .planner-name:not(:disabled):focus-visible .planner-title {
+    text-decoration: underline;
+    text-underline-offset: 4px;
+  }
+
+  .planner-name:not(:disabled):hover .planner-name-mark {
+    color: var(--fg);
+  }
+
+  /* No programme yet: the title is a word, not a fact, so there is nothing to
+     press and the empty state's own card is the single way in. It has to look
+     exactly like the plain heading it replaced — full ink, no chevron, no
+     pointer — because nothing about the page has gone unavailable. */
+  .planner-name:disabled {
+    cursor: default;
+    color: inherit;
+  }
+
+  .planner-name:disabled .planner-name-mark {
+    display: none;
   }
 
   /* The verdict's own line, between the plan's name and the week it judges. */

@@ -2092,6 +2092,11 @@ test.describe("the programme picker lives on the planner", () => {
     page,
   }) => {
     await page.goto("/planlegger/");
+    // With no programme the title is a word rather than a fact, so it is NOT a
+    // door — and the strict-mode resolution below is the assertion: an enabled
+    // one here would be a second control named "Velg studieprogram" on a
+    // screen that already has the card's.
+    await expect(page.locator("#planner-name-btn")).toBeDisabled();
     // The empty state's own primary route still lands in the programme field.
     await page.getByRole("button", { name: "Velg studieprogram" }).click();
     const dialog = page.locator("#planner-studieinfo");
@@ -2107,5 +2112,26 @@ test.describe("the programme picker lives on the planner", () => {
     await page.locator("#site-account-btn").click();
     await expect(page.locator("#planner-profile-panel")).toBeVisible();
     await expect(page.locator("#planner-profile-panel #studieinfo-program-input")).toHaveCount(0);
+  });
+
+  test("a stored programme makes the title the way back into the picker", async ({ page }) => {
+    await page.addInitScript(() => {
+      localStorage.setItem(
+        "np:profile",
+        JSON.stringify({ program: { code: "MTDT", cohort: 2026, name: "Datateknologi" } }),
+      );
+    });
+    await page.goto("/planlegger/");
+    const door = page.locator("#planner-name-btn");
+    await expect(door).toContainText("MTDT");
+    // At rest it is a NAME, not a button: no underline until the pointer is on
+    // it, the same grammar `.planner-chip.is-jump` sets for the verdict.
+    expect(
+      await door.locator(".planner-title").evaluate((n) => getComputedStyle(n).textDecorationLine),
+    ).toBe("none");
+    // The accessible name is the errand, not the whole banner read end to end.
+    await expect(door).toHaveAttribute("aria-label", "Endre studieprogram · MTDT kull 2026");
+    await door.click();
+    await expect(page.locator("#planner-studieinfo")).toBeVisible();
   });
 });

@@ -234,6 +234,9 @@ class FakeEl {
 
 const IDS = [
   "planner-title",
+  // The identity block, which is also the door into the programme picker —
+  // `renderBanner` writes its aria-label, so a missing one fails the mount.
+  "planner-name-btn",
   "planner-context-line",
   // The plan's own semester control. It sits beside programme, kull and
   // studieretning again — all four describe the PLAN, and all four are the

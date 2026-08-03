@@ -231,6 +231,8 @@ function saveWeekBox(view: WeekView, width: number, height: number): void {
 
 interface PlannerElements {
   title: HTMLElement;
+  /** The identity block, which is also the door into the programme picker. */
+  nameBtn: HTMLButtonElement;
   contextLine: HTMLElement;
   semesterSelect: HTMLSelectElement;
   linkNote: HTMLElement;
@@ -270,6 +272,7 @@ function getElements(): PlannerElements | null {
 
   const found = {
     title: byId<HTMLElement>("planner-title"),
+    nameBtn: byId<HTMLButtonElement>("planner-name-btn"),
     contextLine: byId<HTMLElement>("planner-context-line"),
     semesterSelect: byId<HTMLSelectElement>("planner-semester-select"),
     linkNote: byId<HTMLElement>("planner-link-note"),
@@ -1201,6 +1204,14 @@ export async function mountPlannerApp(
     { signal: lifeSignal },
   );
 
+  // The plan's name is the way back into the picker that set it. Always
+  // `"program"`: the door is the title, the title states programme and kull,
+  // and the caret belongs on the first of the two. The studieretning prompt
+  // has its own control and asks for `"direction"` instead.
+  elements.nameBtn.addEventListener("click", () => openStudieinfo("program"), {
+    signal: lifeSignal,
+  });
+
   // --- Banner ------------------------------------------------------------
 
   /**
@@ -1246,6 +1257,28 @@ export async function mountPlannerApp(
       );
     } else {
       title.textContent = "Semesterplan";
+    }
+
+    // PRESS THE FACT TO CHANGE THE FACT — so with no fact there is nothing to
+    // press. Disabled rather than merely unstyled: the empty state's own card
+    // already carries a "Velg studieprogram" button, and an enabled door here
+    // put two controls with that same accessible name on one screen, which is
+    // the two-doors-into-one-room shape the bar was cleaned of. Disabling
+    // takes it out of the tab order and out of the a11y tree's interactive
+    // set, and the title keeps its ink and its place either way.
+    const nameBtn = elements.nameBtn;
+    nameBtn.disabled = !program;
+    // The accessible name is the ERRAND, not the button's two children read
+    // end to end: without this a screen reader announced the whole banner —
+    // "MTFYMA Kull 24 Uke 34 · Master i fysikk og matematikk" — as one
+    // control's label, naming everything except what pressing it does.
+    if (program) {
+      nameBtn.setAttribute(
+        "aria-label",
+        `Endre studieprogram · ${program.code} kull ${program.cohort}`,
+      );
+    } else {
+      nameBtn.removeAttribute("aria-label");
     }
 
     elements.contextLine.replaceChildren();
