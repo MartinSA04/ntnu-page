@@ -363,6 +363,14 @@ deadline cannot share one 390 px row, so a **qualified** pass spends 27 px
 more than a plan whose pass says nothing. Only a qualified plan spends it —
 an unqualified clean verdict is still hidden on a phone.
 
+Measured at 390 × 844 on that qualified plan, the week's frame has started at
+277 px, then 304 px when the qualified pass began printing, and **260 px
+(31 %) since the plan bar folded into its ⋯ menu** on 2026-08-03. The fold
+bought back **one** row of controls, 44 px — not two: the plan's name and the
+view switch still take a row each. The budget stays at 0.37 rather than being
+tightened onto the new reading; the fraction is the claim, and the measurement
+is only evidence that the claim currently holds.
+
 ---
 
 ## 7. Motion
@@ -523,11 +531,13 @@ Settled, with the reasoning, so they are not re-opened by the next reviewer.
   control is the authority, so the title stops competing with it. This
   supersedes the three-part shape recorded here before 2026-08-03.
 
-  It buys **no vertical space**: measured at 390 px the week's frame starts at
-  304 px before and after, because the title's row is a full-width block whose
-  height comes from one line of 1.25 rem plus the context line, not from how
-  many words are on it. The bar still wraps to three rows. That is the honest
-  result and the reason to make the change is the redundancy, not the budget.
+  It bought **no vertical space**: measured at 390 px the week's frame started
+  at 304 px before and after, because the title's row is a full-width block
+  whose height comes from one line of 1.25 rem plus the context line, not from
+  how many words are on it. The bar still wrapped to three rows. That was the
+  honest result, and the reason to make the change was the redundancy, not the
+  budget. (The fold later took it to two rows and 260 px — see §6. That is a
+  different change, and it is the one that bought the space.)
 
   The one string that still names the term in short form is gone with it:
   `semesterShort` was deleted with its only caller. Everything that names a
@@ -541,20 +551,51 @@ Settled, with the reasoning, so they are not re-opened by the next reviewer.
   A long name ellipsises — the bar is one row at 390 px or §6's phone gate
   fails, since that gate measures from the viewport's top.
 
-  **Below the site's mobile breakpoint (480 px) it is the mark alone.** The
-  name used to stay visible on the argument that saying who you are is the
-  whole point of it; capped at 6ch it stopped doing that ("Martin…" beside a
-  glyph that already says "you"), and signed out it spent the same room on the
-  word "Profil" beside a person mark — a label naming its own icon. The
-  information **moves rather than goes**: `aria-label` carries "Profil ·
-  {navn}" at every width, so the constraint costs a sighted phone user a
-  truncated word and costs a screen reader nothing. The target is **44 px
-  square** there — alone in the bar it has nothing beside it to forgive a miss,
-  and the topbar is 64 px tall so the room is already paid for. The mark is
-  `user` at every width: the room behind the door is programme, kull,
-  studieretning and the session — who you are, not what the page is set to — so
-  a cog would claim settings, and `settings-2` is spoken for by the plan's own
-  control.
+  **Below 480 px it is a row in the topbar's menu, and the name is visible
+  there.** This supersedes the mark-alone rule that stood here for part of
+  2026-08-03. That rule was a concession, not a design: capped at 6ch the name
+  stopped saying anything ("Martin…" beside a glyph that already says "you")
+  and signed out it spent the same room on the word "Profil" beside a person
+  mark, so the text was dropped and `aria-label` carried "Profil · {navn}"
+  alone. A menu row has the width for a whole name, so the concession is
+  repealed — the sighted phone user gets back what only a screen reader had.
+  The `aria-label` stays at every width, and the row is still a **44 px**
+  target. The mark is `user` at every width: what is behind the door is the
+  session, which is who you are and not what the page is set to, so a cog would
+  claim settings and `settings-2` is spoken for by the plan's own control.
+
+  Folding also **repeals three economies the bar was paying for those
+  controls**: the wordmark's size step-down, its ellipsis, and the dropped mono
+  suffix. "Semesterplan NTNU" is whole at 360 px again.
+
+- **A bar that runs out of room folds into a menu, and the WRAPPER is what
+  folds.** One controller (`src/lib/menuPanel.ts`), two bars. Above its
+  breakpoint the wrapper is `display: contents`, so its children are the bar's
+  own flex children and the wide layout is exactly what it would be with no
+  menu at all; below it the wrapper is an absolutely-positioned `.np-frame`
+  panel, drawn only while the bar carries `data-menu="open"`.
+
+  Three things about that are load-bearing. It is **not** a `<dialog>` and not
+  `[popover]`, because neither can be switched back to inline layout by CSS and
+  switching is the entire point. The open state is `data-menu` **on the bar**,
+  never `[hidden]` on the wrapper — that rule carries `!important` and would
+  delete the controls at every width rather than only on a phone. And there is
+  **one DOM**: every control that folds is bound by id elsewhere, so a
+  duplicated phone copy would collide and a `matchMedia` node-move would
+  relocate a live `<select>` across resizes and ClientRouter swaps.
+
+  **Each bar folds at its own width** — 480 px for the shell, 46 rem for the
+  plan bar, which is where each actually runs out of room. A 700 px tablet
+  therefore shows ⋯ with the topbar still expanded; that is correct, not
+  inconsistent.
+
+  **What stays out of the menu is what you throw while reading.** The plan
+  bar keeps Uke/Liste; everything else folds. And one rule decides dismissal:
+  **a control that redraws the week closes the menu, a control that only
+  confirms itself stays open.** The layer box and the semester are animated on
+  purpose (§7) so a student can follow the change, which is impossible under a
+  scrim; "Del lenke" holds "Kopiert" in place, and closing would throw away the
+  confirmation the pinned width exists to protect.
 
 - **The hand-over is "Del lenke" → "Kopiert", and the resting state is the
   wider one.** That ordering is the whole decision. The pair was "Del" →

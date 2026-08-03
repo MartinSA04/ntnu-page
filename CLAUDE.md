@@ -152,6 +152,25 @@
   gates all of it with per-surface budgets — verified to fail when (b) is
   removed. Re-measure before changing any number; do not "tidy" a
   `min-height` you cannot see doing anything.
+- **The two chrome bars fold into menus on a phone, and the WRAPPER is what
+  folds** (`src/lib/menuPanel.ts`, one controller, two bars: the shell topbar
+  at 480px and `.planner-head` at 46rem — each folds where *it* runs out of
+  room, so a 700px tablet gets `⋯` with the topbar still expanded). Above its
+  breakpoint the wrapper is `display: contents`, so its children are the bar's
+  own flex children and the wide layout is untouched; below it the wrapper is a
+  positioned panel drawn only while the bar carries `data-menu="open"`. Three
+  things a reasonable person would undo: it is deliberately **not** a
+  `<dialog>` or `[popover]` (neither can be switched back to inline layout by
+  CSS, which is the whole mechanism); the open state is `data-menu` **on the
+  bar**, never `[hidden]` on the wrapper (see the bullet above — that rule
+  beats `display: contents` too and would delete the controls at every width);
+  and there is **one DOM**, because every folded control is bound by id
+  elsewhere, so a duplicated phone copy collides and a `matchMedia` node-move
+  would relocate a live `<select>` mid-interaction. The planner's menu closes
+  on the layer box and the semester but **not** on "Del lenke" — the first two
+  redraw the week and you cannot follow an animation under a scrim, the third
+  holds "Kopiert" in place. `e2e/flows.pw.ts` covers both, including that the
+  menu survives a ClientRouter navigation.
 - **ClientRouter rule (load-bearing):** hoisted page/component scripts run
   ONCE per module — they do NOT re-execute after a view-transition swap. Every
   page's setup must go through `onPage(setup)` (`src/lib/pageLifecycle.ts`),

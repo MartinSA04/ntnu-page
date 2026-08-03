@@ -256,9 +256,9 @@ plan is named. Any credits shown outside `/planlegger/` are best-effort, not
 authoritative.
 
 What the bar does carry is the **account's own door**, on every page, printing
-the account name when there is a session and "Profil" when there is not —
-and below 480 px printing neither, because there is no room: it is the mark
-alone there, with the same words carried by its `aria-label`. That
+the account name when there is a session and "Profil" when there is not. Below
+480 px the bar folds into a menu and the door is a row inside it — still
+printing the name, which the mark-alone treatment it replaced could not. That
 is not the killed chip in another costume: an account is not a plan, and the
 state behind the door (`np:profile`, `np:plans`, `np:lastSemester`) is read by
 `/`, `/emner/` and `/emne/[code]/` as much as by the planner. `/emne/[code]/`
