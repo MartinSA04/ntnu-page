@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   attemptAuth,
+  collisionLines,
   creditsFor,
   deviceLabel,
   pinIsValid,
@@ -89,6 +90,91 @@ describe("creditsFor", () => {
     expect(
       creditsFor({ profile: "{}", plans: "not json", lastSemester: "26h", devices: [] }, "26h"),
     ).toBe(0);
+  });
+});
+
+/**
+ * The one prompt this design keeps, and the copy defect that made it dangerous:
+ * "Behold denne enheten" / "Behold <den andre>" swap the WHOLE `np:plans` map,
+ * but the question described `lastSemester` alone. A student with a full 25h
+ * plan and an empty 26h read "Denne enheten — 0 emner · 0 sp" against "MacBook
+ * — 5 emner · 30 sp", pressed the obvious button, and lost the 25h draft the
+ * prompt had never mentioned.
+ */
+describe("collisionLines", () => {
+  const plans = (byId: Record<string, Array<{ code: string; credits?: number }>>): string =>
+    JSON.stringify(
+      Object.fromEntries(
+        Object.entries(byId).map(([id, rows]) => [
+          id,
+          rows.map((row) => ({ ...row, name: row.code })),
+        ]),
+      ),
+    );
+
+  it("names every semester the choice would replace, not just the current one", () => {
+    const local: SyncPayload = {
+      profile: "{}",
+      plans: plans({
+        "25h": [
+          { code: "TDT4100", credits: 7.5 },
+          { code: "TDT4120", credits: 7.5 },
+        ],
+        "26h": [],
+      }),
+      lastSemester: "26h",
+      devices: [],
+    };
+    const remote: SyncPayload = {
+      profile: "{}",
+      plans: plans({ "26h": [] }),
+      lastSemester: "26h",
+      devices: [],
+    };
+
+    expect(collisionLines(local, remote, "Mac · Safari")).toEqual([
+      {
+        semester: "Høst 2025",
+        local: "Denne enheten — 2 emner · 15 sp",
+        remote: "Mac · Safari — ingen emner · mangler TDT4100, TDT4120",
+      },
+    ]);
+  });
+
+  it("says what each side would lose, in both directions, with comma decimals", () => {
+    const local: SyncPayload = {
+      profile: "{}",
+      plans: plans({ "27v": [{ code: "TMA4105", credits: 7.5 }] }),
+      lastSemester: "27v",
+      devices: [],
+    };
+    const remote: SyncPayload = {
+      profile: "{}",
+      plans: plans({ "27v": [{ code: "TMA4115", credits: 7.5 }] }),
+      lastSemester: "27v",
+      devices: [],
+    };
+
+    expect(collisionLines(local, remote, "iPhone · Safari")).toEqual([
+      {
+        semester: "Vår 2027",
+        local: "Denne enheten — 1 emne · 7,5 sp · mangler TMA4115",
+        remote: "iPhone · Safari — 1 emne · 7,5 sp · mangler TMA4105",
+      },
+    ]);
+  });
+
+  /** The load-bearing property: an ordinary second-device login, where this
+   *  device holds nothing, is never asked anything at all. */
+  it("has nothing to say when this device holds nothing", () => {
+    const local: SyncPayload = { profile: "{}", plans: "{}", lastSemester: "", devices: [] };
+    const remote: SyncPayload = {
+      profile: "{}",
+      plans: plans({ "26h": [{ code: "TDT4120", credits: 7.5 }] }),
+      lastSemester: "26h",
+      devices: [],
+    };
+    expect(collisionLines(local, remote, "Mac · Safari")).toEqual([]);
   });
 });
 

@@ -679,9 +679,31 @@
   font-size: var(--text-sm);
 }
 
-/* §6 step 5's collision question: two full-width choices rather than a row
-   of short actions, because each carries a sentence ("Denne enheten — 5
-   emner · 30 sp"), not a verb. */
+/* §6 step 5's collision question. The facts sit above the buttons, one block
+   per semester the two sides disagree about — the choice replaces the whole
+   plan map, so a single line about one semester described less than the button
+   under it did. */
+.profile-panel-collision-diff {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.profile-panel-collision-semester {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.profile-panel-collision-semester-name {
+  color: var(--fg);
+}
+
+/* Two full-width choices rather than a row of short actions: neither is a
+   cancel, and stacking them keeps the pair from reading as primary + dismiss. */
 .profile-panel-collision-options {
   display: flex;
   flex-direction: column;
@@ -690,8 +712,7 @@
 
 .profile-panel-collision-options .np-btn {
   width: 100%;
-  justify-content: flex-start;
-  text-align: left;
+  justify-content: center;
 }
 
 /* --- Session popover ---------------------------------------------------

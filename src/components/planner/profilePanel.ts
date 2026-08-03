@@ -30,6 +30,7 @@
  * control in the page chrome, which is never removed from the document — so
  * the native `showModal()`/`close()` focus return needs no manual fallback.
  */
+import { semesterYear } from "../../lib/planner/schedule.js";
 import { activeCourses, type PlanCourse, type PlanStore } from "../../lib/planner/store.js";
 import {
   type DeviceEntry,
@@ -276,6 +277,88 @@ export function creditsFor(payload: SyncPayload, semesterId: string): number {
   } catch {
     return 0;
   }
+}
+
+/**
+ * "Høst 2026" for one key of the `np:plans` map. The keys are semester ids
+ * (`26h`/`27v`, `schedule.ts`'s `semesterYear` grammar); anything else — an
+ * empty `lastSemester` that once got written, a hand-edited key — is printed
+ * verbatim rather than guessed at, since the point of naming the semester is
+ * that the student can recognise which plan is at stake.
+ */
+function semesterName(semesterId: string): string {
+  const year = semesterYear(semesterId);
+  if (year === null) return semesterId === "" ? "Uten semester" : semesterId;
+  return `${/h$/i.test(semesterId.trim()) ? "Høst" : "Vår"} ${year}`;
+}
+
+/**
+ * One semester's three lines in the collision question: which semester, and
+ * what each side holds in it.
+ *
+ * Pure and exported so the copy itself is testable — there is no DOM in this
+ * file's unit tests, and the defect this replaced was a copy defect, not a
+ * layout one: the question summarised `lastSemester` while the buttons under
+ * it replaced the whole `np:plans` map.
+ */
+export interface CollisionLine {
+  /** "Høst 2025" */
+  semester: string;
+  /** "Denne enheten — 2 emner · 15 sp" */
+  local: string;
+  /** "Mac · Safari — ingen emner · mangler TDT4100, TDT4120" */
+  remote: string;
+}
+
+/** One side of one semester: "2 emner · 15 sp · mangler TDT4120". */
+function sideLine(
+  name: string,
+  payload: SyncPayload,
+  semesterId: string,
+  count: number,
+  missing: string[],
+): string {
+  const held =
+    count === 0
+      ? "ingen emner"
+      : `${count} ${courseWord(count)} · ${formatCreditNumber(creditsFor(payload, semesterId))} sp`;
+  const lacks = missing.length > 0 ? ` · mangler ${missing.join(", ")}` : "";
+  return `${name} — ${held}${lacks}`;
+}
+
+/**
+ * Every semester the two sides disagree about, in the delta idiom §6 step 5
+ * already uses — one block per semester instead of one line about whichever
+ * semester this device happened to be looking at.
+ *
+ * Empty only when there is nothing to ask about at all, which `renderCollision`
+ * cannot reach: `login()` raises the collision from the same `describeCollision`
+ * call, over the same two payloads.
+ */
+export function collisionLines(
+  local: SyncPayload,
+  remote: SyncPayload,
+  remoteLabel: string,
+): CollisionLine[] {
+  const summary = describeCollision(local, remote);
+  if (!summary) return [];
+  return summary.semesters.map((semester) => ({
+    semester: semesterName(semester.semesterId),
+    local: sideLine(
+      "Denne enheten",
+      local,
+      semester.semesterId,
+      semester.localCodes.length,
+      semester.missingFromLocal,
+    ),
+    remote: sideLine(
+      remoteLabel,
+      remote,
+      semester.semesterId,
+      semester.remoteCodes.length,
+      semester.missingFromRemote,
+    ),
+  }));
 }
 
 /** The most recently active OTHER device, for naming the remote side of the
@@ -667,10 +750,19 @@ export function mountProfilePanel(deps: ProfilePanelDeps): ProfilePanelHandle {
 
   /**
    * §6 step 5's collision question — the one prompt this design keeps.
-   * `login()` only returns here when its own `describeCollision` call
-   * already found something to ask about, so the recompute below (needed for
-   * the counts and the "mangler …" list, which `LoginResult` does not carry)
-   * cannot itself come back null.
+   * `login()` only returns here when its own `describeCollision` call already
+   * found something to ask about, so the recompute below (needed for the
+   * counts and the "mangler …" lists, which `LoginResult` does not carry)
+   * cannot itself come back empty.
+   *
+   * The question describes EVERY semester the two sides disagree about,
+   * because either button replaces the whole `np:plans` map. It used to print
+   * one line about `lastSemester`: a student with a full 25h plan and an empty
+   * 26h was shown "Denne enheten — 0 emner · 0 sp" and told the other device
+   * had five, and the obvious answer deleted the 25h draft the prompt never
+   * mentioned. The counts live in the per-semester lines rather than on the
+   * buttons, because a total summed across semesters is not a number a student
+   * has anywhere else on this page; the buttons carry the verb.
    */
   function renderCollision(local: SyncPayload, remote: SyncPayload): void {
     dialog.replaceChildren(renderHead());
@@ -678,18 +770,24 @@ export function mountProfilePanel(deps: ProfilePanelDeps): ProfilePanelHandle {
     body.append(
       el("h3", "profile-panel-heading", "Begge enhetene har en plan. Hvilken vil du beholde?"),
     );
+    body.append(
+      el("p", "np-hint", "Valget gjelder alle semestrene under. Den du ikke beholder, blir borte."),
+    );
 
-    const semesterId = local.lastSemester;
-    const summary = describeCollision(local, remote, semesterId) ?? {
-      localCount: 0,
-      remoteCount: 0,
-      missingFromRemote: [] as string[],
-    };
-    const remoteLabel = latestDevice(remote.devices)?.label ?? "Den andre enheten";
-    const missingSuffix =
-      summary.missingFromRemote.length > 0
-        ? ` · mangler ${summary.missingFromRemote.join(", ")}`
-        : "";
+    // Named for the row labels ("Mac · Safari — …") and for the button verb
+    // ("Behold Mac · Safari"). The fallback differs in case for the same
+    // reason: one starts a line, the other follows a verb.
+    const remoteName = latestDevice(remote.devices)?.label ?? null;
+
+    const list = el("ul", "profile-panel-collision-diff");
+    for (const line of collisionLines(local, remote, remoteName ?? "Den andre enheten")) {
+      const item = el("li", "profile-panel-collision-semester");
+      item.append(el("p", "np-kicker profile-panel-collision-semester-name", line.semester));
+      item.append(el("p", "np-hint", line.local));
+      item.append(el("p", "np-hint", line.remote));
+      list.append(item);
+    }
+    body.append(list);
 
     const hint = el("p", "np-hint profile-panel-hint", "");
     hint.id = "profile-panel-collision-hint";
@@ -699,14 +797,14 @@ export function mountProfilePanel(deps: ProfilePanelDeps): ProfilePanelHandle {
     const localBtn = el(
       "button",
       "np-btn np-btn--primary",
-      `Denne enheten — ${summary.localCount} ${courseWord(summary.localCount)} · ${formatCreditNumber(creditsFor(local, semesterId))} sp`,
+      "Behold denne enheten",
     ) as HTMLButtonElement;
     localBtn.type = "button";
     localBtn.setAttribute("aria-describedby", "profile-panel-collision-hint");
     const remoteBtn = el(
       "button",
       "np-btn",
-      `${remoteLabel} — ${summary.remoteCount} ${courseWord(summary.remoteCount)} · ${formatCreditNumber(creditsFor(remote, semesterId))} sp${missingSuffix}`,
+      `Behold ${remoteName ?? "den andre enheten"}`,
     ) as HTMLButtonElement;
     remoteBtn.type = "button";
     remoteBtn.setAttribute("aria-describedby", "profile-panel-collision-hint");

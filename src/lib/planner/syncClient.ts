@@ -10,6 +10,7 @@
  * editing session to reconcile. A push either lands or reports that it didn't.
  */
 
+import { semesterYear } from "./schedule.js";
 import {
   activeCourses,
   LAST_SEMESTER_KEY,
@@ -77,10 +78,34 @@ export type LoginResult =
   | SyncResult
   | { ok: false; reason: "collision"; local: SyncPayload; remote: SyncPayload };
 
-export interface CollisionSummary {
-  localCount: number;
-  remoteCount: number;
+/**
+ * One semester where the two sides hold different courses — a row of the
+ * collision question.
+ *
+ * Both `missing…` lists are kept because the choice is symmetrical: keeping
+ * the account's copy drops `missingFromRemote`, keeping this device drops
+ * `missingFromLocal`, and a prompt that named only one of them would still be
+ * describing less than the button it sits above.
+ */
+export interface CollisionSemester {
+  semesterId: string;
+  /** Active codes on each side — dropped rows excluded, per `activeCodesIn`. */
+  localCodes: string[];
+  remoteCodes: string[];
+  /** Only on this device; lost by "Behold <den andre enheten>". */
   missingFromRemote: string[];
+  /** Only on the account; lost by "Behold denne enheten". */
+  missingFromLocal: string[];
+}
+
+export interface CollisionSummary {
+  /**
+   * EVERY semester the two sides disagree about, oldest first — not just the
+   * one this device happens to be looking at. `applySyncable` replaces the
+   * whole `np:plans` map, so this is the smallest honest description of what
+   * either button does.
+   */
+  semesters: CollisionSemester[];
 }
 
 /**
@@ -115,42 +140,62 @@ export function activeCodesIn(plans: Record<string, PlanCourse[]>, semesterId: s
 }
 
 /**
+ * Chronological order, oldest first — the order `candidateSemesters` puts the
+ * planner's own semester picker in, so the prompt reads like the rest of the
+ * app. A plain string sort would put `"26h"` before `"26v"`, i.e. an autumn
+ * before the spring that precedes it. Anything that is not a semester id keeps
+ * its own relative order at the end rather than claiming a year.
+ */
+function semesterOrder(semesterId: string): number {
+  const year = semesterYear(semesterId);
+  if (year === null) return Number.POSITIVE_INFINITY;
+  return year * 10 + (/h$/i.test(semesterId.trim()) ? 1 : 0);
+}
+
+/**
  * Two independent histories meeting at login — NOT a conflict, and the one
  * prompt this design keeps. `null` means there is nothing to ask about: this
  * device holds nothing the account does not already have, so adopting the
  * remote copy costs nothing and the ordinary "add my second device" login
  * stays promptless. That property is deliberate; do not regress it.
  *
- * The QUESTION is asked about `semesterId` (the counts and the "mangler …"
- * list the panel prints), but the DECISION to ask is taken across every
- * semester this device holds. `applySyncable` replaces the whole `np:plans`
- * map, so a student with a full 25h plan and an empty 26h — `lastSemester`
- * = "26h" — used to be asked nothing and lose the 25h draft outright. The
- * spec syncs the whole map precisely so a draft is not stranded; the guard
- * has to span the same ground the overwrite does.
+ * Both the DECISION to ask and the DESCRIPTION the student is asked to answer
+ * span the whole `np:plans` map, because that is exactly what `applySyncable`
+ * replaces. There used to be a `semesterId` parameter here and the answer
+ * summarised that one semester: with a full 25h plan and an empty 26h —
+ * `lastSemester` = "26h" — the question read "Denne enheten — 0 emner · 0 sp"
+ * over a device holding a 25h draft, and the obvious answer destroyed it. The
+ * parameter is gone rather than fixed at the call site: a per-semester
+ * question about a whole-map decision cannot be made safe by choosing a better
+ * semester.
+ *
+ * The trigger stays ASYMMETRIC — only work this device would lose raises the
+ * prompt — while the description is symmetrical, listing every semester that
+ * differs in either direction. A second device that holds a subset of the
+ * account is still asked nothing.
  */
 export function describeCollision(
   local: SyncPayload,
   remote: SyncPayload,
-  semesterId: string,
 ): CollisionSummary | null {
   const localPlans = plansOf(local);
   const remotePlans = plansOf(remote);
-  const atRisk = Object.keys(localPlans).some((id) => {
-    const mine = activeCodesIn(localPlans, id);
-    if (mine.length === 0) return false;
-    const theirs = activeCodesIn(remotePlans, id);
-    return mine.some((code) => !theirs.includes(code));
-  });
-  if (!atRisk) return null;
+  const ids = [...new Set([...Object.keys(localPlans), ...Object.keys(remotePlans)])].sort(
+    (a, b) => semesterOrder(a) - semesterOrder(b),
+  );
 
-  const mine = activeCodesIn(localPlans, semesterId);
-  const theirs = activeCodesIn(remotePlans, semesterId);
-  return {
-    localCount: mine.length,
-    remoteCount: theirs.length,
-    missingFromRemote: mine.filter((code) => !theirs.includes(code)),
-  };
+  const semesters: CollisionSemester[] = [];
+  let atRisk = false;
+  for (const semesterId of ids) {
+    const localCodes = activeCodesIn(localPlans, semesterId);
+    const remoteCodes = activeCodesIn(remotePlans, semesterId);
+    const missingFromRemote = localCodes.filter((code) => !remoteCodes.includes(code));
+    const missingFromLocal = remoteCodes.filter((code) => !localCodes.includes(code));
+    if (missingFromRemote.length === 0 && missingFromLocal.length === 0) continue;
+    if (missingFromRemote.length > 0) atRisk = true;
+    semesters.push({ semesterId, localCodes, remoteCodes, missingFromRemote, missingFromLocal });
+  }
+  return atRisk ? { semesters } : null;
 }
 
 /**
@@ -514,12 +559,12 @@ export function createSyncClient(deps: { storage: StorageLike; fetch: typeof fet
       const remote = JSON.parse(plain) as SyncPayload;
 
       // §6 step 5: this device's OWN current plan, compared against what the
-      // account already holds, on the semester this device last looked at.
+      // account already holds, across every semester either side has.
       // `describeCollision` is null (no prompt) for an empty device or two
       // sides that already agree — an ordinary "add my second device" login
       // never reaches the branch below.
       const local = collectSyncable(deps.storage);
-      const summary = describeCollision(local, remote, local.lastSemester);
+      const summary = describeCollision(local, remote);
       if (summary) {
         pending = {
           navn,

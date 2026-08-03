@@ -194,6 +194,21 @@ describe("createSyncClient", () => {
     // Nothing was written: the 25h draft is untouched until the student answers.
     expect(storageB.map.get("np:plans")).toContain("TDT4100");
     expect(deviceB.session()).toBeNull();
+
+    // …and the two payloads the panel is handed describe the 25h draft, not
+    // the empty 26h this device happens to be looking at. Asserting only
+    // `reason: "collision"` is what let the prompt go on summarising
+    // `lastSemester` while the buttons replaced everything.
+    const collision = result as { local: SyncPayload; remote: SyncPayload };
+    expect(describeCollision(collision.local, collision.remote)?.semesters).toEqual([
+      {
+        semesterId: "25h",
+        localCodes: ["TDT4100", "TDT4120"],
+        remoteCodes: [],
+        missingFromRemote: ["TDT4100", "TDT4120"],
+        missingFromLocal: [],
+      },
+    ]);
   }, 60_000);
 
   it("adopts the server copy when a push is stale", async () => {
@@ -237,47 +252,96 @@ const multiPayload = (plans: Record<string, string[]>, lastSemester: string): Sy
 
 describe("describeCollision", () => {
   it("is null when this device has nothing to lose", () => {
-    expect(describeCollision(payload([]), payload(["TDT4120"]), "26h")).toBeNull();
+    expect(describeCollision(payload([]), payload(["TDT4120"]))).toBeNull();
   });
 
   it("is null when the two sides already agree", () => {
-    expect(describeCollision(payload(["TDT4120"]), payload(["TDT4120"]), "26h")).toBeNull();
+    expect(describeCollision(payload(["TDT4120"]), payload(["TDT4120"]))).toBeNull();
   });
 
-  it("counts both sides and names what the remote is missing", () => {
-    const summary = describeCollision(payload(["TDT4120", "TDT4100"]), payload(["TDT4100"]), "26h");
-    expect(summary).toMatchObject({
-      localCount: 2,
-      remoteCount: 1,
-      missingFromRemote: ["TDT4120"],
-    });
+  it("names the semester and both sides' courses, in both directions", () => {
+    const summary = describeCollision(payload(["TDT4120", "TDT4100"]), payload(["TDT4100"]));
+    expect(summary?.semesters).toEqual([
+      {
+        semesterId: "26h",
+        localCodes: ["TDT4120", "TDT4100"],
+        remoteCodes: ["TDT4100"],
+        missingFromRemote: ["TDT4120"],
+        missingFromLocal: [],
+      },
+    ]);
   });
 
   // The ordinary second-device login: this device holds a subset of what the
   // account already has, so adopting the remote copy loses nothing and the
   // student is asked nothing. This is the branch's best product property.
   it("stays null when the remote already contains everything this device has", () => {
-    expect(
-      describeCollision(payload(["TDT4100"]), payload(["TDT4100", "TDT4120"]), "26h"),
-    ).toBeNull();
+    expect(describeCollision(payload(["TDT4100"]), payload(["TDT4100", "TDT4120"]))).toBeNull();
   });
 
   /**
    * `applySyncable` replaces the WHOLE `np:plans` map, but the question used
    * to be asked about one semester only. A student with a full 25h plan and an
-   * empty 26h — `lastSemester` = "26h" — got no prompt at all and the 25h plan
-   * was gone, unasked.
+   * empty 26h — `lastSemester` = "26h" — first got no prompt at all, and then
+   * (once the DECISION was widened) got a prompt that still described 26h:
+   * "Denne enheten — 0 emner · 0 sp" over a device holding a 25h draft, with
+   * the obvious answer wired to destroy it.
+   *
+   * So it is not enough that this asks. What it answers has to NAME the
+   * semester at risk, or the prompt describes less than the button does.
    */
-  it("asks when ANOTHER semester holds work the remote lacks, not only the current one", () => {
+  it("describes the semester at risk, not the one this device is looking at", () => {
     const local = multiPayload({ "25h": ["TDT4100", "TDT4120"], "26h": [] }, "26h");
     const remote = multiPayload({ "26h": [] }, "26h");
-    expect(describeCollision(local, remote, "26h")).not.toBeNull();
+    const summary = describeCollision(local, remote);
+    expect(summary?.semesters).toEqual([
+      {
+        semesterId: "25h",
+        localCodes: ["TDT4100", "TDT4120"],
+        remoteCodes: [],
+        missingFromRemote: ["TDT4100", "TDT4120"],
+        missingFromLocal: [],
+      },
+    ]);
+  });
+
+  /**
+   * "Behold denne enheten" replaces the account's copy just as thoroughly as
+   * the other button replaces this device's, so a semester only the ACCOUNT
+   * has is at risk too and has to be listed — even though it is never what
+   * raises the prompt.
+   */
+  it("lists a semester only the account has, once something else raised the question", () => {
+    const local = multiPayload({ "26h": ["TDT4100"] }, "26h");
+    const remote = multiPayload({ "25h": ["TMA4100"], "26h": [] }, "26h");
+    const summary = describeCollision(local, remote);
+    expect(summary?.semesters.map((s) => s.semesterId)).toEqual(["25h", "26h"]);
+    expect(summary?.semesters[0]).toMatchObject({
+      localCodes: [],
+      remoteCodes: ["TMA4100"],
+      missingFromLocal: ["TMA4100"],
+    });
+  });
+
+  /** Chronological, like the planner's own semester picker — a plain string
+   *  sort puts "26h" before the "26v" that precedes it. */
+  it("orders semesters oldest first", () => {
+    const local = multiPayload(
+      { "26h": ["TDT4100"], "25h": ["TMA4100"], "26v": ["TMA4105"] },
+      "26h",
+    );
+    const remote = multiPayload({}, "26h");
+    expect(describeCollision(local, remote)?.semesters.map((s) => s.semesterId)).toEqual([
+      "25h",
+      "26v",
+      "26h",
+    ]);
   });
 
   it("asks even when lastSemester is unset, so plans[''] is empty", () => {
     const local = multiPayload({ "25h": ["TDT4100"] }, "");
     const remote = multiPayload({ "25h": [] }, "");
-    expect(describeCollision(local, remote, "")).not.toBeNull();
+    expect(describeCollision(local, remote)).not.toBeNull();
   });
 
   /**
@@ -300,14 +364,17 @@ describe("describeCollision", () => {
     };
     // The only difference between the two sides is a course this device
     // dropped, so there is nothing to ask about at all.
-    expect(describeCollision(withDrop, payload(["TDT4100"]), "26h")).toBeNull();
+    expect(describeCollision(withDrop, payload(["TDT4100"]))).toBeNull();
 
-    const summary = describeCollision(withDrop, payload([]), "26h");
-    expect(summary).toMatchObject({
-      localCount: 1,
-      remoteCount: 0,
-      missingFromRemote: ["TDT4100"],
-    });
+    expect(describeCollision(withDrop, payload([]))?.semesters).toEqual([
+      {
+        semesterId: "26h",
+        localCodes: ["TDT4100"],
+        remoteCodes: [],
+        missingFromRemote: ["TDT4100"],
+        missingFromLocal: [],
+      },
+    ]);
   });
 });
 
