@@ -2343,6 +2343,145 @@ describe("mountPlannerApp — an on-load pull does not eat a shared link", () =>
   }, 10_000);
 });
 
+/**
+ * Signing in is the OTHER write to `np:plans` that bypasses `store.savePlan`:
+ * `login` calls `applySyncable` straight through `localStorage`. It did not
+ * move `planGen`, so a GET already on the wire still satisfied
+ * `planGen === sentGen`, and its snapshot — fetched before the student signed
+ * in, at a version two writes old — was applied straight over the state the
+ * login had just established, session version and device registry included.
+ *
+ * Driven on ONE account on purpose. Logging into a *different* account inside
+ * the same window is caught by accident today (the answer is decrypted with
+ * whatever key the session holds NOW, so the other account's blob fails to
+ * open) — an accident is not the guard, and this is the case where there is no
+ * accident to lean on.
+ *
+ * The profile panel is replaced with a double so the test can hold the two
+ * halves apart in time — it captures the very `deps` the real panel is handed,
+ * including the app's OWN sync client, and drives `login` + `onAuthenticated`
+ * exactly as `renderSignedOut`'s `submit()` does.
+ */
+describe("mountPlannerApp — a login inside a pull's round trip is not overwritten", () => {
+  beforeEach(() => {
+    installDom();
+    vi.resetModules();
+  });
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.doUnmock("../../src/components/planner/profilePanel.js");
+  });
+
+  it("refuses the answer to a GET that predates the login", async () => {
+    const server = makeSyncServer();
+    // Another device on the same account, holding the plan this tab starts on.
+    const storageA = fakeStorage({
+      "np:plans":
+        '{"26h":[{"code":"TDT4136","name":"TDT4136 navn","version":"1","source":"manual"}]}',
+    });
+    const deviceA = createSyncClient({
+      storage: storageA,
+      fetch: server.handle as unknown as typeof fetch,
+    });
+    await deviceA.signup("martin", "482913", "Mac");
+
+    (globalThis as unknown as Record<string, unknown>).location = {
+      hash: "",
+      search: "",
+      pathname: "/planlegger/",
+    };
+
+    const localStorageLike = (globalThis as unknown as { localStorage: StorageLike }).localStorage;
+    await createSyncClient({
+      storage: localStorageLike,
+      fetch: server.handle as unknown as typeof fetch,
+    }).login("martin", "482913", "Tavle · nettleser");
+
+    // The first GET is answered as of NOW and then held: the response body is
+    // captured before the account moves on, which is what makes it stale by
+    // the time the student sees it.
+    let releaseGet = (): void => {};
+    const gate = new Promise<void>((resolve) => {
+      releaseGet = resolve;
+    });
+    let held = false;
+    (globalThis as unknown as Record<string, unknown>).fetch = vi.fn(
+      async (url: string, init?: RequestInit) => {
+        if (url.startsWith("/api/sync/")) {
+          const answer = await server.handle(url, init);
+          if ((init?.method ?? "GET") === "GET" && !held) {
+            held = true;
+            await gate;
+          }
+          return answer;
+        }
+        if (url.includes("/data/search-index.json")) {
+          return jsonResponse({ year: 2026, courses: [] });
+        }
+        if (url.includes("/api/course/TDT4109/timetable")) {
+          return jsonResponse([entry("TDT4109", 1, "08:15", "10:00")]);
+        }
+        if (url.includes("/api/course/TDT4136/timetable")) {
+          return jsonResponse([entry("TDT4136", 2, "10:15", "12:00")]);
+        }
+        if (url.includes("/api/course/")) return jsonResponse(DETAILS);
+        return { ok: false, status: 404, json: async () => ({ error: "Not found" }) };
+      },
+    );
+
+    type PanelModule = typeof import("../../src/components/planner/profilePanel.js");
+    let panelDeps: Parameters<PanelModule["mountProfilePanel"]>[0] | null = null;
+    vi.doMock("../../src/components/planner/profilePanel.js", async (importOriginal) => {
+      const actual = await importOriginal<PanelModule>();
+      return {
+        ...actual,
+        mountProfilePanel: (deps: Parameters<PanelModule["mountProfilePanel"]>[0]) => {
+          panelDeps = deps;
+          return { show: () => {}, setSyncState: () => {} };
+        },
+      };
+    });
+
+    const { mountPlannerApp } = await import("../../src/components/planner/plannerApp.js");
+    const { clearCourseBundleMemo, clearPlannerIndexMemo } = await import(
+      "../../src/lib/planner/data.js"
+    );
+    clearCourseBundleMemo();
+    clearPlannerIndexMemo();
+
+    await mountPlannerApp(SEMESTERS as never, [], undefined);
+    for (let i = 0; i < 20; i++) await new Promise((r) => setTimeout(r, 0));
+
+    // The account moves on while that GET is still held: the other device adds
+    // a course and pushes it.
+    storageA.setItem(
+      "np:plans",
+      '{"26h":[{"code":"TDT4136","name":"TDT4136 navn","version":"1","source":"manual"},{"code":"TDT4109","name":"TDT4109 navn","version":"1","source":"manual"}]}',
+    );
+    expect(await deviceA.push()).toEqual({ ok: true });
+
+    // The student signs out and back in — the app's own client, the panel's
+    // own two calls. Nothing to ask about (this device's plan is a subset of
+    // the account's), so it is the ordinary promptless login.
+    const deps = panelDeps as unknown as Parameters<PanelModule["mountProfilePanel"]>[0];
+    expect(deps).not.toBeNull();
+    deps.sync.logout();
+    expect(await deps.sync.login("martin", "482913", "Tavle · nettleser")).toEqual({ ok: true });
+    deps.onAuthenticated();
+    expect(planStorage.get("np:plans")).toContain("TDT4109");
+
+    releaseGet();
+    for (let i = 0; i < 20; i++) await new Promise((r) => setTimeout(r, 0));
+
+    // The held answer described the account two writes ago. It must not land
+    // on top of what the login just established — neither the plan…
+    expect(planStorage.get("np:plans")).toContain("TDT4109");
+    // …nor the version, which is what a stale one would leave for the next
+    // push to 409 against.
+    expect(JSON.parse(planStorage.get("np:sync") ?? "{}").version).toBe(2);
+  }, 20_000);
+});
+
 describe("shouldPullOnVisible", () => {
   const session = {
     navn: "martin",

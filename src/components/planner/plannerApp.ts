@@ -480,13 +480,13 @@ export async function mountPlannerApp(
     store,
     sync,
     onEditProgram: () => studieinfo.open(),
-    // `applyPulledPlan` (below): a fresh `login` writes straight to
+    // `onAuthenticated` (below): a fresh `login` writes straight to
     // `localStorage` the same way a pull does and needs the same repaint —
     // see that function's own comment and `onAuthenticated`'s in
-    // `profilePanel.ts`. Forward reference is safe: `applyPulledPlan` is a
-    // hoisted function declaration, and this callback only ever runs after a
-    // click, long after this whole function body has finished setting up.
-    onAuthenticated: () => applyPulledPlan(),
+    // `profilePanel.ts`. Forward reference is safe: it is a hoisted function
+    // declaration, and this callback only ever runs after a click, long after
+    // this whole function body has finished setting up.
+    onAuthenticated: () => onAuthenticated(),
     signal: lifeSignal,
   });
   elements.profileEntry.addEventListener("click", () => profile.show(), { signal: lifeSignal });
@@ -506,6 +506,13 @@ export async function mountPlannerApp(
    * "who caused this" is exactly the kind of state that goes stale under
    * concurrency. `syncedGen` is `planGen` as of the last push this tab
    * confirmed landed; the two being equal is what "clean" means.
+   *
+   * The converse invariant matters as much as the counter itself: EVERY write
+   * to `np:plans` has to move `planGen`, or a pull already on the wire still
+   * satisfies `planGen === sentGen` and writes its stale snapshot over it.
+   * Two writes bypass `store.savePlan` and so have to bump it by hand — the
+   * shared link far below, and `applySyncable` inside a login
+   * (`onAuthenticated`).
    */
   let planGen = 0;
   let syncedGen = 0;
@@ -543,6 +550,34 @@ export async function mountPlannerApp(
     const next = store.loadPlan();
     if (formatPlanHash(next) === formatPlanHash(plan)) return;
     applyPlanUpdate(next);
+  }
+
+  /**
+   * A `signup`/`login`/`resolveLogin` that just landed — the other write to
+   * `np:plans` that does not go through `store.savePlan`.
+   *
+   * `applySyncable` (syncClient.ts) replaced the whole map a moment ago, so
+   * this needs the repaint a pull gets AND, unlike a pull, a bump of
+   * `planGen`. A pull deliberately does not bump: its content is by definition
+   * the server's, and its own `sentGen` check is what makes it safe. A login
+   * is not that — it is a write from OUTSIDE the pull's guard, and without the
+   * bump a GET already on the wire still satisfied `planGen === sentGen` and
+   * wrote its pre-login snapshot on top. For the same account that self-corrects
+   * on the next 409; log out and into a DIFFERENT account inside one round trip
+   * and it was the other account's plan landing in `np:plans`, under a session
+   * carrying this account's version and device registry.
+   *
+   * `schedulePush` pairs with the bump for the same reason every other bump in
+   * this file does: a tab left dirty with nothing armed is the shape that gets
+   * flushed at some arbitrary later moment by the visibility trigger. What it
+   * sends is the account's own content at the account's own version, so the
+   * push is a no-op for the plan — but it is how this device's registry row
+   * (written locally by `login`, never yet uploaded) reaches the other devices.
+   */
+  function onAuthenticated(): void {
+    planGen++;
+    applyPulledPlan();
+    schedulePush();
   }
 
   /**
