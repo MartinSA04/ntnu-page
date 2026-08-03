@@ -21,6 +21,7 @@
  * Render work is delegated to grid.ts/examList.ts.
  */
 
+import { mountMenuPanel } from "../../lib/menuPanel.js";
 import {
   type CourseBundle,
   clearCourseBundleMemo,
@@ -1211,6 +1212,34 @@ export async function mountPlannerApp(
   elements.nameBtn.addEventListener("click", () => openStudieinfo("program"), {
     signal: lifeSignal,
   });
+
+  // THE ⋯ MENU'S ONE RULE: a control that redraws the week CLOSES it; a control
+  // that only confirms itself stays open.
+  //
+  // The layer and the semester are deliberately animated (DESIGN §7 — "a
+  // student who pressed one of them is asking to see the same plan differently
+  // and needs to be able to follow it there"), and you cannot follow anything
+  // under a scrim. "Del lenke" swaps mark and word to "Kopiert" in place, and
+  // closing on press would throw away the confirmation the button's pinned
+  // width exists to protect.
+  const toolsBar = document.querySelector<HTMLElement>(".planner-head");
+  const toolsTrigger = document.getElementById("planner-tools-btn");
+  const toolsPanel = document.getElementById("planner-tools");
+  if (toolsBar && toolsTrigger && toolsPanel) {
+    const tools = mountMenuPanel({
+      bar: toolsBar,
+      trigger: toolsTrigger,
+      panel: toolsPanel,
+      query: "(max-width: 46rem)",
+      signal: lifeSignal,
+    });
+    elements.othersToggle.addEventListener("click", () => tools.close(), {
+      signal: lifeSignal,
+    });
+    elements.semesterSelect.addEventListener("change", () => tools.close(), {
+      signal: lifeSignal,
+    });
+  }
 
   // --- Banner ------------------------------------------------------------
 

@@ -1816,15 +1816,15 @@ test.describe("the banner's pair", () => {
     const title = await box("#planner-title");
     const hint = await box("#planner-context-line");
     const verdict = await box("#planner-grid-status");
-    const semester = await box(".planner-semester");
     const tabs = await box(".planner-view-tabs");
     const frame = await box("#planner-grid-frame");
 
     // Nothing fits between them: the gap is smaller than a line of text at any
     // step on the page's scale, so no sentence can have got in there.
     expect(hint.top - title.bottom).toBeLessThan(20);
-    // Every control is below the whole name, never inside it.
-    expect(semester.top).toBeGreaterThanOrEqual(hint.bottom);
+    // Every control is below the whole name, never inside it. The semester is
+    // NOT checked here any more — below 46rem it is a row of the ⋯ menu, so
+    // there is no box of its own in the bar to measure.
     expect(tabs.top).toBeGreaterThanOrEqual(hint.bottom);
     // MTDT's pass is QUALIFIED — HMS0002 publishes nothing classifiable as a
     // lecture, so the check went over it rather than on it — and a qualified
@@ -1845,15 +1845,22 @@ test.describe("the banner's pair", () => {
     // Expressed as a FRACTION of the screen rather than a pixel count, because
     // that is the actual claim: the week has to start in the first third-ish,
     // or the thing the page is for is below the fold. From the viewport's top,
-    // so the site topbar is inside the budget too. Measured at 277 of 844.
+    // so the site topbar is inside the budget too.
     //
     // Raised 0.35 → 0.37 when the qualified pass started printing on a phone:
     // the verdict and the deadline cannot share one 390px row, so a qualified
-    // plan spends 27px more here (304 of 844, 36%) than a plan whose pass says
-    // nothing. That is the trade, made deliberately — the alternative was a
-    // margin note reading "kollisjonssjekken er ufullstendig" with no verdict
-    // on screen for it to qualify. An UNQUALIFIED pass is still hidden and
-    // still costs nothing, which is what the sibling test below pins.
+    // plan spends 27px more here than a plan whose pass says nothing. That is
+    // the trade, made deliberately — the alternative was a margin note reading
+    // "kollisjonssjekken er ufullstendig" with no verdict on screen for it to
+    // qualify. An UNQUALIFIED pass is still hidden and still costs nothing,
+    // which is what the sibling test below pins.
+    //
+    // History of this measurement, all at 390×844 on this same qualified plan:
+    // 277 → 304 when the qualified pass started printing → **260** when the
+    // bar folded into the ⋯ menu (2026-08-03). The fold bought back one row of
+    // controls, 44px, not the two the plan estimated: the title's block and the
+    // view switch still take a row each. The budget stays at 0.37 rather than
+    // being tightened to the new number — it is the claim, not the reading.
     const viewport = page.viewportSize();
     expect(frame.top).toBeLessThan((viewport?.height ?? 844) * 0.37);
   });
@@ -2174,5 +2181,78 @@ test.describe("the programme picker lives on the planner", () => {
     await expect(door).toHaveAttribute("aria-label", "Endre studieprogram · MTDT kull 2026");
     await door.click();
     await expect(page.locator("#planner-studieinfo")).toBeVisible();
+  });
+});
+
+test.describe("the plan bar on a phone", () => {
+  test.use({ viewport: { width: 390, height: 844 } });
+
+  const seedProgram = (page: Page) =>
+    page.addInitScript(() => {
+      localStorage.setItem(
+        "np:profile",
+        JSON.stringify({ program: { code: "MTDT", cohort: 2026, name: "Datateknologi" } }),
+      );
+    });
+
+  test("folds to the view switch and one menu", async ({ page }) => {
+    await seedProgram(page);
+    await page.goto("/planlegger/");
+
+    // What stays out is the control a student throws while reading the week.
+    await expect(page.locator(".planner-view-tabs")).toBeVisible();
+    await expect(page.locator("#planner-others-toggle")).toBeHidden();
+    await expect(page.locator("#planner-semester-select")).toBeHidden();
+
+    const menu = page.locator("#planner-tools-btn");
+    await menu.click();
+    await expect(page.locator("#planner-others-toggle")).toBeVisible();
+    await expect(page.locator("#planner-semester-select")).toBeVisible();
+  });
+
+  test("a control that redraws the week closes it; one that confirms itself does not", async ({
+    page,
+    context,
+  }) => {
+    // Without the grant `writeText` rejects and the label never swaps — the
+    // confirmation this test is about would be missing for the wrong reason.
+    await context.grantPermissions(["clipboard-read", "clipboard-write"]);
+    await seedProgram(page);
+    await page.goto("/planlegger/");
+    const menu = page.locator("#planner-tools-btn");
+
+    // The layer is animated ON PURPOSE (DESIGN §7) so a student who threw it
+    // can follow the change — which they cannot do under a scrim.
+    await menu.click();
+    await page.locator("#planner-others-toggle").click();
+    await expect(menu).toHaveAttribute("aria-expanded", "false");
+
+    // "Del lenke" swaps to "Kopiert" in place. Closing would throw away the
+    // confirmation the button's whole pinned width exists to protect.
+    // Visibility is asserted with the menu OPEN — inside the panel is the only
+    // place this control exists at this width.
+    await menu.click();
+    const share = page.locator("#planner-share");
+    await expect(share).toBeVisible({ timeout: 45_000 });
+    await share.click();
+    await expect(menu).toHaveAttribute("aria-expanded", "true");
+    await expect(page.locator("#planner-share-label")).toHaveText("Kopiert");
+  });
+
+  test("above the breakpoint there is no menu, and the bar reads left to right", async ({
+    page,
+  }) => {
+    await seedProgram(page);
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await page.goto("/planlegger/");
+    await expect(page.locator("#planner-tools-btn")).toBeHidden();
+
+    // DOM order == visual order: the run that collapses comes first, the
+    // switch that stays comes last, so the fold needs no `order:` tricks and
+    // focus order never diverges from what the eye sees.
+    const x = async (sel: string) => (await page.locator(sel).boundingBox())?.x ?? -1;
+    expect(await x("#planner-others-toggle")).toBeLessThan(await x("#planner-share"));
+    expect(await x("#planner-share")).toBeLessThan(await x(".planner-semester"));
+    expect(await x(".planner-semester")).toBeLessThan(await x(".planner-view-tabs"));
   });
 });

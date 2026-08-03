@@ -67,14 +67,23 @@ const description =
           focusable="false"><path d="m6 9 6 6 6-6"></path></svg>
       </button>
 
-      {/* The layer is a box you tick; the view is a switch you throw. They read
+      {/* THE RUN THAT FOLDS, and it is ordered so that folding needs no
+          `order:` tricks: the three controls that collapse are written first
+          and the switch that stays is written last. DOM order, visual order
+          and focus order agree at both widths — and the view switch landing at
+          the far right is where Google Calendar and Apple Calendar put theirs.
+
+          Above 46rem this wrapper is `display: contents` and these are the
+          bar's own flex children; below it, it is the ⋯ menu's panel. */}
+      <div class="planner-tools" id="planner-tools">
+        {/* The layer is a box you tick; the view is a switch you throw. They read
           as two kinds of control because they are. */}
-      <button
-        type="button"
-        class="planner-others-toggle"
-        id="planner-others-toggle"
-        aria-pressed="false"
-      >
+        <button
+          type="button"
+          class="planner-others-toggle"
+          id="planner-others-toggle"
+          aria-pressed="false"
+        >
         <span class="planner-check" aria-hidden="true">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5">
             <path d="m4 12 6 6L20 6" />
@@ -86,34 +95,10 @@ const description =
             week) — what was not deliberate is that the control said nothing
             about it, so ticking the box on a five-course plan appeared to do
             nothing at all. Filled by `renderOthersPending`. */}
-        <span class="planner-others-pending" id="planner-others-pending" hidden></span>
-      </button>
+          <span class="planner-others-pending" id="planner-others-pending" hidden></span>
+        </button>
 
-      {/* "Uke" is the timetable shape a student already knows from every other
-          calendar: days as columns, time down. The id keeps saying `kolonner`
-          because that is the value in localStorage and the name of the module
-          that draws it — the transposed week it used to be named against now
-          lives only on /emne/[code]/. */}
-      <div class="planner-view-tabs" role="group" aria-label="Velg hvordan uka vises">
-        <span class="planner-view-thumb" aria-hidden="true"></span>
-        <button
-          type="button"
-          class="planner-view-tab"
-          id="planner-view-kolonner"
-          aria-pressed="true"
-        >
-          Uke
-        </button>
-        <button
-          type="button"
-          class="planner-view-tab"
-          id="planner-view-tavle"
-          aria-pressed="false"
-        >
-          Liste
-        </button>
-      </div>
-      {/* THE PLAN IS THE URL, AND NOTHING ON THE PAGE SAID SO. Shared-link
+        {/* THE PLAN IS THE URL, AND NOTHING ON THE PAGE SAID SO. Shared-link
           creations are PRODUCT §2's north-star metric, `syncHash` has kept the
           address bar current since the beginning, and there was no way to act
           on that short of knowing to select the address bar. Hidden until
@@ -143,35 +128,78 @@ const description =
         <span id="planner-share-label">Del lenke</span>
       </button>
 
-      {/* WHICH TERM THIS PLAN IS FOR — the one thing in this bar that is not a
+        {/* WHICH TERM THIS PLAN IS FOR — the one thing in this bar that is not a
           verb, and the slot the old "Profil" button vacated.
 
           It was a `<select>` inside the studieinfo modal, staged next to
-          programme, kull and studieretning. Those three describe the STUDENT
-          and moved to the profile panel the topbar opens; this describes the
-          PLAN, so it belongs beside the plan's own name. It commits on change
-          — which is what the modal did anyway, writing the semester first and
-          unconditionally before anything else it staged.
+          programme, kull and studieretning. It came out because it describes
+          the PLAN and belongs beside the plan's own name — and the other three
+          have since come back to the planner for the same reason, into the
+          dialog the title opens. It commits on change, which is what the modal
+          did anyway: it wrote the semester first and unconditionally, before
+          anything else it staged.
 
           No visible label: every option names itself ("Høst 2026"), and a
           "Semester" caption beside it would spend a phone row restating the
-          option. `renderSemesterOptions` fills it. */}
-      <div class="np-select-shell planner-semester">
-        <select class="np-select" id="planner-semester-select" aria-label="Semester"></select>
-        <svg
-          class="np-select-icon"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="2"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          aria-hidden="true"
-          focusable="false"
-        >
-          <path d="m6 9 6 6 6-6" />
-        </svg>
+          option — which holds just as well as a row of the ⋯ menu, where this
+          control sits below 46rem. `renderSemesterOptions` fills it. */}
+        <div class="np-select-shell planner-semester">
+          <select class="np-select" id="planner-semester-select" aria-label="Semester"></select>
+          <svg
+            class="np-select-icon"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+            focusable="false"
+          >
+            <path d="m6 9 6 6 6-6" />
+          </svg>
+        </div>
       </div>
+
+      {/* "Uke" is the timetable shape a student already knows from every other
+          calendar: days as columns, time down. The id keeps saying `kolonner`
+          because that is the value in localStorage and the name of the module
+          that draws it — the transposed week it used to be named against now
+          lives only on /emne/[code]/.
+
+          THE ONE CONTROL THAT DOES NOT FOLD. It is what a student throws while
+          reading the week, so putting it a tap deep would charge the most
+          frequent gesture on the page for the benefit of the least frequent. */}
+      <div class="planner-view-tabs" role="group" aria-label="Velg hvordan uka vises">
+        <span class="planner-view-thumb" aria-hidden="true"></span>
+        <button
+          type="button"
+          class="planner-view-tab"
+          id="planner-view-kolonner"
+          aria-pressed="true"
+        >
+          Uke
+        </button>
+        <button
+          type="button"
+          class="planner-view-tab"
+          id="planner-view-tavle"
+          aria-pressed="false"
+        >
+          Liste
+        </button>
+      </div>
+
+      <button
+        type="button"
+        class="np-icon-btn planner-tools-btn"
+        id="planner-tools-btn"
+        aria-controls="planner-tools"
+        aria-expanded="false"
+        aria-label="Flere valg for planen"
+      >
+        <Icon name="more" size={20} />
+      </button>
     </div>
 
     {/* The verdict, on its own line under the bar. The product's one job is to
@@ -603,6 +631,70 @@ const description =
      picker in the profile panel. */
   .planner-semester {
     flex: none;
+  }
+
+  /* --- The fold ----------------------------------------------------------
+     Above 46rem this wrapper is not a box: its three children are the bar's
+     own flex children, in the order they are written, so the desktop bar is
+     the layout it would have with no menu at all. */
+  .planner-tools {
+    display: contents;
+  }
+
+  .planner-tools-btn {
+    display: none;
+  }
+
+  /* 46rem is where this bar actually stops wrapping — title 150 + layer 170 +
+     tabs 120 + share 110 + semester 120 + gaps ≈ 734px — and where its phone
+     rules already lived. Each bar folds at its OWN width: the shell topbar
+     runs out of room at 480px, so a 700px tablet gets ⋯ with the topbar still
+     expanded, which is correct rather than inconsistent. */
+  @media (max-width: 46rem) {
+    .planner-head {
+      position: relative;
+    }
+
+    /* Above the scrim (19) while open, so the trigger stays visible and
+       hittable; the panel is a child and stacks inside this context. */
+    .planner-head[data-menu="open"] {
+      z-index: 21;
+    }
+
+    .planner-tools-btn {
+      display: inline-flex;
+    }
+
+    .planner-tools {
+      position: absolute;
+      top: calc(100% + var(--space-2));
+      right: 0;
+      z-index: 1;
+      display: none;
+      flex-direction: column;
+      align-items: stretch;
+      gap: var(--space-2);
+      min-width: 14rem;
+      max-width: calc(100vw - var(--gutter) * 2);
+      padding: var(--space-2);
+      background: var(--bg);
+      border: 1px solid var(--border-strong);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow);
+    }
+
+    .planner-head[data-menu="open"] .planner-tools {
+      display: flex;
+    }
+
+    /* Every row is a phone target and reads left-aligned. `.np-btn` centres
+       its content and the select shell sizes to its widest option, so without
+       this the three rows would each find a different edge. */
+    .planner-tools > * {
+      justify-content: flex-start;
+      width: 100%;
+      min-height: 44px;
+    }
   }
 
   @media (max-width: 46rem) {
