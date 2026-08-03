@@ -477,6 +477,14 @@ export function createSyncClient(deps: { storage: StorageLike; fetch: typeof fet
     if (res === null) return { ok: false, reason: "failed" };
     if (!res.ok) return authFailure(res.status);
     const body = (await res.json()) as { blob: string; version: number };
+    // Re-checked AFTER the round trip, exactly as `applyRemoteInternal` does
+    // and for the same reason: 401-as-revocation calls `writeSession(null)`,
+    // so a concurrent push's 401 can empty `session` while this GET is on the
+    // wire. TypeScript keeps the narrowing from the top of the function across
+    // an `await` and would have let this compile straight into a TypeError —
+    // which, from `void pullAndRefresh()`, surfaces as an unhandled rejection
+    // rather than as this module's own total `{ ok: false, reason }` contract.
+    if (!session) return { ok: false, reason: "no_session" };
     const plain = await open(session.encKeyRaw, body.blob);
     if (plain === null) return { ok: false, reason: "undecryptable" };
     return {

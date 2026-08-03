@@ -484,6 +484,49 @@ describe("a revoked session", () => {
     expect(await client.push()).toEqual({ ok: false, reason: "unavailable" });
     expect(client.session()).not.toBeNull();
   }, 30_000);
+
+  /**
+   * The revocation path made this reachable: a 401 on ANY request now calls
+   * `writeSession(null)`, and a GET is typically in flight when the push next
+   * to it gets one (the visibility trigger fires both). `fetchRemote` read
+   * `session.encKeyRaw` after its own `await` — TypeScript keeps the narrowing
+   * from the top of the function across an await, so it compiled, and at
+   * runtime it threw a TypeError. From `void pullAndRefresh()` that is an
+   * unhandled rejection rather than the total `{ ok: false, reason }` contract
+   * every method here advertises.
+   */
+  it("answers rather than throwing when a concurrent 401 empties the session mid-GET", async () => {
+    const storage = fakeStorage({ "np:plans": '{"26h":[]}' });
+    let claimed = false;
+    let releaseGet = (): void => {};
+    const getGate = new Promise<void>((resolve) => {
+      releaseGet = resolve;
+    });
+    const fetchMock = vi.fn(async (_url: string, init?: RequestInit) => {
+      const method = init?.method ?? "GET";
+      if (!claimed && method === "POST") {
+        claimed = true;
+        return new Response(JSON.stringify({ version: 1 }), { status: 201 });
+      }
+      // The push: someone changed the PIN elsewhere, so this credential is gone.
+      if (method === "PUT") {
+        return new Response(JSON.stringify({ error: "unauthorised" }), { status: 401 });
+      }
+      // The GET, held open until the 401 above has dropped the session.
+      await getGate;
+      return new Response(JSON.stringify({ blob: "not-read", version: 1 }), { status: 200 });
+    }) as unknown as typeof fetch;
+
+    const client = createSyncClient({ storage, fetch: fetchMock });
+    await client.signup("martin", "482913", "Mac");
+
+    const inFlight = client.fetchRemote();
+    expect(await client.push()).toEqual({ ok: false, reason: "unauthorised" });
+    expect(client.session()).toBeNull();
+    releaseGet();
+
+    await expect(inFlight).resolves.toEqual({ ok: false, reason: "no_session" });
+  }, 30_000);
 });
 
 /**
