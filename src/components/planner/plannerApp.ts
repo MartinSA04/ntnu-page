@@ -616,7 +616,12 @@ export async function mountPlannerApp(
   async function pushOnce(): Promise<SyncResult> {
     let result = await sync.push();
     if (!result.ok && result.reason === "stale") {
-      if ((await pullAndRefresh()).ok) result = await sync.push();
+      const pulled = await pullAndRefresh();
+      if (pulled.ok) result = await sync.push();
+      // A session revoked between the PUT and the recovery GET is a more
+      // useful answer than the `stale` that sent us here — otherwise the
+      // panel says "prøv igjen" over a session that is already gone.
+      else if (pulled.reason === "unauthorised") result = pulled;
     }
     return result;
   }
