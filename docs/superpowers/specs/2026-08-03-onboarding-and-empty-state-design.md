@@ -33,36 +33,57 @@ it does: everything on screen presupposes the content that is missing.
 
 Five things, in dependency order.
 
-### 1. `data-firstrun`, decided before first paint
+### 1. First run is `html:not([data-plan])`, which the probe already writes
 
-`Layout.astro`'s pre-paint script already writes `--plan-courses` and
-`data-plan` onto `<html>` from localStorage, and `src/lib/planProbe.ts` keeps
-them true for the rest of the visit. Both gain a third fact:
+No new attribute. `Layout.astro`'s pre-paint script sets `data-plan` to
+`"program"` when a programme is stored, `"courses"` when the count is above
+zero, and **removes it otherwise** — so its absence is already exactly "no
+programme and no courses", written before the first frame and kept true for the
+rest of the visit by `src/lib/planProbe.ts`. `html:not([data-plan])` is the
+first-run predicate, and committing a programme clears it without a reload.
 
-    data-firstrun   set when there is no stored programme, AND no stored
-                    courses, AND this load carries no plan hash
+Why a pre-paint attribute rather than JS-built DOM: the probe is the one
+mechanism that runs before the first frame, so a CSS-gated panel paints **with**
+the document. No mount flash, no reserved void, and no reservation to lease and
+release.
 
-The hash test is new and load-bearing. The probe reads only localStorage today,
-so a shared link pasted into a fresh browser has no `data-plan` at pre-paint;
-without the hash test that visit would paint the first-run screen and swap it
-for a plan a frame later. The test is a shape check against the hash's semester
-segment, `/^#\d{2}[hv]/i`, matching `parsePlanHash`'s own first gate. It stays
-deliberately loose in the same way the rest of the probe is: every failure path
-lands on "not first run", because showing the planner to a student who has none
-is a smaller error than hiding a plan that exists.
+#### The one thing the probe does not see yet: a plan arriving by hash
 
-`syncPlanProbe` writes the same attribute from the store, so committing a
-programme clears it and the planner appears without a reload.
+The probe reads localStorage only, so a shared `#26h;…` link pasted into a
+fresh browser has no `data-plan` at pre-paint. Today that costs a reservation
+(`--plan-courses` is 0, so the incoming plan's course rows shift in). Once the
+first-run screen is static markup it would also cost a **visible flash**: the
+picker paints, then the plan replaces it a frame later, on the north-star flow.
 
-Why an attribute rather than JS-built DOM: the probe is the one mechanism that
-runs before the first frame, so a CSS-gated panel paints **with** the document.
-No mount flash, no reserved void, and no reservation to lease and release.
+So the pre-paint script gains one branch — if `location.hash` matches
+`/^#\d{2}[hv]/i`, the hash's own first gate in `parsePlanHash`, treat the load
+as carrying a plan and leave `data-plan` set. It is a shape test, not a parse:
+the probe is forgiving everywhere else for the same reason, and here the safe
+failure is showing the planner to a student with no plan rather than hiding a
+plan that exists. It does **not** try to count courses out of the hash; that
+would duplicate the hash grammar in a pre-paint script for the sake of code
+with a deletion date.
+
+**This branch has a deletion date.**
+`docs/superpowers/specs/2026-08-02-accountless-sync-design.md` §5 deletes the
+hash outright — sharing becomes publish plus `/user/<navn>`, the recipient
+*views* it, and nothing is ever written to their storage. After that,
+`/planlegger/` can only ever receive a plan from localStorage, the predicate is
+purely `html:not([data-plan])`, and §5's stated invariant ("nothing in the CLS
+machinery depends on the hash") is true again. The branch is therefore listed as
+a deletion site in `docs/superpowers/plans/2026-08-03-publish-and-share.md`
+Task 5 alongside `syncHash`, `parsePlanHash` and the rest, so it cannot be
+orphaned.
+
+**Sequencing:** this work does not depend on the hash deletion and the hash
+deletion does not depend on this. If Task 5 lands first, skip the branch
+entirely and write the predicate as `html:not([data-plan])`.
 
 ### 2. The first-run screen
 
 Static markup in `src/pages/planlegger/index.astro`, revealed by
-`html[data-firstrun]`, which hides `.planner-banner` and `#planner-main` in the
-same rule.
+`html:not([data-plan])`, which hides `.planner-banner` and `#planner-main` in
+the same rule.
 
 ```
         Lag timeplanen for semesteret
@@ -201,14 +222,14 @@ Nothing new is introduced. Every mechanism this uses is one the codebase
 already documents:
 
 - **The probe** (`Layout.astro` pre-paint script + `src/lib/planProbe.ts`)
-  gains one attribute. It keeps its existing contract: forgiving, every failure
-  path landing on the reservation-free answer, re-applied on
-  `astro:after-swap`.
+  gains no attribute at all — only the hash branch above, which has a deletion
+  date. It keeps its existing contract: forgiving, every failure path landing on
+  the reservation-free answer, re-applied on `astro:after-swap`.
 - **The picker** (`studieinfo.ts`) gains one policy field. Its element,
   lifecycle and focus contract are unchanged, and the dialog's behaviour is
   unchanged.
 - **The page** (`planlegger/index.astro`) gains one static section and a
-  `html[data-firstrun]` rule. The reserved week height is not touched; it is
+  `html:not([data-plan])` rule. The reserved week height is not touched; it is
   simply not on screen during first run.
 - **The planner app** (`plannerApp.ts`) loses its `noProfile` week-card branch,
   which the first-run screen replaces, and gains the two section gates.
@@ -233,7 +254,9 @@ design.
 - **e2e:** first run → programme → kull → a drawn week, with no dialog in the
   path.
 - **e2e:** a shared plan link opened on a fresh profile never shows the
-  first-run screen.
+  first-run screen. This one is **deleted with the hash**, not carried forward:
+  after §5 there is no way for `/planlegger/` to receive a plan it did not store
+  itself, and the case it guards stops existing.
 - **e2e:** `cls.pw.ts` gains a first-run budget for `/planlegger/`. The
   existing planner budgets are measured with a plan and do not cover this
   state.

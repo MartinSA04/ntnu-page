@@ -598,6 +598,7 @@ git commit -m "feat(publish): Del publishes and copies /user/<navn>"
 - Modify: `src/lib/planner/store.ts`
 - Modify: `src/components/planner/plannerApp.ts`
 - Modify: `src/pages/planlegger/index.astro`
+- Modify: `src/layouts/Layout.astro`
 - Modify: `tests/planner/store.test.ts`
 
 **Interfaces:**
@@ -610,6 +611,7 @@ Delete:
 - `store.ts` — `parsePlanHash`, `formatPlanHash`, `ParsedPlanHash`, the semester/course token regexes and the whole hash-grammar block.
 - `plannerApp.ts` — `syncHash`, `lastWrittenHash`, the `hashchange` listener, `planFromHash`, `withStoredFacts`, `replacedPlan`, `hashPlan`/`hashHasPlan` and the boot branch that saved from the hash, `renderLinkNote`'s replaced-plan half and the `Behold min egen` button, and the `replacedPlan = null` line in `onPlanChange`.
 - `index.astro` — `#planner-link-note` only if `linkNote`'s remaining C4 semester-substitution use also disappears; **keep it if that message survives**, and check before deleting.
+- `Layout.astro` — the pre-paint script's `location.hash` branch, which suppresses the first-run screen for a load whose plan arrives by hash (see `docs/superpowers/specs/2026-08-03-onboarding-and-empty-state-design.md` §1). After this task the first-run predicate is purely `html:not([data-plan])`, and §5's "nothing in the CLS machinery depends on the hash" is true again. Delete the e2e case that guards it too — a shared link can no longer reach `/planlegger/` at all.
 - `tests/planner/store.test.ts` — every `parsePlanHash`/`formatPlanHash` test.
 
 Keep: `linkNote` itself if the C4 "we substituted a semester" message still has a source. After the hash goes, the only writer was `planFromHash`, so it very likely becomes dead — verify by grep before removing, and remove the element and its CSS with it.
