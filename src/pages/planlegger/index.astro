@@ -53,6 +53,11 @@ const programOptionsJson = JSON.stringify(programOptions).replaceAll("<", "\\u00
             held from first paint rather than appearing at mount and pushing
             the whole page down 21px. */}
         <p class="np-hint planner-context-line" id="planner-context-line"></p>
+        {/* The account's one door: opt-in, never a prerequisite, and reached
+            from exactly this control (see profilePanel.ts's file header). */}
+        <button type="button" class="np-navlink planner-profile-entry" id="planner-profile-entry">
+          Profil
+        </button>
       </div>
 
       {/* The layer is a box you tick; the view is a switch you throw. They read
@@ -471,6 +476,13 @@ const programOptionsJson = JSON.stringify(programOptions).replaceAll("<", "\\u00
     /* One line, held. `renderBanner` always writes this, so the line is never
        absent once the page is alive. */
     min-height: 1lh;
+  }
+
+  /* A little air off the context line above it — `.np-navlink`'s own padding
+     is horizontal only, so with no top margin it sat flush against the line
+     of text it follows. */
+  .planner-profile-entry {
+    margin-top: var(--space-1);
   }
 
   /* The title and the control that changes it as one group, so the verdict

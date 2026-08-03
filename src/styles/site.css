@@ -608,6 +608,77 @@
   border-top: 1px solid var(--border);
 }
 
+/* --- Profile panel -------------------------------------------------------
+   The opt-in account's one surface: programme/kull, signup/login, this
+   device's own sync row. Same `.np-frame` bones and the same three traps as
+   the other two dialogs — see their comments for why each rule is qualified
+   the way it is. */
+.profile-panel-dialog {
+  width: min(26rem, calc(100vw - 2rem));
+  max-width: calc(100vw - 2rem);
+  max-height: min(84vh, 42rem);
+  margin: min(8vh, 4rem) auto auto;
+  padding: 0;
+  color: var(--fg);
+}
+
+.profile-panel-dialog[open] {
+  display: flex;
+  flex-direction: column;
+}
+
+.profile-panel-dialog::backdrop {
+  background: color-mix(in srgb, var(--fg) 45%, transparent);
+}
+
+.profile-panel-head {
+  padding-inline-start: var(--space-5);
+}
+
+.profile-panel-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-5);
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.profile-panel-heading {
+  margin: 0;
+  font-family: var(--font-sans);
+  font-size: var(--text-md);
+  font-weight: var(--weight-medium);
+}
+
+.profile-panel-program {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--gap-3);
+  padding-bottom: var(--space-3);
+  border-bottom: 1px solid var(--border);
+}
+
+.profile-panel-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.profile-panel-devices {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.profile-panel-device-row {
+  font-size: var(--text-sm);
+}
+
 /* --- Session popover ---------------------------------------------------
    What a bar in the week says when you click it: the facts the bar could not
    fit, anchored to the bar. A READ surface — the course editor is one verb
