@@ -236,9 +236,11 @@ test.describe("the topbar carries the account, and no plan state", () => {
       await expect(panel, where).toBeHidden();
       await account.click();
       await expect(panel, where).toBeVisible();
-      // Studieinfo IS the panel now: programme and kull are in it, not behind
-      // a second door.
-      await expect(panel.locator("#studieinfo-heading"), where).toBeVisible();
+      // And what is behind that door is the ACCOUNT, nothing else. Programme
+      // and kull left on 2026-08-03 for the planner's own dialog: they are
+      // facts about a plan, like the semester that never followed them up
+      // here, and only sign-in is a fact about the person.
+      await expect(panel.locator("#studieinfo-heading"), where).toHaveCount(0);
       await panel.locator(".profile-panel-close").click();
       await expect(panel, where).toBeHidden();
     }

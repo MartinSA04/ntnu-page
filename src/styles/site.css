@@ -100,62 +100,114 @@
   white-space: nowrap;
 }
 
-/* Narrow phones: the wordmark, two nav links, the account and the toggle must
-   fit 360px without horizontal page scroll — tighten gaps, drop the mono
-   suffix, and take the account's TEXT off entirely.
-
-   The name used to stay visible on the argument that saying who you are is the
-   whole point of it. At 6ch it stopped doing that: "Martin Sundal" came out as
-   "Martin…" beside a mark that already said "you", and signed out it spent the
-   same room on the word "Profil" beside a person glyph — a label naming its own
-   icon. The information is not lost, it moves to the `aria-label` the button
-   already carried ("Profil · Martin Sundal"), so a screen reader is not degraded
-   by a visual constraint; it is only sighted text that goes, and only where
-   there is no room for it.
-
-   44px square, not `--control-h`'s 36: alone in the bar it is a phone target
-   with nothing beside it to forgive a miss, and the topbar is 64px tall so the
-   room is already paid for. */
-@media (max-width: 480px) {
-  .site-topbar {
-    gap: var(--gap-1);
-  }
-
-  .site-brand-suffix {
-    display: none;
-  }
-
-  .site-nav {
-    gap: 0;
-  }
-
-  .site-nav .np-navlink {
-    padding: 0 var(--space-1);
-  }
-
-  .site-account {
-    justify-content: center;
-    min-width: 44px;
-    min-height: 44px;
-    padding: 0;
-  }
-
-  .site-account-name {
-    display: none;
-  }
+/* --- The run that folds ---------------------------------------------------
+   Above the breakpoint this wrapper is not a box at all: its children are the
+   bar's own flex children, in the order they are written, which is why the
+   desktop bar is byte-for-byte the layout it was before the menu existed. */
+.site-menu-panel {
+  display: contents;
 }
 
-/* One scale step down buys the wordmark ~12 px, which is the difference
-   between "Semesterplan" whole and "Semesterpl…" on a 390 px phone. */
+.site-menu-btn,
+.site-menu-sep,
+.theme-toggle-label {
+  display: none;
+}
+
+/* Narrow phones: the bar is the wordmark and one control, and everything else
+   is a panel under it.
+
+   THE WORDMARK COMES BACK WHOLE. It used to step down a size and ellipsise,
+   and the mono suffix was dropped outright, to buy room for two nav links and
+   two icon buttons squeezed against it at `--gap-1`. With those in the panel
+   the bar spends ~148px on the brand and 44 on the trigger out of 360, so all
+   three economies are repealed.
+
+   The account's NAME comes back too, and that is the point of the change
+   rather than a side effect: below this breakpoint it used to be the mark
+   alone, because at 6ch "Martin Sundal" came out as "Martin…" beside a glyph
+   that already said "you". A menu row has room for a person's name, so the
+   information stops being something only the `aria-label` carries. */
 @media (max-width: 480px) {
-  .site-brand {
+  .site-topbar {
+    gap: var(--gap-2);
+  }
+
+  /* Raised above the scrim (19) while open, so the trigger stays visible and
+     hittable. The panel is a child, so it stacks inside this context. */
+  .site-topbar[data-menu="open"] {
+    z-index: 21;
+  }
+
+  .site-menu-btn {
+    display: inline-flex;
+    margin-left: auto;
+  }
+
+  .site-menu-panel {
+    position: absolute;
+    top: calc(var(--topbar-h) - var(--space-2));
+    right: var(--gutter);
+    z-index: 1;
+    display: none;
+    flex-direction: column;
+    align-items: stretch;
+    min-width: 13rem;
+    max-width: calc(100vw - var(--gutter) * 2);
+    padding: var(--space-2);
+    background: var(--bg);
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow);
+  }
+
+  .site-topbar[data-menu="open"] .site-menu-panel {
+    display: flex;
+  }
+
+  /* The two links become two panel ROWS rather than a row inside a column. */
+  .site-menu-panel .site-nav {
+    display: contents;
+  }
+
+  .site-menu-sep {
     display: block;
-    min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    line-height: var(--control-h);
-    font-size: var(--text-base);
+    height: 1px;
+    margin: var(--space-2) 0;
+    background: var(--border);
+    border: 0;
+  }
+
+  /* Every row is a phone target and reads left-aligned. Without this the
+     account is a bare navlink and the toggle an icon square, both centred. */
+  .site-menu-panel .np-navlink,
+  .site-menu-panel .site-account,
+  .site-menu-panel .theme-toggle {
+    justify-content: flex-start;
+    width: 100%;
+    min-height: 44px;
+    padding: 0 var(--space-2);
+  }
+
+  /* Stacked in one grid cell at desktop because it is icon-only there; a row
+     here, with the label beside the mark. Only ever one glyph is displayed, so
+     flex changes nothing about which one is drawn. */
+  .site-menu-panel .theme-toggle {
+    display: flex;
+    align-items: center;
+    gap: var(--gap-2);
+  }
+
+  .theme-toggle-label {
+    display: inline;
+    font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
+  }
+
+  /* No 10ch cap in the panel: a menu row has the width for a whole name, and
+     the cap existed to stop a long one wrapping a one-row bar. */
+  .site-account-name {
+    max-width: none;
   }
 }
 

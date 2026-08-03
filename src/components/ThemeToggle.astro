@@ -11,7 +11,12 @@ interface Props {
   storageKey?: string;
   label?: string;
 }
-const { storageKey = "np:theme", label = "Bytt tema" } = Astro.props;
+// "Mørkt tema", not "Bytt tema": below the site's mobile breakpoint this button
+// is a row in the topbar's menu with that phrase printed beside the mark, and
+// an accessible name that disagreed with its own visible label fails WCAG
+// 2.5.3. Naming the state it turns on also reads correctly icon-only, where
+// `aria-pressed` is the only thing saying which way it is set.
+const { storageKey = "np:theme", label = "Mørkt tema" } = Astro.props;
 
 import Icon from "./Icon.astro";
 ---
@@ -26,6 +31,11 @@ import Icon from "./Icon.astro";
 >
   <Icon name="sun" size={19} class="icon icon-sun" />
   <Icon name="moon" size={19} class="icon icon-moon" />
+  {/* Only drawn inside the topbar's phone menu, where this control is a row
+      rather than an icon square. Styled from site.css, NOT from the scoped
+      block below: a scoped rule carries the component's own attribute selector
+      and would outrank the media query that has to reveal it. */}
+  <span class="theme-toggle-label">Mørkt tema</span>
 </button>
 
 <style>

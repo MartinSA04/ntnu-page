@@ -2045,45 +2045,86 @@ test.describe("the account on a phone", () => {
       );
     });
 
-  test("is the mark alone, and still says who you are", async ({ page }) => {
+  test("lives in the menu, where it can say who you are", async ({ page }) => {
     await seedSession(page);
     await page.goto("/planlegger/");
-    const btn = page.locator("#site-account-btn");
-    await expect(btn).toBeVisible();
 
-    // No visible text at any session state below the breakpoint. At 6ch the
-    // name was "Kari No…" beside a glyph that already says "you", and signed
-    // out it spent the same room on the word "Profil" beside a person mark.
-    await expect(page.locator("#site-account-name")).toBeHidden();
-    // The information MOVED — it did not go. A screen reader is not degraded by
-    // a visual constraint.
+    // Closed, the bar is the wordmark and one control. The name is not
+    // truncated away any more — it is not on screen at all until asked for.
+    const btn = page.locator("#site-account-btn");
+    await expect(btn).toBeHidden();
+    // And the wordmark comes back WHOLE: the size step-down, the ellipsis and
+    // the dropped mono suffix were all paying for controls that are in the
+    // panel now.
+    await expect(page.locator(".site-brand-suffix")).toBeVisible();
+
+    const menu = page.locator("#site-menu-btn");
+    await expect(menu).toHaveAttribute("aria-expanded", "false");
+    await menu.click();
+    await expect(menu).toHaveAttribute("aria-expanded", "true");
+
+    // Open, the name is VISIBLE. That is the whole reason this beats the bare
+    // mark it replaced: at 6ch that mark said "you" and nothing else.
+    await expect(btn).toBeVisible();
+    await expect(page.locator("#site-account-name")).toHaveText("Kari Nordmann");
     await expect(btn).toHaveAttribute("aria-label", "Profil · Kari Nordmann");
 
+    // Every row is a phone target.
     const box = await btn.boundingBox();
-    expect(box?.width).toBeGreaterThanOrEqual(44);
     expect(box?.height).toBeGreaterThanOrEqual(44);
 
-    // ONE ROW. §6's phone gate measures the week's top from the viewport's top,
-    // so a topbar that wrapped would come straight out of the week's budget.
+    // ONE ROW still. §6's phone gate measures the week's top from the
+    // viewport's top, so a topbar that wrapped would come out of the week.
     const bar = await page.locator(".site-topbar").boundingBox();
     expect(bar?.height).toBeLessThanOrEqual(64);
-    // And the mark is still drawn — an icon-only button whose icon collapsed is
-    // exactly the failure the share button had.
-    const glyph = await btn.locator("svg").boundingBox();
-    expect(glyph?.width).toBe(16);
+
+    // Esc dismisses, and focus goes back to the control that opened it.
+    await page.keyboard.press("Escape");
+    await expect(menu).toHaveAttribute("aria-expanded", "false");
+    await expect(menu).toBeFocused();
   });
 
-  test("signed out it is the same control, named for what it opens", async ({ page }) => {
+  test("signed out it is the same row, named for what it opens", async ({ page }) => {
     await page.goto("/planlegger/");
+    await page.locator("#site-menu-btn").click();
     const btn = page.locator("#site-account-btn");
-    await expect(page.locator("#site-account-name")).toBeHidden();
+    await expect(page.locator("#site-account-name")).toHaveText("Profil");
     await expect(btn).toHaveAttribute("aria-label", "Profil");
-    const box = await btn.boundingBox();
-    expect(box?.width).toBeGreaterThanOrEqual(44);
-    expect(box?.height).toBeGreaterThanOrEqual(44);
-    // Still the door: pressing it opens the panel, at every width.
+    // Still the door: pressing it opens the panel.
     await btn.click();
     await expect(page.locator("#planner-profile-panel")).toBeVisible();
+  });
+
+  test("the scrim dismisses it, and it survives a ClientRouter navigation", async ({ page }) => {
+    await page.goto("/planlegger/");
+    const menu = page.locator("#site-menu-btn");
+    await menu.click();
+    await page.locator(".np-menu-scrim").click({ position: { x: 10, y: 700 } });
+    await expect(menu).toHaveAttribute("aria-expanded", "false");
+    await expect(page.locator(".np-menu-scrim")).toHaveCount(0);
+
+    // The one that rots silently: hoisted scripts run ONCE per module, so a
+    // top-level mount would leave this button dead after any in-site nav.
+    await menu.click();
+    await page.locator('#site-menu-panel a[href="/emner/"]').click();
+    await expect(page).toHaveURL(/\/emner\/$/);
+    const after = page.locator("#site-menu-btn");
+    await after.click();
+    await expect(after).toHaveAttribute("aria-expanded", "true");
+  });
+
+  test("above the breakpoint there is no menu, and every control is in the bar", async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await page.goto("/planlegger/");
+    await expect(page.locator("#site-menu-btn")).toBeHidden();
+    await expect(page.locator("#site-account-btn")).toBeVisible();
+    await expect(page.locator(".theme-toggle")).toBeVisible();
+    await expect(page.locator('.site-nav a[href="/emner/"]')).toBeVisible();
+    // `display: contents` on the wrapper, so the separator it holds for the
+    // panel must not draw a line across the bar.
+    await expect(page.locator(".site-menu-sep")).toBeHidden();
   });
 });
 
