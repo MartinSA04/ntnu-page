@@ -530,6 +530,44 @@ describe("parsePlanHash / formatPlanHash — hash grammar", () => {
     expect(hash).toBe("#26h;MTDT.2024;TDT4100,TMA4100.2,-IT2805,%2BPSY1000");
   });
 
+  /**
+   * `formatPlanHash` is not only the URL — it is this product's plan-identity
+   * function, and `applyPulledPlan` compares two of them to decide whether a
+   * pulled plan differs from the one on screen. The old `else if` encoded
+   * `dropped` for `source: "program"` only, so a dropped manual course and an
+   * undropped one produced the identical token: the repaint gate returned
+   * early and left screen and storage disagreeing. An encoder used as an
+   * equality key has to be injective over the type it encodes.
+   */
+  it("encodes dropped for a manual course too, so the two do not hash alike", () => {
+    const dropped = formatPlanHash({
+      semesterId: "26h",
+      courses: [{ code: "PSY1000", name: "D", version: "1", source: "manual", dropped: true }],
+    });
+    const kept = formatPlanHash({
+      semesterId: "26h",
+      courses: [{ code: "PSY1000", name: "D", version: "1", source: "manual" }],
+    });
+    expect(dropped).not.toBe(kept);
+
+    // The parser reads BOTH prefixes, so the course survives rather than
+    // failing `CODE_PATTERN` and being thrown away whole. What it does with
+    // `dropped` on a manual row is the model's own long-standing invariant
+    // (`coerceCourse`: "manual adds are never dropped"), unchanged here.
+    const parsed = parsePlanHash(dropped);
+    expect(parsed?.courses).toEqual([
+      { code: "PSY1000", version: "1", source: "manual", groups: [] },
+    ]);
+  });
+
+  it("still reads the single-flag tokens every link in the wild carries", () => {
+    const parsed = parsePlanHash("#26h;-;-IT2805,+PSY1000");
+    expect(parsed?.courses).toEqual([
+      { code: "IT2805", version: "1", source: "program", dropped: true, groups: [] },
+      { code: "PSY1000", version: "1", source: "manual", groups: [] },
+    ]);
+  });
+
   it('formats a plan with no program as a "-" segment', () => {
     const hash = formatPlanHash({ semesterId: "26h", courses: [] });
     expect(hash).toBe("#26h;-;");

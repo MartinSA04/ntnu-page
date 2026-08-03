@@ -627,12 +627,24 @@ function parseHashToken(raw: string): HashToken | null {
   let rest = head;
   let source: CourseSource = "program";
   let dropped = false;
-  if (rest.startsWith("-")) {
-    dropped = true;
-    rest = rest.slice(1);
-  } else if (rest.startsWith("+")) {
-    source = "manual";
-    rest = rest.slice(1);
+  // Both flags, in either order, rather than an either/or: `-` and `+` answer
+  // two different questions (is it dropped, where did it come from) and the
+  // `else if` this replaced could only ever record one of them. See
+  // `formatHashToken` for why that mattered. `-CODE` and `+CODE` still mean
+  // exactly what they always did, so every link already in the wild is
+  // unaffected.
+  for (;;) {
+    if (rest.startsWith("-")) {
+      dropped = true;
+      rest = rest.slice(1);
+      continue;
+    }
+    if (rest.startsWith("+")) {
+      source = "manual";
+      rest = rest.slice(1);
+      continue;
+    }
+    break;
   }
   if (rest === "") return null;
   const [codeRaw = "", versionRaw = ""] = rest.split(".");
@@ -641,12 +653,28 @@ function parseHashToken(raw: string): HashToken | null {
   return { code: codeRaw, version, source, dropped, groups };
 }
 
+/**
+ * `dropped` is encoded for EVERY source, not only `program`.
+ *
+ * The `else if` this replaced meant a `source: "manual"` course carried no
+ * drop marker at all, so a dropped one and an undropped one produced the
+ * identical token — and `formatPlanHash` is not only the URL, it is this
+ * product's plan-identity function. `applyPulledPlan` compares two hashes to
+ * decide whether a pulled plan differs from the one on screen; a collision
+ * there returns early and leaves screen and storage disagreeing with no way
+ * to notice. An encoder used as an equality key has to be injective over the
+ * type it encodes, whatever the current reachability argument says.
+ *
+ * (Today `coerceCourse` normalises `dropped` away for manual rows on the way
+ * out of storage, which is a separate, documented invariant and is left
+ * alone — this is the encoder being made total, not that rule being relaxed.)
+ */
 function formatHashToken(course: PlanCourse): string {
   const codeVersion =
     course.version === DEFAULT_VERSION ? course.code : `${course.code}.${course.version}`;
   let raw = codeVersion;
-  if (course.source === "manual") raw = `+${codeVersion}`;
-  else if (course.dropped) raw = `-${codeVersion}`;
+  if (course.source === "manual") raw = `+${raw}`;
+  if (course.dropped) raw = `-${raw}`;
   for (const group of course.groups ?? []) {
     raw += `~${group}`;
   }
@@ -738,6 +766,12 @@ export function parsePlanHash(hash: string): ParsedPlanHash | null {
       source: parsed.source,
       groups: parsed.groups,
     };
+    // The `source === "program"` half is the SAME normalisation `coerceCourse`
+    // applies on the way out of storage ("manual adds are never dropped;
+    // removing one deletes it"). `parseHashToken` reads both flags so a
+    // `-+CODE` token is not thrown away whole — it would fail `CODE_PATTERN`
+    // and the course would vanish — but the model's own invariant still decides
+    // what survives into a `HashCourse`.
     if (parsed.source === "program" && parsed.dropped) course.dropped = true;
     courses.push(course);
   }
