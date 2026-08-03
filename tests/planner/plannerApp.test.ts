@@ -1725,12 +1725,18 @@ describe("mountPlannerApp — a pending edit survives a visibility pull in the s
  * derivation key (semester|programme|cohort|direction) — and
  * `loadPeriodCourses` can itself call `store.setProgramPlan`, which
  * dispatches `PLAN_CHANGE_EVENT` and re-enters `store.onPlanChange`'s
- * subscriber. That subscriber calls `schedulePush()` for a REAL edit, but
- * this re-entry is not one — it is the pull's own consequence — so
- * `suppressPush` must hold `schedulePush()` off for the whole async tail,
- * not just the synchronous repaint.
+ * subscriber, bumping `planGen` and scheduling a push exactly as a real
+ * edit would.
+ *
+ * That push is INTENTIONAL under the counter design (`plannerApp.ts`'s own
+ * comment on `planGen`): the derived obligatory course is real local
+ * content the server does not have yet, so sending it is correct, not a
+ * bug to suppress. What this test actually needs to prove is the "it
+ * converges" half of that claim — the derive settles into exactly ONE push,
+ * not a loop, and what lands on the server is the same content this tab
+ * rendered.
  */
-describe("mountPlannerApp — a pull that changes the programme does not schedule a push", () => {
+describe("mountPlannerApp — a pull-driven programme derive converges to one push", () => {
   beforeEach(() => {
     installDom();
     vi.resetModules();
@@ -1739,7 +1745,7 @@ describe("mountPlannerApp — a pull that changes the programme does not schedul
     vi.unstubAllGlobals();
   });
 
-  it("loadPeriodCourses's own setProgramPlan write never reaches schedulePush", async () => {
+  it("the derived obligatory course reaches the server in exactly one push", async () => {
     const server = makeSyncServer();
     // Device A: another device, already on this account, no programme set yet.
     const storageA = fakeStorage({ "np:plans": '{"26h":[]}' });
@@ -1824,19 +1830,283 @@ describe("mountPlannerApp — a pull that changes the programme does not schedul
 
     await mountPlannerApp(SEMESTERS as never, [], undefined);
     for (let i = 0; i < 20; i++) await new Promise((r) => setTimeout(r, 0));
-    // Real time, past `schedulePush`'s 1s debounce: if `setProgramPlan`'s
-    // re-entry into `onPlanChange` had armed a push (the un-suppressed
-    // behaviour), it would fire in this window. A short flush loop would not
-    // reach it.
+    // Real time, past `schedulePush`'s 1s debounce, so the derive's own
+    // (intentional) push actually fires within this test rather than being
+    // left dangling for whatever runs next.
     await new Promise((r) => setTimeout(r, 1100));
 
-    // The derive actually ran — TDT4109 is on screen — so the "no push"
-    // assertion below is not vacuously true because nothing happened.
+    // The derive ran — TDT4109 is on screen…
     const row = find("planner-course-rows")
       .descendants()
       .find((e) => e.dataset.code === "TDT4109");
     expect(row).toBeDefined();
-    expect(server.puts.length).toBe(putsBefore);
+    // …it reached the server in exactly one push (converged, not looped —
+    // nothing else changed locally after the derive settled)…
+    expect(server.puts.length).toBe(putsBefore + 1);
+    // …and what a fresh pull from another client decrypts to is the same
+    // derived content, not something a stale/duplicate push corrupted.
+    await deviceA.pull();
+    expect(storageA.getItem("np:plans")).toContain("TDT4109");
+  }, 10_000);
+});
+
+/**
+ * The two compound races review specifically asked for — each is a genuine
+ * edit landing inside a window the SIMPLER (single) races already covered
+ * did not reach: mid pull-driven derive, and mid the flush's own push round
+ * trip. `planGen`/`isDirty()` is supposed to make both self-healing rather
+ * than needing a bespoke guard per window; these are the tests that would
+ * fail if that were only true in the cases already covered elsewhere.
+ */
+describe("mountPlannerApp — an edit survives a race inside the pull/push machinery itself", () => {
+  beforeEach(() => {
+    installDom();
+    vi.resetModules();
+  });
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("an edit made while loadPeriodCourses's own fetch is in flight survives a later visibility cycle", async () => {
+    const server = makeSyncServer();
+    const storageA = fakeStorage({ "np:plans": '{"26h":[]}' });
+    const deviceA = createSyncClient({
+      storage: storageA,
+      fetch: server.handle as unknown as typeof fetch,
+    });
+    await deviceA.signup("martin", "482913", "Mac");
+
+    (globalThis as unknown as Record<string, unknown>).location = {
+      hash: "",
+      search: "",
+      pathname: "/planlegger/",
+    };
+    const localStorageLike = (globalThis as unknown as { localStorage: StorageLike }).localStorage;
+    const deviceB = createSyncClient({
+      storage: localStorageLike,
+      fetch: server.handle as unknown as typeof fetch,
+    });
+    await deviceB.login("martin", "482913", "Tavle · nettleser");
+
+    // Device A picks MTDT kull 2026 (no courses yet) and pushes — the
+    // on-load pull below moves the derivation key and kicks off
+    // `loadPeriodCourses`.
+    storageA.setItem("np:profile", '{"program":{"code":"MTDT","name":"MTDT","cohort":2026}}');
+    await deviceA.push();
+
+    // The programme-plan fetch is held open until the test releases it —
+    // the window a genuine edit needs to land inside.
+    let releasePlan = (): void => {};
+    const planGate = new Promise<void>((resolve) => {
+      releasePlan = resolve;
+    });
+    (globalThis as unknown as Record<string, unknown>).fetch = vi.fn(
+      async (url: string, init?: RequestInit) => {
+        if (url.startsWith("/api/sync/")) return server.handle(url, init);
+        if (url.includes("/data/search-index.json"))
+          return jsonResponse({ year: 2026, courses: [] });
+        if (url.includes("/api/program/MTDT/plan")) {
+          await planGate;
+          return jsonResponse({
+            code: "MTDT",
+            name: "Datateknologi",
+            year: 2026,
+            startTerm: "AUTUMN",
+            updated: null,
+            publishedYears: [2026],
+            periods: [
+              {
+                periodNumber: 1,
+                direction: {
+                  code: null,
+                  name: null,
+                  courseGroups: [
+                    {
+                      name: null,
+                      description: null,
+                      type: "O",
+                      courses: [obligatory("TDT4109", "TDT4109 navn", 7.5)],
+                    },
+                  ],
+                  waypoints: [],
+                },
+              },
+            ],
+          });
+        }
+        if (url.includes("/api/course/TDT4109/timetable")) {
+          return jsonResponse([entry("TDT4109", 1, "08:15", "10:00")]);
+        }
+        if (url.includes("/api/course/TDT4136/timetable")) {
+          return jsonResponse([entry("TDT4136", 2, "10:15", "12:00")]);
+        }
+        if (url.includes("/api/course/")) return jsonResponse(DETAILS);
+        return { ok: false, status: 404, json: async () => ({ error: "Not found" }) };
+      },
+    );
+
+    const { mountPlannerApp } = await import("../../src/components/planner/plannerApp.js");
+    const { clearCourseBundleMemo, clearPlannerIndexMemo } = await import(
+      "../../src/lib/planner/data.js"
+    );
+    const { clearProgramPlanMemo } = await import("../../src/components/planner/programPlan.js");
+    clearCourseBundleMemo();
+    clearPlannerIndexMemo();
+    clearProgramPlanMemo();
+
+    await mountPlannerApp(SEMESTERS as never, [], undefined);
+    // Let the on-load pull land and `loadPeriodCourses` reach — and hang on
+    // — the gated fetch.
+    for (let i = 0; i < 20; i++) await new Promise((r) => setTimeout(r, 0));
+
+    // The genuine edit, while the derive's own fetch is still in flight —
+    // `source: "manual"` so `store.setProgramPlan`'s own merge (it only
+    // replaces `source: "program"` courses) preserves it once the derive
+    // below finally lands.
+    planStorage.set(
+      "np:plans",
+      '{"26h":[{"code":"TDT4136","name":"TDT4136 navn","version":"1","source":"manual"}]}',
+    );
+    (
+      globalThis as unknown as { window: { dispatchEvent: (ev: { type: string }) => void } }
+    ).window.dispatchEvent({ type: PLAN_CHANGE_EVENT });
+    for (let i = 0; i < 5; i++) await new Promise((r) => setTimeout(r, 0));
+
+    // Now let the derive land: obligatory TDT4109 merges in alongside the
+    // manual TDT4136, and `setProgramPlan`'s own write re-enters
+    // `onPlanChange`, bumping `planGen` again.
+    releasePlan();
+    for (let i = 0; i < 20; i++) await new Promise((r) => setTimeout(r, 0));
+
+    const putsBefore = server.puts.length;
+
+    // A later visibility cycle is what is supposed to flush all of it.
+    fireVisibilityChange(true);
+    fireVisibilityChange(false);
+    for (let i = 0; i < 20; i++) await new Promise((r) => setTimeout(r, 0));
+
+    // Both courses are on screen and in local storage…
+    expect(planStorage.get("np:plans")).toContain("TDT4109");
+    expect(planStorage.get("np:plans")).toContain("TDT4136");
+    const rows = find("planner-course-rows").descendants();
+    expect(rows.find((e) => e.dataset.code === "TDT4109")).toBeDefined();
+    expect(rows.find((e) => e.dataset.code === "TDT4136")).toBeDefined();
+    // …a push actually happened…
+    expect(server.puts.length).toBeGreaterThan(putsBefore);
+    // …and BOTH courses reached the server, not just whichever one a race
+    // happened to send first.
+    await deviceA.pull();
+    expect(storageA.getItem("np:plans")).toContain("TDT4109");
+    expect(storageA.getItem("np:plans")).toContain("TDT4136");
+  }, 10_000);
+
+  it("an edit made while the flush's own push is on the wire survives the same cycle", async () => {
+    const server = makeSyncServer();
+    const storageA = fakeStorage({ "np:plans": '{"26h":[]}' });
+    const deviceA = createSyncClient({
+      storage: storageA,
+      fetch: server.handle as unknown as typeof fetch,
+    });
+    await deviceA.signup("martin", "482913", "Mac");
+
+    (globalThis as unknown as Record<string, unknown>).location = {
+      hash: "",
+      search: "",
+      pathname: "/planlegger/",
+    };
+
+    // The FIRST PUT after `armGate()` is held open until the test releases
+    // it; every other request (including later PUTs) passes straight
+    // through. This is the flush's own network round trip, from the
+    // inside.
+    let gateActive = false;
+    let releasePut = (): void => {};
+    let gate: Promise<void> = Promise.resolve();
+    function armGate(): void {
+      gate = new Promise<void>((resolve) => {
+        releasePut = resolve;
+      });
+      gateActive = true;
+    }
+    (globalThis as unknown as Record<string, unknown>).fetch = vi.fn(
+      async (url: string, init?: RequestInit) => {
+        if (url.startsWith("/api/sync/")) {
+          if ((init?.method ?? "GET") === "PUT" && gateActive) {
+            gateActive = false;
+            await gate;
+          }
+          return server.handle(url, init);
+        }
+        if (url.includes("/data/search-index.json"))
+          return jsonResponse({ year: 2026, courses: [] });
+        if (url.includes("/api/course/TDT4109/timetable")) {
+          return jsonResponse([entry("TDT4109", 1, "08:15", "10:00")]);
+        }
+        if (url.includes("/api/course/TDT4136/timetable")) {
+          return jsonResponse([entry("TDT4136", 2, "10:15", "12:00")]);
+        }
+        if (url.includes("/api/course/")) return jsonResponse(DETAILS);
+        return { ok: false, status: 404, json: async () => ({ error: "Not found" }) };
+      },
+    );
+
+    const localStorageLike = (globalThis as unknown as { localStorage: StorageLike }).localStorage;
+    const deviceB = createSyncClient({
+      storage: localStorageLike,
+      fetch: server.handle as unknown as typeof fetch,
+    });
+    await deviceB.login("martin", "482913", "Tavle · nettleser");
+
+    const { mountPlannerApp } = await import("../../src/components/planner/plannerApp.js");
+    const { clearCourseBundleMemo, clearPlannerIndexMemo } = await import(
+      "../../src/lib/planner/data.js"
+    );
+    clearCourseBundleMemo();
+    clearPlannerIndexMemo();
+
+    await mountPlannerApp(SEMESTERS as never, [], undefined);
+    for (let i = 0; i < 20; i++) await new Promise((r) => setTimeout(r, 0));
+
+    // First edit.
+    planStorage.set(
+      "np:plans",
+      '{"26h":[{"code":"TDT4109","name":"TDT4109 navn","version":"1","source":"manual"}]}',
+    );
+    (
+      globalThis as unknown as { window: { dispatchEvent: (ev: { type: string }) => void } }
+    ).window.dispatchEvent({ type: PLAN_CHANGE_EVENT });
+
+    // Fires the visibility cycle that flushes it — the very next push this
+    // fetch mock sees is held open.
+    armGate();
+    fireVisibilityChange(true);
+    fireVisibilityChange(false);
+    // Give the async chain time to actually reach the gated fetch call and
+    // hang there before the second edit lands.
+    for (let i = 0; i < 5; i++) await new Promise((r) => setTimeout(r, 0));
+
+    // Second edit, while the first push is still on the wire — this tab's
+    // own `collectSyncable` read for that in-flight push already missed it.
+    planStorage.set(
+      "np:plans",
+      '{"26h":[{"code":"TDT4109","name":"TDT4109 navn","version":"1","source":"manual"},{"code":"TDT4136","name":"TDT4136 navn","version":"1","source":"manual"}]}',
+    );
+    (
+      globalThis as unknown as { window: { dispatchEvent: (ev: { type: string }) => void } }
+    ).window.dispatchEvent({ type: PLAN_CHANGE_EVENT });
+    for (let i = 0; i < 5; i++) await new Promise((r) => setTimeout(r, 0));
+
+    releasePut();
+    for (let i = 0; i < 20; i++) await new Promise((r) => setTimeout(r, 0));
+
+    // Both courses survived — the second edit was not left dirty with
+    // nothing scheduled once the first push (that could not have carried
+    // it) landed.
+    expect(planStorage.get("np:plans")).toContain("TDT4109");
+    expect(planStorage.get("np:plans")).toContain("TDT4136");
+    await deviceA.pull();
+    expect(storageA.getItem("np:plans")).toContain("TDT4109");
+    expect(storageA.getItem("np:plans")).toContain("TDT4136");
   }, 10_000);
 });
 

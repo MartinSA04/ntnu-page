@@ -475,19 +475,24 @@ export async function mountPlannerApp(
   elements.profileEntry.addEventListener("click", () => profile.show(), { signal: lifeSignal });
 
   /**
-   * True from the moment a pull decides to repaint until that repaint's full
-   * tail — including the async `loadPeriodCourses()` it may kick off — has
-   * settled. `loadPeriodCourses` can itself call `store.savePlan`/
-   * `setProgramPlan` (when a pulled plan carries a new programme/cohort),
-   * which re-enters `store.onPlanChange`'s subscriber below and would
-   * otherwise call `schedulePush()` on data this tab only just adopted from
-   * the server — pushing it straight back for no reason. `schedulePush`
-   * checks this and no-ops while it is held; a REAL edit made in that same
-   * narrow window is not lost, only delayed to the student's next genuine
-   * edit (push always re-reads storage fresh, never a snapshot) — the same
-   * trade this makes for `loadPeriodCourses`'s own enrichment on purpose.
+   * The one fact everything below is built on: has the plan changed since
+   * the server last confirmed it has this tab's copy? A generation counter,
+   * not a flag or a timer's presence. Two earlier attempts here inferred
+   * "unsaved work exists" from `pushTimer !== null` and "this write was
+   * mine" from a time-scoped `suppressPush` boolean — both are lies under
+   * concurrency (an edit racing a pull, or racing the push's own network
+   * round trip), which is why each patched one race and opened another.
+   * `planGen` is bumped, unconditionally, by `store.onPlanChange`'s
+   * subscriber (further down) for every change it sees — a real edit and a
+   * pull's own re-derive (`setProgramPlan` inside `loadPeriodCourses`)
+   * alike; there is no attempt to tell them apart, because a snapshot of
+   * "who caused this" is exactly the kind of state that goes stale under
+   * concurrency. `syncedGen` is `planGen` as of the last push this tab
+   * confirmed landed; the two being equal is what "clean" means.
    */
-  let suppressPush = false;
+  let planGen = 0;
+  let syncedGen = 0;
+  const isDirty = () => planGen !== syncedGen;
 
   /**
    * What a successful pull needs that a same-tab edit gets for free through
@@ -499,107 +504,140 @@ export async function mountPlannerApp(
    * `localStorage` while the screen keeps drawing the week from before the
    * pull.
    *
-   * Two things this deliberately does NOT do:
-   *  - Call `schedulePush()` itself, and holds `suppressPush` so nothing
-   *    reached indirectly through `applyPlanUpdate` can either (see that
-   *    flag's own comment). `applyPlanUpdate`'s subscriber (further down) is
-   *    the one place that schedules a push, and only for a real edit — a
-   *    pull pushing the plan it just adopted straight back to the server
-   *    would bump the version for no reason and ping-pong between two open
-   *    devices for no reason beyond that.
-   *  - Repaint when nothing changed. `formatPlanHash` is the same identity
-   *    check the `hashchange` handler below already uses for "is this
-   *    actually different" — a pull that came back identical to what is
-   *    already on screen must not spend the week's layer-motion animation or
-   *    CLS budget on a no-op.
+   * Deliberately does NOT bump `planGen` itself: the pulled content, by
+   * definition, is what the server already has, so the pull alone creates
+   * nothing new to send. If applying it moves the derivation key and that
+   * kicks off `loadPeriodCourses()`, and THAT calls `setProgramPlan`, that
+   * goes through `store.onPlanChange` like any other write and bumps
+   * `planGen` there — correctly: the derived courses are real local content
+   * the server does not have yet. Pushing them is not a bug (see `planGen`'s
+   * own comment on why nothing suppresses that here any more) — the other
+   * device pulls the same enrichment, re-derives the identical result,
+   * `formatPlanHash` matches, and nothing repaints or pushes again. It
+   * converges rather than ping-ponging.
+   *
+   * Repaints only when the pulled plan actually differs: `formatPlanHash` is
+   * the same identity check the `hashchange` handler below already uses for
+   * "is this actually different" — a pull that came back identical to what
+   * is already on screen must not spend the week's layer-motion animation or
+   * CLS budget on a no-op.
    */
-  async function applyPulledPlan(): Promise<void> {
+  function applyPulledPlan(): void {
     const next = store.loadPlan();
     if (formatPlanHash(next) === formatPlanHash(plan)) return;
-    suppressPush = true;
-    try {
-      await applyPlanUpdate(next);
-    } finally {
-      suppressPush = false;
-    }
+    applyPlanUpdate(next);
   }
 
   /**
    * `sync.pull()`, plus the repaint it does not do on its own (above).
-   * Returns the same `SyncResult` `sync.pull()` did, so `runPush`'s
+   * Returns the same `SyncResult` `sync.pull()` did, so `pushOnce`'s
    * stale-retry branch can still branch on `.ok`.
    */
   async function pullAndRefresh(): Promise<SyncResult> {
     const result = await sync.pull();
-    if (result.ok) void applyPulledPlan();
+    if (result.ok) applyPulledPlan();
     return result;
   }
 
   let pushTimer: ReturnType<typeof setTimeout> | null = null;
-  /**
-   * Debounced so a fast run of edits (adding five courses in a row) pushes
-   * once. Nulls `pushTimer` the moment the timer actually fires (not just
-   * when a later call replaces it) — `handleVisibilityPull` below reads
-   * `pushTimer !== null` as "is there an edit still waiting to be pushed",
-   * and that check is only honest if a timer that has already fired stops
-   * counting as pending.
-   */
+  /** Debounced so a fast run of edits (adding five courses in a row) pushes
+   *  once. Purely a batching delay now — nothing reads `pushTimer` as a
+   *  signal for "is there unsynced work" any more; `isDirty()` is that
+   *  signal, and it is correct whether or not this timer happens to be
+   *  armed at the moment it is asked. */
   function schedulePush(): void {
-    if (suppressPush) return;
     if (sync.session() === null) return;
     if (pushTimer !== null) clearTimeout(pushTimer);
     pushTimer = setTimeout(() => {
       pushTimer = null;
-      void runPush();
+      void ensurePush();
     }, 1000);
   }
   lifeSignal.addEventListener("abort", () => {
     if (pushTimer !== null) clearTimeout(pushTimer);
   });
 
-  /** Runs the debounced push now, if one is armed, and cancels the timer. */
-  function flushPendingPush(): Promise<boolean> | null {
-    if (pushTimer === null) return null;
-    clearTimeout(pushTimer);
-    pushTimer = null;
-    return runPush();
-  }
-
-  /** Returns whether the push landed — `runPush` reassigns `result` on the
-   *  stale-retry path, so this is the LAST push tried, not just the first. */
-  async function runPush(): Promise<boolean> {
+  /**
+   * One push attempt, including the existing stale-conflict recovery: pull
+   * the server's newer copy, then push once more on top of it. `syncClient.ts`
+   * (Task 6) is explicit that there is no merge — a genuine cross-device
+   * conflict is last-write-wins there, unchanged by this file. What this
+   * file owns is a narrower problem: keeping ONE tab's own debounce/pull
+   * timing from destroying ITS OWN unsent edit, which is `ensurePush`'s job,
+   * below.
+   */
+  async function pushOnce(): Promise<boolean> {
     let result = await sync.push();
-    // A stale push means another device moved first: take its copy, then
-    // re-push our edit on top. There is no merge here and there must not be
-    // one. `result` is reassigned here — the brief's own snippet left it
-    // `const` and threw the retry's outcome away, so a stale push that the
-    // retry actually landed still rendered "Ikke synkronisert · prøv igjen"
-    // forever. The UI has to reflect whichever push was the LAST one tried.
     if (!result.ok && result.reason === "stale") {
       if ((await pullAndRefresh()).ok) result = await sync.push();
     }
-    profile.setSyncState(result.ok ? "ok" : "failed");
     return result.ok;
   }
 
   /**
-   * The stale-tab guard's real entry point. A tab holding an unflushed edit
-   * — `pushTimer` still armed — is NOT the stale tab the guard exists for:
-   * pulling first would overwrite that edit's `localStorage` with the
-   * server's pre-edit copy (`applySyncable` is unconditional) and adopt the
-   * server's version number, so the still-armed timer would then push the
-   * now-overwritten, edit-free copy back — and because the pull just
-   * advanced the version to match, that push lands clean and reports "ok"
-   * while the edit is gone from screen, storage AND server. Flush first;
-   * only pull if the flush landed. A flush that fails leaves "Ikke
-   * synkronisert · prøv igjen" standing rather than pulling over data this
-   * tab could not save — an honest failure beats a silent loss. The common
-   * case (nothing pending) is untouched: `flushPendingPush` returns `null`
-   * and this falls straight through to the pull exactly as before.
+   * At most one push in flight: a caller that arrives while one is already
+   * running is handed that SAME promise rather than starting a second —
+   * this is what actually stops a stale-retry pull (inside `pushOnce`) from
+   * stacking a second push on one already on the wire. Loops on `planGen`
+   * moving DURING the send: `sentGen` is read fresh at the top of each pass,
+   * so an edit that lands mid-flight (this push's own `collectSyncable` read
+   * already missed it) gets picked up by another pass rather than left
+   * dirty with nothing scheduled. `isDirty()` is checked going in — nothing
+   * to send is a plain no-op, not a wasted round trip.
+   */
+  let pushInFlight: Promise<boolean> | null = null;
+  function ensurePush(): Promise<boolean> {
+    if (pushInFlight) return pushInFlight;
+    if (!isDirty()) return Promise.resolve(true);
+    pushInFlight = (async () => {
+      let ok = true;
+      try {
+        for (;;) {
+          if (sync.session() === null) {
+            ok = true;
+            break;
+          }
+          const sentGen = planGen;
+          ok = await pushOnce();
+          if (!ok) break;
+          syncedGen = sentGen;
+          if (planGen === sentGen) break; // nothing moved while that send was in flight
+        }
+      } finally {
+        pushInFlight = null;
+      }
+      profile.setSyncState(ok ? "ok" : "failed");
+      return ok;
+    })();
+    return pushInFlight;
+  }
+
+  /**
+   * The stale-tab guard's real entry point. A tab holding unsynced work is
+   * NOT the stale tab the guard exists for: pulling first would overwrite
+   * that work's `localStorage` with the server's older copy (`applySyncable`
+   * is unconditional). Flush first — cancelling any armed debounce timer,
+   * which would otherwise fire later and redo work `ensurePush` is about to
+   * do anyway — and only pull once nothing is left dirty. Re-checked AFTER
+   * the flush, not just before it starts, because an edit can land during
+   * the flush's OWN network round trip too; `ensurePush`'s loop already
+   * catches that internally, but this is what decides whether it is safe to
+   * pull once the flush call returns. If the flush failed, or something is
+   * dirty again by the time it settles, skip the pull for this cycle
+   * entirely — do not retry, do not pull anyway. A tab with unsaved work is
+   * not stale, and skipping one pull costs nothing next to losing an edit.
+   * The common case (nothing dirty) falls straight through exactly as
+   * before: `isDirty()` is false and this reaches the pull immediately.
    */
   async function handleVisibilityPull(): Promise<void> {
-    const flush = flushPendingPush();
-    if (flush !== null && !(await flush)) return;
+    if (isDirty()) {
+      if (pushTimer !== null) {
+        clearTimeout(pushTimer);
+        pushTimer = null;
+      }
+      if (!(await ensurePush())) return;
+      if (isDirty()) return;
+    }
     void pullAndRefresh();
   }
 
@@ -618,7 +656,7 @@ export async function mountPlannerApp(
   );
 
   // On load: a signed-in student's other device may have moved since this
-  // tab's `localStorage` copy was written. No edit can be pending this early
+  // tab's `localStorage` copy was written. Nothing can be dirty this early
   // (this runs before the first paint), so there is nothing to flush first.
   if (sync.session() !== null) void pullAndRefresh();
 
@@ -2959,19 +2997,11 @@ export async function mountPlannerApp(
   /**
    * Paints `next` onto the page: the in-memory `plan`, the address bar, both
    * rendered views, and — if the derivation key moved — a re-fetch of the
-   * study plan. The one shared step between a same-tab plan write (below,
-   * which also schedules a push) and a successful sync pull
-   * (`applyPulledPlan`, near the sync setup above, which deliberately does
-   * not — see its own comment).
-   *
-   * Returns the `loadPeriodCourses()` promise when the derivation key moved
-   * (`Promise.resolve()` otherwise) — not for its resolved value, which is
-   * always `void`, but so `applyPulledPlan` can `await` the full tail of a
-   * pull-driven update, including the async re-derive it may kick off,
-   * before releasing `suppressPush`. `loadPeriodCourses` can itself call
-   * `store.savePlan`/`setProgramPlan`, which re-enters this very subscriber.
+   * study plan. The one shared step between a same-tab plan write (below)
+   * and a successful sync pull (`applyPulledPlan`, near the sync setup
+   * above).
    */
-  function applyPlanUpdate(next: PlanState): Promise<void> {
+  function applyPlanUpdate(next: PlanState): void {
     // C4's note only explains a semester we SUBSTITUTED for the link's own, so
     // a deliberate switch is when it stops being true. Nothing else clears it:
     // studieinfo's Lagre goes through `savePlan` and `syncHash`'s replaceState,
@@ -2989,18 +3019,21 @@ export async function mountPlannerApp(
     const key = derivationKey();
     if (key !== lastDerivationKey) {
       lastDerivationKey = key;
-      return loadPeriodCourses();
+      void loadPeriodCourses();
     }
-    return Promise.resolve();
   }
 
   const unsubscribe = store.onPlanChange((next) => {
-    void applyPlanUpdate(next);
+    // The one fact `isDirty()` (near the sync setup, above) is asked
+    // against — bumped for every change this subscriber sees, a real edit
+    // or a pull-driven re-derive (`setProgramPlan` inside
+    // `loadPeriodCourses`) alike, unconditionally. See `planGen`'s own
+    // comment for why nothing here tries to tell the two apart any more.
+    planGen++;
+    applyPlanUpdate(next);
     // The debounced push trigger: every plan write (add/drop a course, change
     // a group, edit studieinfo) reaches the store through here, so wiring it
-    // once at the top of the fan-out covers all of them. `schedulePush`
-    // itself is a no-op while `suppressPush` is held (a pull-driven update in
-    // progress, further up) — this is a REAL edit, not one, so it never is.
+    // once at the top of the fan-out covers all of them.
     schedulePush();
   });
   signal?.addEventListener("abort", unsubscribe);
