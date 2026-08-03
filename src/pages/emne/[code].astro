@@ -353,7 +353,20 @@ const description = `${course.code} ${course.name}: timeplan, eksamen og nøkkel
   :global(.timetable-term) {
     margin-bottom: var(--space-3);
   }
-  :global(.timetable-others) {
+
+  /* The week's two switches share a row: WHAT is drawn (øvinger og labber) and
+     HOW MUCH of it (alle / bare min). They wrap on a narrow phone rather than
+     compressing — a `.np-toggle` at its min-height is already a phone target,
+     and two of them do not fit 358px side by side. */
+  :global(.timetable-controls) {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--gap-2);
+    margin-bottom: var(--space-2);
+  }
+
+  /* What the week is showing, under the controls that change it. */
+  :global(.timetable-scope) {
     margin-bottom: var(--space-3);
   }
 
@@ -614,6 +627,12 @@ const description = `${course.code} ${course.name}: timeplan, eksamen og nøkkel
     let semester = plannedSemester();
 
     function mountWeek() {
+      // The three facts the scope line and the "bare min" switch are about,
+      // read at mount. The programme narrows lectures to your own section; a
+      // plan ENTRY is the only thing that can carry your øving-group pick,
+      // which is why the line offers a plan when there is none.
+      const planNow = store.loadPlan();
+      const entryNow = planNow.courses.find((c) => c.code === code);
       return mountCourseTimetable({
         code,
         name,
@@ -625,6 +644,9 @@ const description = `${course.code} ${course.name}: timeplan, eksamen og nøkkel
           label: semesterLabel(semester.name),
           teachingWeeks: semester.teachingWeeks,
         },
+        programCode: planNow.program?.code ?? null,
+        selectedGroups: entryNow?.groups,
+        inPlan: !!entryNow && !entryNow.dropped,
         signal,
       });
     }

@@ -1296,7 +1296,16 @@ export async function mountPlannerApp(
     // takes it out of the tab order and out of the a11y tree's interactive
     // set, and the title keeps its ink and its place either way.
     const nameBtn = elements.nameBtn;
-    nameBtn.disabled = !program;
+    // Inert ONLY on the true empty state — no programme AND no courses — which
+    // is exactly when the week's own card is on screen saying "Velg
+    // studieprogram" in the accent. Two controls with that one accessible name
+    // is the two-doors-into-one-room shape the bar was cleaned of, and the card
+    // is the louder of the two, so the title yields to it.
+    //
+    // A program-less plan that HAS courses (a pasted shared link) draws no
+    // card, so the title is the only way in and must stay a door. Gating on
+    // `!program` alone left that student with no route to the picker at all.
+    nameBtn.disabled = !program && plan.courses.length === 0;
     // The accessible name is the ERRAND, not the button's two children read
     // end to end: without this a screen reader announced the whole banner —
     // "MTFYMA Kull 24 Uke 34 · Master i fysikk og matematikk" — as one

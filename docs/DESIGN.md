@@ -568,6 +568,28 @@ Settled, with the reasoning, so they are not re-opened by the next reviewer.
   controls**: the wordmark's size step-down, its ellipsis, and the dropped mono
   suffix. "Semesterplan NTNU" is whole at 360 px again.
 
+- **The course page's week is every parallel, and it says so.** `/emne/[code]/`
+  draws with `showAllGroups` on purpose — it is the course's own reference
+  page, not one student's plan — and for a long time nothing on it said that,
+  so six lectures on screen read as six lectures you had to attend. A line
+  under the controls now states the scope, and it has **three rungs** because
+  what the student can do next differs: with no programme stored, nothing can
+  be narrowed and the line points at the planner; with one, a **«Bare min
+  undervisning»** switch appears; only a *plan entry* can carry an øving-group
+  pick, so the offer to add the course stands until it is in the plan.
+
+  The switch renders **only when narrowing would change the week**.
+  `entriesForProgram` is a no-op for a course whose entries name no programme
+  in `studyProgramKeys`, which is most of them, so an unguarded control would
+  visibly do nothing on the majority of course pages — the same failure the
+  layer box was fixed for.
+
+  **Default is all, per visit, never persisted.** One URL has to show two
+  people the same week, and a remembered choice would need a pre-paint read to
+  avoid shifting the week in a frame late (§6). The narrowing acts on the
+  ENTRIES handed to the renderer, not on `showAllGroups`: that flag states what
+  the surface is, and the switch is the student asking for a slice of it.
+
 - **A bar that runs out of room folds into a menu, and the WRAPPER is what
   folds.** One controller (`src/lib/menuPanel.ts`), two bars. Above its
   breakpoint the wrapper is `display: contents`, so its children are the bar's

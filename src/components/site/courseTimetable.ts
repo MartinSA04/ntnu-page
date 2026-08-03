@@ -44,6 +44,12 @@ export interface CourseTimetableOptions {
   semester: { season: string; year: number; label: string; teachingWeeks: number[] };
   /** The page's lifecycle signal — the window-level scroll/resize listeners hang off it. */
   signal?: AbortSignal;
+  /** The stored programme, for the "bare min undervisning" narrowing. */
+  programCode?: string | null;
+  /** The student's group picks for this course, when it is in the plan. */
+  selectedGroups?: string[];
+  /** Whether the course is in the plan — only a plan entry can hold a pick. */
+  inPlan?: boolean;
 }
 
 const SEASON_TERMS: Record<string, string> = {
@@ -242,10 +248,38 @@ export async function mountCourseTimetable(
 
   body.append(el("p", "np-hint timetable-term", termNote(shown, options)));
 
+  const programCode = options.programCode ?? null;
+  const inPlan = options.inPlan ?? false;
+  /** All of it, until the student asks for their own slice. Per visit, never
+   *  persisted: the same URL has to show two people the same week, and a
+   *  remembered choice would need a pre-paint read to avoid shifting the week
+   *  in a frame late. */
+  let scope: TimetableScope = "all";
+
+  const controls = el("div", "timetable-controls");
   const toggle = el("button", "np-toggle timetable-others", "Vis øvinger og labber");
   toggle.type = "button";
   toggle.setAttribute("aria-pressed", "false");
-  body.append(toggle);
+  controls.append(toggle);
+
+  // Only when it would change something — see `narrowingChangesWeek`.
+  const canNarrow = narrowingChangesWeek(shown, options.selectedGroups, programCode);
+  const mine = el("button", "np-toggle np-toggle--text timetable-mine", "Bare min undervisning");
+  mine.type = "button";
+  mine.setAttribute("aria-pressed", "false");
+  if (canNarrow) controls.append(mine);
+
+  body.append(controls);
+
+  // WHAT THIS WEEK IS. Every parallel and every group, said out loud, because
+  // six lectures on screen with nothing naming them read as six lectures you
+  // have to attend.
+  const scopeLine = el("p", "np-hint timetable-scope");
+  const syncScopeLine = (): void => {
+    scopeLine.textContent = scopeNote({ programCode, inPlan, scope });
+  };
+  syncScopeLine();
+  body.append(scopeLine);
 
   // Same class names as /planlegger/'s week: the geometry lives in
   // src/styles/planner-week.css, which both surfaces import.
@@ -308,9 +342,14 @@ export async function mountCourseTimetable(
   };
 
   function draw(showOthers: boolean): void {
-    // showAllGroups: this is the course's own reference page, not one student's
-    // plan — every parallel/group draws, not whichever one a programme-less
-    // context would default to.
+    // The narrowing happens on the ENTRIES handed in, not on `showAllGroups`.
+    // That flag stays true either way: it says "this is the course's page, not
+    // one student's plan", which is still what the surface is — the switch is
+    // the student ASKING for their own slice of it, which is a different
+    // statement and belongs on the data rather than on the renderer's policy.
+    const drawn =
+      scope === "mine" ? applyGroupSelection(shown, options.selectedGroups, programCode) : shown;
+    state.bundle = bundleFromEntries(drawn);
     const result = renderGrid(frame, notes, [state], showOthers, { showAllGroups: true });
     // Blocks are rebuilt on every draw, so the tab stops come off every time.
     // They keep their aria-label and title, which is where a keyboard or
@@ -324,6 +363,18 @@ export async function mountCourseTimetable(
     // Toggling øvinger can widen the grid (a Saturday column) — re-measure.
     syncScroll();
   }
+
+  // Same grammar as the layer toggle beside it: a deliberate switch that
+  // changes how much of the same plan is drawn, so it animates rather than
+  // snapping (DESIGN §7's one exception).
+  mine.addEventListener("click", () => {
+    scope = scope === "mine" ? "all" : "mine";
+    mine.setAttribute("aria-pressed", String(scope === "mine"));
+    syncScopeLine();
+    const settle = beginLayerChange(frame, scope === "mine" ? "hide" : "reveal");
+    draw(toggle.getAttribute("aria-pressed") === "true");
+    settle();
+  });
 
   toggle.addEventListener("click", () => {
     const next = toggle.getAttribute("aria-pressed") !== "true";

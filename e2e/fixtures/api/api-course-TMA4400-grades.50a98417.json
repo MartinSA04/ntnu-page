@@ -1,0 +1,81 @@
+{
+  "url": "http://127.0.0.1:8788/api/course/TMA4400/grades",
+  "status": 200,
+  "contentType": "application/json; charset=utf-8",
+  "body": {
+    "rows": [
+      {
+        "institutionCode": "1150",
+        "institutionName": "Norges teknisk-naturvitenskapelige universitet",
+        "courseCode": "TMA4400-1",
+        "year": 2025,
+        "semester": 3,
+        "semesterName": "Høst",
+        "grade": "A",
+        "total": 84,
+        "women": 20,
+        "men": 64
+      },
+      {
+        "institutionCode": "1150",
+        "institutionName": "Norges teknisk-naturvitenskapelige universitet",
+        "courseCode": "TMA4400-1",
+        "year": 2025,
+        "semester": 3,
+        "semesterName": "Høst",
+        "grade": "B",
+        "total": 165,
+        "women": 47,
+        "men": 118
+      },
+      {
+        "institutionCode": "1150",
+        "institutionName": "Norges teknisk-naturvitenskapelige universitet",
+        "courseCode": "TMA4400-1",
+        "year": 2025,
+        "semester": 3,
+        "semesterName": "Høst",
+        "grade": "C",
+        "total": 322,
+        "women": 127,
+        "men": 195
+      },
+      {
+        "institutionCode": "1150",
+        "institutionName": "Norges teknisk-naturvitenskapelige universitet",
+        "courseCode": "TMA4400-1",
+        "year": 2025,
+        "semester": 3,
+        "semesterName": "Høst",
+        "grade": "D",
+        "total": 309,
+        "women": 134,
+        "men": 175
+      },
+      {
+        "institutionCode": "1150",
+        "institutionName": "Norges teknisk-naturvitenskapelige universitet",
+        "courseCode": "TMA4400-1",
+        "year": 2025,
+        "semester": 3,
+        "semesterName": "Høst",
+        "grade": "E",
+        "total": 243,
+        "women": 97,
+        "men": 146
+      },
+      {
+        "institutionCode": "1150",
+        "institutionName": "Norges teknisk-naturvitenskapelige universitet",
+        "courseCode": "TMA4400-1",
+        "year": 2025,
+        "semester": 3,
+        "semesterName": "Høst",
+        "grade": "F",
+        "total": 217,
+        "women": 85,
+        "men": 132
+      }
+    ]
+  }
+}

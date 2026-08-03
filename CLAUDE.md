@@ -180,6 +180,20 @@
   `swapRootAttributes()` wipes every `<html>` attribute on each swap, so
   Layout's no-flash script re-applies it on `astro:after-swap`. Both are
   covered by `mise run e2e`; don't "simplify" either away.
+- **Do not write tests that restate the current design.** DOM child counts,
+  exact visual treatments, per-control geometry, "control X lives inside
+  surface Y" — their failure message is "someone changed their mind", and
+  editing them is transcription, not verification. Adjudicated decisions belong
+  in `docs/DESIGN.md`, which is the record; a test that repeats one just makes
+  every design change cost a test-editing pass while catching nothing. On
+  2026-08-03 three design changes broke ~10 of ~94 browser tests and 0 of 987
+  unit tests, and every broken one was of this kind — they were cut rather than
+  re-pinned. **Test mechanism instead**: does it survive a ClientRouter swap,
+  does the plan round-trip through the hash, does CLS stay in budget, do
+  targets clear 24 px, did a fixture go missing. Those caught four real defects
+  in the same run. Before adding a browser test, ask what its failure would
+  mean; if the answer is not "something is broken in a way you cannot see by
+  looking", don't add it.
 - `mise run check` is the fast unit pass (no server). `mise run e2e` builds,
   serves via wrangler and drives Chromium (`e2e/*.pw.ts` — named `.pw.ts` so
   vitest's default `*.spec/test.*` include never picks them up). Navigation

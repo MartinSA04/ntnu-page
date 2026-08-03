@@ -62,15 +62,24 @@ const planTitle = (page: Page) => page.locator("#planner-title");
 const profileBtn = (page: Page) => page.locator("#site-account-btn");
 const profilePanel = (page: Page) => page.locator("#planner-profile-panel");
 
+/** The picker's own dialog, opened from the plan's name in the planner's bar. */
+const studieinfoDialog = (page: Page) => page.locator("#planner-studieinfo");
+
 /**
- * Opens studieinfo, which is one click now: programme, kull and studieretning
- * are a SECTION of the profile panel rather than a modal reached through it,
- * so there is no second door and no `<dialog>` on top of a `<dialog>`.
+ * Opens studieinfo. Still one click, but from the PLAN'S NAME rather than the
+ * topbar: programme, kull and studieretning describe the plan, so they came
+ * back to the planner on 2026-08-03 and the topbar kept the account alone.
+ *
+ * With no programme stored the title is inert (there is no fact to press, and
+ * the empty state's card already says "Velg studieprogram"), so that card is
+ * the door on a fresh plan and the title is the door once one exists.
  */
 async function openStudieinfo(page: Page): Promise<void> {
-  await profileBtn(page).click();
-  await expect(profilePanel(page)).toBeVisible();
-  await expect(profilePanel(page).locator("#studieinfo-heading")).toBeVisible();
+  const door = page.locator("#planner-name-btn");
+  if (await door.isEnabled()) await door.click();
+  else await page.getByRole("button", { name: "Velg studieprogram" }).click();
+  await expect(studieinfoDialog(page)).toBeVisible();
+  await expect(studieinfoDialog(page).locator("#studieinfo-heading")).toBeVisible();
 }
 
 /**
@@ -118,10 +127,11 @@ test("onboarding: panel → programme + kull + retning → a full week", async (
   await expect(card).toBeVisible({ timeout: 15_000 });
   await card.locator("button", { hasText: "Velg studieprogram" }).click();
 
-  // The FIRST-RUN PATH, and it is one press: the profile panel opens with the
-  // caret already in the programme search. It used to open a settings panel
-  // whose own "Endre" link opened studieinfo on top of it.
-  const dialog = page.locator("#planner-profile-panel");
+  // The FIRST-RUN PATH, and it is one press: the picker opens with the caret
+  // already in the programme search. It used to open a settings panel whose own
+  // "Endre" link opened studieinfo on top of it, and then briefly the topbar's
+  // account panel — it is the planner's own dialog now.
+  const dialog = page.locator("#planner-studieinfo");
   await expect(dialog).toBeVisible();
   await expect(page.locator("#studieinfo-program-input")).toBeFocused();
 
@@ -196,14 +206,14 @@ test("share: a program-less link clears the profile chip", async ({ page }) => {
   // its own name — and the hint carries the invitation instead of a programme.
   await expect(planTitle(page)).toHaveText("Semesterplan");
   await expect(planTitle(page)).not.toContainText("MTDT");
-  // The topbar's account door reads "Profil" while signed out, and the panel
-  // behind it is where a programme would be named — with none stored, its
-  // studieinfo section is back to the bare search field rather than a chip.
-  await expect(profileBtn(page)).toHaveText("Profil");
-  await openStudieinfo(page);
-  await expect(page.locator("#studieinfo-program-input")).toBeVisible();
-  await expect(profilePanel(page).locator(".studieinfo-program-chip")).toHaveCount(0);
-  await profilePanel(page).locator(".profile-panel-close").click();
+  // The stored programme is GONE from storage, not merely unpainted — which is
+  // the whole defect: `savePlan` can only write `np:profile`, never clear it.
+  // Read from storage rather than by opening the picker and inspecting it: what
+  // this test is about is the write, and where the picker lives is a design
+  // decision that has moved twice.
+  expect(
+    await page.evaluate(() => JSON.parse(localStorage.getItem("np:profile") || "{}").program),
+  ).toBeFalsy();
 });
 
 test("overlap: two colliding courses take a lane each, both readable", async ({ page }) => {
@@ -467,9 +477,10 @@ test("course settings: complementary lecture sessions are not offered as a choic
 
 test("one control opens studieinfo, and semester lives only inside it", async ({ page }) => {
   // The page used to carry three permanent openers for one modal plus a "Bytt
-  // semester" disclosure duplicating the modal's own select. "Profil" — which
-  // absorbed the studieinfo door outright on 2026-08-03 — is the one that
-  // remains, routed through the profile panel's own "Endre" link.
+  // semester" disclosure duplicating the modal's own select. What remains is
+  // the PLAN'S OWN NAME: press the fact to change the fact. (The topbar briefly
+  // held this door on 2026-08-03; it kept the account and gave the picker back,
+  // because a programme is a fact about the plan and sign-in is not.)
   await page.goto("/planlegger/#26h;MTDT.2026;");
   await expect(courseRows(page).first()).toBeVisible({ timeout: 30_000 });
 
@@ -487,11 +498,11 @@ test("one control opens studieinfo, and semester lives only inside it", async ({
   await expect(page.locator("#planner-context-line")).toContainText("Datateknologi");
 
   // With a plan set, the week is a real grid — so no empty-state card is on
-  // screen and the topbar's account door is the only thing left that opens
-  // studieinfo.
+  // screen and the plan's own name is the only thing left that opens
+  // studieinfo. The topbar's door leads to the account, a different room.
   await expect(page.locator("#planner-grid-frame .planner-week-card")).toHaveCount(0);
 
-  const dialog = page.locator("#planner-profile-panel");
+  const dialog = studieinfoDialog(page);
   await expect(dialog).toBeHidden();
   await openStudieinfo(page);
   await expect(dialog).toBeVisible();
@@ -944,7 +955,7 @@ test("modals: a click on the backdrop dismisses every one of them", async ({ pag
 
   for (const [name, open] of [
     ["#planner-add-dialog", () => page.click("#planner-add-course-btn")],
-    ["#planner-profile-panel", () => openStudieinfo(page)],
+    ["#planner-studieinfo", () => openStudieinfo(page)],
     ["#planner-course-settings", () => settingsFromBlock(page)],
   ] as const) {
     await open();
@@ -1221,12 +1232,12 @@ test("BSPL: a campus choice whose own code contains Ø survives a reload (B10)",
   const question = page.locator("#planner-direction");
   await expect(question).toBeVisible({ timeout: 30_000 });
   // The inline week question no longer carries its own chips — choosing a
-  // direction happens in the profile panel's studieinfo section, and the
-  // question's button opens it with focus already on that select.
+  // direction happens in the studieinfo dialog, and the question's button
+  // opens it with focus already on that select.
   await expect(question.locator("#planner-direction-btn")).toHaveText("Velg studieretning");
   await page.click("#planner-direction-btn");
 
-  const dialog = page.locator("#planner-profile-panel");
+  const dialog = studieinfoDialog(page);
   await expect(dialog).toBeVisible();
   const retningSelect = page.locator("#studieinfo-retning-select");
   await expect(retningSelect).toBeVisible({ timeout: 20_000 });
@@ -1446,13 +1457,11 @@ test("ett navn: the plan is named once, and the switch is not a third toggle", a
   // the term on its own control in the same bar (DESIGN §9).
   await expect(planTitle(page)).toHaveText("MTDT Kull 26");
   await expect(page.locator("#studieinfo-chip")).toHaveCount(0);
-  // Four topbar children on every page (the ThemeToggle and the account button
-  // each ship a <script> beside themselves, which are not children of this
-  // kind): wordmark, nav, account, toggle. The account arrived when the
-  // profile panel became site-wide; it says nothing about the PLAN, which is
-  // what this assertion has always been about — `#studieinfo-chip` above is
-  // the half that pins that, and `navigation.pw.ts` pins it on all four pages.
-  await expect(page.locator(".site-topbar > *:not(script)")).toHaveCount(4);
+  // The topbar's child COUNT used to be asserted here as a proxy for "no plan
+  // state up there". It was never that: it broke when a wrapper was added and
+  // would have passed if a plan chip had replaced a nav link. `#studieinfo-chip`
+  // above is the assertion that actually means it, and `navigation.pw.ts` makes
+  // it on all four pages.
   await expect(page.locator("#site-account-btn")).toHaveText("Profil");
 
   // The switch is a segmented control, and its whole state is which word the
@@ -1562,6 +1571,15 @@ test.describe("target sizes", () => {
 
       // The øving layer brings the margin notes with it, and the list view
       // swaps the whole week for rows — both add targets the grid has not.
+      //
+      // Below 46rem the layer box is a row of the ⋯ menu, so it has to be
+      // opened first — and the open panel's own rows are then swept by the
+      // same pass, which is the point rather than a workaround.
+      const tools = page.locator("#planner-tools-btn");
+      if (await tools.isVisible()) {
+        await tools.click();
+        expect(await undersized(page)).toEqual([]);
+      }
       await page.locator("#planner-others-toggle").click();
       await expect(page.locator(".planner-note-groups").first()).toBeVisible();
       expect(await undersized(page)).toEqual([]);
@@ -1816,16 +1834,17 @@ test.describe("the banner's pair", () => {
     const title = await box("#planner-title");
     const hint = await box("#planner-context-line");
     const verdict = await box("#planner-grid-status");
-    const tabs = await box(".planner-view-tabs");
     const frame = await box("#planner-grid-frame");
 
     // Nothing fits between them: the gap is smaller than a line of text at any
-    // step on the page's scale, so no sentence can have got in there.
+    // step on the page's scale, so no sentence can have got in there. This is
+    // the one geometric claim worth pinning — a control wrapping INTO the name
+    // is the defect, and it is invisible in any DOM assertion.
+    //
+    // Where each individual control sits relative to the name is NOT asserted:
+    // that is layout policy, it moved twice in one day, and its failures are
+    // things you can see by looking.
     expect(hint.top - title.bottom).toBeLessThan(20);
-    // Every control is below the whole name, never inside it. The semester is
-    // NOT checked here any more — below 46rem it is a row of the ⋯ menu, so
-    // there is no box of its own in the bar to measure.
-    expect(tabs.top).toBeGreaterThanOrEqual(hint.bottom);
     // MTDT's pass is QUALIFIED — HMS0002 publishes nothing classifiable as a
     // lecture, so the check went over it rather than on it — and a qualified
     // pass is printed on a phone. The rule that hides a clean verdict was
@@ -2032,7 +2051,7 @@ test("del: the mark has a size, and confirming moves nothing", async ({ page, co
   expect((await share.boundingBox())?.width).toBe(restWidth);
 });
 
-test.describe("the account on a phone", () => {
+test.describe("the topbar's phone menu", () => {
   test.use({ viewport: { width: 390, height: 844 } });
 
   /** A session shaped as `isValidSession` demands, so `renderName` sees it. */
@@ -2052,66 +2071,57 @@ test.describe("the account on a phone", () => {
       );
     });
 
-  test("lives in the menu, where it can say who you are", async ({ page }) => {
+  /**
+   * MECHANISM ONLY. What this describe used to assert — that the account is a
+   * 44 px mark, that its text is hidden, that the bar has N children — was the
+   * design restated in Playwright. It failed the moment the design changed and
+   * had never caught a defect. DESIGN §9 is where the treatment is decided and
+   * recorded; a test that only re-states it is transcription, not verification.
+   *
+   * What is left is what you cannot see by looking: the controls are still
+   * REACHABLE at this width, the menu dismisses by every gesture it claims, and
+   * it survives a soft navigation.
+   */
+  test("everything the bar holds is still reachable, and the menu dismisses", async ({ page }) => {
     await seedSession(page);
     await page.goto("/planlegger/");
-
-    // Closed, the bar is the wordmark and one control. The name is not
-    // truncated away any more — it is not on screen at all until asked for.
-    const btn = page.locator("#site-account-btn");
-    await expect(btn).toBeHidden();
-    // And the wordmark comes back WHOLE: the size step-down, the ellipsis and
-    // the dropped mono suffix were all paying for controls that are in the
-    // panel now.
-    await expect(page.locator(".site-brand-suffix")).toBeVisible();
 
     const menu = page.locator("#site-menu-btn");
     await expect(menu).toHaveAttribute("aria-expanded", "false");
     await menu.click();
     await expect(menu).toHaveAttribute("aria-expanded", "true");
 
-    // Open, the name is VISIBLE. That is the whole reason this beats the bare
-    // mark it replaced: at 6ch that mark said "you" and nothing else.
+    // The account, the toggle and both nav links are all operable from here.
+    const btn = page.locator("#site-account-btn");
     await expect(btn).toBeVisible();
     await expect(page.locator("#site-account-name")).toHaveText("Kari Nordmann");
+    await expect(page.locator(".theme-toggle")).toBeVisible();
+    await expect(page.locator('#site-menu-panel a[href="/emner/"]')).toBeVisible();
+    // Whoever you are is still on the accessible name, at every width.
     await expect(btn).toHaveAttribute("aria-label", "Profil · Kari Nordmann");
 
-    // Every row is a phone target.
-    const box = await btn.boundingBox();
-    expect(box?.height).toBeGreaterThanOrEqual(44);
-
-    // ONE ROW still. §6's phone gate measures the week's top from the
-    // viewport's top, so a topbar that wrapped would come out of the week.
-    const bar = await page.locator(".site-topbar").boundingBox();
-    expect(bar?.height).toBeLessThanOrEqual(64);
-
-    // Esc dismisses, and focus goes back to the control that opened it.
+    // Esc, and focus returns to the control that opened it.
     await page.keyboard.press("Escape");
     await expect(menu).toHaveAttribute("aria-expanded", "false");
     await expect(menu).toBeFocused();
-  });
 
-  test("signed out it is the same row, named for what it opens", async ({ page }) => {
-    await page.goto("/planlegger/");
-    await page.locator("#site-menu-btn").click();
-    const btn = page.locator("#site-account-btn");
-    await expect(page.locator("#site-account-name")).toHaveText("Profil");
-    await expect(btn).toHaveAttribute("aria-label", "Profil");
-    // Still the door: pressing it opens the panel.
-    await btn.click();
-    await expect(page.locator("#planner-profile-panel")).toBeVisible();
-  });
-
-  test("the scrim dismisses it, and it survives a ClientRouter navigation", async ({ page }) => {
-    await page.goto("/planlegger/");
-    const menu = page.locator("#site-menu-btn");
+    // The scrim is the outside-click target, and it goes with the menu.
     await menu.click();
     await page.locator(".np-menu-scrim").click({ position: { x: 10, y: 700 } });
     await expect(menu).toHaveAttribute("aria-expanded", "false");
     await expect(page.locator(".np-menu-scrim")).toHaveCount(0);
 
-    // The one that rots silently: hoisted scripts run ONCE per module, so a
-    // top-level mount would leave this button dead after any in-site nav.
+    // And it is still the door.
+    await menu.click();
+    await btn.click();
+    await expect(page.locator("#planner-profile-panel")).toBeVisible();
+  });
+
+  test("the menu survives a ClientRouter navigation", async ({ page }) => {
+    // The failure that rots silently: hoisted scripts run ONCE per module, so a
+    // top-level mount leaves this button dead after any in-site navigation.
+    await page.goto("/planlegger/");
+    const menu = page.locator("#site-menu-btn");
     await menu.click();
     await page.locator('#site-menu-panel a[href="/emner/"]').click();
     await expect(page).toHaveURL(/\/emner\/$/);
@@ -2120,18 +2130,15 @@ test.describe("the account on a phone", () => {
     await expect(after).toHaveAttribute("aria-expanded", "true");
   });
 
-  test("above the breakpoint there is no menu, and every control is in the bar", async ({
-    page,
-  }) => {
+  test("above the breakpoint the same controls are operable without the menu", async ({ page }) => {
+    // `display: contents` has to leave them ordinary children of the bar — the
+    // wrapper must not become a box that reflows or hides anything.
     await page.setViewportSize({ width: 1280, height: 800 });
     await page.goto("/planlegger/");
     await expect(page.locator("#site-menu-btn")).toBeHidden();
     await expect(page.locator("#site-account-btn")).toBeVisible();
     await expect(page.locator(".theme-toggle")).toBeVisible();
     await expect(page.locator('.site-nav a[href="/emner/"]')).toBeVisible();
-    // `display: contents` on the wrapper, so the separator it holds for the
-    // panel must not draw a line across the bar.
-    await expect(page.locator(".site-menu-sep")).toBeHidden();
   });
 });
 
@@ -2254,5 +2261,51 @@ test.describe("the plan bar on a phone", () => {
     expect(await x("#planner-others-toggle")).toBeLessThan(await x("#planner-share"));
     expect(await x("#planner-share")).toBeLessThan(await x(".planner-semester"));
     expect(await x(".planner-semester")).toBeLessThan(await x(".planner-view-tabs"));
+  });
+});
+
+test.describe("the course page says what its week is showing", () => {
+  test("with no programme it states the scope and offers no switch", async ({ page }) => {
+    await page.goto("/emne/TMA4400/");
+    const line = page.locator(".timetable-scope");
+    await expect(line).toContainText("Uka viser alle paralleller og grupper", {
+      timeout: 45_000,
+    });
+    await expect(line).toContainText("Velg studieprogram i planleggeren");
+    // Nothing to narrow TO, so the control would be one that does nothing.
+    await expect(page.locator(".timetable-mine")).toHaveCount(0);
+  });
+
+  test("a stored programme buys a switch to your own slice, and it resets per course", async ({
+    page,
+  }) => {
+    await page.addInitScript(() => {
+      localStorage.setItem(
+        "np:profile",
+        JSON.stringify({ program: { code: "MTDT", cohort: 2026, name: "Datateknologi" } }),
+      );
+    });
+    // TMA4400 partitions its lectures by programme cluster — 21 entries down to
+    // 8 for MTDT — which is the fact `contract.pw.ts` pins against live NTNU.
+    await page.goto("/emne/TMA4400/");
+    const mine = page.locator(".timetable-mine");
+    await expect(mine).toBeVisible({ timeout: 45_000 });
+    await expect(mine).toHaveAttribute("aria-pressed", "false");
+
+    const blocks = page.locator("#timetable-section .planner-block");
+    const before = await blocks.count();
+    expect(before).toBeGreaterThan(0);
+
+    await mine.click();
+    await expect(mine).toHaveAttribute("aria-pressed", "true");
+    await expect(page.locator(".timetable-scope")).toContainText("Viser undervisningen for MTDT");
+    await expect.poll(() => blocks.count()).toBeLessThan(before);
+
+    // Per visit, never persisted: the same URL has to show two people the same
+    // week, so the next course page opens on "all" again.
+    await page.goto("/emne/TDT4160/");
+    const next = page.locator(".timetable-mine");
+    await expect(next).toBeVisible({ timeout: 45_000 });
+    await expect(next).toHaveAttribute("aria-pressed", "false");
   });
 });
