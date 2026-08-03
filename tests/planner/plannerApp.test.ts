@@ -235,8 +235,10 @@ class FakeEl {
 const IDS = [
   "planner-title",
   "planner-context-line",
-  "planner-profile-btn",
-  "planner-profile-btn-label",
+  // The plan's own semester control. Programme, kull and studieretning left
+  // this page for the profile panel the topbar opens; the semester stayed,
+  // because it describes the plan rather than the student.
+  "planner-semester-select",
   "planner-link-note",
   "planner-credit-line",
   "planner-load-legend",
@@ -590,7 +592,7 @@ describe("mountPlannerApp — audit repro", () => {
     );
     clearCourseBundleMemo();
     clearPlannerIndexMemo();
-    await mountPlannerApp(semesters as never, [], undefined);
+    await mountPlannerApp(semesters as never, undefined);
     // let the microtask-debounced renders flush
     for (let i = 0; i < 20; i++) await new Promise((r) => setTimeout(r, 0));
     return { fetchMock };
@@ -944,7 +946,7 @@ describe("mountPlannerApp — audit repro", () => {
     clearCourseBundleMemo();
     clearPlannerIndexMemo();
     clearProgramPlanMemo();
-    const mounted = mountPlannerApp(SEMESTERS as never, [], undefined);
+    const mounted = mountPlannerApp(SEMESTERS as never, undefined);
     await new Promise((r) => setTimeout(r, 0));
 
     // The student pastes a program-less shared link while the plan fetch is
@@ -1367,7 +1369,7 @@ describe("mountPlannerApp — audit repro", () => {
     const { createPlanStore } = await import("../../src/lib/planner/store.js");
     clearCourseBundleMemo();
     clearPlannerIndexMemo();
-    const mounted = mountPlannerApp(SEMESTERS_TWO as never, [], undefined);
+    const mounted = mountPlannerApp(SEMESTERS_TWO as never, undefined);
     await new Promise((r) => setTimeout(r, 0));
 
     // A bar no longer prints its own start time — the axis above it does
@@ -1478,7 +1480,7 @@ describe("mountPlannerApp — audit repro", () => {
     );
     clearCourseBundleMemo();
     clearPlannerIndexMemo();
-    const mounted = mountPlannerApp(SEMESTERS as never, [], undefined);
+    const mounted = mountPlannerApp(SEMESTERS as never, undefined);
     for (let i = 0; i < 5; i++) await new Promise((r) => setTimeout(r, 0));
 
     find("planner-add-course-btn").click();
@@ -1577,7 +1579,7 @@ describe("mountPlannerApp — a successful sync pull re-renders without pushing"
     clearPlannerIndexMemo();
     const putsBefore = server.puts.length;
 
-    await mountPlannerApp(SEMESTERS as never, [], undefined);
+    await mountPlannerApp(SEMESTERS as never, undefined);
     for (let i = 0; i < 20; i++) await new Promise((r) => setTimeout(r, 0));
     // Real time, past `schedulePush`'s 1s debounce: if the pull's repaint
     // had gone through the `onPlanChange` path instead of its own
@@ -1633,7 +1635,7 @@ describe("mountPlannerApp — a successful sync pull re-renders without pushing"
     clearPlannerIndexMemo();
     const putsBefore = server.puts.length;
 
-    await mountPlannerApp(SEMESTERS as never, [], undefined);
+    await mountPlannerApp(SEMESTERS as never, undefined);
     for (let i = 0; i < 20; i++) await new Promise((r) => setTimeout(r, 0));
 
     // Only the mount's own unconditional first paint — the pull found
@@ -1695,7 +1697,7 @@ describe("mountPlannerApp — a pending edit survives a visibility pull in the s
     clearCourseBundleMemo();
     clearPlannerIndexMemo();
 
-    await mountPlannerApp(SEMESTERS as never, [], undefined);
+    await mountPlannerApp(SEMESTERS as never, undefined);
     for (let i = 0; i < 20; i++) await new Promise((r) => setTimeout(r, 0));
     const putsBefore = server.puts.length;
 
@@ -1842,7 +1844,7 @@ describe("mountPlannerApp — a pull-driven programme derive converges to one pu
     clearProgramPlanMemo();
     const putsBefore = server.puts.length;
 
-    await mountPlannerApp(SEMESTERS as never, [], undefined);
+    await mountPlannerApp(SEMESTERS as never, undefined);
     for (let i = 0; i < 20; i++) await new Promise((r) => setTimeout(r, 0));
     // Real time, past `schedulePush`'s 1s debounce, so the derive's own
     // (intentional) push actually fires within this test rather than being
@@ -1968,7 +1970,7 @@ describe("mountPlannerApp — an edit survives a race inside the pull/push machi
     clearPlannerIndexMemo();
     clearProgramPlanMemo();
 
-    await mountPlannerApp(SEMESTERS as never, [], undefined);
+    await mountPlannerApp(SEMESTERS as never, undefined);
     // Let the on-load pull land and `loadPeriodCourses` reach — and hang on
     // — the gated fetch.
     for (let i = 0; i < 20; i++) await new Promise((r) => setTimeout(r, 0));
@@ -2078,7 +2080,7 @@ describe("mountPlannerApp — an edit survives a race inside the pull/push machi
     clearCourseBundleMemo();
     clearPlannerIndexMemo();
 
-    await mountPlannerApp(SEMESTERS as never, [], undefined);
+    await mountPlannerApp(SEMESTERS as never, undefined);
     for (let i = 0; i < 20; i++) await new Promise((r) => setTimeout(r, 0));
 
     // First edit.
@@ -2212,7 +2214,7 @@ describe("mountPlannerApp — an edit inside a pull's own round trip is not dest
     clearCourseBundleMemo();
     clearPlannerIndexMemo();
 
-    await mountPlannerApp(SEMESTERS as never, [], undefined);
+    await mountPlannerApp(SEMESTERS as never, undefined);
     for (let i = 0; i < 20; i++) await new Promise((r) => setTimeout(r, 0));
 
     // Nothing is dirty, so the visibility flip goes straight to the pull —
@@ -2327,7 +2329,7 @@ describe("mountPlannerApp — an on-load pull does not eat a shared link", () =>
     clearCourseBundleMemo();
     clearPlannerIndexMemo();
 
-    await mountPlannerApp(SEMESTERS as never, [], undefined);
+    await mountPlannerApp(SEMESTERS as never, undefined);
     for (let i = 0; i < 20; i++) await new Promise((r) => setTimeout(r, 0));
 
     // The link's plan is what is on screen and in storage — not the account's.
@@ -2393,7 +2395,7 @@ describe("mountPlannerApp — an on-load pull does not eat a shared link", () =>
     clearPlannerIndexMemo();
     const putsBefore = server.puts.length;
 
-    await mountPlannerApp(SEMESTERS as never, [], undefined);
+    await mountPlannerApp(SEMESTERS as never, undefined);
     for (let i = 0; i < 20; i++) await new Promise((r) => setTimeout(r, 0));
 
     // Trigger one: a write the PAGE makes on the link's behalf — the name
@@ -2505,27 +2507,32 @@ describe("mountPlannerApp — a login inside a pull's round trip is not overwrit
       },
     );
 
-    type PanelModule = typeof import("../../src/components/planner/profilePanel.js");
-    let panelDeps: Parameters<PanelModule["mountProfilePanel"]>[0] | null = null;
-    vi.doMock("../../src/components/planner/profilePanel.js", async (importOriginal) => {
-      const actual = await importOriginal<PanelModule>();
+    // The panel lives in the layout now, not on this page, so what has to be
+    // intercepted is the seam between them: `setAccountRepaint` is the planner
+    // handing over the repaint a login owes it. Only that export is replaced —
+    // `account()` stays the real one, so the client captured below is
+    // literally the client `mountPlannerApp` pushes and pulls through.
+    type AccountModule = typeof import("../../src/components/account.js");
+    let repaint: (() => void) | null = null;
+    vi.doMock("../../src/components/account.js", async (importOriginal) => {
+      const actual = await importOriginal<AccountModule>();
       return {
         ...actual,
-        mountProfilePanel: (deps: Parameters<PanelModule["mountProfilePanel"]>[0]) => {
-          panelDeps = deps;
-          return { show: () => {}, setSyncState: () => {} };
+        setAccountRepaint: (cb: (() => void) | null) => {
+          repaint = cb;
         },
       };
     });
 
     const { mountPlannerApp } = await import("../../src/components/planner/plannerApp.js");
+    const { account } = await import("../../src/components/account.js");
     const { clearCourseBundleMemo, clearPlannerIndexMemo } = await import(
       "../../src/lib/planner/data.js"
     );
     clearCourseBundleMemo();
     clearPlannerIndexMemo();
 
-    await mountPlannerApp(SEMESTERS as never, [], undefined);
+    await mountPlannerApp(SEMESTERS as never, undefined);
     for (let i = 0; i < 20; i++) await new Promise((r) => setTimeout(r, 0));
 
     // The account moves on while that GET is still held: the other device adds
@@ -2536,14 +2543,15 @@ describe("mountPlannerApp — a login inside a pull's round trip is not overwrit
     );
     expect(await deviceA.push()).toEqual({ ok: true });
 
-    // The student signs out and back in — the app's own client, the panel's
-    // own two calls. Nothing to ask about (this device's plan is a subset of
-    // the account's), so it is the ordinary promptless login.
-    const deps = panelDeps as unknown as Parameters<PanelModule["mountProfilePanel"]>[0];
-    expect(deps).not.toBeNull();
-    deps.sync.logout();
-    expect(await deps.sync.login("martin", "482913", "Tavle · nettleser")).toEqual({ ok: true });
-    deps.onAuthenticated();
+    // The student signs out and back in — the shared client, the panel's own
+    // two calls. Nothing to ask about (this device's plan is a subset of the
+    // account's), so it is the ordinary promptless login.
+    const { sync } = account("26h");
+    const repaintNow = repaint as unknown as (() => void) | null;
+    expect(repaintNow).not.toBeNull();
+    sync.logout();
+    expect(await sync.login("martin", "482913", "Tavle · nettleser")).toEqual({ ok: true });
+    repaintNow?.();
     expect(planStorage.get("np:plans")).toContain("TDT4109");
 
     releaseGet();

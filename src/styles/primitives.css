@@ -313,6 +313,76 @@ button.np-tag:hover {
   color: var(--muted);
 }
 
+/* A native <select> on the same field grammar, with this product's own
+   indicator instead of the platform arrow — which renders differently in every
+   engine, sits hard against the right edge answering nothing on the left, and
+   cannot say whether the picker is open. `appearance: none` removes it; the
+   shell puts Lucide's `chevron-down` in its place and turns it over while
+   `:open`.
+
+   The icon is a SIBLING rather than a background image so it inherits
+   `currentColor`; `pointer-events: none` keeps it clear of the control, which
+   is still an ordinary <select> with its native keyboard behaviour.
+
+   `--select-inset` is the single number both sides are measured from, so they
+   cannot drift: the text starts one inset in from the leading edge, the chevron
+   ends one inset in from the trailing one. The end padding is
+   `2 × inset + 1em`.
+
+   It lives here rather than beside one caller because the same control is now
+   the studieretning picker inside the profile panel AND the planner's semester
+   control in its own bar — two surfaces that share nothing else. */
+.np-select-shell {
+  --select-inset: var(--space-3);
+  position: relative;
+  display: grid;
+}
+
+.np-select {
+  appearance: none;
+  min-height: var(--control-h);
+  padding-block: 0;
+  padding-inline: var(--select-inset) calc(var(--select-inset) * 2 + 1em);
+  background: var(--control-bg);
+  color: var(--fg);
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  border: 0;
+  border-radius: var(--radius-sm);
+  transition: background var(--dur-fast) var(--ease);
+}
+
+.np-select:hover {
+  background: var(--control-hover);
+}
+
+/* Optically centred on the control, not on the text box: `top: 50%` plus a
+   half-height pull is stable whatever `--control-h` the pointer type resolves
+   to. */
+.np-select-icon {
+  position: absolute;
+  inset-inline-end: var(--select-inset);
+  top: 50%;
+  width: 1em;
+  height: 1em;
+  margin-top: -0.5em;
+  color: var(--muted);
+  pointer-events: none;
+  transition: transform var(--dur-fast) var(--ease);
+}
+
+/* Open is the same mark turned over — a chevron-up drawn separately would drift
+   in stroke and optical centre. Engines without `:open` on <select> simply
+   leave the chevron down. */
+.np-select:open + .np-select-icon {
+  transform: rotate(180deg);
+}
+
+.np-select:focus-visible {
+  outline: 2px solid var(--ui);
+  outline-offset: 3px;
+}
+
 /* --- Surfaces ------------------------------------------------------ */
 
 .np-panel {

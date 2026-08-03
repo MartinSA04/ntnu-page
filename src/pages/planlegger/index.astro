@@ -1,5 +1,4 @@
 ---
-import programsData from "../../../data/programs.json";
 import Layout from "../../layouts/Layout.astro";
 // The week's geometry and ink live in one stylesheet because two surfaces
 // render it through the same `renderGrid`. Only this page's exam list stays
@@ -9,23 +8,12 @@ import "../../styles/planner-week.css";
 const description =
   "Velg studieprogram og kull, se ukeplanen med en gang: forelesninger, kollisjoner, eksamensdatoer og studiepoeng.";
 
-// Trimmed tuples: the picker needs identity plus the field that tells two
-// same-named programmes apart, not the full crawled record; this ships to every
-// visitor. Same tuple as the homepage picker — the two ask the same question.
-const programOptions: [code: string, name: string, studyLevel: string, cities: string[]][] =
-  programsData.programs
-    .map((p): [string, string, string, string[]] => [
-      p.code,
-      p.name,
-      p.studyLevel ?? "",
-      p.cities ?? [],
-    ])
-    .sort((a, b) => a[1].localeCompare(b[1], "nb"));
-
-// `JSON.stringify` escapes neither "<" nor "/", so a programme name containing
-// "</script" would close this tag. < is a legal JSON escape, so the payload
-// stays valid JSON and the parser sees the original character.
-const programOptionsJson = JSON.stringify(programOptions).replaceAll("<", "\\u003c");
+// The programme catalogue used to be inlined here as a 27 KB
+// `<script type="application/json">` for the studieinfo modal this page owned.
+// The picker lives in the profile panel now, which opens from the topbar on
+// every page — including the 5 470 `/emne/[code]/` documents — so it is a
+// build-time static file (`src/pages/data/programs.json.ts`) that
+// `studieinfo.ts` fetches the first time a student opens the panel.
 ---
 
 <Layout title="Planlegger · Semesterplan" description={description} wide>
@@ -101,21 +89,6 @@ const programOptionsJson = JSON.stringify(programOptions).replaceAll("<", "\\u00
           Liste
         </button>
       </div>
-      {/* THE ACCOUNT'S DOOR AND THE STUDIEINFO DOOR MERGED INTO ONE CONTROL.
-          "Profil" used to be a bare `.np-navlink` inside the identity block
-          above — a control dressed as a caption, needing a `margin-top` hack
-          because `.np-navlink`'s padding is horizontal only — while THIS
-          button opened studieinfo directly: two doors into the same room
-          (programme + kull), one nested inside the other. The identity block
-          is back to title + context line; this button opens Profil
-          (`profilePanel.ts`), whose own first section is programme + kull
-          with an "Endre" link that carries on into studieinfo
-          (`renderProgramBlock`) — so nothing became unreachable.
-
-          Lucide `settings-2`, the exact mark `settingsIcon()` builds for the
-          course rows — "settings for this thing", one scope up. It was a
-          hand-drawn approximation of that icon, which is worse than either
-          using it or using something else. */}
       {/* THE PLAN IS THE URL, AND NOTHING ON THE PAGE SAID SO. Shared-link
           creations are PRODUCT §2's north-star metric, `syncHash` has kept the
           address bar current since the beginning, and there was no way to act
@@ -139,37 +112,35 @@ const programOptionsJson = JSON.stringify(programOptions).replaceAll("<", "\\u00
         <span id="planner-share-label">Del</span>
       </button>
 
-      <button type="button" class="np-btn planner-profile-btn" id="planner-profile-btn">
-        <svg
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            aria-hidden="true"
-            focusable="false"
-          >
-            <path d="M20 7h-9" />
-            <path d="M14 17H5" />
-            <circle cx="17" cy="17" r="3" />
-            <circle cx="7" cy="7" r="3" />
-          </svg>
-        <span id="planner-profile-btn-label">Profil</span>
-      </button>
+      {/* WHICH TERM THIS PLAN IS FOR — the one thing in this bar that is not a
+          verb, and the slot the old "Profil" button vacated.
 
-      {/* The page's primary action, and the only thing on it wearing the
-          accent — that is the token's one job (DESIGN §2's One-Job-Accent). It
-          used to be a paper button at the bottom of the Emner column, below the
-          fold on a phone and indistinguishable from "Velg fra studieplanen"
-          beside it. */}
-      <button
-        type="button"
-        class="np-btn np-btn--primary planner-add-course-btn"
-        id="planner-add-course-btn"
-      >
-        Legg til emne
-      </button>
+          It was a `<select>` inside the studieinfo modal, staged next to
+          programme, kull and studieretning. Those three describe the STUDENT
+          and moved to the profile panel the topbar opens; this describes the
+          PLAN, so it belongs beside the plan's own name. It commits on change
+          — which is what the modal did anyway, writing the semester first and
+          unconditionally before anything else it staged.
+
+          No visible label: every option names itself ("Høst 2026"), and a
+          "Semester" caption beside it would spend a phone row restating the
+          option. `renderSemesterOptions` fills it. */}
+      <div class="np-select-shell planner-semester">
+        <select class="np-select" id="planner-semester-select" aria-label="Semester"></select>
+        <svg
+          class="np-select-icon"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          aria-hidden="true"
+          focusable="false"
+        >
+          <path d="m6 9 6 6 6-6" />
+        </svg>
+      </div>
     </div>
 
     {/* The verdict, on its own line under the bar. The product's one job is to
@@ -261,6 +232,35 @@ const programOptionsJson = JSON.stringify(programOptions).replaceAll("<", "\\u00
           </button>
         </p>
 
+        {/* THE PRIMARY ACTION, AT THE FOOT OF THE LIST IT ADDS TO. It spent a
+            while up in the page's bar, on two arguments that have both expired.
+
+            "Indistinguishable from 'Velg fra studieplanen' beside it" — that
+            line is `#planner-gap-line`, `hidden` by default and drawn only when
+            the plan is short of credits, so the objection was about one state,
+            not the general case. In that state the two now differ in weight,
+            not only in words: this is the accent, that is paper, and they are
+            on separate rows.
+
+            "Below the fold on a phone" — the layout it was measured in is
+            gone (the Uke/Emner tabs it mentions no longer exist), and the
+            Emner column is one scroll under the week either way. Re-measured
+            at 390 px: it lands well down the page on a full plan, which is
+            where the thing it adds to also is. A student who wants a sixth
+            course is looking at the five they have.
+
+            It keeps the accent, which is the token's one job (DESIGN §2's
+            One-Job-Accent) — `renderBanner` takes it off while there is no
+            plan, because then the empty week's own "Velg studieprogram" is the
+            primary action and two accents is none. */}
+        <button
+          type="button"
+          class="np-btn np-btn--primary planner-add-course-btn"
+          id="planner-add-course-btn"
+        >
+          Legg til emne
+        </button>
+
         <details class="planner-plan-panel" id="planner-plan-panel" hidden>
           <summary class="np-summary planner-plan-summary">Fra studieplanen</summary>
           <div class="planner-plan-body" id="planner-plan-body"></div>
@@ -286,9 +286,12 @@ const programOptionsJson = JSON.stringify(programOptions).replaceAll("<", "\\u00
      now sits inside `.planner-name` where nothing can get in.
 
      `--gap-4` between tools and `--space-3` between wrapped rows: on a phone
-     this comes out as the name on its own line, then the layer box, the
-     Uke/Liste switch and Del (once a plan exists) sharing the next, then
-     Profil and "Legg til emne" on the last. */
+     this comes out as the name on its own line, then the layer box and the
+     Uke/Liste switch sharing the next, then Del (once a plan exists) and the
+     semester select on the last. Two controls left this bar in the same change
+     — the account's door went to the topbar and "Legg til emne" went back to
+     the foot of the Emner column — and one arrived, so the bar carries less
+     than it did. */
   .planner-head {
     display: flex;
     flex-wrap: wrap;
@@ -480,27 +483,14 @@ const programOptionsJson = JSON.stringify(programOptions).replaceAll("<", "\\u00
     min-height: 1lh;
   }
 
-  /* THE MERGED CONTROL. The studieinfo opener ("Endre") and the account's
-     door ("Profil", formerly a bare `.np-navlink` hanging off `.planner-name`
-     with its own `margin-top` hack) are the same button now: one destination,
-     one door. It opens the profile panel; the panel's own "Endre" link is
-     what carries on into studieinfo. A real `.np-btn`: 36px of target, a
-     paper surface and a mark — paper rather than an ink fill, so it does not
-     out-shout "Legg til emne" beside it. */
-  .planner-profile-btn {
+  /* The semester, at the end of the tool run. `flex: none` because a select
+     with `appearance: none` has no min-content width worth trusting — the
+     grammar is `.np-select` in primitives.css, shared with the studieretning
+     picker in the profile panel. */
+  .planner-semester {
     flex: none;
   }
 
-  .planner-profile-btn svg {
-    width: 16px;
-    height: 16px;
-    flex: none;
-  }
-
-  /* At the bar's narrowest there is no width for the word: the mark is the
-     same `settings-2` the course rows use, and `renderBanner` writes the
-     button an aria-label, so only the ink changes. A square --control-h box,
-     44 px on every touch device. */
   @media (max-width: 46rem) {
     /* Every row the bar spends is a row the week does not get, and the bar now
        carries the controls that used to sit lower down. So: tighter rows, and
@@ -519,23 +509,6 @@ const programOptionsJson = JSON.stringify(programOptions).replaceAll("<", "\\u00
 
     .planner-status {
       margin-top: var(--space-2);
-    }
-
-    .planner-profile-btn {
-      justify-content: center;
-      width: var(--control-h);
-      padding: 0;
-    }
-
-    #planner-profile-btn-label {
-      /* Not `display: none`: the label is this button's visible name at every
-         other width, and a screen reader ignoring aria-label needs one. */
-      position: absolute;
-      width: 1px;
-      height: 1px;
-      overflow: hidden;
-      clip-path: inset(50%);
-      white-space: nowrap;
     }
 
     /* The pass is not shown on a phone: "Ingen forelesninger kolliderer"
@@ -1325,10 +1298,19 @@ const programOptionsJson = JSON.stringify(programOptions).replaceAll("<", "\\u00
 
   /* --- Add-course button --------------------------------------------------
      One button opens the dialog addCourse.ts builds itself (its CSS lives in
-     site.css, alongside the studieinfo modal it is modeled on). */
+     site.css, alongside the profile panel it is modeled on).
 
+     At the foot of the Emner column, under the rows it appends to, with a
+     clear gap over it: the credit-gap line above it is a *sentence* with a
+     paper button in it, and this is a control on its own line. Where both are
+     on screen they read as two different weights on two different rows, which
+     is the distinction the bar version was moved up to get and never needed
+     to leave the column for.
+
+     Not full width: `.np-btn` is `inline-flex` and stays it. A 100 %-wide
+     accent bar under five course rows is a banner, and the button is a verb. */
   .planner-add-course-btn {
-    align-self: flex-start;
+    margin-top: var(--space-2);
   }
 
   /* --- "Fra studieplanen" panel -----------------------------------------
@@ -1396,12 +1378,6 @@ const programOptionsJson = JSON.stringify(programOptions).replaceAll("<", "\\u00
   }
 </style>
 
-<script
-  is:inline
-  type="application/json"
-  id="planner-program-options"
-  set:html={programOptionsJson}
-/>
 <script>
   import { mountPlannerApp } from "../../components/planner/plannerApp.js";
   import { onPage } from "../../lib/pageLifecycle.ts";
@@ -1410,11 +1386,9 @@ const programOptionsJson = JSON.stringify(programOptions).replaceAll("<", "\\u00
   // Must run per page-load, not once per module: under ClientRouter this module
   // is evaluated only the first time it is fetched, so mounting at top level
   // left the planner an empty shell after any in-site navigation back to it.
-  // `mountPlannerApp` owns the single store and mounts its modals itself.
+  // `mountPlannerApp` mounts this page's own modals; the store and the sync
+  // client come from `account.ts`, shared with the topbar's profile panel.
   onPage((signal) => {
-    const optionsEl = document.getElementById("planner-program-options");
-    if (!optionsEl) return;
-    const programOptions = optionsEl.textContent ? JSON.parse(optionsEl.textContent) : [];
-    mountPlannerApp(semestersData, programOptions, signal);
+    mountPlannerApp(semestersData, signal);
   });
 </script>

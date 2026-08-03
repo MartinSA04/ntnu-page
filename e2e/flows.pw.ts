@@ -58,19 +58,19 @@ const firstBlockCode = async (page: Page): Promise<string> =>
  * page. The chip is still the assertion on every other page.
  */
 const planTitle = (page: Page) => page.locator("#planner-title");
-const profileBtn = (page: Page) => page.locator("#planner-profile-btn");
+/** The topbar's account door — on every page, not just this one. */
+const profileBtn = (page: Page) => page.locator("#site-account-btn");
 const profilePanel = (page: Page) => page.locator("#planner-profile-panel");
 
 /**
- * Opens studieinfo through the merged control: "Profil" opens the account
- * panel first, and its own "Endre" link (`profilePanel.ts`'s
- * `renderProgramBlock`) is what carries on into studieinfo — the two doors
- * into programme + kull merged into one control on 2026-08-03.
+ * Opens studieinfo, which is one click now: programme, kull and studieretning
+ * are a SECTION of the profile panel rather than a modal reached through it,
+ * so there is no second door and no `<dialog>` on top of a `<dialog>`.
  */
-async function openStudieinfoViaProfile(page: Page): Promise<void> {
+async function openStudieinfo(page: Page): Promise<void> {
   await profileBtn(page).click();
   await expect(profilePanel(page)).toBeVisible();
-  await profilePanel(page).locator(".profile-panel-edit").click();
+  await expect(profilePanel(page).locator("#studieinfo-heading")).toBeVisible();
 }
 
 /**
@@ -107,7 +107,7 @@ function courseCodesOf(page: Page): Promise<string[]> {
   return page.locator("#planner-course-rows .planner-course-code").allTextContents();
 }
 
-test("onboarding: modal → programme + kull + retning → a full week", async ({ page }) => {
+test("onboarding: panel → programme + kull + retning → a full week", async ({ page }) => {
   await page.goto("/planlegger/");
 
   // The empty state is a card in the week frame, not a dead end: the picker it
@@ -118,8 +118,12 @@ test("onboarding: modal → programme + kull + retning → a full week", async (
   await expect(card).toBeVisible({ timeout: 15_000 });
   await card.locator("button", { hasText: "Velg studieprogram" }).click();
 
-  const dialog = page.locator("#studieinfo-dialog");
+  // The FIRST-RUN PATH, and it is one press: the profile panel opens with the
+  // caret already in the programme search. It used to open a settings panel
+  // whose own "Endre" link opened studieinfo on top of it.
+  const dialog = page.locator("#planner-profile-panel");
   await expect(dialog).toBeVisible();
+  await expect(page.locator("#studieinfo-program-input")).toBeFocused();
 
   await page.fill("#studieinfo-program-input", "Datateknologi");
   // "Datateknologi" alone matches MIDT/MTDT/PHCOS too (B6) — the code span
@@ -190,10 +194,13 @@ test("share: a program-less link clears the profile chip", async ({ page }) => {
   // its own name — and the hint carries the invitation instead of a programme.
   await expect(planTitle(page)).toHaveText("Semesterplan");
   await expect(planTitle(page)).not.toContainText("MTDT");
-  // The top bar's own button always reads "Profil" now; the studieinfo verb
-  // that used to sit there lives inside the panel it opens.
-  await profileBtn(page).click();
-  await expect(profilePanel(page).locator(".profile-panel-edit")).toHaveText("Velg studieprogram");
+  // The topbar's account door reads "Profil" while signed out, and the panel
+  // behind it is where a programme would be named — with none stored, its
+  // studieinfo section is back to the bare search field rather than a chip.
+  await expect(profileBtn(page)).toHaveText("Profil");
+  await openStudieinfo(page);
+  await expect(page.locator("#studieinfo-program-input")).toBeVisible();
+  await expect(profilePanel(page).locator(".studieinfo-program-chip")).toHaveCount(0);
   await profilePanel(page).locator(".profile-panel-close").click();
 });
 
@@ -474,14 +481,18 @@ test("one control opens studieinfo, and semester lives only inside it", async ({
   await expect(page.locator("#planner-context-line")).toContainText("Datateknologi");
 
   // With a plan set, the week is a real grid — so no empty-state card is on
-  // screen and "Profil" is the only thing left that opens the modal.
+  // screen and the topbar's account door is the only thing left that opens
+  // studieinfo.
   await expect(page.locator("#planner-grid-frame .planner-week-card")).toHaveCount(0);
 
-  const dialog = page.locator("#studieinfo-dialog");
+  const dialog = page.locator("#planner-profile-panel");
   await expect(dialog).toBeHidden();
-  await openStudieinfoViaProfile(page);
+  await openStudieinfo(page);
   await expect(dialog).toBeVisible();
-  await expect(page.locator("#studieinfo-semester-select")).toBeVisible();
+  // …and the SEMESTER is not in it. It is a control on the page itself now,
+  // beside the plan whose term it names.
+  await expect(dialog.locator("#planner-semester-select")).toHaveCount(0);
+  await expect(page.locator("#planner-semester-select")).toBeVisible();
 });
 
 test("week: three overlapping lectures stack into three lanes, no pile", async ({
@@ -927,7 +938,7 @@ test("modals: a click on the backdrop dismisses every one of them", async ({ pag
 
   for (const [name, open] of [
     ["#planner-add-dialog", () => page.click("#planner-add-course-btn")],
-    ["#studieinfo-dialog", () => openStudieinfoViaProfile(page)],
+    ["#planner-profile-panel", () => openStudieinfo(page)],
     ["#planner-course-settings", () => settingsFromBlock(page)],
   ] as const) {
     await open();
@@ -1148,24 +1159,14 @@ test("manual adds stay in their semester", async ({ page }) => {
   await expect(courseRows(page)).toHaveCount(1);
   await expect(courseRows(page)).toContainText("TDT4100");
 
-  // Switching semester lives inside the studieinfo modal now (no inline
-  // toggle-and-add): manual adds are scoped per semester in `np:plans`, so a
-  // switch away must drop this course from view without deleting it.
-  const dialog = page.locator("#studieinfo-dialog");
-  await openStudieinfoViaProfile(page);
-  await expect(dialog).toBeVisible();
-  await page.selectOption("#studieinfo-semester-select", "27v");
-  await page.click("#studieinfo-save");
-  await expect(dialog).toBeHidden();
-
+  // The semester is a control ON THE PAGE — it describes the plan, not the
+  // student, so it did not follow programme and kull into the profile panel.
+  // Manual adds are scoped per semester in `np:plans`, so a switch away must
+  // drop this course from view without deleting it.
+  await page.selectOption("#planner-semester-select", "27v");
   await expect(courseRows(page)).toHaveCount(0);
 
-  await openStudieinfoViaProfile(page);
-  await expect(dialog).toBeVisible();
-  await page.selectOption("#studieinfo-semester-select", "26h");
-  await page.click("#studieinfo-save");
-  await expect(dialog).toBeHidden();
-
+  await page.selectOption("#planner-semester-select", "26h");
   await expect(courseRows(page)).toHaveCount(1);
   await expect(courseRows(page)).toContainText("TDT4100");
 });
@@ -1214,13 +1215,16 @@ test("BSPL: a campus choice whose own code contains Ø survives a reload (B10)",
   const question = page.locator("#planner-direction");
   await expect(question).toBeVisible({ timeout: 30_000 });
   // The inline week question no longer carries its own chips — choosing a
-  // direction now happens in the studieinfo modal it opens into.
+  // direction happens in the profile panel's studieinfo section, and the
+  // question's button opens it with focus already on that select.
+  await expect(question.locator("#planner-direction-btn")).toHaveText("Velg studieretning");
   await page.click("#planner-direction-btn");
 
-  const dialog = page.locator("#studieinfo-dialog");
+  const dialog = page.locator("#planner-profile-panel");
   await expect(dialog).toBeVisible();
   const retningSelect = page.locator("#studieinfo-retning-select");
   await expect(retningSelect).toBeVisible({ timeout: 20_000 });
+  await expect(retningSelect).toBeFocused();
   const gjovikOption = retningSelect.locator("option", { hasText: "Gjøvik" }).first();
   await expect(gjovikOption).toHaveCount(1);
   const gjovikValue = await gjovikOption.getAttribute("value");
@@ -1434,9 +1438,14 @@ test("ett navn: the plan is named once, and the switch is not a third toggle", a
 
   await expect(planTitle(page)).toHaveText("MTDT Kull 26 H26");
   await expect(page.locator("#studieinfo-chip")).toHaveCount(0);
-  // Three topbar children on every page (the ThemeToggle ships a <script>
-  // beside its button, which is not one): wordmark, nav, toggle.
-  await expect(page.locator(".site-topbar > *:not(script)")).toHaveCount(3);
+  // Four topbar children on every page (the ThemeToggle and the account button
+  // each ship a <script> beside themselves, which are not children of this
+  // kind): wordmark, nav, account, toggle. The account arrived when the
+  // profile panel became site-wide; it says nothing about the PLAN, which is
+  // what this assertion has always been about — `#studieinfo-chip` above is
+  // the half that pins that, and `navigation.pw.ts` pins it on all four pages.
+  await expect(page.locator(".site-topbar > *:not(script)")).toHaveCount(4);
+  await expect(page.locator("#site-account-btn")).toHaveText("Profil");
 
   // The switch is a segmented control, and its whole state is which word the
   // thumb is under — a thumb that TRAVELS rather than cross-fading.
@@ -1799,7 +1808,7 @@ test.describe("the banner's pair", () => {
     const title = await box("#planner-title");
     const hint = await box("#planner-context-line");
     const verdict = await box("#planner-grid-status");
-    const edit = await box("#planner-profile-btn");
+    const semester = await box(".planner-semester");
     const tabs = await box(".planner-view-tabs");
     const frame = await box("#planner-grid-frame");
 
@@ -1807,7 +1816,7 @@ test.describe("the banner's pair", () => {
     // step on the page's scale, so no sentence can have got in there.
     expect(hint.top - title.bottom).toBeLessThan(20);
     // Every control is below the whole name, never inside it.
-    expect(edit.top).toBeGreaterThanOrEqual(hint.bottom);
+    expect(semester.top).toBeGreaterThanOrEqual(hint.bottom);
     expect(tabs.top).toBeGreaterThanOrEqual(hint.bottom);
     // MTDT's pass is QUALIFIED — HMS0002 publishes nothing classifiable as a
     // lecture, so the check went over it rather than on it — and a qualified

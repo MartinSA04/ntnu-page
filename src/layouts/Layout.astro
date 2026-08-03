@@ -1,6 +1,7 @@
 ---
 import { ClientRouter } from "astro:transitions";
 import semestersData from "../../data/semesters.json";
+import AccountButton from "../components/AccountButton.astro";
 import ThemeToggle from "../components/ThemeToggle.astro";
 import { faviconDataUri, VERDICT } from "../lib/favicon.ts";
 import "../styles/tokens.css";
@@ -14,9 +15,24 @@ import "../styles/site.css";
  * and a footer carrying provenance. All colour lives in tokens.css: no inline
  * colour vars here.
  *
- * The topbar carries no plan state and no way into the studieinfo modal. The
- * planner's own "Endre" button is the single entrance, and the planner's title
- * says whose plan it is.
+ * THE TOPBAR CARRIES NO PLAN STATE — still true, and the three attempts that
+ * broke it (a plan strip, a plan-count link, a studieinfo chip) stay dead. It
+ * does carry the ACCOUNT, which is a different thing: `<AccountButton>` prints
+ * the account's own name when there is a session and "Profil" when there is
+ * not. No semester, no course count, no programme code.
+ *
+ * The rule that used to stand here — "no way into the studieinfo modal; the
+ * planner's own button is the single entrance" — was written when programme +
+ * kull were the only thing behind that door and the planner was the only page
+ * that cared. Neither holds now. The account governs `np:profile`, `np:plans`
+ * and `np:lastSemester`, which `/`, `/emner/` and `/emne/[code]/` all read;
+ * and `/emne/[code]/` is the largest cold-traffic surface on the site, so a
+ * student arriving there from a search engine must be able to sign in — and to
+ * say which programme they are on — without navigating away first. A door that
+ * exists on exactly one of four pages is not a settings surface (mandate 8).
+ *
+ * What stays with the planner is what belongs to a PLAN rather than to a
+ * person: the semester select, and the plan's own name in the planner's title.
  */
 interface Props {
   title: string;
@@ -255,6 +271,7 @@ const crawlDate = formatCrawlDate(semestersData.crawledAt);
             ))
           }
         </nav>
+        <AccountButton defaultSemesterId={DEFAULT_SEMESTER_ID} />
         <ThemeToggle storageKey={THEME_KEY} />
       </header>
       <main id="main-content" class:list={["site-content", { wide }]}>

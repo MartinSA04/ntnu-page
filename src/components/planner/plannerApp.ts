@@ -44,22 +44,17 @@ import { entriesForProgram, entriesInSemester, semesterYear } from "../../lib/pl
 import {
   type AddCourseInput,
   activeCourses,
-  createPlanStore,
   DEFAULT_VERSION,
   formatPlanHash,
   type PlanCourse,
   type PlanProgram,
   type PlanState,
-  type PlanStore,
   parsePlanHash,
 } from "../../lib/planner/store.js";
-import {
-  createSyncClient,
-  type SyncResult,
-  type SyncSession,
-} from "../../lib/planner/syncClient.js";
+import type { SyncResult, SyncSession } from "../../lib/planner/syncClient.js";
 import { isoWeekNumber, weekdayDates } from "../../lib/planner/weekDates.js";
 import { syncPlanProbe } from "../../lib/planProbe.js";
+import { account, accountPanel, setAccountRepaint } from "../account.js";
 import { type AddCourseDeps, type AddCourseHandle, mountAddCourse } from "./addCourse.js";
 import { mountBlockPopover, type SessionChoice } from "./blockPopover.js";
 import { renderBoard, syncBoardNow } from "./board.js";
@@ -90,7 +85,7 @@ import {
   unresolvedLectureChoices,
 } from "./grid.js";
 import { beginLayerChange } from "./layerMotion.js";
-import { mountProfilePanel } from "./profilePanel.js";
+import type { ProfileFocus } from "./profilePanel.js";
 import {
   type ClassifiedCourse,
   findProgramPlan,
@@ -99,7 +94,7 @@ import {
   prefillCredits,
   resolvePeriodFor,
 } from "./programPlan.js";
-import { mountStudieinfo, publishMonthFor } from "./studieinfo.js";
+import { publishMonthFor } from "./studieinfo.js";
 import type { PlanCourseState } from "./types.js";
 
 export interface SemesterSummary {
@@ -237,8 +232,7 @@ function saveWeekBox(view: WeekView, width: number, height: number): void {
 interface PlannerElements {
   title: HTMLElement;
   contextLine: HTMLElement;
-  profileBtn: HTMLButtonElement;
-  profileBtnLabel: HTMLElement;
+  semesterSelect: HTMLSelectElement;
   linkNote: HTMLElement;
   creditLine: HTMLElement;
   loadLegend: HTMLElement;
@@ -278,8 +272,7 @@ function getElements(): PlannerElements | null {
   const found = {
     title: byId<HTMLElement>("planner-title"),
     contextLine: byId<HTMLElement>("planner-context-line"),
-    profileBtn: byId<HTMLButtonElement>("planner-profile-btn"),
-    profileBtnLabel: byId<HTMLElement>("planner-profile-btn-label"),
+    semesterSelect: byId<HTMLSelectElement>("planner-semester-select"),
     linkNote: byId<HTMLElement>("planner-link-note"),
     creditLine: byId<HTMLElement>("planner-credit-line"),
     loadLegend: byId<HTMLElement>("planner-load-legend"),
@@ -415,9 +408,8 @@ export function shouldPullOnVisible(session: SyncSession | null, hidden: boolean
 }
 
 /**
- * Mounts the planner page. `semestersFile` is `data/semesters.json`,
- * `programOptions` the trimmed catalog from `data/programs.json` (both
- * build-time crawler artifacts imported by the caller, not fetched).
+ * Mounts the planner page. `semestersFile` is `data/semesters.json`, a
+ * build-time crawler artifact imported by the caller rather than fetched.
  *
  * Called once per `astro:page-load`, so it runs again after every client-side
  * navigation back to `/planlegger/`. `signal` aborts just before the next
@@ -426,7 +418,6 @@ export function shouldPullOnVisible(session: SyncSession | null, hidden: boolean
  */
 export async function mountPlannerApp(
   semestersFile: SemestersFile,
-  programOptions: ProgramOption[],
   signal?: AbortSignal,
 ): Promise<void> {
   const found = getElements();
@@ -434,60 +425,50 @@ export async function mountPlannerApp(
   const elements = found;
 
   const defaultSemesterId = semestersFile.current?.id ?? "26h";
-  const store: PlanStore = createPlanStore(defaultSemesterId);
   const semesters = candidateSemesters(semestersFile);
   // One AbortSignal for everything this page mounts and binds, so it all tears
   // down together on the next `astro:before-swap`.
   const lifeSignal = signal ?? new AbortController().signal;
 
-  // The studieinfo modal owns all four plan choices (programme/kull/retning/
-  // semester); the course-settings modal owns everything per-course, group
-  // selection AND drop/remove. One mount each off the single store. Studieinfo
-  // opens from the banner "Endre", the week's studieretning question and the
-  // empty-state buttons, and nowhere else on the site.
-  const studieinfo = mountStudieinfo(
-    { store, semesters, programOptions, defaultSemesterId },
-    lifeSignal,
-  );
+  // --- The account: shared with the topbar, not owned here -----------------
+  //
+  // The store and the sync client come from `account.ts`, which the topbar's
+  // profile button also mounts against. Sharing the CLIENT is not tidiness:
+  // `createSyncClient` keeps its session in memory, so a second client would
+  // still answer `session() === null` after the panel signed in, and every
+  // push below would report "no_session" until the page reloaded.
+  //
+  // Three sync triggers, and no polling loop: on plan change (debounced 1s),
+  // on `visibilitychange` → visible, and on load. The visibility pull is
+  // load-bearing, not an optimisation — see `shouldPullOnVisible`'s own
+  // comment for why. There is no offline queue and there must never be one:
+  // this is a webpage with no service worker, so a push either lands or it
+  // reports that it did not.
+  const { store, sync } = account(defaultSemesterId);
+  // A fresh `login` writes straight to `localStorage` the same way a pull does
+  // and needs the same repaint — see `onAuthenticated`'s doc comment in
+  // `profilePanel.ts`. The panel lives in the layout and cannot know about
+  // this page, so the page hands its repaint over for as long as it is here.
+  // Forward reference is safe: `onAuthenticated` is a hoisted declaration and
+  // the callback only ever runs after a click.
+  setAccountRepaint(() => onAuthenticated());
+  lifeSignal.addEventListener("abort", () => setAccountRepaint(null));
+
+  /**
+   * Opens the profile panel, on the control that answers whatever asked. It
+   * is mounted by the layout, so it is `null` in a context that has no topbar
+   * (the unit-test shim) — the planner degrades to doing nothing rather than
+   * to throwing.
+   */
+  function openProfile(focus?: ProfileFocus): void {
+    accountPanel()?.show(focus);
+  }
+
   const courseSettings = mountCourseSettings(store, lifeSignal);
   // A click in the week asks "what is this session", not "let me edit this
   // course" — so it opens a read popover anchored to the bar, carrying a way
   // through to the editor rather than being it.
   const blockPopover = mountBlockPopover(openCourseSettings, lifeSignal);
-
-  // --- Account sync: the opt-in account's join into this page --------------
-  //
-  // Three triggers, and no polling loop: on plan change (debounced 1s), on
-  // `visibilitychange` → visible, and on load. The visibility pull is
-  // load-bearing, not an optimisation — see `shouldPullOnVisible`'s own
-  // comment for why. There is no offline queue and there must never be one:
-  // this is a webpage with no service worker, so a push either lands or it
-  // reports that it did not.
-  // `.bind(globalThis)`, not the bare reference: `deps.fetch(...)` inside
-  // syncClient.ts is a METHOD CALL on the deps object, so an unbound `fetch`
-  // runs with `this === deps` — and the native implementation throws
-  // "Illegal invocation" unless `this` is a Window/WorkerGlobalScope. Every
-  // unit test constructs its own `createSyncClient` with a plain mock
-  // function, which does not care about `this`, so this was invisible until
-  // e2e/sync.pw.ts drove the real button in a real browser (Task 9).
-  const sync = createSyncClient({
-    storage: localStorage,
-    fetch: globalThis.fetch.bind(globalThis),
-  });
-  const profile = mountProfilePanel({
-    store,
-    sync,
-    onEditProgram: () => studieinfo.open(),
-    // `onAuthenticated` (below): a fresh `login` writes straight to
-    // `localStorage` the same way a pull does and needs the same repaint —
-    // see that function's own comment and `onAuthenticated`'s in
-    // `profilePanel.ts`. Forward reference is safe: it is a hoisted function
-    // declaration, and this callback only ever runs after a click, long after
-    // this whole function body has finished setting up.
-    onAuthenticated: () => onAuthenticated(),
-    signal: lifeSignal,
-  });
-  elements.profileBtn.addEventListener("click", () => profile.show(), { signal: lifeSignal });
 
   /**
    * The one fact everything below is built on: has the plan changed since
@@ -646,13 +627,13 @@ export async function mountPlannerApp(
       // A pull that failed used to say nothing at all, so a session revoked by
       // a PIN change on another device kept reading "Sist synkronisert nå"
       // while every request 401'd.
-      profile.setSyncState(fetched.reason === "unauthorised" ? "unauthorised" : "failed");
+      accountPanel()?.setSyncState(fetched.reason === "unauthorised" ? "unauthorised" : "failed");
       return { ok: false, reason: fetched.reason };
     }
     if (planGen !== sentGen) return { ok: false, reason: "superseded" };
     sync.applyRemote(fetched.snapshot);
     applyPulledPlan();
-    profile.setSyncState("ok");
+    accountPanel()?.setSyncState("ok");
     return { ok: true };
   }
 
@@ -721,7 +702,7 @@ export async function mountPlannerApp(
       // The third `SyncUiState` was unreachable until now — nothing ever set
       // it, so `syncStatusLine`/`syncSuffix`'s "Synkroniserer …" branches were
       // dead copy. This is the one window it describes.
-      profile.setSyncState("syncing");
+      accountPanel()?.setSyncState("syncing");
       /** The reason the LAST failing attempt gave, so the panel can tell a
        *  revoked session ("Logg inn på nytt") from a retryable one. */
       let reason = "";
@@ -744,7 +725,9 @@ export async function mountPlannerApp(
       } finally {
         pushInFlight = null;
       }
-      profile.setSyncState(ok ? "ok" : reason === "unauthorised" ? "unauthorised" : "failed");
+      accountPanel()?.setSyncState(
+        ok ? "ok" : reason === "unauthorised" ? "unauthorised" : "failed",
+      );
       return ok;
     })();
     return pushInFlight;
@@ -1187,12 +1170,43 @@ export async function mountPlannerApp(
     return entriesInSemester(bundle.timetable, semester.teachingWeeks);
   }
 
-  // --- Banner ------------------------------------------------------------
+  // --- The semester, which belongs to the PLAN ---------------------------
 
-  // No on-page "Bytt semester" disclosure: the studieinfo modal's semester
-  // select already commits unconditionally and first. The resolved term is
-  // still *stated* in the context line — DR-9/U6 asks the tool to resolve the
-  // term and say so, not to put a switcher on the fold.
+  /**
+   * The one control on this page that says which term is being planned.
+   *
+   * It used to be a `<select>` inside the studieinfo modal, staged alongside
+   * programme, kull and studieretning and committed by that modal's Lagre.
+   * Those three describe the STUDENT and moved into the profile panel; this
+   * one describes the PLAN, so it stayed — and it commits immediately, which
+   * the studieinfo version already effectively did (it wrote the semester
+   * first and unconditionally, before anything else it staged).
+   *
+   * The options print only "Høst 2026" / "Vår 2027" — the "timeplan publiseres
+   * ~august" qualifier belongs to the term you are actually on and is already
+   * in the context line under the title, so repeating it in every option would
+   * spend most of a 390 px row saying it about terms you are not planning.
+   */
+  function renderSemesterOptions(): void {
+    const select = elements.semesterSelect;
+    select.replaceChildren();
+    for (const semester of semesters) {
+      const option = el("option", undefined, semesterLabel(semester)) as HTMLOptionElement;
+      option.value = semester.id;
+      select.append(option);
+    }
+    select.value = plan.semesterId;
+  }
+
+  elements.semesterSelect.addEventListener(
+    "change",
+    () => {
+      store.setSemester(elements.semesterSelect.value);
+    },
+    { signal: lifeSignal },
+  );
+
+  // --- Banner ------------------------------------------------------------
 
   /**
    * The banner — ETT NAVN.
@@ -1201,8 +1215,7 @@ export async function mountPlannerApp(
    * 24 H26` — three facts, no separators, all of them data and therefore mono.
    *
    * The programme's full name is not lost, it is demoted to the hint line: it
-   * is a 42-character database field. Beside it sits "endre", the page's one
-   * opener for the studieinfo modal.
+   * is a 42-character database field.
    *
    * With no programme there is nothing to name and the title falls back to the
    * product's own — the one moment the wordmark and the page title may agree,
@@ -1280,15 +1293,10 @@ export async function mountPlannerApp(
     if (semester && !semester.timetablePublished) {
       append(`timeplan publiseres ~${publishMonthFor(semester.id)}`);
     }
-    // The label no longer varies with `program`: this button always opens
-    // Profil, never studieinfo directly (that door is now the panel's own
-    // "Endre" link). The aria-label still names the programme where there is
-    // one, for the icon-only square at ≤46rem.
-    elements.profileBtnLabel.textContent = "Profil";
-    elements.profileBtn.setAttribute(
-      "aria-label",
-      program ? `Profil for ${program.code}` : "Profil",
-    );
+    // The select is rebuilt from the plan on every render rather than only at
+    // mount: a shared link carries its own semester, and the control has to
+    // agree with the week beside it.
+    renderSemesterOptions();
     // ONE ACCENT ON SCREEN, AND ON THE RIGHT ACTION (§8's One-Job-Accent).
     // "Legg til emne" is the primary action of a plan that EXISTS. With no plan
     // it is the secondary route — PRODUCT §1.1 ranks programme + kull first — and while
@@ -1690,12 +1698,15 @@ export async function mountPlannerApp(
     return `${todayInOslo()}|${todayWeekday()}`;
   }
 
-  // --- Programme / kull / retning / semester: the studieinfo modal --------
+  // --- Programme / kull / retning: the profile panel ----------------------
   //
-  // All four plan choices live in the one studieinfo modal, and exactly one
-  // persistent control opens it: this page's "Endre" button. What follows are
-  // the *contextual* openers — the week's studieretning question and the
-  // empty-state cards — which appear only when the week has nothing else in it.
+  // Those three describe the STUDENT and live in the profile panel, which the
+  // topbar opens from every page. The semester describes the PLAN and is this
+  // page's own control, a few lines up. What follows are the *contextual*
+  // openers — the week's studieretning question and the empty-state cards —
+  // which appear only when the week has nothing else in it; each one sends the
+  // student to the panel with focus already on the control that answers it,
+  // rather than to a settings surface they then have to read.
 
   // --- Studieretning question --------------------------------------------
 
@@ -1704,9 +1715,8 @@ export async function mountPlannerApp(
    *
    * All shapes get the same treatment for the same reason: the answer belongs
    * *on* the primary surface, not in a side panel while the grid renders as a
-   * failure. The studieretning is chosen in the studieinfo modal, so its
-   * question renders as a sentence + "Endre studieinfo" button, not inline
-   * chips.
+   * failure. The studieretning is chosen in the profile panel, so its question
+   * renders as a sentence + a button that opens it, not inline chips.
    */
   interface WeekQuestion {
     title: string;
@@ -1761,11 +1771,15 @@ export async function mountPlannerApp(
       const deadline = pending.deadlineDate
         ? `Studieplanen viser frist ${formatShortDate(pending.deadlineDate)}. `
         : "";
-      const prompt = "Velg studieretning i studieinfo, så fylles ukeplanen ut med en gang.";
+      const prompt = "Velg studieretning i profilen, så fylles ukeplanen ut med en gang.";
       return {
         title: pending.name,
         note: `${deadline}${prompt}`,
-        action: { label: "Endre studieinfo", run: () => studieinfo.open() },
+        // The button names the ANSWER, not the surface it lives on, and the
+        // panel opens with focus on the select — so the student presses one
+        // control and the next thing under their hand is the one that closes
+        // the question.
+        action: { label: "Velg studieretning", run: () => openProfile("direction") },
         weekMessage: prompt,
       };
     }
@@ -2548,16 +2562,22 @@ export async function mountPlannerApp(
           ),
         );
         // THE ACCENT GOES ON THE MANDATE'S OWN PATH. This was a paper button
-        // while "Legg til emne" wore the accent in the bar above — so on the
-        // empty state the loudest thing on the page was the SECONDARY route,
-        // and the primary one read as its footnote. `renderBanner` demotes the
-        // bar's button while there is no plan, so there is still exactly one
-        // accent on screen (§8's One-Job-Accent).
+        // while "Legg til emne" wore the accent — so on the empty state the
+        // loudest thing on the page was the SECONDARY route, and the primary
+        // one read as its footnote. `renderBanner` demotes "Legg til emne"
+        // while there is no plan, so there is still exactly one accent on
+        // screen (§8's One-Job-Accent).
+        //
+        // FIRST RUN GOES STRAIGHT TO THE FIELD. The panel opens with the
+        // caret in the programme search, so this button and the next keystroke
+        // are one continuous action — the panel's account half is below the
+        // fold of the student's attention, which is where an opt-in thing
+        // belongs.
         const primary = el("button", "np-btn np-btn--primary", "Velg studieprogram");
         primary.type = "button";
-        primary.addEventListener("click", () => studieinfo.open());
+        primary.addEventListener("click", () => openProfile("program"));
         card.append(primary);
-        // The modal is the way in; the dialog is the "I already know a code"
+        // The panel is the way in; the dialog is the "I already know a code"
         // escape hatch. A paper button rather than `.np-navlink`, which at
         // --muted with no underline did not read as pressable at all.
         const secondary = el("button", "np-btn planner-week-card-secondary", "Jeg har emnekodene");
@@ -2603,9 +2623,16 @@ export async function mountPlannerApp(
               `Ingen av emnene dine undervises i ${semesterLabel(semester)}.`,
             ),
           );
-          const change = el("button", "np-btn", "Endre studieinfo");
+          // The recovery is the SEMESTER, and the semester is a control on
+          // this page now — so the button hands the student to it rather than
+          // opening a settings panel that no longer holds the answer. (It used
+          // to read "Endre studieinfo" and open the modal the semester select
+          // then lived inside.)
+          const change = el("button", "np-btn", "Bytt semester");
           change.type = "button";
-          change.addEventListener("click", () => studieinfo.open());
+          change.addEventListener("click", () => {
+            elements.semesterSelect.focus();
+          });
           card.append(change);
         });
       }

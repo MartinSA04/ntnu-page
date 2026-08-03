@@ -1,24 +1,36 @@
 /**
- * The profile panel — the ONE surface the opt-in account lives on: the
- * programme/kull summary a student already set in studieinfo, signup/login,
- * the device registry, and changing the PIN. It is reached from one control
- * ("Profil", in the planner's action bar — the same button that used to open
- * studieinfo directly, before the two doors into programme + kull merged
- * into one) and nothing else nags about it —
- * the account is strictly opt-in and never a prerequisite for using the
- * planner (see the plan's product framing).
+ * The profile panel — the ONE surface everything about the STUDENT lives on:
+ * studieinfo (programme, kull, studieretning) and the opt-in account
+ * (signup/login, the device registry, changing the PIN). It is reached from
+ * one control, the topbar's account button, which stands on every page —
+ * because the state behind it (`np:profile`, `np:plans`, `np:lastSemester`) is
+ * read by all four of them, and because `/emne/[code]/` is the largest
+ * cold-traffic surface on the site and a student landing there must be able to
+ * sign in without navigating away first.
  *
- * Three states, switched on `sync.session()` and a pending collision:
- *  - signed out — programme block, Navn/PIN/Gjenta PIN, the two terms lines,
+ * Nothing here nags: the account is strictly opt-in and never a prerequisite
+ * for using the planner (see the plan's product framing). Studieinfo is not
+ * optional in the same way — it is PRODUCT mandate 1's own path — so it comes
+ * first in the panel and carries the panel's one accent.
+ *
+ * WHAT IS NOT HERE: the semester. It describes the PLAN, not the student, so
+ * it is a control in the planner's own bar (`#planner-semester-select`). The
+ * studieinfo section reads the stored semester (kull relevance and the
+ * studieretning question both depend on the term) and writes it never.
+ *
+ * Four states, switched on `sync.session()` and a pending collision:
+ *  - signed out — studieinfo, then Navn/PIN/Gjenta PIN, the two terms lines,
  *    Opprett konto / Logg inn.
  *  - a login collision (§6 step 5) — the one prompt this design keeps: two
  *    independent histories met, and the student picks which one wins. Shown
  *    ONLY when `describeCollision` says so; an ordinary "add my second
  *    device" login never reaches it.
- *  - signed in — programme block, "Sist synkronisert …", the device
+ *  - signed in — studieinfo, then "Sist synkronisert …", the device
  *    registry (`SyncSession.devices`, labelled by platform and browser —
  *    two browsers on one Mac are two entries), Bytt PIN, Logg ut på denne
  *    enheten.
+ *  - Bytt PIN, which replaces the body outright: a focused sub-task, so
+ *    studieinfo is not drawn under it.
  *
  * There is no per-device revocation (§4 / §6 step 8): Bytt PIN is the only
  * way to drop a device, and it is honest about the cost — every OTHER
@@ -28,9 +40,9 @@
  * Follows `courseSettings.ts`'s modal pattern: a `<dialog>` built with `el`,
  * `showModal()`, `closedby="any"`, appended to `document.body`, idempotent
  * against a stale dialog left by a previous mount. Unlike that dialog's
- * per-row invoker, this one is always opened from the single static "Profil"
- * control in the page chrome, which is never removed from the document — so
- * the native `showModal()`/`close()` focus return needs no manual fallback.
+ * per-row invoker, this one is opened from static controls in the page chrome
+ * that are never removed from the document — so the native
+ * `showModal()`/`close()` focus return needs no manual fallback.
  */
 import { semesterYear } from "../../lib/planner/schedule.js";
 import { activeCourses, type PlanCourse, type PlanStore } from "../../lib/planner/store.js";
@@ -43,12 +55,22 @@ import {
   type SyncSession,
 } from "../../lib/planner/syncClient.js";
 import { el, formatCreditNumber, icon } from "./dom.js";
+import { buildStudieinfoSection, type StudieinfoSectionHandle } from "./studieinfo.js";
+
+/**
+ * Fired on `document` whenever the session may have changed — a signup, a
+ * login, a logout, or a 401 that ended one. Same idiom as `np:themechange`:
+ * something only the client knows, needed by a control the server rendered
+ * (here the topbar's account name, `account.ts`).
+ *
+ * Declared HERE, where it is dispatched, rather than in `account.ts`, so the
+ * two modules form a line instead of a cycle.
+ */
+export const ACCOUNT_CHANGE_EVENT = "np:accountchange";
 
 export interface ProfilePanelDeps {
   store: PlanStore;
   sync: SyncClient;
-  /** Opens studieinfo. Called after this panel closes itself — see `renderProgramBlock`. */
-  onEditProgram: () => void;
   /**
    * Fires after a successful `signup`/`login`, i.e. exactly when `sync`'s
    * `applySyncable` may just have written a DIFFERENT plan straight into
@@ -83,8 +105,17 @@ export type SyncUiState = "ok" | "failed" | "syncing" | "unauthorised";
 /** The one sentence a revoked session gets, everywhere it can surface. */
 const REAUTH_COPY = "PIN-en er endret. Logg inn på nytt.";
 
+/**
+ * Where focus lands when something else on the page sent the student here.
+ * `"program"` is the first-run path (the planner's empty state) and
+ * `"direction"` is the week's studieretning question — both are asked
+ * elsewhere and answered here, so the answer's own control is what has to be
+ * under the caret when the panel opens.
+ */
+export type ProfileFocus = "program" | "direction";
+
 export interface ProfilePanelHandle {
-  show(): void;
+  show(focus?: ProfileFocus): void;
   setSyncState(state: SyncUiState): void;
 }
 
@@ -443,48 +474,47 @@ export function mountProfilePanel(deps: ProfilePanelDeps): ProfilePanelHandle {
   }
 
   /**
-   * The plan's own identity, at the top of both states — the same fact the
-   * planner's title bar names, so the account panel never contradicts it. No
-   * programme set swaps "Endre" for "Velg studieprogram" — the same verb pair
-   * the top bar's control carried when it opened studieinfo directly, kept
-   * here now that this link is the route onward.
+   * Studieinfo, built ONCE and re-appended into each rendered body.
+   *
+   * Built once because it stages edits and holds two in-flight fetch tokens:
+   * rebuilding it on every `render()` would throw away a half-picked programme
+   * every time a sync state changed underneath it. `replaceChildren` detaches
+   * it rather than destroying it, and re-appending a detached element keeps
+   * every listener bound to it.
+   *
+   * It used to be a modal of its own reached through an "Endre" link here —
+   * two doors into the same room, one nested inside the other, and a
+   * `<dialog>` opened on top of a `<dialog>`. Now there is one room.
    */
-  function renderProgramBlock(): HTMLElement {
-    const program = deps.store.loadPlan().program;
-    const block = el("div", "profile-panel-program");
-    const value = program
-      ? `${program.code} · kull ${program.cohort}`
-      : "Ingen studieprogram valgt";
-    block.append(el("p", "np-hint profile-panel-program-value", value));
-    const edit = el(
-      "button",
-      "np-navlink profile-panel-edit",
-      program ? "Endre" : "Velg studieprogram",
-    );
-    edit.type = "button";
-    edit.addEventListener("click", () => {
-      // Two native <dialog>s open at once is not a state this product has
-      // anywhere else; close this one before studieinfo opens on top of it.
-      close();
-      deps.onEditProgram();
-    });
-    block.append(edit);
-    return block;
+  const studieinfo: StudieinfoSectionHandle = buildStudieinfoSection({
+    store: deps.store,
+    // A saved studieinfo is a finished errand: the plan behind the modal has
+    // already redrawn, so keeping the panel open would leave the student
+    // looking at the form they just submitted instead of at the answer.
+    onSaved: () => close(),
+  });
+
+  /** The hairline that says "different subject below". */
+  function renderDivider(): HTMLElement {
+    return el("hr", "profile-panel-divider");
   }
 
   function renderSignedOut(): void {
     dialog.replaceChildren(renderHead());
+    const body = el("div", "profile-panel-body");
+    body.append(studieinfo.element, renderDivider());
+
     // A <form>, not a <div>: `addCourse.ts`'s search field sets this
     // precedent (`searchForm`, addCourse.ts:169) for exactly this reason —
     // without it, only a mouse click reaches `submit()` and Enter in Navn/
     // PIN/Gjenta PIN does nothing. A login form is a stronger case for it
-    // than a search box.
-    const body = el("form", "profile-panel-body") as HTMLFormElement;
-    body.autocomplete = "off";
-    body.append(renderProgramBlock());
-
-    body.append(el("h3", "profile-panel-heading", "Logg inn eller opprett konto"));
-    body.append(el("p", "np-hint", "Da følger planen med på telefon, PC og nettbrett."));
+    // than a search box. It is a SIBLING of studieinfo rather than a wrapper
+    // around it: studieinfo carries its own <form> for the typeahead, and
+    // nested forms are not a thing HTML has.
+    const account = el("form", "profile-panel-account") as HTMLFormElement;
+    account.autocomplete = "off";
+    account.append(el("h3", "profile-panel-heading", "Konto"));
+    account.append(el("p", "np-hint", "Da følger planen med på telefon, PC og nettbrett."));
 
     const navn = buildField("Navn", "profile-panel-navn");
     const pin = buildField("PIN (6 siffer)", "profile-panel-pin", {
@@ -495,10 +525,12 @@ export function mountProfilePanel(deps: ProfilePanelDeps): ProfilePanelHandle {
       inputmode: "numeric",
       maxlength: "6",
     });
-    body.append(navn.wrapper, pin.wrapper, repeat.wrapper);
+    account.append(navn.wrapper, pin.wrapper, repeat.wrapper);
 
-    body.append(el("p", "np-hint", "Planen lagres kryptert. Vi kan ikke lese den."));
-    body.append(el("p", "np-hint", "Husk PIN-en — du trenger den for å logge inn på en ny enhet."));
+    account.append(el("p", "np-hint", "Planen lagres kryptert. Vi kan ikke lese den."));
+    account.append(
+      el("p", "np-hint", "Husk PIN-en — du trenger den for å logge inn på en ny enhet."),
+    );
 
     // Permanently mounted, never `hidden` — mirrors studieinfo's own hint, so
     // a refused submit is described from the button that caused it (below).
@@ -515,14 +547,19 @@ export function mountProfilePanel(deps: ProfilePanelDeps): ProfilePanelHandle {
     );
     hint.id = "profile-panel-hint";
     hint.setAttribute("aria-live", "polite");
-    body.append(hint);
+    account.append(hint);
 
-    const actions = el("div", "np-actions profile-panel-actions");
+    const actions = el("div", "profile-panel-actions");
     // The form's one `type="submit"` control, so Enter in any field and a
     // click land on the same listener below (native submit dispatch) rather
-    // than needing a second, separately-bound click handler. It is also the
-    // button already carrying `.np-btn--primary` — Enter deferring to the
-    // same action a mouse click defaults to, not a second convention.
+    // than needing a second, separately-bound click handler.
+    //
+    // It is PAPER, not `.np-btn--primary`, and that changed when studieinfo
+    // moved into this panel: `.np-btn--primary` is at most one per surface
+    // (DESIGN §5) and the accent's one job is THE primary action (§2's
+    // One-Job-Accent). On this surface that is Lagre — mandate 1's own path,
+    // and what a first-run student opened the panel to do. An account is
+    // strictly opt-in (mandate 8), so it may not be the loudest thing here.
     //
     // Which action Enter picks is ARBITRARY: the same three fields feed both
     // signup and login, and a returning student setting up a second device —
@@ -536,7 +573,7 @@ export function mountProfilePanel(deps: ProfilePanelDeps): ProfilePanelHandle {
     // guess names its way out rather than dead-ending. Do not "fix" this by
     // moving `type="submit"` to `loginBtn` without also reverting that copy;
     // the two changes are one decision.
-    const signupBtn = el("button", "np-btn np-btn--primary", "Opprett konto") as HTMLButtonElement;
+    const signupBtn = el("button", "np-btn", "Opprett konto") as HTMLButtonElement;
     signupBtn.type = "submit";
     signupBtn.setAttribute("aria-describedby", "profile-panel-hint");
     // Deliberately NOT `type="submit"`: two submit controls in one form make
@@ -546,8 +583,9 @@ export function mountProfilePanel(deps: ProfilePanelDeps): ProfilePanelHandle {
     loginBtn.type = "button";
     loginBtn.setAttribute("aria-describedby", "profile-panel-hint");
     actions.append(signupBtn, loginBtn);
-    body.append(actions);
+    account.append(actions);
 
+    body.append(account);
     dialog.append(body);
 
     async function submit(kind: "signup" | "login"): Promise<void> {
@@ -604,7 +642,7 @@ export function mountProfilePanel(deps: ProfilePanelDeps): ProfilePanelHandle {
     // fires this once — including when it was `signupBtn` (type="submit")
     // that was clicked directly, so no separate click listener is needed
     // for it.
-    body.addEventListener("submit", (event) => {
+    account.addEventListener("submit", (event) => {
       event.preventDefault();
       void submit("signup");
     });
@@ -616,9 +654,13 @@ export function mountProfilePanel(deps: ProfilePanelDeps): ProfilePanelHandle {
   function renderSignedIn(session: SyncSession): void {
     dialog.replaceChildren(renderHead());
     const body = el("div", "profile-panel-body");
-    body.append(renderProgramBlock());
+    body.append(studieinfo.element, renderDivider());
 
-    body.append(el("p", "np-hint profile-panel-sync-line", syncStatusLine(syncState)));
+    const account = el("div", "profile-panel-account");
+    // The account names itself here, where "Konto" alone would be a heading
+    // over a list of devices with nothing saying whose they are.
+    account.append(el("h3", "profile-panel-heading", session.navn));
+    account.append(el("p", "np-hint profile-panel-sync-line", syncStatusLine(syncState)));
 
     const list = el("ul", "profile-panel-devices");
     // This device first — it is the only row that reflects LIVE sync state
@@ -636,9 +678,9 @@ export function mountProfilePanel(deps: ProfilePanelDeps): ProfilePanelHandle {
       row.append(el("span", undefined, `${device.label} — ${suffix}`));
       list.append(row);
     }
-    body.append(list);
+    account.append(list);
 
-    const actions = el("div", "np-actions profile-panel-actions");
+    const actions = el("div", "profile-panel-actions");
     // §4 / §6 step 8: the only way to drop a device — no per-device control
     // exists in the list above, on purpose. There is no per-device
     // revocation, and this UI must not imply one.
@@ -653,8 +695,9 @@ export function mountProfilePanel(deps: ProfilePanelDeps): ProfilePanelHandle {
       render();
     });
     actions.append(changePinBtn, logoutBtn);
-    body.append(actions);
+    account.append(actions);
 
+    body.append(account);
     dialog.append(body);
   }
 
@@ -845,15 +888,28 @@ export function mountProfilePanel(deps: ProfilePanelDeps): ProfilePanelHandle {
     const session = deps.sync.session();
     if (session) renderSignedIn(session);
     else renderSignedOut();
+    // The topbar prints the account's name and cannot see this dialog's state,
+    // so every rebuild announces itself the same way the theme flip does. It
+    // is a rebuild, not a diff, so this fires on opens that changed nothing —
+    // the listener re-reads one string, which is cheaper than tracking what
+    // changed.
+    document.dispatchEvent(new CustomEvent(ACCOUNT_CHANGE_EVENT));
   }
 
   deps.signal.addEventListener("abort", () => dialog.remove());
 
   return {
-    show(): void {
+    show(focus?: ProfileFocus): void {
+      // Studieinfo is re-staged from the store on every open, so a half-picked
+      // programme abandoned last time is gone rather than resurrected.
+      studieinfo.reset();
       render();
       dialog.scrollTop = 0;
       if (!dialog.open) dialog.showModal();
+      // The caller sent the student here to answer one question; put the caret
+      // on the control that answers it.
+      if (focus === "direction") studieinfo.focusDirection();
+      else if (focus === "program") studieinfo.focusProgram();
     },
     setSyncState(state: SyncUiState): void {
       syncState = state;

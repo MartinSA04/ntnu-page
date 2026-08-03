@@ -132,7 +132,7 @@ describe.each(["light", "dark"] as const)("contrast: %s theme", (theme) => {
   });
 
   /* Ink fills. Every filled control is --ui now (.np-btn[aria-pressed],
-     .np-toggle[aria-pressed], .studieinfo-save, .skip-link), which is the
+     .np-toggle[aria-pressed], .skip-link), which is the
      change that made the compromise unnecessary rather than merely
      compliant: --fg on --bg is the highest-contrast pair the palette has. */
   it("--ui-contrast on --ui clears AA", () => {

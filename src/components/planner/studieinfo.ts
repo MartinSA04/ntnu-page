@@ -1,12 +1,27 @@
 /**
- * Studieinfo modal — the product's front door.
+ * Studieinfo — programme, kull and studieretning — as a SECTION of the profile
+ * panel rather than a modal of its own.
  *
- * One native `<dialog>` owning *all four* choices the plan hangs off:
- * programme, kull, studieretning and semester. Every edit is staged locally and
- * nothing touches the store until **Lagre**; Avbryt/Esc discard by closing.
- * Obligatory-classified courses replace the plan's `source: "program"` set via
- * `setProgramPlan`, preserving manual adds/drops. A >30 sp prefill is **kept**,
- * not zeroed — the planner's credit-line note does the surfacing.
+ * **What moved, and why.** This was one `<dialog>` owning four choices:
+ * programme, kull, studieretning and semester. Three of them describe the
+ * *student* and one describes the *plan*, and the file made no distinction —
+ * so the only way to change your programme was a modal opened from a button
+ * that existed on one of four pages, while the semester rode along inside it
+ * for no reason except that it was also a `<select>`.
+ *
+ * Now: the three that describe the student are this section, mounted inside
+ * the profile panel (`profilePanel.ts`) which the topbar opens from every
+ * page. The semester is the planner's own control, in the planner's own bar,
+ * because it belongs to the plan you are looking at — see
+ * `#planner-semester-select`. This file no longer touches it; it reads the
+ * stored semester when it needs one (kull relevance and the studieretning
+ * question both depend on which term is being planned) and writes it never.
+ *
+ * Every edit is still staged locally and nothing touches the store until
+ * **Lagre**; closing the panel discards. Obligatory-classified courses replace
+ * the plan's `source: "program"` set via `setProgramPlan`, preserving manual
+ * adds/drops. A >30 sp prefill is **kept**, not zeroed — the planner's
+ * credit-line note does the surfacing.
  *
  * **Why two study-plan fetches on a programme pick.** The plan API truncates
  * `periods` to how far the *fetched cohort* has progressed, so a current-year
@@ -17,14 +32,14 @@
  * studieretning + the final classify is fetched on kull-select.
  *
  * **Programmes NTNU publishes no plan for** (~17 % of the catalogue) must still
- * be savable — this is the only programme picker there is, so refusing to close
+ * be savable — this is the only programme picker there is, so refusing to save
  * is a hard dead end. We offer `fallbackCohorts` chips, record programme + kull
  * with an empty prefill, and say the emner have to be added by hand.
  */
 import { semesterYear } from "../../lib/planner/schedule.js";
 import type { AddCourseInput, PlanProgram, PlanStore } from "../../lib/planner/store.js";
 import { el, fold, formatShortDate, icon } from "./dom.js";
-import type { ProgramOption, SemesterSummary } from "./plannerApp.js";
+import type { ProgramOption } from "./plannerApp.js";
 import {
   type DirectionOption,
   findProgramPlan,
@@ -34,16 +49,31 @@ import {
   type StudyPlan,
 } from "./programPlan.js";
 
-export interface StudieinfoDeps {
+export interface StudieinfoSectionDeps {
   store: PlanStore;
-  /** The plannable candidates (current + next two) — one `<option>` each. */
-  semesters: SemesterSummary[];
-  programOptions: ProgramOption[];
-  defaultSemesterId: string;
+  /**
+   * Called after a Lagre that actually wrote. The panel closes itself on it:
+   * the student came here to answer a question, the answer is stored, and the
+   * week behind the modal has already redrawn.
+   */
+  onSaved: () => void;
 }
 
-export interface StudieinfoHandle {
-  open(): void;
+export interface StudieinfoSectionHandle {
+  /** The element the panel appends. Built once, re-rendered in place. */
+  element: HTMLElement;
+  /** Re-reads the store and rebuilds the staging. Called on every panel open. */
+  reset(): void;
+  /** Focus for a first-run student: the programme field, or the picked chip. */
+  focusProgram(): void;
+  /**
+   * Focus for the planner's studieretning question. The select does not exist
+   * until the kull's study plan has landed, which on a cold open is a fetch
+   * away — so this focuses it now if it is drawn and otherwise ARMS the next
+   * render to do it. The arming is dropped if the student has meanwhile
+   * started typing in the programme field.
+   */
+  focusDirection(): void;
 }
 
 /** Rows rendered in the programme typeahead at once (matches the planner picker). */
@@ -69,6 +99,30 @@ const FALLBACK_COHORT_YEARS = 6;
  */
 const PROGRAM_MISSING_HINT =
   "Fant ingen studieplan for dette programmet. Velg kull og lagre, så husker vi programmet ditt. Emnene må du legge til selv.";
+
+/**
+ * The typeahead's catalogue, fetched once per tab from the build-time endpoint
+ * (`src/pages/data/programs.json.ts`) rather than inlined into every document.
+ * Memoised on the module, so the second panel open on the same tab is free.
+ *
+ * A failure resolves to an empty list rather than rejecting: the field then
+ * says it found nothing, which is true of what it can see, and the next open
+ * retries because the memo is cleared on the way out.
+ */
+let programOptionsMemo: Promise<ProgramOption[]> | null = null;
+
+export function loadProgramOptions(): Promise<ProgramOption[]> {
+  if (!programOptionsMemo) {
+    programOptionsMemo = fetch("/data/programs.json")
+      .then((res) => (res.ok ? (res.json() as Promise<ProgramOption[]>) : []))
+      .catch(() => [])
+      .then((options) => {
+        if (options.length === 0) programOptionsMemo = null;
+        return options;
+      });
+  }
+  return programOptionsMemo;
+}
 
 /** "publiseres vanligvis i <måned>" — desember for vår, august for høst. */
 export function publishMonthFor(semesterId: string): string {
@@ -116,46 +170,41 @@ export function cohortHint(input: {
 }
 
 /**
- * A native `<select>` in a shell that owns its indicator.
- *
- * The platform arrow renders differently in every engine, sits hard against the
- * right edge answering nothing on the left, and cannot say whether the picker
- * is open. `appearance: none` (site.css) removes it; this puts Lucide's
- * `chevron-down` in its place, and CSS turns it over while `:open`.
- *
- * The icon is a sibling rather than a background image so it inherits
- * `currentColor`; `pointer-events: none` keeps it clear of the control, which
- * is still an ordinary `<select>` with its native keyboard behaviour.
+ * A native `<select>` in a shell that owns its indicator. The grammar is
+ * `primitives.css`'s `.np-select`, shared with the planner's semester control
+ * — the platform arrow renders differently in every engine and cannot say
+ * whether the picker is open.
  */
 function selectShell(select: HTMLSelectElement): HTMLElement {
-  const shell = el("div", "studieinfo-select-shell");
-  shell.append(select, icon("chevronDown", "studieinfo-select-icon"));
+  const shell = el("div", "np-select-shell");
+  shell.append(select, icon("chevronDown", "np-select-icon"));
   return shell;
 }
 
-/** "Høst 2026" / "Vår 2027" — the label every surface uses for a semester. */
-function semesterLabel(semester: SemesterSummary): string {
-  const season = /h$/i.test(semester.id) ? "Høst" : "Vår";
-  const year = semesterYear(semester.id);
-  return year !== null ? `${season} ${year}` : semester.name;
+/**
+ * "Høst 2026" / "Vår 2027" from a semester id alone. Derived rather than
+ * looked up in `data/semesters.json`, so this module ships no copy of that
+ * file to the browser — it is mounted on every page now, and the only fact it
+ * needs about a semester is what to call it.
+ */
+export function semesterLabelFor(semesterId: string): string {
+  const year = semesterYear(semesterId);
+  if (year === null) return semesterId;
+  return `${/h$/i.test(semesterId.trim()) ? "Høst" : "Vår"} ${year}`;
 }
 
 /**
- * Mounts the studieinfo modal once: a single `<dialog>` on `document.body`
- * plus the handle callers open it through. `signal` aborts on the next page
- * swap and removes the dialog, so a re-mount never leaves a second behind.
+ * Builds the section once and hands back the element plus the three things the
+ * panel drives it with. Nothing is appended to the document here: the panel
+ * owns where it goes.
  */
-export function mountStudieinfo(deps: StudieinfoDeps, signal: AbortSignal): StudieinfoHandle {
-  // Idempotency: a previous mount's dialog may still be in the DOM after a
-  // client-side navigation that didn't fire the abort in time.
-  document.getElementById("studieinfo-dialog")?.remove();
-
+export function buildStudieinfoSection(deps: StudieinfoSectionDeps): StudieinfoSectionHandle {
   // --- Staged state (nothing here reaches the store until Lagre) ----------
-  let invoker: HTMLElement | null = null;
   let stagedProgram: { code: string; name: string } | null = null;
   let stagedCohort: number | null = null;
   let stagedDirection: DirectionOption | null = null;
-  let stagedSemesterId = defaultSemesterOf();
+  /** The semester being planned. Read from the store, never written here. */
+  let semesterId = deps.store.loadPlan().semesterId;
   /** Full-range plan feeding `relevantCohorts` (see file header). */
   let cohortsPlan: StudyPlan | null = null;
   /** The selected kull's own plan — studieretning options + the Lagre classify. */
@@ -164,50 +213,31 @@ export function mountStudieinfo(deps: StudieinfoDeps, signal: AbortSignal): Stud
   let programMissing = false;
   /** Whichever `<select>` options studieretning currently offers. */
   let retningOptions: DirectionOption[] = [];
+  /** The typeahead catalogue, once its fetch has landed. */
+  let programOptions: ProgramOption[] | null = null;
+  /** A `focusDirection()` waiting for the studieretning select to exist. */
+  let pendingDirectionFocus = false;
   let hintText = "";
   /** Guards against a slow fetch resolving after a newer pick (superseded). */
   let programToken = 0;
   let cohortToken = 0;
   /**
-   * Guards `commit`'s awaited plan fetch: bumped on every open and close, so an
-   * Avbryt/Esc/reopen during the in-flight classify cancels the pending write.
+   * Guards `commit`'s awaited plan fetch: bumped on every `reset()`, so
+   * closing and reopening the panel during the in-flight classify cancels the
+   * pending write.
    */
   let commitToken = 0;
 
-  function defaultSemesterOf(): string {
-    return deps.semesters.some((s) => s.id === deps.defaultSemesterId)
-      ? deps.defaultSemesterId
-      : (deps.semesters[0]?.id ?? deps.defaultSemesterId);
-  }
-
-  function stagedSemesterLabel(): string {
-    const semester = deps.semesters.find((s) => s.id === stagedSemesterId);
-    return semester ? semesterLabel(semester) : stagedSemesterId;
-  }
-
   // --- DOM skeleton (built once) ------------------------------------------
-  const dialog = el("dialog", "np-frame studieinfo-dialog") as HTMLDialogElement;
-  dialog.id = "studieinfo-dialog";
-  dialog.setAttribute("aria-labelledby", "studieinfo-title");
-  // Light dismiss: Esc *and* a backdrop click. Unlike the other two modals this
-  // one stages its edits, so a backdrop click discards them — the same outcome
-  // Esc and Avbryt have. The keydown handler below still keeps Escape away from
-  // the dialog while the programme listbox is open.
-  dialog.setAttribute("closedby", "any");
-
-  // The same masthead the session card and course modal open on, in its paper
-  // variant: a programme has no hue of its own. It sits outside the scrolling
-  // body, so it stays put while a long programme list moves under it.
-  const head = el("div", "np-head studieinfo-head");
-  const ident = el("div", "np-head-ident");
-  const title = el("h2", "np-head-title studieinfo-title", "Studieinfo");
-  title.id = "studieinfo-title";
-  ident.append(title);
-  head.append(ident);
-  dialog.append(head);
+  const section = el("section", "studieinfo-section");
+  const heading = el("h3", "profile-panel-heading", "Studieinfo");
+  heading.id = "studieinfo-heading";
+  section.setAttribute("aria-labelledby", heading.id);
+  section.append(heading);
+  section.append(el("p", "np-hint", "Programmet og kullet ditt fyller ukeplanen."));
 
   const body = el("div", "studieinfo-body");
-  dialog.append(body);
+  section.append(body);
 
   // Programme -------------------------------------------------------------
   const programSection = el("div", "studieinfo-field");
@@ -245,7 +275,7 @@ export function mountStudieinfo(deps: StudieinfoDeps, signal: AbortSignal): Stud
   kullSection.hidden = true;
   kullSection.append(el("p", "np-kicker studieinfo-label", "Kull"));
   // The caption shipped on the homepage picker and did not move when that
-  // picker was deleted (PRODUCT §11) — so this modal, now the ONLY place a
+  // picker was deleted (PRODUCT §11) — so this section, the ONLY place a
   // programme and kull are ever chosen, offered a first-year five bare year
   // chips and no way to know which one was theirs.
   kullSection.append(el("p", "np-hint studieinfo-kull-hint", "Året du begynte på programmet."));
@@ -262,7 +292,7 @@ export function mountStudieinfo(deps: StudieinfoDeps, signal: AbortSignal): Stud
   const retningLabel = el("label", "np-kicker studieinfo-label", "");
   retningLabel.htmlFor = "studieinfo-retning-select";
   retningSection.append(retningLabel);
-  const retningSelect = el("select", "studieinfo-select") as HTMLSelectElement;
+  const retningSelect = el("select", "np-select") as HTMLSelectElement;
   retningSelect.id = "studieinfo-retning-select";
   retningSection.append(selectShell(retningSelect));
   const retningNote = el("p", "np-note studieinfo-note", "");
@@ -281,50 +311,36 @@ export function mountStudieinfo(deps: StudieinfoDeps, signal: AbortSignal): Stud
   retningSection.append(retningReset);
   body.append(retningSection);
 
-  // Semester --------------------------------------------------------------
-  const semesterSection = el("div", "studieinfo-field");
-  const semesterLabelEl = el("label", "np-kicker studieinfo-label", "Semester");
-  semesterLabelEl.htmlFor = "studieinfo-semester-select";
-  semesterSection.append(semesterLabelEl);
-  const semesterSelect = el("select", "studieinfo-select") as HTMLSelectElement;
-  semesterSelect.id = "studieinfo-semester-select";
-  for (const semester of deps.semesters) {
-    const suffix = semester.timetablePublished
-      ? ""
-      : `, timeplan publiseres ~${publishMonthFor(semester.id)}`;
-    const option = el(
-      "option",
-      undefined,
-      `${semesterLabel(semester)}${suffix}`,
-    ) as HTMLOptionElement;
-    option.value = semester.id;
-    semesterSelect.append(option);
-  }
-  semesterSection.append(selectShell(semesterSelect));
-  body.append(semesterSection);
-
-  // Hint + footer ---------------------------------------------------------
+  // Hint + action ---------------------------------------------------------
   // Permanently mounted, never `hidden` — see `renderHint()` for why.
   const hint = el("p", "np-hint studieinfo-hint sr-only", "");
   hint.id = "studieinfo-hint";
   hint.setAttribute("aria-live", "polite");
   body.append(hint);
 
-  const actions = el("div", "np-actions studieinfo-actions");
-  const saveBtn = el("button", "np-btn studieinfo-save", "Lagre") as HTMLButtonElement;
+  // NOT `.np-actions`: that primitive is a CARD's footer and brings its own
+  // hairline, and this is a section inside one. The panel already draws a rule
+  // between studieinfo and the account — a second one 50 px above it is ruling
+  // that has stopped dividing anything (DESIGN §4).
+  const actions = el("div", "studieinfo-actions");
+  // The section's own primary, and the panel's only one: saving your studieinfo
+  // is what a first-run student came here to do, and the account below is
+  // strictly opt-in (mandate 8). There is no Avbryt beside it — the panel's
+  // own × is the way out, and closing discards the staging, which is exactly
+  // what Avbryt did.
+  const saveBtn = el(
+    "button",
+    "np-btn np-btn--primary studieinfo-save",
+    "Lagre",
+  ) as HTMLButtonElement;
   saveBtn.type = "button";
   saveBtn.id = "studieinfo-save";
   // A refused Lagre writes its reason into the hint; describing the button with
   // it makes the reason reachable from the control that caused it. An empty
   // hint contributes no description.
   saveBtn.setAttribute("aria-describedby", "studieinfo-hint");
-  const cancelBtn = el("button", "np-btn studieinfo-cancel", "Avbryt") as HTMLButtonElement;
-  cancelBtn.type = "button";
-  cancelBtn.id = "studieinfo-cancel";
-  actions.append(saveBtn, cancelBtn);
+  actions.append(saveBtn);
   body.append(actions);
-
-  document.body.append(dialog);
 
   // --- Programme typeahead ------------------------------------------------
   let programMatches: ProgramOption[] = [];
@@ -355,31 +371,43 @@ export function mountStudieinfo(deps: StudieinfoDeps, signal: AbortSignal): Stud
     else programInput.removeAttribute("aria-activedescendant");
   }
 
+  /** One non-option row in the listbox — "Ingen treff." and the loading line.
+   *  A `role="listbox"` may only contain options, so a bare <li> is dropped
+   *  from the accessibility tree and a mistyped programme is answered with
+   *  silence. A disabled option is valid and can be `aria-activedescendant`. */
+  function renderListboxMessage(text: string): void {
+    const item = el("li", "studieinfo-typeahead-empty np-hint", text);
+    item.id = "studieinfo-program-option-empty";
+    item.setAttribute("role", "option");
+    item.setAttribute("aria-disabled", "true");
+    item.setAttribute("aria-selected", "false");
+    programListbox.replaceChildren(item);
+    programListbox.hidden = false;
+    programActive = -1;
+    programInput.setAttribute("aria-expanded", "true");
+    programInput.setAttribute("aria-activedescendant", item.id);
+  }
+
   function renderProgramOptions(): void {
     const query = fold(programInput.value.trim());
     if (query === "") {
       closeProgramList();
       return;
     }
-    programMatches = deps.programOptions
+    if (programOptions === null) {
+      // Typed before the catalogue landed. It is one small file requested when
+      // the panel opened, so this is a frame or two, not a state to design
+      // around — but silence here reads as "no such programme".
+      renderListboxMessage("henter studieprogram …");
+      return;
+    }
+    programMatches = programOptions
       .filter(([code, name]) => fold(code).includes(query) || fold(name).includes(query))
       .slice(0, MAX_PROGRAM_ROWS);
 
     programListbox.replaceChildren();
     if (programMatches.length === 0) {
-      // A `role="listbox"` may only contain options, so a bare <li> is dropped
-      // from the accessibility tree and a mistyped programme is answered with
-      // silence. A disabled option is valid and can be `aria-activedescendant`.
-      const empty = el("li", "studieinfo-typeahead-empty np-hint", "Ingen treff.");
-      empty.id = "studieinfo-program-option-empty";
-      empty.setAttribute("role", "option");
-      empty.setAttribute("aria-disabled", "true");
-      empty.setAttribute("aria-selected", "false");
-      programListbox.append(empty);
-      programListbox.hidden = false;
-      programActive = -1;
-      programInput.setAttribute("aria-expanded", "true");
-      programInput.setAttribute("aria-activedescendant", empty.id);
+      renderListboxMessage("Ingen treff.");
       return;
     }
     programMatches.forEach((option, index) => {
@@ -407,7 +435,7 @@ export function mountStudieinfo(deps: StudieinfoDeps, signal: AbortSignal): Stud
   programInput.addEventListener("input", renderProgramOptions);
   programInput.addEventListener("keydown", (event) => {
     if (event.key === "Escape") {
-      // With no list open, Escape belongs to the dialog. With one open it must
+      // With no list open, Escape belongs to the panel. With one open it must
       // dismiss only the list — and a dialog's Escape close is a *close
       // request*, which `stopPropagation()` does not touch.
       if (programListbox.hidden) return;
@@ -450,7 +478,7 @@ export function mountStudieinfo(deps: StudieinfoDeps, signal: AbortSignal): Stud
 
   /**
    * Fetches the two plans a programme pick needs and rebuilds the kull chips.
-   * `keepCohort` re-uses a pre-staged kull when the modal opened on a profile.
+   * `keepCohort` re-uses a pre-staged kull when the panel opened on a profile.
    */
   async function loadProgram(keepCohort: boolean): Promise<void> {
     const program = stagedProgram;
@@ -463,7 +491,7 @@ export function mountStudieinfo(deps: StudieinfoDeps, signal: AbortSignal): Stud
     renderRetning();
     renderHint();
 
-    const guessYear = semesterYear(deps.defaultSemesterId) ?? new Date().getFullYear();
+    const guessYear = semesterYear(semesterId) ?? new Date().getFullYear();
     const head = await findProgramPlan(program.code, guessYear);
     if (token !== programToken) return;
     if ("kind" in head) {
@@ -492,7 +520,7 @@ export function mountStudieinfo(deps: StudieinfoDeps, signal: AbortSignal): Stud
     const stillRelevant =
       keepCohort &&
       stagedCohort !== null &&
-      relevantCohorts(cohortsPlan, stagedSemesterId).includes(stagedCohort);
+      relevantCohorts(cohortsPlan, semesterId).includes(stagedCohort);
     if (stillRelevant && stagedCohort !== null) {
       void loadCohort(stagedCohort, true);
     } else {
@@ -529,9 +557,8 @@ export function mountStudieinfo(deps: StudieinfoDeps, signal: AbortSignal): Stud
       cohort,
       foundYear: "kind" in res ? null : res.year,
       periodMissing:
-        cohortPlan !== null &&
-        resolvePeriodFor(cohortPlan, stagedSemesterId, cohort).courses === null,
-      semesterLabel: stagedSemesterLabel(),
+        cohortPlan !== null && resolvePeriodFor(cohortPlan, semesterId, cohort).courses === null,
+      semesterLabel: semesterLabelFor(semesterId),
     });
     renderRetning();
     renderHint();
@@ -586,8 +613,8 @@ export function mountStudieinfo(deps: StudieinfoDeps, signal: AbortSignal): Stud
    * period for this semester — a programme with no kull cannot be saved.
    */
   function kullChoices(): number[] {
-    const fromPlan = cohortsPlan ? relevantCohorts(cohortsPlan, stagedSemesterId) : [];
-    return fromPlan.length > 0 ? fromPlan : fallbackCohorts(stagedSemesterId);
+    const fromPlan = cohortsPlan ? relevantCohorts(cohortsPlan, semesterId) : [];
+    return fromPlan.length > 0 ? fromPlan : fallbackCohorts(semesterId);
   }
 
   function renderKull(): void {
@@ -631,21 +658,16 @@ export function mountStudieinfo(deps: StudieinfoDeps, signal: AbortSignal): Stud
     }
     // Resolving *with* the staged answer walks past levels already answered, so
     // a nested waypoint becomes askable here — otherwise the planner asks a
-    // question this modal cannot answer and the student loops between the two.
-    // When every level is answered we fall back to the top-level question so an
-    // existing choice stays changeable.
+    // question this section cannot answer and the student loops between the
+    // two. When every level is answered we fall back to the top-level question
+    // so an existing choice stays changeable.
     const staged = stagedDirection?.code ?? null;
-    const deepest = resolvePeriodFor(
-      cohortPlan,
-      stagedSemesterId,
-      stagedCohort,
-      staged,
-    ).pendingChoice;
+    const deepest = resolvePeriodFor(cohortPlan, semesterId, stagedCohort, staged).pendingChoice;
     const pending =
       deepest ??
       (staged === null
         ? null
-        : resolvePeriodFor(cohortPlan, stagedSemesterId, stagedCohort).pendingChoice);
+        : resolvePeriodFor(cohortPlan, semesterId, stagedCohort).pendingChoice);
     if (!pending) {
       retningSection.hidden = true;
       retningReset.hidden = true;
@@ -679,6 +701,14 @@ export function mountStudieinfo(deps: StudieinfoDeps, signal: AbortSignal): Stud
     } else {
       retningNote.hidden = true;
     }
+
+    // The question the planner sent the student here to answer has finally
+    // drawn its control. Not while they are typing a programme name: an armed
+    // focus that jumps out of a field mid-word is worse than no focus at all.
+    if (pendingDirectionFocus) {
+      pendingDirectionFocus = false;
+      if (document.activeElement !== programInput) retningSelect.focus();
+    }
   }
 
   /**
@@ -710,40 +740,20 @@ export function mountStudieinfo(deps: StudieinfoDeps, signal: AbortSignal): Stud
     retningSelect.focus();
   });
 
-  semesterSelect.addEventListener("change", () => {
-    stagedSemesterId = semesterSelect.value;
-    // Relevance and the studieretning question both depend on the semester.
-    if (stagedCohort !== null && (cohortsPlan !== null || programMissing)) {
-      if (!kullChoices().includes(stagedCohort)) {
-        stagedCohort = null;
-        stagedDirection = null;
-        cohortPlan = null;
-        hintText = programMissing ? PROGRAM_MISSING_HINT : "";
-      }
-    }
-    renderKull();
-    if (stagedCohort !== null) {
-      void loadCohort(stagedCohort, true);
-    } else {
-      renderRetning();
-      renderHint();
-    }
-  });
-
-  // --- Commit / open / close ----------------------------------------------
+  // --- Commit -------------------------------------------------------------
   async function commit(): Promise<void> {
     const token = ++commitToken;
     // Snapshot the staging at click time — the awaited plan fetch below must
-    // commit what was on screen when Lagre was pressed.
-    const semesterId = stagedSemesterId;
+    // commit what was on screen when Lagre was pressed. The semester is
+    // snapshotted too, and never written: it is the planner's control now, and
+    // a settings panel that silently moved the student's term would be worse
+    // than one that refuses to.
+    const semester = semesterId;
     const program = stagedProgram;
     const cohort = stagedCohort;
     const direction = stagedDirection;
 
     // A staged programme still needs a kull before it can classify a period.
-    // The refusal comes *before* the semester write: a rejected Lagre must write
-    // nothing, or an Avbryt afterwards leaves the planner on a semester the
-    // student was never told about.
     if (program && cohort === null) {
       hintText = "Velg kull for å lagre studieprogrammet.";
       renderHint();
@@ -753,10 +763,6 @@ export function mountStudieinfo(deps: StudieinfoDeps, signal: AbortSignal): Stud
       kullChips.querySelector<HTMLButtonElement>(".studieinfo-kull-chip")?.focus();
       return;
     }
-
-    // Semester commits first, so the programme set re-derives against the
-    // semester the student is actually planning.
-    deps.store.setSemester(semesterId);
 
     if (program && cohort !== null) {
       const planProgram: PlanProgram = {
@@ -772,14 +778,14 @@ export function mountStudieinfo(deps: StudieinfoDeps, signal: AbortSignal): Stud
       let plan = cohortPlan;
       if (!plan && !programMissing) {
         const res = await findProgramPlan(program.code, cohort);
-        // Avbryt/Esc/reopen during the fetch bumped the token — the student
-        // is no longer looking at this Lagre, so drop the write.
+        // A close/reopen during the fetch bumped the token — the student is no
+        // longer looking at this Lagre, so drop the write.
         if (token !== commitToken) return;
         plan = "kind" in res ? cohortsPlan : res.plan;
       }
       let toAdd: AddCourseInput[] = [];
       if (plan) {
-        const resolved = resolvePeriodFor(plan, semesterId, cohort, direction?.code ?? null);
+        const resolved = resolvePeriodFor(plan, semester, cohort, direction?.code ?? null);
         // The prefill is kept even when it exceeds a semester (B9): zeroing it
         // leaves a legitimately-heavy programme with no rows and no reason.
         const obligatory = resolved.courses?.obligatory ?? [];
@@ -798,53 +804,26 @@ export function mountStudieinfo(deps: StudieinfoDeps, signal: AbortSignal): Stud
       deps.store.removeProgram();
     }
 
-    dialog.close();
+    deps.onSaved();
   }
 
-  function focusInitial(): void {
-    if (!stagedProgram) {
-      programInput.focus();
-      return;
-    }
-    // Reading order is programme → kull → retning → semester → Lagre, so
-    // opening on the semester select left forward Tab covering only two
-    // controls before it wrapped.
-    const chipRemove = chipHost.querySelector<HTMLButtonElement>(".studieinfo-chip-remove");
-    if (chipRemove) chipRemove.focus();
-    else semesterSelect.focus();
-    // A control that is hidden, disabled or not yet rendered refuses focus
-    // WITHOUT complaining, and the dialog then opens with focus on <body> —
-    // outside itself, so the first Tab starts at the top of the document
-    // instead of in the modal. Measured on an MTDT plan, where the chip this
-    // reaches for is rendered by a fetch that has not landed yet. Of the four
-    // floating surfaces this was the only one that did it, and it is the one
-    // PRODUCT §1.1 calls path number one.
-    if (!dialog.contains(document.activeElement)) {
-      dialog
-        .querySelector<HTMLElement>(
-          'button:not([disabled]), input:not([disabled]), select:not([disabled]), [href], [tabindex]:not([tabindex="-1"])',
-        )
-        ?.focus();
-    }
-  }
+  saveBtn.addEventListener("click", () => void commit());
 
-  function open(): void {
+  function reset(): void {
     // Invalidate any commit still awaiting its plan fetch from a prior open.
     commitToken++;
-    invoker = (document.activeElement as HTMLElement | null) ?? null;
-
     const plan = deps.store.loadPlan();
-    stagedSemesterId = deps.semesters.some((s) => s.id === plan.semesterId)
-      ? plan.semesterId
-      : defaultSemesterOf();
+    semesterId = plan.semesterId;
     stagedProgram = null;
     stagedCohort = null;
     stagedDirection = null;
     cohortsPlan = null;
     cohortPlan = null;
     programMissing = false;
+    pendingDirectionFocus = false;
     hintText = "";
     programInput.value = "";
+    closeProgramList();
     if (plan.program) {
       stagedProgram = { code: plan.program.code, name: plan.program.name };
       stagedCohort = plan.program.cohort;
@@ -853,27 +832,40 @@ export function mountStudieinfo(deps: StudieinfoDeps, signal: AbortSignal): Stud
         : null;
     }
 
-    semesterSelect.value = stagedSemesterId;
     renderProgramField();
     renderKull();
     renderRetning();
     renderHint();
 
-    dialog.showModal();
-    focusInitial();
+    // Requested on open rather than on page-load: a student who never touches
+    // their studieinfo never pays for the catalogue.
+    void loadProgramOptions().then((options) => {
+      programOptions = options;
+      // Only if something is waiting on it — otherwise this would open a
+      // listbox nobody asked for.
+      if (programInput.value.trim() !== "") renderProgramOptions();
+    });
+
     if (stagedProgram) void loadProgram(true);
   }
 
-  saveBtn.addEventListener("click", () => void commit());
-  cancelBtn.addEventListener("click", () => dialog.close());
-  dialog.addEventListener("close", () => {
-    // Avbryt/Esc closes here: cancel any commit awaiting its plan fetch.
-    commitToken++;
-    invoker?.focus?.();
-    invoker = null;
-  });
-
-  signal.addEventListener("abort", () => dialog.remove());
-
-  return { open };
+  return {
+    element: section,
+    reset,
+    focusProgram(): void {
+      // Reading order is programme → kull → retning → Lagre, so a picked
+      // programme puts focus on its chip rather than on a field the student
+      // has already filled.
+      const chipRemove = chipHost.querySelector<HTMLButtonElement>(".studieinfo-chip-remove");
+      if (chipRemove) chipRemove.focus();
+      else programInput.focus();
+    },
+    focusDirection(): void {
+      if (!retningSection.hidden) {
+        retningSelect.focus();
+        return;
+      }
+      pendingDirectionFocus = true;
+    },
+  };
 }

@@ -224,6 +224,12 @@ a global 2 px `--ui` outline.
 **Fields**
 - **`.np-field`** — paper input on `--control-bg`, nothing else at rest;
   `focus-within` keeps the 2 px `--ui` outline. No edge rule.
+- **`.np-select` / `-shell` / `-icon`** — a native `<select>` on the same
+  grammar, with the platform arrow removed (`appearance: none`) and Lucide's
+  `chevron-down` put in its place, turned over while `:open`. The icon is a
+  sibling so it inherits `currentColor`; `--select-inset` is the one number
+  both sides are measured from. Live users: the planner's semester control and
+  the profile panel's studieretning picker.
 
 **Surfaces**
 - **`.np-panel`** — paper panel on `--card`.
@@ -478,12 +484,28 @@ Settled, with the reasoning, so they are not re-opened by the next reviewer.
   in whichever view is drawing it, underlined on hover only, because at rest
   it is a verdict and must read as one.
 
-- **One bar at the top of the page.** The plan's name and every control that
-  acts on it share a row: the layer checkbox, the Uke/Liste switch, Del,
-  Profil, and the primary "Legg til emne". They came up out of the week's own
-  section head — a second bar 200 px lower saying the same kind of thing — and
-  that head is gone with them. **The title is a name, not a headline**
-  (1.25 rem / 600).
+- **One bar at the top of the page, and it carries the PLAN.** The plan's name
+  and the controls that act on *it* share a row: the layer checkbox, the
+  Uke/Liste switch, Del, and the semester select. They came up out of the
+  week's own section head — a second bar 200 px lower saying the same kind of
+  thing — and that head is gone with them. **The title is a name, not a
+  headline** (1.25 rem / 600).
+
+  Two of the bar's original five left on 2026-08-03, and the line they were
+  sorted along is *what the control is about*. **Profil** went to the site
+  topbar: it opens programme, kull, studieretning and the account, all of
+  which describe the STUDENT and are read by all four pages, and a door that
+  exists on one of four is not a settings surface. **"Legg til emne"** went
+  back to the foot of the Emner column, under the rows it appends to. The
+  semester came the other way, out of the studieinfo modal, because a term is
+  a fact about the plan. The bar is one control lighter than it was and the
+  week still starts inside §6's 37 % (304 px of 844 at 390 px).
+
+- **The topbar carries the account, and still no plan state.** The name it
+  prints is the account's own; there is no semester, no course count and no
+  programme code up there, and the three killed plan affordances stay killed.
+  A long name ellipsises — the bar is one row at 390 px or §6's phone gate
+  fails, since that gate measures from the viewport's top.
 
 - **The view switch is a segmented control**, a recessed track with the live
   view raised out of it. A travelling underline was right when it lived in a

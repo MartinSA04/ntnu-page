@@ -40,8 +40,9 @@ passed on ("· N emner ikke sjekket"). Every failure carries a ready Norwegian
 sentence; no upstream English reaches the UI. Memoisation is per part and
 failures are never cached.
 
-**The planner surface.** The studieinfo modal is the only picker for
-programme, kull, retning and semester. One editing surface per course
+**The planner surface.** The profile panel's studieinfo section is the only
+picker for programme, kull and retning; the semester is the planner bar's own
+select. One editing surface per course
 (`courseSettings.ts`); a read-only session popover on the bars; a catalog
 search modal for adding. Display-level parallel and øving group selection,
 narrowed per *session family* so a pick of one kind can never delete the
@@ -66,9 +67,10 @@ overwrote is offered back, because the destructive half of §3 flow 5 was live
 while the merge half was not.
 
 **Accounts and sync.** An opt-in account — name plus a 6-digit PIN — carries
-a student's plan between phone, PC and iPad; the planner is unchanged until
-Profil is opened and asked for it. That single door replaces what mandate 8
-promised and what used to be two nested ones (PRODUCT §1). `localStorage`
+a student's plan between phone, PC and iPad; nothing nags until the topbar's
+Profil is opened and asked for it. That single door — on every page, printing
+the account name once there is a session — replaces what mandate 8 promised
+and what used to be two nested ones on one page (PRODUCT §1). `localStorage`
 stays the write target and the server mirrors it — no offline queue, no
 polling — and the worker contract (routes, crypto, KV record) is
 `docs/SPEC.md`'s. There is no per-device revocation; dropping a device is a

@@ -68,8 +68,42 @@
   margin-left: auto;
 }
 
-/* Narrow phones: the wordmark, two nav links and the toggle must fit 360px
-   without horizontal page scroll — tighten gaps, drop the mono suffix. */
+/* --- The account's door ---------------------------------------------------
+   The topbar's one piece of client state: the account NAME when there is a
+   session, "Profil" when there is not. Not plan state — no semester, no course
+   count, no programme code; the three attempts at a sitewide plan affordance
+   stay dead (PRODUCT §5).
+
+   Bare, on `.np-navlink`'s grammar, so it belongs to the same family as the two
+   links beside it rather than reading as an action on the page. The mark is
+   what keeps a person's name from reading as a third nav item. */
+.site-account {
+  gap: var(--gap-2);
+  /* Allowed to shrink, and the only thing here that is: the name is student
+     input of unbounded length. */
+  min-width: 0;
+}
+
+.site-account-mark {
+  flex: none;
+}
+
+/* One row, always. A long name ellipsises rather than wrapping the bar — the
+   planner's phone budget measures the week's top from the VIEWPORT top, so a
+   two-row topbar is a real regression, not a cosmetic one. The cap is in `ch`
+   because what has to fit is characters, not pixels. */
+.site-account-name {
+  min-width: 0;
+  max-width: 10ch;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Narrow phones: the wordmark, two nav links, the account and the toggle must
+   fit 360px without horizontal page scroll — tighten gaps, drop the mono
+   suffix, and cap the name harder. The name stays VISIBLE rather than becoming
+   an icon-only button: that it says who you are is the whole point of it. */
 @media (max-width: 480px) {
   .site-topbar {
     gap: var(--gap-1);
@@ -83,14 +117,15 @@
     gap: 0;
   }
 
-  .site-nav .np-navlink {
+  .site-nav .np-navlink,
+  .site-account {
     padding: 0 var(--space-1);
   }
-}
 
-/* There is no topbar plan chip: the planner's own "Endre" button is the only
-   way into the studieinfo modal. The topbar's three remaining children fit
-   320 px without either the wordmark or the toggle giving. */
+  .site-account-name {
+    max-width: 6ch;
+  }
+}
 
 /* One scale step down buys the wordmark ~12 px, which is the difference
    between "Semesterplan" whole and "Semesterpl…" on a 390 px phone. */
@@ -154,69 +189,26 @@
   color: var(--faint);
 }
 
-/* --- Studieinfo modal ------------------------------------------------------
-   The product's front door: one native <dialog> on .np-frame bones. Every edit
-   is staged and only Lagre commits, so the modal never renders plan state
-   itself. */
-.studieinfo-dialog {
-  width: min(34rem, calc(100vw - 2rem));
-  max-width: calc(100vw - 2rem);
-  max-height: min(84vh, 48rem);
-  /* Pinned near the top, NOT centred (`margin: auto`, which base.css's
-     `* { margin: 0 }` beats, so it has to be stated either way).
+/* --- Studieinfo -----------------------------------------------------------
+   Programme, kull and studieretning — a SECTION of the profile panel, not a
+   modal of its own. It was one (`.studieinfo-dialog`, deleted with its rules:
+   the surface, the backdrop, the `[open]` display trap and the `.np-head`
+   padding match) reached through an "Endre" link inside the panel, which put a
+   native <dialog> on top of a native <dialog> to ask about the same room.
 
-     This dialog grows as it is used: picking a programme adds the kull chips,
-     picking a kull can add a select and a hint. Centred, every one of those
-     jumped the whole card upward while the student was reading it, and the
-     control they were about to press moved out from under the pointer. */
-  margin: min(8vh, 4rem) auto auto;
-  padding: 0;
-  color: var(--fg);
-}
-
-/* MUST stay qualified on [open], the same trap the other two dialogs document:
-   an author `display` beats the UA's `dialog:not([open]) { display: none }`
-   whatever the specificity, so an unqualified rule parks the modal on screen
-   from first paint. The column lets the head stay while the body scrolls. */
-.studieinfo-dialog[open] {
+   Every edit is still staged and only Lagre commits, so this section never
+   renders plan state itself. */
+.studieinfo-section {
   display: flex;
   flex-direction: column;
-}
-
-.studieinfo-dialog::backdrop {
-  background: color-mix(in srgb, var(--fg) 45%, transparent);
-}
-
-/* The sections below set an explicit `display`, which used to need a
-   `.studieinfo-dialog [hidden]` patch here. primitives.css now enforces
-   `[hidden]` for the whole site, so every toggled section hides through that
-   one rule. */
-
-/* The body sets its own, roomier padding than `.np-head`'s default, so the head
-   has to follow it: a title starting 8px left of every field under it reads as
-   a mistake. */
-.studieinfo-head {
-  padding-inline-start: var(--space-5);
+  gap: var(--space-2);
 }
 
 .studieinfo-body {
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
-  padding: var(--space-5);
-  /* The scrolling half of the dialog's column: `min-height: 0` is what lets a
-     long programme list shrink it instead of growing the modal past the
-     viewport. */
-  min-height: 0;
-  overflow-y: auto;
-}
-
-/* The one head whose title is a page-level <h2> rather than a course code, so
-   it keeps the headline step (site.css loads after primitives.css). */
-.studieinfo-title {
-  font-family: var(--font-sans);
-  font-size: var(--text-lg);
-  font-weight: var(--weight-medium);
+  margin-top: var(--space-2);
 }
 
 .studieinfo-field {
@@ -310,61 +302,9 @@
   max-width: none;
 }
 
-/* Native selects on the field grammar: the control fill, no border, focus is
-   the global ink outline — and this product's own indicator rather than the
-   platform arrow, which renders differently in every engine and cannot say
-   whether the picker is open.
-
-   `--select-inset` is the single number both sides are measured from, so they
-   cannot drift: the text starts one inset in from the leading edge, the chevron
-   ends one inset in from the trailing one. The end padding is
-   `2 × inset + 1em`. */
-.studieinfo-select-shell {
-  --select-inset: var(--space-3);
-  position: relative;
-  display: grid;
-}
-
-.studieinfo-select {
-  appearance: none;
-  min-height: var(--control-h);
-  padding-block: 0;
-  padding-inline: var(--select-inset) calc(var(--select-inset) * 2 + 1em);
-  background: var(--control-bg);
-  color: var(--fg);
-  font-family: var(--font-sans);
-  font-size: var(--text-sm);
-  border: 0;
-  border-radius: var(--radius-sm);
-}
-
-/* Optically centred on the control, not on the text box: `top: 50%` plus a
-   half-height pull is stable whatever `--control-h` the pointer type resolves
-   to. `pointer-events: none` keeps the mark clear of the select underneath,
-   which is still an ordinary <select> with its native keyboard behaviour. */
-.studieinfo-select-icon {
-  position: absolute;
-  inset-inline-end: var(--select-inset);
-  top: 50%;
-  width: 1em;
-  height: 1em;
-  margin-top: -0.5em;
-  color: var(--muted);
-  pointer-events: none;
-  transition: transform var(--dur-fast) var(--ease);
-}
-
-/* Open is the same mark turned over — a chevron-up drawn separately would drift
-   in stroke and optical centre. Engines without `:open` on <select> simply
-   leave the chevron down. */
-.studieinfo-select:open + .studieinfo-select-icon {
-  transform: rotate(180deg);
-}
-
-.studieinfo-select:focus-visible {
-  outline: 2px solid var(--ui);
-  outline-offset: 3px;
-}
+/* The select grammar moved to primitives.css as `.np-select`: the same control
+   is now the studieretning picker here and the planner's semester control in
+   its own bar, two surfaces that share nothing else. */
 
 .studieinfo-note {
   margin: 0;
@@ -374,24 +314,18 @@
   max-width: none;
 }
 
-/* Both actions are verbs about the same staged edit, so they stay together at
-   the start (`--split` is for a verb and a way out to another page). */
-.studieinfo-actions {
+/* One verb, at the start. It used to sit beside Avbryt; the panel's own × is
+   the discard now, and a section inside a panel does not get its own cancel.
+
+   No hairline over it (see the class list in studieinfo.ts): `.np-actions` is
+   a CARD's footer, and this is a section footer inside one. The panel's own
+   divider is the rule that divides here. */
+.studieinfo-actions,
+.profile-panel-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
   gap: var(--gap-2);
-}
-
-/* Lagre is the primary — an ink fill in rest and hover (the shared .np-btn
-   hover would wash it back to a neutral control). Saving a plan is an action,
-   not a verdict on one, so it takes --ui. Hover lifts rather than darkens,
-   because ink cannot go darker. */
-.studieinfo-save {
-  background: var(--ui);
-  color: var(--ui-contrast);
-}
-
-.studieinfo-save:hover {
-  background: color-mix(in srgb, var(--ui) 86%, var(--muted));
-  color: var(--ui-contrast);
 }
 
 /* --- Add-course dialog ---------------------------------------------------
@@ -609,12 +543,15 @@
 }
 
 /* --- Profile panel -------------------------------------------------------
-   The opt-in account's one surface: programme/kull, signup/login, this
-   device's own sync row. Same `.np-frame` bones and the same three traps as
-   the other two dialogs — see their comments for why each rule is qualified
-   the way it is. */
+   Everything about the STUDENT, on one surface: studieinfo (programme, kull,
+   studieretning) above a hairline, the opt-in account below it. Same
+   `.np-frame` bones and the same three traps as the other two dialogs — see
+   their comments for why each rule is qualified the way it is.
+
+   Wider than it was (26rem → 30rem): it carries the programme typeahead now,
+   whose rows are a code, a name and a level on one line. */
 .profile-panel-dialog {
-  width: min(26rem, calc(100vw - 2rem));
+  width: min(30rem, calc(100vw - 2rem));
   max-width: calc(100vw - 2rem);
   max-height: min(84vh, 42rem);
   margin: min(8vh, 4rem) auto auto;
@@ -638,7 +575,7 @@
 .profile-panel-body {
   display: flex;
   flex-direction: column;
-  gap: var(--space-3);
+  gap: var(--space-5);
   padding: var(--space-5);
   min-height: 0;
   overflow-y: auto;
@@ -651,13 +588,20 @@
   font-weight: var(--weight-medium);
 }
 
-.profile-panel-program {
+/* Two subjects, one surface, one line between them (Ink-Before-Chrome: what
+   separates a region from its neighbour is the line, not a wall around each).
+   Studieinfo is above it because that is mandate 1's own path; the account is
+   below because it is strictly opt-in. */
+.profile-panel-divider {
+  height: 1px;
+  border: 0;
+  background: var(--border);
+}
+
+.profile-panel-account {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--gap-3);
-  padding-bottom: var(--space-3);
-  border-bottom: 1px solid var(--border);
+  flex-direction: column;
+  gap: var(--space-3);
 }
 
 .profile-panel-field {

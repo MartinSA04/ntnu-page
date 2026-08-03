@@ -41,6 +41,17 @@ test("a plan reaches a second browser context through an account", async ({ brow
   await phone.getByLabel("Gjenta PIN").press("Enter");
   await expect(phone.getByText("Sist synkronisert")).toBeVisible();
 
+  // The topbar starts saying who you are the moment the session exists — and
+  // keeps saying it BEFORE first paint on the next load, from the pre-paint
+  // script under the button. Without that, a signed-in student watched
+  // "Profil" turn into their own name on every page they opened.
+  await expect(phone.locator("#site-account-name")).toHaveText(navn);
+  await phone.locator(".profile-panel-close").click();
+  await phone.goto("/emner/");
+  expect(
+    await phone.locator("#site-account-name").evaluate((el) => el.textContent),
+  ).toBe(navn);
+
   const second = await browser.newContext();
   const laptop = await second.newPage();
   await laptop.goto("/planlegger/");

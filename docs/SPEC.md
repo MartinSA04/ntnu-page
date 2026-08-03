@@ -63,7 +63,7 @@ data.ts         fetch + shape: search-index rows, per-course bundles,
    │             indexForSemester() (the exam-window filter)
    │
 programPlan.ts  study-plan resolution: resolvePeriodFor() is the ONE entry
-   │             point — the studieinfo modal and the planner both call it
+   │             point — the studieinfo section and the planner both call it
    │
    │  pure engines, no DOM:
    │  layout.ts       day-column packing (clusters, columns, piling)
@@ -315,11 +315,24 @@ plannerApp.ts    orchestration: owns the DOM ids in planlegger/index.astro,
 - Shell (`site.css` + `Layout.astro`): sticky topbar (wordmark left;
   `.np-navlink`s for "Planlegger" and "Emner", both always present,
   `aria-current` computed from an explicit per-item `sections` list rather
-  than `path.startsWith`; ThemeToggle right), a content column (`--maxw` for
-  data pages via Layout's `wide` prop, `--measure` otherwise), and a footer
-  that only states provenance — no links, because the catalog is already one
-  of the two nav destinations. **No sitewide plan bar of any kind**
-  (PRODUCT.md §5).
+  than `path.startsWith`; then `<AccountButton>` and ThemeToggle right), a
+  content column (`--maxw` for data pages via Layout's `wide` prop,
+  `--measure` otherwise), and a footer that only states provenance — no links,
+  because the catalog is already one of the two nav destinations. **No
+  sitewide plan bar of any kind** (PRODUCT.md §5) — the account button is not
+  one: it prints the account's own name, or "Profil", and nothing about a plan.
+- `src/components/account.ts` owns the store + `SyncClient` as a **module
+  singleton** and mounts the profile panel per page-load. The client must be
+  shared: it holds its session in memory, so a second one would keep answering
+  `session() === null` after the panel signed in and every planner push would
+  report `no_session`. `plannerApp.ts` reads it through `account()` and hands
+  its repaint over with `setAccountRepaint`.
+- `/data/programs.json` is a **build-time endpoint**
+  (`src/pages/data/programs.json.ts`), not a crawler artifact: the trimmed
+  `[code, name, studyLevel, cities]` tuples the programme typeahead searches.
+  It is fetched lazily the first time the panel opens, because the panel is
+  reachable from all 5 474 built pages and neither inlining 27 KB into each nor
+  importing the 332 KB record into a client chunk is affordable.
 
 ---
 
@@ -566,9 +579,11 @@ Islands are **vanilla `<script>` modules** (no framework) fetching relative
   one line of sub-copy, and one CTA to `/planlegger/`. No picker, no proof
   fragment.
 - **`/planlegger/`** — the app. One bar at the top carries the plan's name and
-  every control that acts on it (layer toggle, Uke/Liste, Del, Profil, and the
-  primary "Legg til emne"); the verdict chips and the deadline sit on the line
-  under it; then the week and exam list against the course rail. Verdict
+  the controls that act on the PLAN (layer toggle, Uke/Liste, Del, and the
+  semester select); the verdict chips and the deadline sit on the line under
+  it; then the week and exam list against the course rail. The primary
+  "Legg til emne" is at the foot of the Emner column, under the rows it
+  appends to, and the account's door is in the site topbar. Verdict
   states are **three, not two**: clean, "N kollisjoner", and "kan ikke
   sjekkes — mangler timeplan for N emne(r)" in muted ink whenever `partial` or
   `incompleteCourses` says the counts are a floor.

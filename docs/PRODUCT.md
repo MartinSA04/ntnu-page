@@ -40,9 +40,13 @@ conflict.
    breakage.
 8. **Programme/kull/retning editing gets a real settings surface**, because
    people have webpage patterns they are used to. **Delivered**, as the
-   profile panel: the planner's action bar carries one door into it
-   ("Profil") rather than the two nested doors — an account entrance and a
-   studieinfo entrance into the same room — that preceded it.
+   profile panel: one room, holding studieinfo (programme, kull,
+   studieretning) *and* the optional account, opened by one door — the
+   topbar's account button, which stands on every page and prints the account
+   name when there is a session. It replaced two nested doors (an account
+   entrance and a studieinfo entrance into the same room) sitting on one page
+   of four. The semester did **not** follow: it describes the plan, not the
+   student, so it is a control in the planner's own bar.
 9. **Manual adds are semester-specific.** A course added in one semester
    must not leak into another.
 10. **No versioning or compat apparatus — delete old code outright.**
@@ -153,8 +157,10 @@ handoff (5)**. The second is the growth loop, not plumbing.
 
 1. **On-ramp.** `/` is a landing: it shows the student's own next session and
    room when a plan exists, and otherwise one CTA into `/planlegger/`. The
-   planner owns onboarding through its own empty states — the studieinfo
-   modal is the only picker on the site.
+   planner owns onboarding through its own empty states — its "Velg
+   studieprogram" opens the profile panel with the caret already in the
+   programme field, and that panel's studieinfo section is the only picker on
+   the site.
 
 2. **Elective decide-loop (CO-PRIMARY, not built — ROADMAP Phase 4).**
    Choice group → "legg alle til vurdering" (shortlist tier) → **inline in
@@ -231,20 +237,29 @@ footer demotion of `/emner/`. `aria-current` is computed from an explicit
 per-item section list rather than a path prefix, so `/emne/[code]/` (not a
 prefix-match of `/emner/`) still lights the right item.
 
-**The topbar carries no plan state.** Three successive attempts at a sitewide
-plan affordance — a plan strip, a plan-count link, and a studieinfo chip —
-were each built and each removed. The planner is where the plan is named, and
-`/planlegger/`'s own "Profil" button (formerly "Endre") is the single
-entrance to it — programme/kull/retning editing and the optional account open
-through the same door (mandate 8). **Do not re-add a sitewide plan bar of any
-kind.** Any credits shown outside `/planlegger/` are best-effort, not
+**The topbar carries no plan state — and it does carry the account.** Three
+successive attempts at a sitewide *plan* affordance — a plan strip, a
+plan-count link, and a studieinfo chip — were each built and each removed, and
+they stay removed: no semester, no course count, no programme code up there.
+**Do not re-add a sitewide plan bar of any kind.** The planner is where the
+plan is named. Any credits shown outside `/planlegger/` are best-effort, not
 authoritative.
+
+What the bar does carry is the **account's own door**, on every page, printing
+the account name when there is a session and "Profil" when there is not. That
+is not the killed chip in another costume: an account is not a plan, and the
+state behind the door (`np:profile`, `np:plans`, `np:lastSemester`) is read by
+`/`, `/emner/` and `/emne/[code]/` as much as by the planner. `/emne/[code]/`
+is the largest cold-traffic surface on the site, so a student arriving from a
+search engine must be able to sign in — and to say which programme they are
+on — without navigating away first. Behind it is the one settings surface
+(mandate 8).
 
 **`/studier/[code]/` and `/studier/` are deleted, no redirects.** Their
 surviving logic moved: kull relevance and plan fetch into the studieinfo
-modal, period courses and verbatim choice-group prose into the planner's
-"Fra studieplanen" panel, where "Bruk som planen min" semantics now live —
-saving programme + kull in the modal *is* the import.
+section of the profile panel, period courses and verbatim choice-group prose
+into the planner's "Fra studieplanen" panel, where "Bruk som planen min"
+semantics now live — saving programme + kull in the panel *is* the import.
 
 **URL is the state, and it is the growth object.** See §6. Query params are
 page-local only: `?q=` on `/emner/` (search prefill, round-tripped through
@@ -534,7 +549,7 @@ Do not re-litigate or silently re-add these.
 | D11 | **Grade stats only in a decision context.** The fork point *is* one, so the season-split figure ships there under §9's constraints. | Browsable grade trivia: a sortable column, a cross-course leaderboard, hue-tinted bars, a derived difficulty score, or any figure divorced from the fork CTA. That is DBH-mirror parasitism. |
 | D12 | **The deadline and "next plannable term" are MUST** (DR-9). | Leaving the deadline off-screen — it was in zero of six flows — and "next term" as an invisible default. |
 | D13 | **No week-scrubber, no personal fixed blocks, no assessment-mix workload count.** | All three were SHOULD/COULD in an early draft. A during-semester concern in a before-semester tool; breaks shared-URL parity; wrong side of no-fabricated-scores. **A block-level popover is explicitly in scope** and is not covered by this row. |
-| D14 | **`/studier/` and `/studier/[code]/` are deleted outright, no redirects.** | Migrating them, or sequencing entrances before deletion. Pre-launch breakage is acceptable (mandate 10); the surviving logic moved into the studieinfo modal and the planner's study-plan panel. |
+| D14 | **`/studier/` and `/studier/[code]/` are deleted outright, no redirects.** | Migrating them, or sequencing entrances before deletion. Pre-launch breakage is acceptable (mandate 10); the surviving logic moved into the studieinfo section of the profile panel and the planner's study-plan panel. |
 | D15 | **The hash grammar is unversioned, with no compat parse** (mandate 10). | A frozen `#v2;…` grammar with a v1-compat branch. Suspended, not abandoned: it resumes when there are external links worth not breaking. |
 
 ---

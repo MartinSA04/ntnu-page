@@ -203,37 +203,51 @@ test.describe("other pages keep working after navigation", () => {
   });
 });
 
-test.describe("the topbar carries no plan state", () => {
-  test("no page has a studieinfo chip, and only the planner opens the modal", async ({ page }) => {
+test.describe("the topbar carries the account, and no plan state", () => {
+  test("every page opens the profile panel, and none of them shows a plan chip", async ({
+    page,
+  }) => {
     await seed(page, { [PROFILE_KEY]: BIT_PROFILE, [LAST_SEMESTER_KEY]: "26h" });
 
-    // The chip is deleted (2026-07-30). It has to be gone after a client-side
-    // swap as well as on a cold load: it was server-rendered per page, so a
-    // ClientRouter navigation is exactly where a stale one would linger.
-    await page.goto("/");
-    await expect(page.locator("#studieinfo-chip")).toHaveCount(0);
+    // The chip is deleted (2026-07-30) and stays deleted: the bar says nothing
+    // about the plan — no semester, no course count, no programme code. It has
+    // to be gone after a client-side swap as well as on a cold load, since it
+    // was server-rendered per page and a ClientRouter navigation is exactly
+    // where a stale one would linger.
+    //
+    // What the bar DOES carry is the account's own door, on all four pages,
+    // reading "Profil" while signed out — because the state behind it is read
+    // by all four, and /emne/[code]/ is the cold-traffic surface where a
+    // student has to be able to sign in without navigating away first.
+    const account = page.locator("#site-account-btn");
+    const panel = page.locator("#planner-profile-panel");
 
-    await navTo(page, "/emner/");
-    await expect(page.locator("#studieinfo-chip")).toHaveCount(0);
+    for (const [go, where] of [
+      [() => page.goto("/"), "/"],
+      [() => navTo(page, "/emner/"), "/emner/"],
+      [() => navTo(page, "/planlegger/"), "/planlegger/"],
+      [() => page.goto("/emne/TDT4100/"), "/emne/TDT4100/"],
+    ] as const) {
+      await go();
+      await expect(page.locator("#studieinfo-chip"), where).toHaveCount(0);
+      await expect(account, where).toHaveText("Profil");
+      // The panel is mounted from the layout, so it survives a soft swap —
+      // mounting at module top level would leave it dead here.
+      await expect(panel, where).toBeHidden();
+      await account.click();
+      await expect(panel, where).toBeVisible();
+      // Studieinfo IS the panel now: programme and kull are in it, not behind
+      // a second door.
+      await expect(panel.locator("#studieinfo-heading"), where).toBeVisible();
+      await panel.locator(".profile-panel-close").click();
+      await expect(panel, where).toBeHidden();
+    }
 
+    // The planner still names whose plan it is, in its own title.
     await navTo(page, "/planlegger/");
-    await expect(page.locator("#studieinfo-chip")).toHaveCount(0);
-    // The planner still names whose plan it is, in its own title, and "Profil"
-    // is the one way into the modal anywhere on the site now — through the
-    // profile panel's own "Endre" link, since the two doors into programme +
-    // kull merged into one control.
     await expect(page.locator("#planner-title")).toHaveText("BIT Kull 25 H26", {
       timeout: 30_000,
     });
-    await expect(page.locator("#studieinfo-dialog")).toBeHidden();
-    await page.locator("#planner-profile-btn").click();
-    const profilePanel = page.locator("#planner-profile-panel");
-    await expect(profilePanel).toBeVisible();
-    await profilePanel.locator(".profile-panel-edit").click();
-    await expect(page.locator("#studieinfo-dialog")).toBeVisible();
-
-    await page.goto("/emne/TDT4100/");
-    await expect(page.locator("#studieinfo-chip")).toHaveCount(0);
   });
 });
 
