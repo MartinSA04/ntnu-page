@@ -76,7 +76,26 @@ is what the 600 000 iterations and the rate limiting are for.
 
 The server stores `hash(authKey)` and an **opaque ciphertext blob**
 (AES-GCM via WebCrypto — no library). It can prove who is writing and cannot
-read what is written. A KV dump yields nothing.
+read what is written.
+
+**What a KV dump is actually worth, stated honestly.** It yields no plaintext
+and no usable credential, and that is the property the service is designed
+for. It is not the same claim as "nothing". The blob's confidentiality rests
+on the entropy of a **6-digit PIN — about 20 bits** — stretched by 600 000
+PBKDF2 iterations, with AES-GCM's authentication tag serving as a free
+verification oracle for each guess. That is roughly **a minute per account on
+one consumer GPU** for an attacker who already holds the dump. The iteration
+count buys time against exactly that; it does not remove it. The mitigation
+that matters is the same one §9.1 relies on: what is inside is a course list,
+which is why this design is acceptable and why it must never be extended to
+carry anything else.
+
+Two further honest limits: `encKeyRaw` is held in `localStorage`, and the
+origin's CSP carries `script-src 'unsafe-inline'` (`routes.ts`'s own note on
+why), so **HTML injection on this origin yields the key** — the key's security
+is bounded by the site's, not by the crypto. And the UI string "Vi kan ikke
+lese den" stays: it is true of *the service*, which is what a student is being
+asked to trust when they type a name and a PIN into it.
 
 **There is no recovery mechanism, deliberately** — see §9.1 before proposing
 one.
