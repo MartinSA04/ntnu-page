@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { deviceLabel, pinIsValid } from "../../src/components/planner/profilePanel.js";
+import { attemptAuth, deviceLabel, pinIsValid } from "../../src/components/planner/profilePanel.js";
+import type { SyncClient, SyncResult } from "../../src/lib/planner/syncClient.js";
 
 describe("pinIsValid", () => {
   it("accepts exactly six digits", () => {
@@ -35,5 +36,64 @@ describe("deviceLabel", () => {
 
   it("falls back to a generic label rather than an empty one", () => {
     expect(deviceLabel("")).toBe("Ukjent enhet");
+  });
+});
+
+/** A `SyncClient` double: every method resolves/no-ops by default, so a test
+ *  only has to override the one method it cares about. */
+function fakeSyncClient(overrides: Partial<SyncClient> = {}): SyncClient {
+  return {
+    session: () => null,
+    signup: async () => ({ ok: true }),
+    login: async () => ({ ok: true }),
+    push: async () => ({ ok: true }),
+    pull: async () => ({ ok: true }),
+    logout: () => {},
+    ...overrides,
+  };
+}
+
+describe("attemptAuth", () => {
+  it("resolves ok on a normal successful signup", async () => {
+    const sync = fakeSyncClient({ signup: async () => ({ ok: true }) as SyncResult });
+    await expect(attemptAuth(sync, "signup", "Ola", "482913", "Mac · Safari")).resolves.toEqual({
+      ok: true,
+    });
+  });
+
+  it("maps a named failure reason to its Norwegian copy, through login as well as signup", async () => {
+    const sync = fakeSyncClient({
+      login: async () => ({ ok: false, reason: "bad_pin" }) as SyncResult,
+    });
+    await expect(attemptAuth(sync, "login", "Ola", "482913", "Mac · Safari")).resolves.toEqual({
+      ok: false,
+      hint: "Feil PIN.",
+    });
+  });
+
+  /**
+   * The regression this function exists to close: `syncClient.ts`'s
+   * `signup`/`login` wrap no try/catch around their `fetch`, so offline/DNS/
+   * CORS reject the promise outright instead of resolving
+   * `{ ok: false, reason: "unavailable" }`. Before `attemptAuth` existed,
+   * `submit()`'s bare `await deps.sync.signup(...)` threw past the two lines
+   * that re-enable the buttons, leaving them permanently disabled with no
+   * message — exactly the failure a student on a flaky phone connection is
+   * most likely to hit.
+   *
+   * There is no DOM in this test environment (`document` is undefined here —
+   * DOM assembly is covered by e2e, per this file's sibling tests), so this
+   * asserts the guarantee `submit()`'s button-reset relies on directly: the
+   * promise this function returns always RESOLVES, with the same generic
+   * retry copy the catch-all "failed" reason already renders. A caller that
+   * unconditionally runs its re-enable code right after `await`ing this
+   * (as `submit()` does) can never be left with dead buttons.
+   */
+  it("never rejects — a signup that throws resolves the same generic retry copy a failed response would", async () => {
+    const sync = fakeSyncClient({ signup: () => Promise.reject(new Error("network")) });
+    await expect(attemptAuth(sync, "signup", "Ola", "482913", "Mac · Safari")).resolves.toEqual({
+      ok: false,
+      hint: "Noe gikk galt. Prøv igjen.",
+    });
   });
 });

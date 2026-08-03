@@ -28,7 +28,7 @@
  * the native `showModal()`/`close()` focus return needs no manual fallback.
  */
 import type { PlanStore } from "../../lib/planner/store.js";
-import type { SyncClient, SyncSession } from "../../lib/planner/syncClient.js";
+import type { SyncClient, SyncResult, SyncSession } from "../../lib/planner/syncClient.js";
 import { el, icon } from "./dom.js";
 
 export interface ProfilePanelDeps {
@@ -109,6 +109,41 @@ function reasonCopy(reason: string): string {
     default:
       return "Noe gikk galt. Prøv igjen.";
   }
+}
+
+/**
+ * Calls `sync.signup`/`sync.login` and turns whatever happens — a normal
+ * `{ ok: true }`, a normal `{ ok: false, reason }`, or an outright promise
+ * REJECTION — into one outcome that always resolves.
+ *
+ * `syncClient.ts`'s `signup`/`login` wrap no try/catch around their `fetch`
+ * (that file is Task 6's, already reviewed, and its result-contract gap is
+ * tracked separately), so offline/DNS/CORS reject the promise instead of
+ * resolving `{ ok: false, reason: "unavailable" }` — exactly the connectivity
+ * hiccup a student on a phone is most likely to hit. `submit()` awaits this
+ * function and unconditionally re-enables both buttons right after; before
+ * this existed, that bare `await` could throw straight past the re-enable
+ * lines, leaving the student staring at two permanently dead buttons with no
+ * message. A caught rejection is folded into the same "failed" reason
+ * `signup`/`login` already use for a non-2xx response, so it renders the same
+ * generic retry copy through the one `reasonCopy` path rather than a second
+ * one.
+ */
+export async function attemptAuth(
+  sync: SyncClient,
+  kind: "signup" | "login",
+  navn: string,
+  pin: string,
+  label: string,
+): Promise<{ ok: true } | { ok: false; hint: string }> {
+  let result: SyncResult;
+  try {
+    result =
+      kind === "signup" ? await sync.signup(navn, pin, label) : await sync.login(navn, pin, label);
+  } catch {
+    result = { ok: false, reason: "failed" };
+  }
+  return result.ok ? { ok: true } : { ok: false, hint: reasonCopy(result.reason) };
 }
 
 /** The "Sist synkronisert" line's text for each `SyncUiState`. */
@@ -226,7 +261,13 @@ export function mountProfilePanel(deps: ProfilePanelDeps): ProfilePanelHandle {
 
   function renderSignedOut(): void {
     dialog.replaceChildren(renderHead());
-    const body = el("div", "profile-panel-body");
+    // A <form>, not a <div>: `addCourse.ts`'s search field sets this
+    // precedent (`searchForm`, addCourse.ts:169) for exactly this reason —
+    // without it, only a mouse click reaches `submit()` and Enter in Navn/
+    // PIN/Gjenta PIN does nothing. A login form is a stronger case for it
+    // than a search box.
+    const body = el("form", "profile-panel-body") as HTMLFormElement;
+    body.autocomplete = "off";
     body.append(renderProgramBlock());
 
     body.append(el("h3", "profile-panel-heading", "Logg inn eller opprett konto"));
@@ -254,9 +295,17 @@ export function mountProfilePanel(deps: ProfilePanelDeps): ProfilePanelHandle {
     body.append(hint);
 
     const actions = el("div", "np-actions profile-panel-actions");
+    // The form's one `type="submit"` control, so Enter in any field and a
+    // click land on the same listener below (native submit dispatch) rather
+    // than needing a second, separately-bound click handler. It is also the
+    // button already carrying `.np-btn--primary` — Enter deferring to the
+    // same action a mouse click defaults to, not a second convention.
     const signupBtn = el("button", "np-btn np-btn--primary", "Opprett konto") as HTMLButtonElement;
-    signupBtn.type = "button";
+    signupBtn.type = "submit";
     signupBtn.setAttribute("aria-describedby", "profile-panel-hint");
+    // Deliberately NOT `type="submit"`: two submit controls in one form make
+    // the "default button" Enter activates engine-dependent. Logg inn stays
+    // reachable by its own click handler, exactly as before.
     const loginBtn = el("button", "np-btn", "Logg inn") as HTMLButtonElement;
     loginBtn.type = "button";
     loginBtn.setAttribute("aria-describedby", "profile-panel-hint");
@@ -290,21 +339,26 @@ export function mountProfilePanel(deps: ProfilePanelDeps): ProfilePanelHandle {
       signupBtn.disabled = true;
       loginBtn.disabled = true;
       const label = deviceLabel(navigator.userAgent);
-      const result =
-        kind === "signup"
-          ? await deps.sync.signup(navnValue, pinValue, label)
-          : await deps.sync.login(navnValue, pinValue, label);
+      // `attemptAuth` never rejects — see its own doc comment — so these two
+      // lines are unconditional, unlike the bare `await deps.sync.signup(…)`
+      // this replaced.
+      const outcome = await attemptAuth(deps.sync, kind, navnValue, pinValue, label);
       signupBtn.disabled = false;
       loginBtn.disabled = false;
-      if (!result.ok) {
-        hint.textContent = reasonCopy(result.reason);
+      if (!outcome.ok) {
+        hint.textContent = outcome.hint;
         return;
       }
       syncState = "ok";
       render();
     }
 
-    signupBtn.addEventListener("click", () => {
+    // Enter in Navn/PIN/Gjenta PIN triggers native form submission, which
+    // fires this once — including when it was `signupBtn` (type="submit")
+    // that was clicked directly, so no separate click listener is needed
+    // for it.
+    body.addEventListener("submit", (event) => {
+      event.preventDefault();
       void submit("signup");
     });
     loginBtn.addEventListener("click", () => {
