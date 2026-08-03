@@ -105,10 +105,33 @@ export async function sha256Hex(input: string): Promise<string> {
   return [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, "0")).join("");
 }
 
-function json(body: unknown, status: number): Response {
+/**
+ * The largest `blob` this surface will store, ~512 KB.
+ *
+ * Neither claim nor PUT bounded it before, and `handleSyncClaim` needs no
+ * credential — so `POST /api/sync/<random>` with a multi-megabyte body, in a
+ * loop, was unbounded anonymous KV writes. The bound is generous by three
+ * orders of magnitude against real content: a 30-course plan plus a device
+ * registry seals to a few KB. Anything near this ceiling is not a semester
+ * plan.
+ */
+const MAX_BLOB_CHARS = 512 * 1024;
+
+/**
+ * Every response from this module is per-user private data behind a
+ * credential, so `no-store` — the one thing `routes.ts`'s own `json()` gets
+ * right that this local copy did not. `Vary` is set by `handleSyncGet` on top
+ * of this: the body is a function of `x-np-auth`, and a shared cache that did
+ * not know that could hand one student's blob to the next request.
+ */
+function json(body: unknown, status: number, extra?: Record<string, string>): Response {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { "content-type": "application/json; charset=utf-8" },
+    headers: {
+      "content-type": "application/json; charset=utf-8",
+      "Cache-Control": "no-store",
+      ...extra,
+    },
   });
 }
 
@@ -171,6 +194,9 @@ export async function handleSyncClaim(
   if (typeof authKey !== "string" || typeof blob !== "string") {
     return json({ error: "bad_body" }, 400);
   }
+  // Before the KV read, let alone the write: an oversized claim must cost
+  // nothing but the parse.
+  if (blob.length > MAX_BLOB_CHARS) return json({ error: "blob_too_large" }, 413);
   if (await read(name, deps)) return json({ error: "taken" }, 409);
 
   const record: SyncRecord = {
@@ -194,7 +220,9 @@ export async function handleSyncGet(
   if (name === null) return json({ error: "bad_name" }, 400);
   const found = await authorise(name, authKey, deps);
   if (found instanceof Response) return found;
-  return json({ blob: found.blob, version: found.version, updatedAt: found.updatedAt }, 200);
+  return json({ blob: found.blob, version: found.version, updatedAt: found.updatedAt }, 200, {
+    Vary: "x-np-auth",
+  });
 }
 
 export async function handleSyncPut(
@@ -223,6 +251,7 @@ export async function handleSyncPut(
   if (newAuthKey !== undefined && typeof newAuthKey !== "string") {
     return json({ error: "bad_body" }, 400);
   }
+  if (blob.length > MAX_BLOB_CHARS) return json({ error: "blob_too_large" }, 413);
   // Stale write: hand back the server's copy so the client can reconcile
   // rather than guess. This is the stale-tab guard, not an offline merge.
   // Checked BEFORE any credential swap: a stale PUT writes nothing at all,

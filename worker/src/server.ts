@@ -18,6 +18,7 @@ import {
   notFoundJson,
   RateLimiter,
   type RouteDeps,
+  rateLimited,
   withSecurityHeaders,
 } from "./routes.js";
 import {
@@ -57,6 +58,11 @@ const authLimiter = new AuthLimiter(10, 15 * 60_000);
  * absorbs several cold loads back to back and 15/s sustained is far above any
  * human session. Miniflare sets `CF-Connecting-IP`, so `mise run e2e` exercises
  * this path too — it is not production-only.
+ *
+ * `/api/sync/*` spends from the same bucket (see the dispatch below), where
+ * what it meters is KV writes rather than NTNU egress. One bucket on purpose:
+ * both are "how much work can one client make this worker do", and a client
+ * hammering one of them has no claim on the other.
  */
 const rateLimiter = new RateLimiter(120, 15);
 
@@ -166,8 +172,24 @@ export default {
 
     // `/api/sync/*` is the one part of `/api` that is not read-only, so it is
     // dispatched before the GET/HEAD-only gate below applies to everything else.
+    //
+    // Behind the SAME per-IP throttle as the rest of `/api`, which it used to
+    // skip entirely: the limiter was constructed further down, after this
+    // branch had already returned. `AuthLimiter` is not a substitute — it is
+    // per NAME and only counts credential failures, so it never sees
+    // `handleSyncClaim`, which needs no credential at all. `POST
+    // /api/sync/<random>` in a loop was unbounded anonymous KV writes.
     const name = syncName(pathname);
-    if (name !== null) return withSecurityHeaders(await handleSync(request, env, name));
+    if (name !== null) {
+      const syncKey = clientKey(request);
+      if (syncKey !== null) {
+        const decision = rateLimiter.take(syncKey);
+        if (!decision.allowed) {
+          return withSecurityHeaders(rateLimited(decision.retryAfterSeconds));
+        }
+      }
+      return withSecurityHeaders(await handleSync(request, env, name));
+    }
 
     // Read-only surface: anything but GET/HEAD used to be served as a GET,
     // payload and all, marked publicly cacheable.

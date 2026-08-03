@@ -33,12 +33,25 @@ describe("validateName", () => {
   });
 });
 
-function fakeKv(): SyncKv & { map: Map<string, string> } {
+/**
+ * `calls` counts every KV operation, so a test whose whole point is that KV
+ * was never reached can assert that rather than infer it from a status code
+ * (a 429 and a 404 both "look right" while still having read the record).
+ */
+function fakeKv(): SyncKv & { map: Map<string, string>; calls: { get: number; put: number } } {
   const map = new Map<string, string>();
+  const calls = { get: 0, put: 0 };
   return {
     map,
-    get: async (key) => map.get(key) ?? null,
-    put: async (key, value) => void map.set(key, value),
+    calls,
+    get: async (key) => {
+      calls.get += 1;
+      return map.get(key) ?? null;
+    },
+    put: async (key, value) => {
+      calls.put += 1;
+      map.set(key, value);
+    },
     delete: async (key) => void map.delete(key),
   };
 }
@@ -196,9 +209,77 @@ it("429s a locked-out name without touching KV", async () => {
   const withLimiter: SyncDeps = { ...deps(kv), limiter, monotonic: () => 0 };
 
   expect((await handleSyncGet("martin", OTHER, withLimiter)).status).toBe(401);
+  // The first 401 had to read the record to compare the digest; everything
+  // after the lockout must not — which is the half of this test's title the
+  // status codes alone never checked.
+  const readsAfterFirst401 = kv.calls.get;
   expect((await handleSyncGet("martin", OTHER, withLimiter)).status).toBe(429);
   // …and a correct key is refused too while the lockout stands.
   expect((await handleSyncGet("martin", AUTH, withLimiter)).status).toBe(429);
+  expect(kv.calls.get).toBe(readsAfterFirst401);
+});
+
+/**
+ * A `blob` is base64 ciphertext of a course list; a real one is a few KB.
+ * Neither claim nor PUT bounded it, and claim needs no credential — so
+ * `POST /api/sync/<random>` with a multi-megabyte body was unbounded
+ * anonymous KV writes.
+ */
+describe("blob size", () => {
+  const HUGE = "x".repeat(512 * 1024 + 1);
+
+  it("refuses an oversized claim with 413, without writing to KV", async () => {
+    const kv = fakeKv();
+    const res = await handleSyncClaim("martin", { authKey: AUTH, blob: HUGE }, deps(kv));
+    expect(res.status).toBe(413);
+    expect(await res.json()).toEqual({ error: "blob_too_large" });
+    expect(kv.calls.put).toBe(0);
+    expect(kv.map.size).toBe(0);
+  });
+
+  it("refuses an oversized PUT with 413, leaving the stored blob intact", async () => {
+    const kv = fakeKv();
+    await handleSyncClaim("martin", { authKey: AUTH, blob: "v1" }, deps(kv));
+    const putsAfterClaim = kv.calls.put;
+
+    const res = await handleSyncPut("martin", AUTH, { blob: HUGE, version: 1 }, deps(kv));
+    expect(res.status).toBe(413);
+    expect(kv.calls.put).toBe(putsAfterClaim);
+    expect(await (await handleSyncGet("martin", AUTH, deps(kv))).json()).toMatchObject({
+      blob: "v1",
+      version: 1,
+    });
+  });
+
+  it("still accepts a blob comfortably larger than any real plan", async () => {
+    const kv = fakeKv();
+    const res = await handleSyncClaim(
+      "martin",
+      { authKey: AUTH, blob: "x".repeat(64 * 1024) },
+      deps(kv),
+    );
+    expect(res.status).toBe(201);
+  });
+});
+
+describe("sync response headers", () => {
+  it("never lets a per-user blob be cached, and varies on the credential", async () => {
+    const kv = fakeKv();
+    await handleSyncClaim("martin", { authKey: AUTH, blob: "cipher" }, deps(kv));
+    const res = await handleSyncGet("martin", AUTH, deps(kv));
+    expect(res.headers.get("Cache-Control")).toBe("no-store");
+    // The body is a function of `x-np-auth`; a shared cache that did not know
+    // that could hand one student's blob to the next request.
+    expect(res.headers.get("Vary")).toBe("x-np-auth");
+  });
+
+  it("marks a refusal no-store too", async () => {
+    const kv = fakeKv();
+    await handleSyncClaim("martin", { authKey: AUTH, blob: "cipher" }, deps(kv));
+    expect((await handleSyncGet("martin", OTHER, deps(kv))).headers.get("Cache-Control")).toBe(
+      "no-store",
+    );
+  });
 });
 
 function envWith(kv: SyncKv): Env {
@@ -251,5 +332,47 @@ describe("worker dispatch for /api/sync", () => {
       envWith(fakeKv()),
     );
     expect(res.status).toBe(405);
+  });
+
+  /**
+   * The sync branch used to return before `clientKey`/`rateLimiter` were even
+   * constructed, so the throttle guarding the rest of `/api` never applied to
+   * it. `handleSyncClaim` needs no credential, so nothing else bounded an
+   * anonymous write loop.
+   *
+   * A distinct IP per test keeps this off the module-level bucket every other
+   * test in the process shares.
+   */
+  it("throttles a client hammering the sync surface", async () => {
+    const kv = fakeKv();
+    const env = envWith(kv);
+    const ip = "203.0.113.77";
+    let lastStatus = 0;
+    // The bucket is 120 tokens; the 121st request inside the same millisecond
+    // cannot have refilled.
+    for (let i = 0; i < 130; i++) {
+      const res = await worker.fetch(
+        new Request(`https://x/api/sync/ingen-slik-konto`, {
+          headers: { "CF-Connecting-IP": ip, "x-np-auth": AUTH },
+        }),
+        env,
+      );
+      lastStatus = res.status;
+      if (lastStatus === 429) break;
+    }
+    expect(lastStatus).toBe(429);
+  });
+
+  it("leaves an unthrottleable client (no CF-Connecting-IP) alone, as the rest of /api does", async () => {
+    const env = envWith(fakeKv());
+    for (let i = 0; i < 130; i++) {
+      const res = await worker.fetch(
+        new Request("https://x/api/sync/ingen-slik-konto", { headers: { "x-np-auth": AUTH } }),
+        env,
+      );
+      // 404, never 429: with no honest key, bucketing everyone together would
+      // let one abuser deny service to all callers.
+      expect(res.status).toBe(404);
+    }
   });
 });
