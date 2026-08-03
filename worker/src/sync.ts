@@ -181,6 +181,22 @@ async function authorise(
   return record;
 }
 
+/**
+ * "There is no KV binding, so this surface cannot save anything" — 503, in the
+ * same envelope as every other answer from this module.
+ *
+ * It lives here rather than in `server.ts`, which built its own `Response` by
+ * hand and was the one sync answer without `Cache-Control: no-store`. Nothing
+ * private leaks through a cached 503, but a shared cache holding one is worse
+ * than pointless: it keeps answering "unavailable" after the binding is back,
+ * and the client maps that to `unavailable`, which the panel words as "prøv
+ * igjen senere". One `json()` for the whole surface means the next header this
+ * module needs cannot be added to eight responses and missed on the ninth.
+ */
+export function syncUnavailable(): Response {
+  return json({ error: "sync_unavailable" }, 503);
+}
+
 export async function handleSyncClaim(
   rawName: string,
   body: unknown,

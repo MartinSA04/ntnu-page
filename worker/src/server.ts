@@ -29,6 +29,7 @@ import {
   handleSyncPut,
   type SyncDeps,
   type SyncKv,
+  syncUnavailable,
 } from "./sync.js";
 
 /**
@@ -116,12 +117,9 @@ function syncName(pathname: string): string | null {
  * looked like it saved but didn't is worse than one that says it cannot.
  */
 async function handleSync(request: Request, env: Env, name: string): Promise<Response> {
-  if (!env.SYNC) {
-    return new Response(JSON.stringify({ error: "sync_unavailable" }), {
-      status: 503,
-      headers: { "content-type": "application/json; charset=utf-8" },
-    });
-  }
+  // `syncUnavailable`, not a hand-built `Response`: this was the one answer on
+  // the sync surface that shipped without `Cache-Control: no-store`.
+  if (!env.SYNC) return syncUnavailable();
   const deps: SyncDeps = {
     kv: env.SYNC,
     now: () => new Date().toISOString(),

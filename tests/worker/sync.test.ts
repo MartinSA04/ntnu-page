@@ -324,6 +324,11 @@ describe("worker dispatch for /api/sync", () => {
       env,
     );
     expect(res.status).toBe(503);
+    // …and it is not cacheable. This branch built its own `Response` by hand
+    // and was the one sync answer missing the header every other one sets; a
+    // shared cache holding it would keep answering "unavailable" after the
+    // binding came back.
+    expect(res.headers.get("Cache-Control")).toBe("no-store");
   });
 
   it("405s an unsupported method", async () => {
