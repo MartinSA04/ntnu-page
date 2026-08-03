@@ -37,8 +37,16 @@ const MISSES = join(HERE, "fixtures", ".misses");
 export const RECORDING = process.env.E2E_RECORD === "1";
 export const LIVE = RECORDING || process.env.E2E_LIVE === "1";
 
-/** Routes about the transport rather than the data — see `handle`. */
+/**
+ * Routes about the transport rather than the data — see `handle`.
+ *
+ * `/api/sync/*` is ours, not NTNU's: replaying it would assert against a
+ * recording of our own worker, and the account tests need real KV round trips.
+ * `wrangler dev` provisions a local namespace from the `SYNC` binding, so these
+ * hit the real handler with no network beyond localhost.
+ */
 const PASS_THROUGH = new Set(["GET /api/health"]);
+const PASS_THROUGH_PREFIXES = ["/api/sync/"];
 
 interface Fixture {
   /** The request this answers, for review — the file name is a digest. */
@@ -126,7 +134,10 @@ export async function installApiFixtures(context: BrowserContext): Promise<void>
     // `navigation.pw.ts` reads the worker's own security headers off. Replaying
     // it would answer that test with headers recorded at some past moment, so
     // it would pass over a worker that had stopped sending them.
-    if (PASS_THROUGH.has(key)) {
+    //
+    // `/api/sync/*` is the other carve-out — see `PASS_THROUGH`'s own comment.
+    const url = new URL(request.url());
+    if (PASS_THROUGH.has(key) || PASS_THROUGH_PREFIXES.some((p) => url.pathname.startsWith(p))) {
       await route.fallback();
       return;
     }

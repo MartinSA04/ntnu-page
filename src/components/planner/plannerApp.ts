@@ -465,11 +465,28 @@ export async function mountPlannerApp(
   // comment for why. There is no offline queue and there must never be one:
   // this is a webpage with no service worker, so a push either lands or it
   // reports that it did not.
-  const sync = createSyncClient({ storage: localStorage, fetch: globalThis.fetch });
+  // `.bind(globalThis)`, not the bare reference: `deps.fetch(...)` inside
+  // syncClient.ts is a METHOD CALL on the deps object, so an unbound `fetch`
+  // runs with `this === deps` — and the native implementation throws
+  // "Illegal invocation" unless `this` is a Window/WorkerGlobalScope. Every
+  // unit test constructs its own `createSyncClient` with a plain mock
+  // function, which does not care about `this`, so this was invisible until
+  // e2e/sync.pw.ts drove the real button in a real browser (Task 9).
+  const sync = createSyncClient({
+    storage: localStorage,
+    fetch: globalThis.fetch.bind(globalThis),
+  });
   const profile = mountProfilePanel({
     store,
     sync,
     onEditProgram: () => studieinfo.open(),
+    // `applyPulledPlan` (below): a fresh `login` writes straight to
+    // `localStorage` the same way a pull does and needs the same repaint —
+    // see that function's own comment and `onAuthenticated`'s in
+    // `profilePanel.ts`. Forward reference is safe: `applyPulledPlan` is a
+    // hoisted function declaration, and this callback only ever runs after a
+    // click, long after this whole function body has finished setting up.
+    onAuthenticated: () => applyPulledPlan(),
     signal: lifeSignal,
   });
   elements.profileEntry.addEventListener("click", () => profile.show(), { signal: lifeSignal });

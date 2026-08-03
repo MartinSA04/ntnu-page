@@ -36,6 +36,18 @@ export interface ProfilePanelDeps {
   sync: SyncClient;
   /** Opens studieinfo. Called after this panel closes itself — see `renderProgramBlock`. */
   onEditProgram: () => void;
+  /**
+   * Fires after a successful `signup`/`login`, i.e. exactly when `sync`'s
+   * `applySyncable` may just have written a DIFFERENT plan straight into
+   * `localStorage`. `login` bypasses `store.savePlan` (it has to — it is
+   * writing the server's copy, not deriving a new one), so nothing repaints
+   * on its own; the caller is expected to pass its own pull-repaint path
+   * (`applyPulledPlan` in `plannerApp.ts`) here rather than this file
+   * reaching into plan rendering it does not own. Harmless to call after a
+   * `signup` too: the blob just pushed IS the plan already on screen, so the
+   * hash comparison there is a no-op.
+   */
+  onAuthenticated: () => void;
   signal: AbortSignal;
 }
 
@@ -373,6 +385,9 @@ export function mountProfilePanel(deps: ProfilePanelDeps): ProfilePanelHandle {
       }
       syncState = "ok";
       render();
+      // See `onAuthenticated`'s own doc comment: `login` may have just
+      // overwritten this device's plan and nothing else here repaints it.
+      deps.onAuthenticated();
     }
 
     // Enter in Navn/PIN/Gjenta PIN triggers native form submission, which
