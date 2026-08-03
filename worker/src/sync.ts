@@ -8,6 +8,48 @@
  */
 
 /**
+ * Per-name failure counter for the PIN.
+ *
+ * Deliberately in-memory and therefore PER ISOLATE, so it is approximate: an
+ * attacker spread across isolates gets more attempts than `max`. That is
+ * accepted because it is not the real bound — producing one candidate
+ * `authKey` costs a 600 000-iteration PBKDF2 on the attacker's own hardware,
+ * and the data is a course list. Do not reach for a KV-backed counter to make
+ * this exact: KV writes are eventually consistent and would be wrong anyway.
+ */
+export class AuthLimiter {
+  private readonly hits = new Map<string, { count: number; until: number }>();
+
+  constructor(
+    private readonly max: number,
+    private readonly windowMs: number,
+  ) {}
+
+  check(name: string, now: number): boolean {
+    const hit = this.hits.get(name);
+    if (!hit) return true;
+    if (now >= hit.until) {
+      this.hits.delete(name);
+      return true;
+    }
+    return hit.count < this.max;
+  }
+
+  fail(name: string, now: number): void {
+    const hit = this.hits.get(name);
+    if (!hit || now >= hit.until) {
+      this.hits.set(name, { count: 1, until: now + this.windowMs });
+      return;
+    }
+    hit.count += 1;
+  }
+
+  clear(name: string): void {
+    this.hits.delete(name);
+  }
+}
+
+/**
  * A name is a public URL segment (`/user/<navn>`), so it is ASCII, lowercase
  * and dash-separated. Æ/Ø/Å are excluded on purpose: this is the one string in
  * the product that has to survive being typed from memory on a foreign
@@ -46,6 +88,10 @@ export interface SyncDeps {
   kv: SyncKv;
   /** Injected so tests are not clock-dependent. */
   now: () => string;
+  /** Absent = unthrottled, which is what the unit tests of Task 2 pass. */
+  limiter?: AuthLimiter;
+  /** Monotonic ms for the limiter, injected so tests are not clock-dependent. */
+  monotonic?: () => number;
 }
 
 export function recordKey(name: string): string {
@@ -98,12 +144,17 @@ async function authorise(
   authKey: string | null,
   deps: SyncDeps,
 ): Promise<SyncRecord | Response> {
+  const now = deps.monotonic?.() ?? 0;
+  if (deps.limiter && !deps.limiter.check(name, now)) {
+    return json({ error: "too_many_attempts" }, 429);
+  }
   const record = await read(name, deps);
   if (record === null) return json({ error: "not_found" }, 404);
-  if (authKey === null) return json({ error: "unauthorised" }, 401);
-  if (!sameDigest(record.authHash, await sha256Hex(authKey))) {
+  if (authKey === null || !sameDigest(record.authHash, await sha256Hex(authKey))) {
+    deps.limiter?.fail(name, now);
     return json({ error: "unauthorised" }, 401);
   }
+  deps.limiter?.clear(name);
   return record;
 }
 

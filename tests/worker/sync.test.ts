@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  AuthLimiter,
   handleSyncClaim,
   handleSyncDelete,
   handleSyncGet,
@@ -113,4 +114,42 @@ describe("sync account lifecycle", () => {
     await handleSyncClaim("martin", { authKey: AUTH, blob: "cipher" }, deps(kv));
     expect(kv.map.get("user:martin")).not.toContain(AUTH);
   });
+});
+
+describe("AuthLimiter", () => {
+  it("blocks after the configured number of failures and recovers after the window", () => {
+    const limiter = new AuthLimiter(3, 60_000);
+    for (let i = 0; i < 3; i++) {
+      expect(limiter.check("martin", 1000)).toBe(true);
+      limiter.fail("martin", 1000);
+    }
+    expect(limiter.check("martin", 1000)).toBe(false);
+    expect(limiter.check("martin", 62_000)).toBe(true);
+  });
+
+  it("buckets per name", () => {
+    const limiter = new AuthLimiter(1, 60_000);
+    limiter.fail("martin", 0);
+    expect(limiter.check("martin", 0)).toBe(false);
+    expect(limiter.check("kari", 0)).toBe(true);
+  });
+
+  it("clears on a successful authentication", () => {
+    const limiter = new AuthLimiter(1, 60_000);
+    limiter.fail("martin", 0);
+    limiter.clear("martin");
+    expect(limiter.check("martin", 0)).toBe(true);
+  });
+});
+
+it("429s a locked-out name without touching KV", async () => {
+  const kv = fakeKv();
+  await handleSyncClaim("martin", { authKey: AUTH, blob: "cipher" }, deps(kv));
+  const limiter = new AuthLimiter(1, 60_000);
+  const withLimiter: SyncDeps = { ...deps(kv), limiter, monotonic: () => 0 };
+
+  expect((await handleSyncGet("martin", OTHER, withLimiter)).status).toBe(401);
+  expect((await handleSyncGet("martin", OTHER, withLimiter)).status).toBe(429);
+  // …and a correct key is refused too while the lockout stands.
+  expect((await handleSyncGet("martin", AUTH, withLimiter)).status).toBe(429);
 });
