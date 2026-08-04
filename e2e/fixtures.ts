@@ -44,9 +44,13 @@ export const LIVE = RECORDING || process.env.E2E_LIVE === "1";
  * recording of our own worker, and the account tests need real KV round trips.
  * `wrangler dev` provisions a local namespace from the `SYNC` binding, so these
  * hit the real handler with no network beyond localhost.
+ *
+ * `/api/plan/*` is the same surface read from the other side — the published
+ * plan `/user/<navn>` fetches. Replaying it would answer the publish test with
+ * a recording instead of the copy the test just wrote.
  */
 const PASS_THROUGH = new Set(["GET /api/health"]);
-const PASS_THROUGH_PREFIXES = ["/api/sync/"];
+const PASS_THROUGH_PREFIXES = ["/api/sync/", "/api/plan/"];
 
 interface Fixture {
   /** The request this answers, for review — the file name is a digest. */

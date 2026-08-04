@@ -291,6 +291,26 @@ describe("publishing", () => {
   });
 });
 
+describe("the public page", () => {
+  it("serves the shell for /user/:navn and refuses indexing by header", async () => {
+    const env = envWith(fakeKv());
+    const res = await worker.fetch(new Request("https://x/user/martin"), env);
+    expect(res.status).toBe(200);
+    expect(res.headers.get("x-robots-tag")).toBe("noindex, nofollow");
+  });
+
+  it("does not disallow /user/ in robots.txt — that would hide the noindex", async () => {
+    const { readFileSync } = await import("node:fs");
+    const robots = readFileSync("public/robots.txt", "utf8");
+    expect(robots).not.toMatch(/Disallow:\s*\/user/i);
+  });
+
+  it("keeps /user/ out of the sitemap, which is the site's only crawl entry", async () => {
+    const { buildSitemap } = await import("../../src/lib/sitemap.js");
+    expect(buildSitemap(new URL("https://x/"), ["TDT4120"])).not.toContain("/user");
+  });
+});
+
 describe("AuthLimiter", () => {
   it("blocks after the configured number of failures and recovers after the window", () => {
     const limiter = new AuthLimiter(3, 60_000);
@@ -481,6 +501,63 @@ describe("worker dispatch for /api/sync", () => {
       if (lastStatus === 429) break;
     }
     expect(lastStatus).toBe(429);
+  });
+
+  it("turns sharing on over the API and reads it back without a credential", async () => {
+    const kv = fakeKv();
+    const env = envWith(kv);
+    await worker.fetch(
+      new Request("https://x/api/sync/martin", {
+        method: "POST",
+        body: JSON.stringify({ authKey: AUTH, blob: "cipher" }),
+      }),
+      env,
+    );
+    const pub = await worker.fetch(
+      new Request("https://x/api/sync/martin/public", {
+        method: "PUT",
+        headers: { "x-np-auth": AUTH },
+        body: JSON.stringify({ plain: PLAN }),
+      }),
+      env,
+    );
+    expect(pub.status).toBe(200);
+
+    const read = await worker.fetch(new Request("https://x/api/plan/martin"), env);
+    expect(read.status).toBe(200);
+    expect(await read.json()).toMatchObject({ plain: PLAN });
+
+    const off = await worker.fetch(
+      new Request("https://x/api/sync/martin/public", {
+        method: "DELETE",
+        headers: { "x-np-auth": AUTH },
+      }),
+      env,
+    );
+    expect(off.status).toBe(204);
+    expect((await worker.fetch(new Request("https://x/api/plan/martin"), env)).status).toBe(404);
+  });
+
+  it("does not read `/api/sync/<navn>/public` as an account named `<navn>`", async () => {
+    // `syncName`'s pattern is anchored, but a loosened one here would turn a
+    // DELETE of the public copy into a DELETE of the whole account.
+    const kv = fakeKv();
+    const env = envWith(kv);
+    await worker.fetch(
+      new Request("https://x/api/sync/martin", {
+        method: "POST",
+        body: JSON.stringify({ authKey: AUTH, blob: "cipher" }),
+      }),
+      env,
+    );
+    await worker.fetch(
+      new Request("https://x/api/sync/martin/public", {
+        method: "DELETE",
+        headers: { "x-np-auth": AUTH },
+      }),
+      env,
+    );
+    expect(kv.map.has("user:martin")).toBe(true);
   });
 
   it("leaves an unthrottleable client (no CF-Connecting-IP) alone, as the rest of /api does", async () => {

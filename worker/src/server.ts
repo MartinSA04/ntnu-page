@@ -23,10 +23,13 @@ import {
 } from "./routes.js";
 import {
   AuthLimiter,
+  handlePublicRead,
+  handlePublish,
   handleSyncClaim,
   handleSyncDelete,
   handleSyncGet,
   handleSyncPut,
+  handleUnpublish,
   type SyncDeps,
   type SyncKv,
   syncUnavailable,
@@ -98,12 +101,18 @@ export function canonicalCoursePath(pathname: string): string | null {
   return `/emne/${encodeURIComponent(upper)}/`;
 }
 
-/** `/api/sync/<navn>` → the name, or null when the shape does not match. */
-function syncName(pathname: string): string | null {
-  const match = /^\/api\/sync\/([^/]+)\/?$/.exec(pathname);
+/**
+ * The name in a `/…/<navn>` path, decoded.
+ *
+ * Same reason as `parseCode` in routes.ts: the WHATWG URL spec keeps path
+ * segments percent-encoded, and a name is validated after decoding. The
+ * patterns are anchored — `/api/sync/martin/public` must never read as an
+ * account named `martin/public` OR as the account `martin`, or a DELETE of the
+ * public copy would delete the whole account.
+ */
+function nameIn(pattern: RegExp, pathname: string): string | null {
+  const match = pattern.exec(pathname);
   if (!match?.[1]) return null;
-  // Same reason as `parseCode` in routes.ts: the WHATWG URL spec keeps path
-  // segments percent-encoded, and a name is validated after decoding.
   try {
     return decodeURIComponent(match[1]);
   } catch {
@@ -111,17 +120,34 @@ function syncName(pathname: string): string | null {
   }
 }
 
+const SYNC_PATH = /^\/api\/sync\/([^/]+)\/?$/;
+/** The share toggle: PUT turns it on with a copy to serve, DELETE turns it off. */
+const PUBLIC_TOGGLE_PATH = /^\/api\/sync\/([^/]+)\/public\/?$/;
+/** The viewer's data source. No credential — that is what being public means. */
+const PUBLIC_READ_PATH = /^\/api\/plan\/([^/]+)\/?$/;
+/** The page itself, which the worker rewrites to one static shell. */
+const PUBLIC_PAGE_PATH = /^\/user\/([^/]+)\/?$/;
+
+/**
+ * A shared plan is a room-and-hour record attached to a name the student chose,
+ * so it is kept out of search by HEADER rather than by `robots.txt`. Blocking
+ * the crawl would mean Google never reads the directive and can still list the
+ * bare URL — the exact failure this avoids.
+ */
+function withNoIndex(response: Response): Response {
+  const next = new Response(response.body, response);
+  next.headers.set("X-Robots-Tag", "noindex, nofollow");
+  return next;
+}
+
 /**
  * Dispatches one `/api/sync/<navn>` request. `env.SYNC` absent is reported
  * as 503 rather than silently falling back to memory — a planner that
  * looked like it saved but didn't is worse than one that says it cannot.
  */
-async function handleSync(request: Request, env: Env, name: string): Promise<Response> {
-  // `syncUnavailable`, not a hand-built `Response`: this was the one answer on
-  // the sync surface that shipped without `Cache-Control: no-store`.
-  if (!env.SYNC) return syncUnavailable();
-  const deps: SyncDeps = {
-    kv: env.SYNC,
+function syncDeps(kv: SyncKv): SyncDeps {
+  return {
+    kv,
     now: () => new Date().toISOString(),
     // `limiter` and `monotonic` must always be supplied as a pair:
     // `authorise` in sync.ts falls back to a frozen `now` of 0 when
@@ -131,6 +157,13 @@ async function handleSync(request: Request, env: Env, name: string): Promise<Res
     limiter: authLimiter,
     monotonic: () => Date.now(),
   };
+}
+
+async function handleSync(request: Request, env: Env, name: string): Promise<Response> {
+  // `syncUnavailable`, not a hand-built `Response`: this was the one answer on
+  // the sync surface that shipped without `Cache-Control: no-store`.
+  if (!env.SYNC) return syncUnavailable();
+  const deps = syncDeps(env.SYNC);
   const auth = request.headers.get("x-np-auth");
 
   switch (request.method) {
@@ -147,10 +180,30 @@ async function handleSync(request: Request, env: Env, name: string): Promise<Res
   }
 }
 
+/** The share toggle. Both halves need the account's own credential. */
+async function handlePublicToggle(request: Request, env: Env, name: string): Promise<Response> {
+  if (!env.SYNC) return syncUnavailable();
+  const deps = syncDeps(env.SYNC);
+  const auth = request.headers.get("x-np-auth");
+  if (request.method === "PUT") {
+    return handlePublish(name, auth, await request.json().catch(() => null), deps);
+  }
+  if (request.method === "DELETE") return handleUnpublish(name, auth, deps);
+  return methodNotAllowed();
+}
+
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url);
     const { pathname } = url;
+
+    // `/user/<navn>` — one static shell for every name, kept out of search.
+    // Before the asset branch below, which would serve the 404 page: the build
+    // emits `/user/index.html` and nothing else under `/user/`.
+    if (PUBLIC_PAGE_PATH.test(pathname)) {
+      const shell = await env.ASSETS.fetch(new Request(new URL("/user/index.html", url), request));
+      return withNoIndex(withSecurityHeaders(shell));
+    }
 
     // `/api` (no trailing slash) is part of the API surface too: falling
     // through to ASSETS answered it with the HTML 404 page while every other
@@ -177,8 +230,9 @@ export default {
     // per NAME and only counts credential failures, so it never sees
     // `handleSyncClaim`, which needs no credential at all. `POST
     // /api/sync/<random>` in a loop was unbounded anonymous KV writes.
-    const name = syncName(pathname);
-    if (name !== null) {
+    const accountName = nameIn(SYNC_PATH, pathname);
+    const shareName = nameIn(PUBLIC_TOGGLE_PATH, pathname);
+    if (accountName !== null || shareName !== null) {
       const syncKey = clientKey(request);
       if (syncKey !== null) {
         const decision = rateLimiter.take(syncKey);
@@ -186,7 +240,12 @@ export default {
           return withSecurityHeaders(rateLimited(decision.retryAfterSeconds));
         }
       }
-      return withSecurityHeaders(await handleSync(request, env, name));
+      if (accountName !== null) {
+        return withSecurityHeaders(await handleSync(request, env, accountName));
+      }
+      if (shareName !== null) {
+        return withSecurityHeaders(await handlePublicToggle(request, env, shareName));
+      }
     }
 
     // Read-only surface: anything but GET/HEAD used to be served as a GET,
@@ -197,6 +256,15 @@ export default {
 
     if (pathname === "/api/health") {
       return handleHealth();
+    }
+
+    // The public page's data source. Below the GET/HEAD gate on purpose — it is
+    // a read like every other route here, and the write side is the toggle
+    // above, which needs the account's credential.
+    const publicName = nameIn(PUBLIC_READ_PATH, pathname);
+    if (publicName !== null) {
+      if (!env.SYNC) return withSecurityHeaders(syncUnavailable());
+      return withSecurityHeaders(await handlePublicRead(publicName, syncDeps(env.SYNC)));
     }
 
     const cache = new TieredCache(memoryCache, env.CACHE);
