@@ -105,6 +105,12 @@ const crawlDate = formatCrawlDate(semestersData.crawledAt);
     <title>{title}</title>
     <meta name="description" content={description} />
     <link rel="icon" href={faviconDataUri(VERDICT)} />
+    {/* One page needs head tags nothing else does: `/user/<navn>` refuses
+        indexing and carries `og:` tags the worker rewrites per name. A named
+        slot rather than a growing list of props — the shell has no opinion
+        about what goes in here, and every page that passes nothing emits
+        nothing. */}
+    <slot name="head" />
     <script
       is:inline
       define:vars={{

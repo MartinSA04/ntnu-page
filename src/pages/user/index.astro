@@ -1,0 +1,166 @@
+---
+import Layout from "../../layouts/Layout.astro";
+// The week's geometry and ink, shared with /planlegger/ and /emne/[code]/.
+import "../../styles/planner-week.css";
+
+/**
+ * ONE shell for every `/user/<navn>`.
+ *
+ * The page is static and the worker rewrites every `/user/*` request to it
+ * (`worker/src/server.ts`), so the name is read from `location.pathname` in the
+ * browser rather than from an Astro param — there is no param, and there are no
+ * 5 470 accounts to prerender.
+ *
+ * The `og:` tags below are DEFAULTS. The worker fills them per name with an
+ * `HTMLRewriter` pass so a link unfurls richly in a chat while
+ * `X-Robots-Tag: noindex` keeps it out of search — those are different
+ * crawlers, which is what lets both hold at once.
+ */
+const description = "En delt semesterplan fra Semesterplan.";
+---
+
+<Layout title="Delt plan · Semesterplan" description={description} wide>
+  {/* Belt and braces beside the worker's `X-Robots-Tag`: a crawler that reads
+      the document but not the headers still sees the refusal. NEVER paired with
+      a `Disallow: /user/` in robots.txt — a blocked crawl would mean neither of
+      these is ever read, and the bare URL can still be listed. */}
+  <meta slot="head" name="robots" content="noindex, nofollow" />
+  <meta slot="head" property="og:title" content="Delt semesterplan" data-unfurl="title" />
+  <meta
+    slot="head"
+    property="og:description"
+    content="En semesterplan delt fra Semesterplan."
+    data-unfurl="description"
+  />
+  <meta slot="head" property="og:type" content="website" />
+  <meta slot="head" name="twitter:card" content="summary" />
+
+  {/* `data-reserve` is a lease, not a layout: `publicPlan.ts` drops the
+      attribute on reaching a terminal state — a drawn week, an empty answer or
+      a failure — because a reservation left standing over a one-line apology is
+      a permanent hole in the page.
+
+      The viewer has no `--plan-courses` to work from (the probe reports THEIR
+      plan, not the one being viewed), so this reserves a fixed week-ish height
+      rather than a computed one, deliberately a little under what a real week
+      settles at so the residual nudges down rather than snatching content up. */}
+  <div class="public-plan" id="public-plan" data-reserve></div>
+</Layout>
+
+<style>
+  /* `:global()` on everything below the container, for the same reason
+     /planlegger/'s course rows are global: the whole page is built by
+     `publicPlan.ts` at runtime, and Astro's scoping stamps an attribute only on
+     elements that exist in this template. The container itself is in the
+     template, so its reservation is scoped normally. */
+  .public-plan[data-reserve] {
+    min-height: 30rem;
+  }
+
+  .public-plan :global(.public-plan-head) {
+    margin-bottom: var(--space-4);
+  }
+
+  /* The name is the plan's title here, exactly as the programme is on
+     /planlegger/: it is what the page is about, not a headline about it. */
+  .public-plan :global(.public-plan-title) {
+    margin: var(--space-1) 0 0;
+    font-size: 1.25rem;
+    font-weight: var(--weight-semibold);
+    letter-spacing: -0.015em;
+    line-height: var(--leading-snug);
+  }
+
+  .public-plan :global(.public-plan-program),
+  .public-plan :global(.public-plan-summary) {
+    margin: var(--space-1) 0 0;
+  }
+
+  .public-plan :global(.public-plan-summary) {
+    color: var(--fg);
+  }
+
+  /* One row per course, the code in the margin, the name a link into the
+     course's own page — the one place this surface can honestly send a
+     viewer, since it cannot edit the plan it is showing. */
+  .public-plan :global(.public-plan-courses) {
+    margin: var(--space-4) 0 0;
+    padding: 0;
+    list-style: none;
+    display: grid;
+    gap: var(--space-2);
+  }
+
+  .public-plan :global(.public-plan-course) {
+    display: flex;
+    align-items: baseline;
+    gap: var(--gap-3);
+    padding-bottom: var(--space-2);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .public-plan :global(.public-plan-code) {
+    flex: none;
+    min-width: 6.5rem;
+    color: var(--muted);
+  }
+
+  .public-plan :global(.public-plan-name) {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  .public-plan :global(.public-plan-credits) {
+    flex: none;
+    color: var(--muted);
+  }
+
+  .public-plan :global(.public-plan-foot) {
+    margin-top: var(--space-5);
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-3) var(--gap-4);
+  }
+
+  .public-plan :global(.public-plan-foot .np-hint) {
+    margin: 0;
+    flex: 1 1 16rem;
+  }
+
+  .public-plan :global(.public-plan-empty) {
+    display: grid;
+    justify-items: start;
+    gap: var(--space-3);
+    padding: var(--space-5) 0;
+  }
+
+  .public-plan :global(.public-plan-empty .np-hint) {
+    margin: 0;
+  }
+</style>
+
+<script>
+  import { mountPublicPlan, nameFromPath } from "../../components/planner/publicPlan.js";
+  import { onPage } from "../../lib/pageLifecycle.ts";
+  import semestersData from "../../../data/semesters.json";
+
+  // Through `onPage`, like every other island: a hoisted script runs ONCE per
+  // module and does NOT re-execute after a ClientRouter swap, so a student
+  // arriving here from another page would otherwise land on a dead shell.
+  onPage((signal) => {
+    const root = document.getElementById("public-plan");
+    if (!root) return;
+    void mountPublicPlan({
+      navn: nameFromPath(location.pathname),
+      root,
+      semesters: semestersData.semesters.map((s) => ({
+        id: s.id,
+        name: s.name,
+        teachingWeeks: s.teachingWeeks,
+      })),
+      fetch: window.fetch.bind(window),
+      signal,
+    });
+  });
+</script>
