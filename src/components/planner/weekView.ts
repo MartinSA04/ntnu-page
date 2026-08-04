@@ -165,6 +165,40 @@ export function loadWeekBox(surface: WeekSurface, view: WeekView, width: number)
   return Math.abs(entry[0] - width) <= WEEK_BOX_TOLERANCE ? entry[1] : null;
 }
 
+/**
+ * The Uke/Liste pair, built at runtime.
+ *
+ * The runtime twin of `components/WeekTabs.astro`, which is what the two
+ * surfaces with a STATIC shell use — building a control at mount pops it into a
+ * bar a frame late, and `/planlegger/` is the page whose CLS this whole file is
+ * defending. `/user/<navn>` has no static shell to put it in: every element on
+ * that page is built after a fetch, so its tabs arrive with its header and its
+ * frame in one write and there is nothing for them to pop in against.
+ *
+ * The two copies are four element names. Everything that could actually drift —
+ * the classes, the ids' shape, the pressed state, the travelling rule — is
+ * shared, because `renderTabs` below is the only thing that writes any of it.
+ */
+export function buildWeekTabs(idPrefix: string): {
+  host: HTMLElement;
+  kolonner: HTMLButtonElement;
+  tavle: HTMLButtonElement;
+} {
+  const host = el("div", "planner-view-tabs");
+  host.setAttribute("role", "group");
+  host.setAttribute("aria-label", "Velg hvordan uka vises");
+  const thumb = el("span", "planner-view-thumb");
+  thumb.setAttribute("aria-hidden", "true");
+  const kolonner = el("button", "planner-view-tab", "Uke");
+  kolonner.type = "button";
+  kolonner.id = `${idPrefix}-view-kolonner`;
+  const tavle = el("button", "planner-view-tab", "Liste");
+  tavle.type = "button";
+  tavle.id = `${idPrefix}-view-tavle`;
+  host.append(thumb, kolonner, tavle);
+  return { host, kolonner, tavle };
+}
+
 export interface WeekViewOptions {
   /** The scroll container the week is drawn into. */
   frame: HTMLElement;

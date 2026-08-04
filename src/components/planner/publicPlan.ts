@@ -8,9 +8,12 @@
  * of the page is where that starts. `tests/planner/publicPlan.test.ts` asserts
  * the rule against this file's source rather than trusting this paragraph.
  *
- * The week is drawn by the planner's own `renderGrid` — one renderer for three
- * surfaces (`/planlegger/`, `/emne/[code]/`, here), so a shared week is the
- * same week the sharer is looking at, including their parallel and øving picks.
+ * The week is drawn by `weekView` — one controller for the three surfaces that
+ * draw a week (`/planlegger/`, `/emne/[code]/`, here), in the same two views,
+ * so a shared week really is the week the sharer is looking at, including their
+ * parallel and øving picks. That sentence stopped being true for a while: the
+ * planner moved to the column week and this page kept drawing the transposed
+ * one, which had been deleted as a view but kept alive as a module.
  */
 
 import {
@@ -26,8 +29,8 @@ import {
 } from "../../lib/planner/publicPlan.js";
 import { entriesInSemester, semesterYear } from "../../lib/planner/schedule.js";
 import { el, formatCreditNumber } from "./dom.js";
-import { fitBlockLabels, renderGrid, setScrollFade } from "./grid.js";
 import type { PlanCourseState } from "./types.js";
+import { buildWeekTabs, mountWeekView } from "./weekView.js";
 
 /** The semester rows the page ships from `data/semesters.json` — teaching weeks and a name. */
 export interface PublicSemester {
@@ -180,12 +183,19 @@ function renderPlan(deps: PublicPlanDeps, plan: PublicPlan): void {
   head.append(el("p", "np-data public-plan-summary", planSummary(plan, label)));
   root.append(head);
 
+  // The Uke/Liste pair, in its own row above the week rather than in the head:
+  // there is no section heading here for it to share a baseline with, and a
+  // segmented control at the top right of a week is where every calendar puts
+  // one. Built rather than server-rendered because every element on this page
+  // arrives after a fetch, so the tabs land with the header and the frame in
+  // one write — `buildWeekTabs` is the runtime twin of WeekTabs.astro, which
+  // the two surfaces with a static shell use instead.
+  const tabs = buildWeekTabs("user");
+  const weekHead = el("div", "public-plan-weekhead");
+  weekHead.append(tabs.host);
+  root.append(weekHead);
+
   const frame = el("div", "planner-grid-frame");
-  // Same withdrawal as `/emne/[code]/`'s week: `renderGrid` emits a `<button>`
-  // per block and wires a click only when the caller passes `onBlockClick`.
-  // This surface has nothing to hand it — the popover edits a plan, and this
-  // plan is not the viewer's — so the affordance is withdrawn rather than faked.
-  frame.dataset.static = "true";
   const notes = el("div", "planner-grid-notes");
   root.append(frame, notes);
 
@@ -212,23 +222,24 @@ function renderPlan(deps: PublicPlanDeps, plan: PublicPlan): void {
   foot.append(ctaLink());
   root.append(foot);
 
-  drawWeek(deps, plan, frame, notes);
+  drawWeek(deps, plan, frame, notes, tabs);
 }
 
 /**
  * Fetches every course's timetable and draws the week.
  *
  * The states are the planner's, minus the ones this page cannot have: it draws
- * a skeleton while the bundles land (`loading: true`), then the week. A course
- * whose fetch failed carries its own outcome into the margin notes through
- * `renderGrid`'s `planGaps` — the honest join (DR-8) is the renderer's, not
- * re-implemented here.
+ * a pending week while the bundles land (`loading: true`), then the week. A
+ * course whose fetch failed carries its own outcome into the margin notes
+ * through `weekNotes`'s `planGaps` — the honest join (DR-8) is the shared
+ * controller's, not re-implemented here.
  */
 function drawWeek(
   deps: PublicPlanDeps,
   plan: PublicPlan,
   frame: HTMLElement,
   notes: HTMLElement,
+  tabs: { kolonner: HTMLButtonElement; tavle: HTMLButtonElement },
 ): void {
   const year = semesterYear(plan.semesterId);
   const semester = deps.semesters.find((s) => s.id === plan.semesterId);
@@ -248,38 +259,32 @@ function drawWeek(
     programCode: plan.program?.code ?? null,
   }));
 
+  /**
+   * The same week `/planlegger/` draws, in the same two views, from the
+   * owner's own group picks — which is what makes a shared link the week the
+   * sharer is looking at rather than a second opinion about it.
+   *
+   * `onOpenSettings` is null: this plan is not the viewer's, and nothing on
+   * this page can change it. The popover still opens, because it answers "what
+   * is this session", which a viewer deciding whether to copy the plan wants.
+   */
+  const week = mountWeekView({
+    frame,
+    notes,
+    tabs,
+    surface: "user",
+    onOpenSettings: null,
+    onRerender: () => draw(states.some((s) => s.loading)),
+    signal: deps.signal,
+  });
+
   const draw = (loading: boolean): void => {
-    renderGrid(frame, notes, states, false, { loading });
-    for (const block of Array.from(frame.querySelectorAll<HTMLElement>(".planner-block"))) {
-      block.tabIndex = -1;
-    }
-    fitBlockLabels(frame);
-    syncScroll();
+    week.render(states, {
+      teachingWeeks: semester?.teachingWeeks ?? [],
+      showOthers: false,
+      loading,
+    });
   };
-
-  /** Mirrors plannerApp's `syncGridScroll`: the edge fades only when a day really is off-frame. */
-  function syncScroll(): void {
-    const grid = frame.querySelector<HTMLElement>(".planner-grid");
-    const hiddenPx = grid ? grid.getBoundingClientRect().width - frame.clientWidth : 0;
-    if (hiddenPx <= 1) {
-      delete frame.dataset.scroll;
-      return;
-    }
-    const maxScroll = frame.scrollWidth - frame.clientWidth;
-    const left = frame.scrollLeft;
-    frame.dataset.scroll = left <= 1 ? "start" : left >= maxScroll - 1 ? "end" : "middle";
-    setScrollFade(frame, left, maxScroll);
-  }
-
-  frame.addEventListener("scroll", syncScroll, { passive: true, signal: deps.signal });
-  window.addEventListener(
-    "resize",
-    () => {
-      syncScroll();
-      fitBlockLabels(frame);
-    },
-    { passive: true, signal: deps.signal },
-  );
 
   draw(true);
   if (year === null) return;

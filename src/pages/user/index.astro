@@ -81,6 +81,13 @@ const description = "En delt semesterplan fra Semesterplan.";
     margin: var(--space-1) 0 0;
   }
 
+  /* The Uke ⇄ Liste pair, at the top right of the week it governs. */
+  .public-plan :global(.public-plan-weekhead) {
+    display: flex;
+    justify-content: flex-end;
+    margin-bottom: var(--space-2);
+  }
+
   .public-plan :global(.public-plan-summary) {
     color: var(--fg);
   }
