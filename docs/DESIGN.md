@@ -165,7 +165,7 @@ happens and nowhere else — if the whole site is ruled, nothing is. Two
 corollaries, and the first is the one reviewers keep proposing against:
 *do not spread it* to panels, cards or a hero for "cohesion"; and *the week
 does not carry a squared field either*. A message is never rendered inside
-the week's frame as though it were a plan (`renderGridMessage` exists for
+the week's frame as though it were a plan (`renderWeekMessage` exists for
 that).
 
 **Ink-Before-Chrome.** Structure is tonal steps and hairlines; interactive
@@ -318,9 +318,17 @@ its rule is an inset shadow so at zero it draws nothing.
 **Two views, and they are Uke and Liste.** `WeekView` is
 `"kolonner" | "tavle"` — the stored values stay as they are, because that is
 what a student's localStorage already holds and what the pre-paint probe must
-agree with. A third transposed view ("Rader") was removed from the planner;
-its renderer (`grid.ts`) survives because `/emne/[code]/` draws a single
-course's week through it, and is now the only surface that does.
+agree with. A third transposed view ("Rader") was removed from the planner and
+then deleted outright; do not reintroduce it.
+
+**Every surface that draws a week draws these two, through one controller.**
+`/planlegger/`, `/emne/[code]/` and `/user/<navn>` all mount `weekView.ts`:
+same tab pair, same blocks, same popover, same margin. For a while they did
+not — the planner moved to the column week while the other two kept drawing
+the transposed one, which is how `/user/<navn>`'s own docstring came to claim a
+parity it had lost. **The view choice is one fact**, one `np:weekView`: it is
+how you are looking at a week rather than which week you are looking at, and a
+student who chose a list on a phone chose it for weeks, not for one page.
 
 **Both week geometries round their sessions to 4 px**, so the same session is
 not two shapes depending on which page drew it.
@@ -698,7 +706,24 @@ Settled, with the reasoning, so they are not re-opened by the next reviewer.
   people the same week, and a remembered choice would need a pre-paint read to
   avoid shifting the week in a frame late (§6). The narrowing acts on the
   ENTRIES handed to the renderer, not on `showAllGroups`: that flag states what
-  the surface is, and the switch is the student asking for a slice of it.
+  the surface is, and the switch is the student asking for a slice of it. The
+  flag is an option on `collectSessions`, which is what both views read their
+  entries through — `applyGroupSelection` is not a no-op with no picks and no
+  programme, so without it neither view could express this at all.
+
+  **Its blocks are live, and its popover carries no verb.** They were inert for
+  a while, on the stated grounds that the popover edits a plan. It does not:
+  it is a READ card, the facts of the session you pointed at, which is exactly
+  what a visitor deciding between five parallels wants. What this page genuinely
+  lacks is an editor to send them to, so `onOpenSettings` is null and the card
+  ends at the link to the course. Same on `/user/<navn>`, for the same reason.
+
+  **The week is dated by one rule, everywhere.** Inside the teaching period the
+  day headers carry their day-of-month and today gets its disc; outside it the
+  numerals come off and the week is a mønsteruke. `weekView` derives that from
+  the weeks it was handed rather than taking it from the caller, so three
+  surfaces cannot disagree about whether the week on screen is a particular
+  one.
 
 - **A bar that runs out of room folds into a menu, and the WRAPPER is what
   folds.** One controller (`src/lib/menuPanel.ts`), two bars. Above its

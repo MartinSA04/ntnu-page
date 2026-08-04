@@ -67,7 +67,8 @@ student, and no copy announces that the week is finished; both are gated by
 ground and a four-job colour scheme; type moved to the platform UI face and
 every vendored font deleted; six course hues cleared of all three signal
 colours and assigned from the plan's code *set*. Two views — Uke and Liste —
-with the third transposed geometry kept only for `/emne/[code]/`. One control
+drawn by every surface that shows a week, with the third transposed geometry
+deleted. One control
 bar at the top of the page, the verdict as a run of chips, and the
 registration deadline beside it. The week's own surface: 52 px hours, blocks
 carrying course and room only, a tinted øving layer, an all-day row for

@@ -115,34 +115,40 @@
   family now, so there is no swap left to hoist before paint. The attribute is
   still read by `/emner/` and the homepage, and `--plan-courses` by every
   reservation, so neither the probe nor the attribute is dead.
-  (b) `.planner-grid-frame`'s `min-height` (`planner-week.css`) — the week's
-  height, held from first paint. `renderSkeleton` already stops the
-  loading→data reflow; this is the paint→mount half, and it was 0.52 of the
-  0.61 on its own. It duplicates `SKELETON_DAYS` and the ruler's 22px from
-  `grid.ts`; the row metrics live on the *frame* so it can compute a week that
-  does not exist yet. **Each week geometry reserves its own height** and that
-  base class rule belongs to the transposed geometry alone — which is
-  `/emne/[code]/`'s and nothing else, because the planner's third view is
-  gone. The planner's two are Uke (the drawn hours × `--planner-hour-h`, the
-  `#`-scoped base rule) and Liste (a session count, `html[data-view="tavle"]`).
-  Reserving one for the other is worse than reserving nothing (0.14 CLS), and
-  the planner's rules are scoped **by id** so a remembered Liste height can
-  never reach the course page's frame. Liste has no formula, so
-  `saveWeekBox`/`--planner-box` remembers the height per view *and per width*
-  and the probe hands it back before paint — sound because a load in Liste is
-  by construction a return visit, and discarded outside a 32px width tolerance
-  rather than trusting another layout's number. **The probe's default view must
-  match `loadWeekView`'s** (`kolonner`), or a cold load reserves for a view it
-  is not about to draw. All of it is a **lease**: `--planner-box` is one
-  variable holding the height of the view the page LOADED in, so a reservation
-  that never ends kept Liste's 829px around the other view's much shorter week
-  the moment the student pressed the other tab (600px of white paper above the
-  exam list, for the rest of the visit).
-  `settleWeekBox` releases on the first drawn week and `setWeekView` on the way
-  out of a view. A gate for this needs a **one-course** plan — a full plan draws
-  a week taller than every reservation, so slack is zero whether or not the
-  lease is ever released, and the first version of that test passed with both
-  halves of the fix disabled.
+  (b) **the week's height, held from first paint** — the paint→mount half,
+  worth 0.52 of the 0.61 on its own (`renderWeekSkeleton` already stops the
+  loading→data reflow, which is the other half). **Each view reserves its own
+  height**: Uke is the drawn hours × `--planner-hour-h`, Liste is a session
+  count and has no formula at all, and reserving one for the other is worse
+  than reserving nothing (0.14 CLS). Three surfaces draw those two views, and
+  they do NOT all reserve the same way.
+  `/planlegger/`'s frame is in the static shell, so it reserves on the FRAME
+  and can be handed a remembered height: `saveWeekBox`/`--planner-box` files
+  what the week actually measured under **(surface, view, width)** and the
+  probe writes it back before paint. The surface is in the key because a
+  five-course planner's Liste number must never reach a one-course page; that
+  guard used to be an id selector, which is the wrong place for it once more
+  than one surface reserves. The width is in it because a list measured at
+  390px wraps differently at 1440, and it is discarded outside a 32px
+  tolerance.
+  `/emne/[code]/` and `/user/<navn>` build their frames AFTER a fetch, so what
+  holds their space is a placeholder standing in for a whole section — a
+  different box, with its own per-view numbers measured in those pages, and
+  `weekView` deliberately files nothing for them.
+  **The probe's default view must match `loadWeekView`'s** (`kolonner`), or a
+  cold load reserves for a view it is not about to draw. All of it is a
+  **lease**: `--planner-box` holds the height of the view the page LOADED in,
+  so a reservation that never ends kept Liste's 829px around the other view's
+  much shorter week the moment the student pressed the other tab (600px of
+  white paper above the exam list, for the rest of the visit). `weekView`'s
+  `settle` releases on the first drawn week and `setWeekView` on the way out of
+  a view. A gate for this needs a **one-course** plan — a full plan draws a
+  week taller than every reservation, so slack is zero whether or not the lease
+  is released, and the first version of that test passed with both halves
+  disabled. On the course page a CLS budget cannot gate it at all: the section
+  sits low enough that everything it displaces is below the fold, so
+  `e2e/cls.pw.ts` asserts the reservation against what the section actually
+  settles at instead.
   (c) **leases** — `data-reserve` attributes that JS deletes on reaching a
   terminal state, the idiom `/emne/[code].astro` already documents. Deleting
   one is not optional: a reservation left standing over a short answer is a

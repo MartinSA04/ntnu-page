@@ -78,9 +78,12 @@ programPlan.ts  study-plan resolution: resolvePeriodFor() is the ONE entry
    │  deadline.ts     NTNU's two standing registration dates
    │
    │  DOM renderers and dialogs:
+   │  weekView.ts     the week as one mountable thing: view state, tabs,
+   │                  scroll edge, now marker, popover, render switch
+   │  weekNotes.ts    what a week MEANS: margin, conflict count, gaps
    │  columnGrid.ts   "Uke" — days across, time down
    │  board.ts        "Liste" — a departure board, one row per session
-   │  grid.ts         the transposed week (days as rows), used by /emne/[code]/
+   │  weekSkeleton.ts a pending week, in the shape of the view about to land
    │  examList.ts     the exam month band + list
    │  layerMotion.ts  the øving layer's arrive/leave choreography
    │  studieinfo.ts   programme / kull / retning / semester modal
@@ -212,15 +215,31 @@ plannerApp.ts    orchestration: owns the DOM ids in planlegger/index.astro,
   nothing narrows as the viewport does — which is the point: the grid is
   weakest exactly where this is strongest, at 390 px, in print, and in a
   screen reader.
-- **`grid.ts`** — the transposed week (days as rows, time horizontal), and the
-  **only** renderer `/emne/[code]/` uses. It was a third planner view and is
-  no longer; do not delete it. `renderGrid(...) → GridRenderResult` reports
-  `conflictCount` (grouped collision slots), `conflictPairCount`,
-  `mutedLayerAutoRevealed`, `blockCount`, `state`, plus the two honesty
-  fields: `incompleteCourses[]` (courses whose timetable we could not get, as
-  opposed to courses NTNU publishes nothing for) and `partial` — "these counts
-  are a floor, do not print a clean verdict". `renderGridMessage` exists so a
+- **`weekView.ts`** — the week as ONE thing a page mounts, and the reason
+  there are three surfaces and not three weeks.
+  `mountWeekView({frame, notes, tabs, surface, onOpenSettings, signal})` owns
+  the view state (`np:weekView`), the Uke/Liste pair, the scroll edge and its
+  mask, the minute tick, the session popover, the frame's reservation lease,
+  and the choice between `renderColumnGrid` and `renderBoard`.
+  `render(states, input) → WeekRenderResult` draws and reports.
+  What a PAGE keeps is the CONTENT of its message branches (`message()`,
+  `card()`): the planner's empty week can be a studieretning question, an
+  unpublished semester or a failed fetch with a retry, and none of that belongs
+  to a shared controller.
+  `onOpenSettings: null` on the two surfaces with no editor, which omits the
+  popover's verb rather than pointing it at nothing.
+- **`weekNotes.ts`** — what a week MEANS, as distinct from how it is drawn:
+  the margin, the branch ladder and the verdict material.
+  `weekNotes(...) → WeekNotesResult` reports `conflictCount` (grouped
+  collision slots), `conflictPairCount`, `mutedLayerAutoRevealed`,
+  `pendingGroupCourses`, `state`/`message`, plus the two honesty fields:
+  `incompleteCourses[]` (courses whose timetable we could not get, as opposed
+  to courses NTNU publishes nothing for) and `partial` — "these counts are a
+  floor, do not print a clean verdict". `renderWeekMessage` exists so a
   message never renders inside the week's own frame as though it were a plan.
+  A collision note hands its group back through `onConflictClick` rather than
+  flashing it: the nodes belong to whichever view is mounted, which this module
+  never sees.
 - **`examList.ts`** — a **month band** showing the shape of the exam period,
   and under it the list. A same-day pair gets no connector (zero distance is
   not a distance); the band splits that day into both hues with a collision
@@ -280,8 +299,11 @@ plannerApp.ts    orchestration: owns the DOM ids in planlegger/index.astro,
   exam enrichment, which hangs **under** the catalog exam headline rather than
   beside it (DR-3 makes the catalog the authority; two peer exam blocks
   invited exactly the confusion that rule prevents).
-- **`courseTimetable.ts`** — hands fetched entries to `grid.ts` as a
-  one-course plan. One renderer, not two.
+- **`courseTimetable.ts`** — hands fetched entries to `weekView.ts` as a
+  one-course plan. One controller, one pair of views, not a second of either.
+  `weeksOf` is why an off-term course still draws: both views filter through
+  `entriesInSemester`, and `entriesForSemester` has already fallen back to a
+  term whose weeks are not the planned semester's.
 - **`gradeChart.ts`** — the Karakterer figure. Small multiples, because a
   100 %-stacked bar needs six mutually distinguishable colours for A–F and the
   palette validator rejected every such ramp this system can build. Small
@@ -639,9 +661,9 @@ Islands are **vanilla `<script>` modules** (no framework) fetching relative
   (5 470 pages). Order is the fork point first: code · name · campus → the
   verdict CTA (flipping to "Fjern fra planen" / "Dropp" / "Legg tilbake"
   against the stored plan) with a clash sentence in the reserved slot beneath
-  it → the week for `offeredYears[0]`, narrowed to ONE semester, via
-  `grid.ts` (its frame carries `data-static`, so the shared block styling
-  drops the click affordance no handler backs) → one exam block → **Karakterer**
+  it → the week for `offeredYears[0]`, narrowed to ONE semester, drawn by
+  `weekView` in whichever of the two views the student last chose → one exam
+  block → **Karakterer**
   → the key-facts panel → all prose in one "Mer om emnet" disclosure. A course
   whose `offeredYears` excludes the catalog year gets **no add control**, only
   the sentence "Kan ikke legges til i planen …". **No year tabs** — upstream
@@ -651,9 +673,12 @@ Islands are **vanilla `<script>` modules** (no framework) fetching relative
   (`src/pages/user/index.astro`) that the worker rewrites every `/user/*`
   request to, so the name comes from `location.pathname` rather than an Astro
   param — there is no param and no per-account page to build. It fetches
-  `/api/plan/<navn>`, draws the week through the planner's own `renderGrid`
-  (`data-static`, as the course page's week is), lists the courses, and ends in
-  "Lag din egen plan". `src/components/planner/publicPlan.ts` **must never
+  `/api/plan/<navn>`, draws the week through `weekView` in both views like
+  every other surface that shows one (`onOpenSettings: null` — nothing here is
+  the viewer's to change), lists the courses, and ends in "Lag din egen plan".
+  Its Uke/Liste pair is the ONE built at runtime (`buildWeekTabs`), because
+  every element on this page arrives after a fetch and there is no static shell
+  to server-render it into. `src/components/planner/publicPlan.ts` **must never
   import `PlanStore` or touch `localStorage`** — a shared link shows you
   someone else's plan and leaves yours alone — and `tests/planner/publicPlan.test.ts`
   asserts that against the module's source rather than trusting the comment.
