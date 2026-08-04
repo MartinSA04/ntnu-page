@@ -67,7 +67,13 @@ export function validateName(raw: string): string | null {
   return name;
 }
 
-/** One account, as stored under `user:<navn>`. `plain` is set only by publishing (phase 2). */
+/**
+ * One account, as stored under `user:<navn>`.
+ *
+ * `plain` is the PUBLISHED copy and is set only by `handlePublish` — plaintext
+ * on purpose, because `/user/<navn>` is read by someone who has no key. `blob`
+ * stays the private source of truth either way.
+ */
 export interface SyncRecord {
   authHash: string;
   version: number;
@@ -287,6 +293,71 @@ export async function handleSyncPut(
   };
   await deps.kv.put(recordKey(name), JSON.stringify(next));
   return json({ version: next.version }, 200);
+}
+
+/**
+ * Publishing writes a PLAINTEXT copy beside the ciphertext, because the public
+ * page has to be readable by someone who has no key. `blob` stays the private
+ * source of truth and is never served by `handlePublicRead`.
+ *
+ * `version` is deliberately NOT bumped. It is the private mirror's optimistic
+ * lock, and every other device holds the number it last pushed at: bumping it
+ * here would 409 the next PUT on every one of them, over a change none of them
+ * made and none of them can see. Publishing is a second, independent fact about
+ * the same record, not a write to the plan.
+ */
+export async function handlePublish(
+  rawName: string,
+  authKey: string | null,
+  body: unknown,
+  deps: SyncDeps,
+): Promise<Response> {
+  const name = validateName(rawName);
+  if (name === null) return json({ error: "bad_name" }, 400);
+  const found = await authorise(name, authKey, deps);
+  if (found instanceof Response) return found;
+
+  const plain = asRecord(body)?.plain;
+  if (typeof plain !== "string") return json({ error: "bad_body" }, 400);
+  // Same ceiling as `blob`, for the same reason: this is a course list, and
+  // anything near half a megabyte of it is not a semester plan.
+  if (plain.length > MAX_BLOB_CHARS) return json({ error: "blob_too_large" }, 413);
+
+  const next: SyncRecord = { ...found, public: true, plain, updatedAt: deps.now() };
+  await deps.kv.put(recordKey(name), JSON.stringify(next));
+  return json({ published: true }, 200);
+}
+
+/** Un-publishing clears `plain` outright rather than only flipping the flag —
+ *  a plan nobody may read has no business staying in the record. */
+export async function handleUnpublish(
+  rawName: string,
+  authKey: string | null,
+  deps: SyncDeps,
+): Promise<Response> {
+  const name = validateName(rawName);
+  if (name === null) return json({ error: "bad_name" }, 400);
+  const found = await authorise(name, authKey, deps);
+  if (found instanceof Response) return found;
+
+  const next: SyncRecord = { ...found, public: false, plain: null, updatedAt: deps.now() };
+  await deps.kv.put(recordKey(name), JSON.stringify(next));
+  return new Response(null, { status: 204 });
+}
+
+/**
+ * No credential, and a uniform 404 for "no such account", "not published" and
+ * "not a valid name": an unpublished account must not be distinguishable from a
+ * free one, or the public route becomes a name-enumeration oracle for a surface
+ * whose whole point is that anyone may call it.
+ */
+export async function handlePublicRead(rawName: string, deps: SyncDeps): Promise<Response> {
+  const name = validateName(rawName);
+  if (name === null) return json({ error: "not_found" }, 404);
+  const record = await read(name, deps);
+  if (record === null) return json({ error: "not_found" }, 404);
+  if (!record.public || record.plain === null) return json({ error: "not_found" }, 404);
+  return json({ plain: record.plain, updatedAt: record.updatedAt }, 200);
 }
 
 export async function handleSyncDelete(

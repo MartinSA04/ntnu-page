@@ -2,10 +2,13 @@ import { describe, expect, it } from "vitest";
 import worker, { type Env } from "../../worker/src/server.js";
 import {
   AuthLimiter,
+  handlePublicRead,
+  handlePublish,
   handleSyncClaim,
   handleSyncDelete,
   handleSyncGet,
   handleSyncPut,
+  handleUnpublish,
   type SyncDeps,
   type SyncKv,
   validateName,
@@ -173,6 +176,81 @@ describe("sync account lifecycle", () => {
     const kv = fakeKv();
     await handleSyncClaim("martin", { authKey: AUTH, blob: "cipher" }, deps(kv));
     expect(kv.map.get("user:martin")).not.toContain(AUTH);
+  });
+});
+
+const PLAN = JSON.stringify({ semesterId: "26h", courses: [{ code: "TDT4120" }] });
+
+describe("publishing", () => {
+  it("publishes a plaintext copy and serves it without any credential", async () => {
+    const kv = fakeKv();
+    await handleSyncClaim("martin", { authKey: AUTH, blob: "cipher" }, deps(kv));
+
+    expect((await handlePublish("martin", AUTH, { plain: PLAN }, deps(kv))).status).toBe(200);
+
+    const res = await handlePublicRead("martin", deps(kv));
+    expect(res.status).toBe(200);
+    expect(await res.json()).toMatchObject({ plain: PLAN });
+  });
+
+  it("404s an unpublished account, so a name cannot be probed for existence", async () => {
+    const kv = fakeKv();
+    await handleSyncClaim("martin", { authKey: AUTH, blob: "cipher" }, deps(kv));
+    expect((await handlePublicRead("martin", deps(kv))).status).toBe(404);
+    expect((await handlePublicRead("finnes-ikke", deps(kv))).status).toBe(404);
+  });
+
+  it("refuses to publish without the right authKey", async () => {
+    const kv = fakeKv();
+    await handleSyncClaim("martin", { authKey: AUTH, blob: "cipher" }, deps(kv));
+    expect((await handlePublish("martin", OTHER, { plain: PLAN }, deps(kv))).status).toBe(401);
+    expect((await handlePublicRead("martin", deps(kv))).status).toBe(404);
+  });
+
+  it("unpublishes and stops serving, without touching the private blob", async () => {
+    const kv = fakeKv();
+    await handleSyncClaim("martin", { authKey: AUTH, blob: "cipher" }, deps(kv));
+    await handlePublish("martin", AUTH, { plain: PLAN }, deps(kv));
+
+    expect((await handleUnpublish("martin", AUTH, deps(kv))).status).toBe(204);
+    expect((await handlePublicRead("martin", deps(kv))).status).toBe(404);
+
+    const still = await handleSyncGet("martin", AUTH, deps(kv));
+    expect(await still.json()).toMatchObject({ blob: "cipher" });
+  });
+
+  it("never exposes the ciphertext on the public route", async () => {
+    const kv = fakeKv();
+    await handleSyncClaim("martin", { authKey: AUTH, blob: "cipher" }, deps(kv));
+    await handlePublish("martin", AUTH, { plain: PLAN }, deps(kv));
+    expect(JSON.stringify(await (await handlePublicRead("martin", deps(kv))).json())).not.toContain(
+      "cipher",
+    );
+  });
+
+  it("leaves the private version counter alone, so no device is made stale by a publish", async () => {
+    const kv = fakeKv();
+    await handleSyncClaim("martin", { authKey: AUTH, blob: "cipher" }, deps(kv));
+    await handlePublish("martin", AUTH, { plain: PLAN }, deps(kv));
+    await handleUnpublish("martin", AUTH, deps(kv));
+    // A bumped `version` here would 409 every other device's next PUT over a
+    // change none of them made and cannot see.
+    expect(await (await handleSyncGet("martin", AUTH, deps(kv))).json()).toMatchObject({
+      version: 1,
+    });
+  });
+
+  it("refuses an oversized plain copy, as the private blob already does", async () => {
+    const kv = fakeKv();
+    await handleSyncClaim("martin", { authKey: AUTH, blob: "cipher" }, deps(kv));
+    const res = await handlePublish(
+      "martin",
+      AUTH,
+      { plain: "x".repeat(512 * 1024 + 1) },
+      deps(kv),
+    );
+    expect(res.status).toBe(413);
+    expect((await handlePublicRead("martin", deps(kv))).status).toBe(404);
   });
 });
 
