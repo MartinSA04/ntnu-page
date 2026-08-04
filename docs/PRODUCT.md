@@ -173,8 +173,8 @@ handoff (5)**. The second is the growth loop, not plumbing.
    deadline, no verdict, no week frame, no Eksamener, no Emner — every one of
    those presupposes the content that is missing, which is why the empty
    planner used to read worse than an empty page. **Choosing a kull commits**:
-   the sentence promises a ready week for two facts, and a third press would
-   make that false, so there is no Lagre on that screen. Studieretning is not
+   the sentence names what those two facts produce, and a Lagre would stand
+   between the student and it, so there is none on that screen. Studieretning is not
    asked there; `#planner-direction` asks it afterwards, once the study plan
    has landed and it knows whether it matters.
 

@@ -439,12 +439,23 @@ separator: "Planlegger", "Emner", "TDT4120 Algoritmer og datastrukturer",
 "Fant ikke siden". The homepage stays "Semesterplan". Both calendars this
 project benchmarks against name the page and nothing else in the tab.
 
-**"Tegne uka" is struck from the vocabulary** — no "tegner vi uka di", no
-inflection of it, in UI copy or in new comments. The idiom is **"så er uka
-klar"**. The verb was wrong for this product: we assemble a week that already
-exists in NTNU's data, we do not invent one.
+**Name what shows up. Never announce that it is finished.** Two phrasings are
+struck, and the second is why the rule is worth stating rather than just the
+ban list:
 
-`tests/copy.test.ts` gates both. It strips comments before scanning, so code
+- **"tegne uka"**, in any inflection. We assemble a week that already exists in
+  NTNU's data; we do not invent one.
+- **"så er uka klar" / "uka er klar"**, and the same shape around *timeplanen*
+  or *ukeplanen*. This one reads as the product congratulating itself on a
+  state, which is a claim rather than a description — and the student cannot
+  check it against anything on screen.
+
+Write the outcome as the thing that appears: **"så lages timeplanen din"**,
+"så vises ukeplanen med en gang". A sentence that names a visible result is
+one the page can be held to.
+
+`tests/copy.test.ts` gates all of it, and its failure message carries the
+rewrite rather than only the ban. It strips comments before scanning, so code
 comments and the four docs keep their heavily em-dashed register on purpose.
 When it fails, rewrite the string; do not loosen the test.
 

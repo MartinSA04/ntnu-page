@@ -198,7 +198,7 @@ export function clashSentence(verdict: ClashVerdict, semester: ClashSemester): s
   const term = semesterLabel(semester.name);
   switch (verdict.kind) {
     case "no-plan":
-      return "Du har ingen plan ennå. Legg til emnet, så er uka klar.";
+      return "Du har ingen plan ennå. Legg til emnet, så lages timeplanen din.";
     case "empty":
       return `Ingen andre emner i planen din for ${term}.`;
     case "off-semester":

@@ -7,9 +7,13 @@
  *    unrelated jobs at once — sentence punctuation, field separation and brand
  *    separation — so none of them read as deliberate. The rewrite rule is
  *    "prose becomes sentences, data rows become spaced fields".
- *  - **No "tegne uka"**. The verb is wrong for this product: we assemble a week
- *    that already exists in NTNU's data, we do not invent one. The replacement
- *    idiom is "så er uka klar".
+ *  - **No claims that the week is ready or drawn.** "Tegne uka" was wrong
+ *    because we assemble a week that already exists in NTNU's data rather than
+ *    inventing one; "så er uka klar" was wrong for a subtler reason and it went
+ *    the same way. Both narrate a STATE the product is announcing about itself.
+ *    Say what appears instead: "så lages timeplanen din", "så vises ukeplanen".
+ *    The rule is **name the thing that shows up**, never assert that it is
+ *    finished.
  *
  * This is a mechanism test, not a design assertion (CLAUDE.md): its failure
  * means someone reintroduced a banned mark or a struck word, which is a real
@@ -30,10 +34,27 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 /** Banned in user-facing strings, with no substitute mark permitted. */
 const BANNED_MARKS = /[—·]/;
 /**
- * "Tegne uka" and every inflection of it, including the one that puts a
- * pronoun in the middle ("så tegner vi uka di").
+ * Phrasings that announce a state instead of naming what shows up. Each entry
+ * carries the rewrite, so a failure tells its reader what to write rather than
+ * only what not to.
  */
-const BANNED_PHRASE = /tegn\w*(\s+\w+){0,2}\s+uk[ae]/i;
+const BANNED_PHRASES: { re: RegExp; instead: string }[] = [
+  {
+    // Including the inflection that puts a pronoun in the middle
+    // ("så tegner vi uka di").
+    re: /tegn\w*(\s+\w+){0,2}\s+uk[ae]/i,
+    instead: 'name what appears, e.g. "så lages timeplanen din"',
+  },
+  {
+    // "så er uka klar", "uka er klar", "timeplanen blir klar", and friends.
+    re: /\b(?:er|blir)\s+(?:uk[ae]n?|timeplanen|ukeplanen)\s+klar\b/i,
+    instead: 'name what appears, e.g. "så lages timeplanen din"',
+  },
+  {
+    re: /\b(?:uk[ae]n?|timeplanen|ukeplanen)\s+(?:er|blir)\s+klar\b/i,
+    instead: 'name what appears, e.g. "så lages timeplanen din"',
+  },
+];
 
 /**
  * Removes block and line comments so the scan sees only code and strings.
@@ -85,12 +106,17 @@ describe("user-facing copy", () => {
     expect(offenders).toEqual([]);
   });
 
-  it("never says tegne uka", () => {
+  it("names what shows up rather than announcing a finished week", () => {
     const offenders: string[] = [];
     for (const file of sourceFiles()) {
-      if (BANNED_PHRASE.test(stripComments(readFileSync(file, "utf8")))) {
-        offenders.push(relative(ROOT, file));
-      }
+      const stripped = stripComments(readFileSync(file, "utf8"));
+      stripped.split("\n").forEach((line, i) => {
+        for (const { re, instead } of BANNED_PHRASES) {
+          if (re.test(line)) {
+            offenders.push(`${relative(ROOT, file)}:${i + 1}  ${line.trim()}  → ${instead}`);
+          }
+        }
+      });
     }
     expect(offenders).toEqual([]);
   });

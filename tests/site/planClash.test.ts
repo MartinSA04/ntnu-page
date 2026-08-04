@@ -77,7 +77,7 @@ describe("planClash", () => {
     ]);
     expect(verdict).toEqual({ kind: "no-plan" });
     expect(clashSentence(verdict, SEMESTER)).toBe(
-      "Du har ingen plan ennå. Legg til emnet, så er uka klar.",
+      "Du har ingen plan ennå. Legg til emnet, så lages timeplanen din.",
     );
   });
 

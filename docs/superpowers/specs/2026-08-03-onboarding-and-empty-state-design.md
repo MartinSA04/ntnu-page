@@ -209,7 +209,9 @@ homepage stays `Semesterplan`. Both calendars this project benchmarks against
 name the page and nothing else in the tab.
 
 **"Tegne uka" is struck from the vocabulary**, in UI copy and in new comments.
-The replacement idiom is "så er uka klar".
+The replacement idiom is "så lages timeplanen din". (This line read "så er uka
+klar" until 2026-08-04, when that phrasing was struck too: it announces a state
+rather than naming what appears. See DESIGN.md §8, which is authoritative.)
 
 Scope: strings a student can read, in `src/` and `worker/`. That includes
 everything publish-and-share leaves behind — the signup and login copy, the

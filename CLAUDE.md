@@ -268,11 +268,14 @@
   substitute mark** — not `–`, not `|`, not a hyphen standing in for one. The
   rewrite rule is *prose becomes sentences, data rows become spaced fields*;
   subpage `<title>`s drop the brand suffix rather than substitute a separator.
-  It also bans **"tegne uka"** in every inflection; the idiom is "så er uka
-  klar". The test strips comments before scanning, so code comments and the
-  four docs keep their heavily em-dashed register on purpose — that asymmetry
-  is deliberate and is not a bug in the test. When it fails, rewrite the
-  string; do not loosen the regex, and do not add an exemption list.
+  It also enforces **name what shows up, never announce that it is finished**:
+  "tegne uka" is banned in every inflection, and so is "så er uka klar" / "uka
+  er klar" and the same shape around *timeplanen*/*ukeplanen*. Write the
+  visible outcome instead — "så lages timeplanen din", "så vises ukeplanen".
+  The test strips comments before scanning, so code comments and the four docs
+  keep their heavily em-dashed register on purpose — that asymmetry is
+  deliberate and is not a bug in the test. When it fails, rewrite the string;
+  do not loosen the regex, and do not add an exemption list.
 - **The planner's first-run screen has three non-obvious rules**
   (`docs/DESIGN.md` §9 has the reasoning). (a) Its predicate is
   `html:not([data-plan])`, which the pre-paint probe already writes — do not

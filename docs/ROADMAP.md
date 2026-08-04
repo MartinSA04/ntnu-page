@@ -59,7 +59,8 @@ register are two forms with one submit each and a link between them, and both
 the first-run screen and the landing page offer login to a returning student on
 a new browser. `/emne/[code]/` tells a cold arrival it has no plan yet rather
 than reporting on one it does not have. Sitewide, no `—` and no `·` reach a
-student, gated by `tests/copy.test.ts`.
+student, and no copy announces that the week is finished; both are gated by
+`tests/copy.test.ts`.
 
 **The calendar direction** (`docs/DESIGN.md`). Tokens remapped to a white
 ground and a four-job colour scheme; type moved to the platform UI face and
