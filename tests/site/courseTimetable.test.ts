@@ -8,7 +8,9 @@ import {
   scopeNote,
   termLabel,
   termNote,
+  weeksOf,
 } from "../../src/components/site/courseTimetable.js";
+import { entriesInSemester } from "../../src/lib/planner/schedule.js";
 
 /** Høst 2026's real teaching weeks, from data/semesters.json. */
 const AUTUMN_WEEKS = [34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47];
@@ -20,6 +22,7 @@ const OPTIONS: CourseTimetableOptions = {
   version: "1",
   year: 2026,
   semester: { season: "AUTUMN", year: 2026, label: "Høst 2026", teachingWeeks: AUTUMN_WEEKS },
+  signal: new AbortController().signal,
 };
 
 function entry(term: string | null, weeks: string[] = ["34-40"]): CourseTimetableEntry {
@@ -116,6 +119,35 @@ describe("entriesForSemester (one semester's week, not the year's)", () => {
   it("keeps everything when upstream sends no term keys", () => {
     const untermed = [entry(null, ["3-13"]), entry(null, ["34-45"])];
     expect(entriesForSemester(untermed, [24, 25, 26])).toEqual(untermed);
+  });
+});
+
+/**
+ * Both surviving views filter their entries through `entriesInSemester`, and
+ * this page cannot hand them the PLANNED semester's teaching weeks: the
+ * fallback above deliberately draws the newest term when nothing intersects,
+ * and that term's weeks are by definition not the planned semester's. Handing
+ * over the planned weeks would filter the fallback straight back out and leave
+ * an empty week where last term's honest timetable used to be.
+ */
+describe("weeksOf (the weeks the drawn entries actually carry)", () => {
+  it("unions and sorts the drawn entries' own weeks", () => {
+    const drawn = [entry("2026_HØST", ["34-36"]), entry("2026_HØST", ["41", "39"])];
+    expect(weeksOf(drawn)).toEqual([34, 35, 36, 39, 41]);
+  });
+
+  it("survives the round trip that used to empty an off-term week", () => {
+    // Autumn-only course, student planning spring: `entriesForSemester` has
+    // already fallen back to autumn, and these weeks are what keeps it drawn.
+    const spring = entry("2026_VÅR", ["3-13"]);
+    const autumn = entry("2026_HØST", ["34-36"]);
+    const shown = entriesForSemester([spring, autumn], SPRING_WEEKS.slice(0, 0).concat([24, 25]));
+    expect(entriesInSemester(shown, weeksOf(shown))).toEqual(shown);
+    expect(entriesInSemester(shown, SPRING_WEEKS)).toEqual([]);
+  });
+
+  it("is empty for no entries rather than undefined", () => {
+    expect(weeksOf([])).toEqual([]);
   });
 });
 

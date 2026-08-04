@@ -1,0 +1,278 @@
+{
+  "url": "http://127.0.0.1:8788/api/course/TMA4100?year=2025",
+  "status": 200,
+  "contentType": "application/json; charset=utf-8",
+  "body": {
+    "courseCode": "TMA4100",
+    "courseName": "Matematikk 1",
+    "credits": 7.5,
+    "level": "Grunnleggende emner, nivå I",
+    "teachingStart": null,
+    "teachingDuration": null,
+    "teachingLanguage": "Norsk",
+    "location": "Trondheim",
+    "assessmentScheme": "Skriftlig skoleeksamen",
+    "gradeRule": "Bokstavkarakterer",
+    "facts": [
+      {
+        "label": "Studiepoeng",
+        "value": "7,5"
+      },
+      {
+        "label": "Nivå",
+        "value": "Grunnleggende emner, nivå I"
+      },
+      {
+        "label": "Undervisningsspråk",
+        "value": "Norsk"
+      },
+      {
+        "label": "Sted",
+        "value": "Trondheim"
+      },
+      {
+        "label": "Vurderingsordning",
+        "value": "Skriftlig skoleeksamen"
+      }
+    ],
+    "content": "Grenser, kontinuitet, derivasjon og integrasjon av funksjoner av én variabel. Skjæringssetningen, sekantsetningen (middelverditeoremet), maksima og minima, transcendente funksjoner, implisitt derivasjon, relaterte vekstrater, ubestemte former, Newtons metode. Riemannsummer, bestemt integral og analysens fundamentalteorem, integrasjonsteknikker og numerisk integrasjon. Areal, volum, buelengde, og areal av rotasjonsflater. Følger, rekker og potensrekker. Taylorrekker, Taylors formel. Førsteordens separable og lineære differensialligninger. Eulers metode. Eksempler på matematisk modellering og anvendelser innenfor naturvitenskap, teknologi og økonomi.",
+    "learningOutcome": "Kunnskap. Studenten forstår og kan gjenkjenne og anvende grunnleggende begreper, resultater og metoder fra envariabel matematisk analyse som omhandler grenser, kontinuitet, derivasjon, integrasjon, konvergens av følger og rekker, taylorpolynom og taylorrekker. Studenten forstår og kan anvende grunnleggende numeriske metoder for løsning av ikke-lineære ligninger, differensialligninger og integrasjon. Studenten kjenner til hvilke muligheter og begrensninger som ligger i bruk av matematisk programvare.\nFerdigheter. Studenten kan anvende sin kunnskap om énvariabel matematisk analyse til å formulere og løse enkle problemer i matematikk og naturvitenskap/teknologi, om nødvendig supplert med bruk av matematisk programvare.",
+    "learningMethods": "Forelesninger og obligatoriske øvinger. Antall øvinger som må godkjennes vil bli oppgitt ved semesterstart på hjemmesiden til emnet. Deler av undervisningen kan bli gitt på engelsk.",
+    "mandatoryActivities": [
+      "Øvinger"
+    ],
+    "assessmentDetails": "Karakter basert på avsluttende skriftlig eksamen. Ved utsatt eksamen (kontinuasjonseksamen) kan skriftlig eksamen bli endret til muntlig eksamen. Utsatt eksamen er i august.",
+    "specialConditions": null,
+    "requiredKnowledge": null,
+    "recommendedKnowledge": "Matematikk R2 eller 3 MX fra videregående skole.",
+    "courseMaterials": "Oppgis ved semesterstart.",
+    "creditReductions": [
+      {
+        "courseCode": "SIF5003",
+        "reduction": "7,5 sp",
+        "fromTerm": null
+      },
+      {
+        "courseCode": "MA1101",
+        "reduction": "3,7 sp",
+        "fromTerm": null
+      },
+      {
+        "courseCode": "MA1102",
+        "reduction": "3,7 sp",
+        "fromTerm": null
+      },
+      {
+        "courseCode": "MA6102",
+        "reduction": "3,7 sp",
+        "fromTerm": null
+      },
+      {
+        "courseCode": "MA0001",
+        "reduction": "6 sp",
+        "fromTerm": "Vår 2009"
+      },
+      {
+        "courseCode": "MA0003",
+        "reduction": "6 sp",
+        "fromTerm": "Vår 2009"
+      },
+      {
+        "courseCode": "MA6101",
+        "reduction": "3,7 sp",
+        "fromTerm": "Høst 2009"
+      },
+      {
+        "courseCode": "TMA4101",
+        "reduction": "3,7 sp",
+        "fromTerm": "Høst 2020"
+      },
+      {
+        "courseCode": "TMA4400",
+        "reduction": "5,5 sp",
+        "fromTerm": "Høst 2025"
+      },
+      {
+        "courseCode": "TMA4410",
+        "reduction": "2 sp",
+        "fromTerm": "Høst 2025"
+      },
+      {
+        "courseCode": "TMA4422",
+        "reduction": "2 sp",
+        "fromTerm": "Høst 2025"
+      },
+      {
+        "courseCode": "TMA4401",
+        "reduction": "7,5 sp",
+        "fromTerm": "Høst 2025"
+      }
+    ],
+    "subjectAreas": [
+      "Teknologiske fag"
+    ],
+    "studyPrograms": [
+      {
+        "code": "MTBYGG",
+        "name": "Bygg og infrastruktur"
+      },
+      {
+        "code": "MTKOM",
+        "name": "Cybersikkerhet og datakommunikasjon"
+      },
+      {
+        "code": "MTDT",
+        "name": "Datateknologi"
+      },
+      {
+        "code": "MTENERG",
+        "name": "Energi og miljø"
+      },
+      {
+        "code": "BFY",
+        "name": "Fysikk"
+      },
+      {
+        "code": "MTFYMA",
+        "name": "Fysikk og matematikk"
+      },
+      {
+        "code": "MTDESIG",
+        "name": "Industriell design"
+      },
+      {
+        "code": "MTIØT",
+        "name": "Industriell økonomi og teknologiledelse"
+      },
+      {
+        "code": "MTING",
+        "name": "Ingeniørvitenskap og IKT"
+      },
+      {
+        "code": "MTMART",
+        "name": "Marin teknikk"
+      },
+      {
+        "code": "MTMT",
+        "name": "Materialteknologi"
+      },
+      {
+        "code": "MTNANO",
+        "name": "Nanoteknologi"
+      },
+      {
+        "code": "MTPETR",
+        "name": "Petroleumsfag"
+      },
+      {
+        "code": "MTPROD",
+        "name": "Produktutvikling og produksjon"
+      },
+      {
+        "code": "MTTEKGEO",
+        "name": "Tekniske geofag"
+      }
+    ],
+    "contacts": [],
+    "department": "Institutt for matematiske fag",
+    "exams": [
+      {
+        "occasion": "Ordinær eksamen",
+        "season": "Høst 2025",
+        "form": "Skriftlig skoleeksamen",
+        "weighting": "100/100",
+        "aidCode": "Kode D",
+        "aidCodeDescription": "D: Ingen trykte eller håndskrevne hjelpemidler tillatt. Bestemt, enkel kalkulator tillatt.",
+        "date": "2025-11-19",
+        "dateText": "19.11.2025",
+        "time": "09:00",
+        "timeText": "09:00",
+        "duration": "4 timer",
+        "system": "Inspera Assessment",
+        "rooms": [
+          {
+            "building": "Sluppenvegen 14",
+            "room": "SL120",
+            "candidates": 16
+          },
+          {
+            "building": "Sluppenvegen 14",
+            "room": "SL271",
+            "candidates": 2
+          },
+          {
+            "building": "Sluppenvegen 14",
+            "room": "SL274",
+            "candidates": 2
+          },
+          {
+            "building": "Sluppenvegen 14",
+            "room": "SL310 blå sone",
+            "candidates": 48
+          },
+          {
+            "building": "Sluppenvegen 14",
+            "room": "SL310 hvit sone",
+            "candidates": 35
+          },
+          {
+            "building": "Sluppenvegen 14",
+            "room": "SL310 lilla sone",
+            "candidates": 80
+          },
+          {
+            "building": "Sluppenvegen 14",
+            "room": "SL310 turkis sone",
+            "candidates": 59
+          },
+          {
+            "building": "Sluppenvegen 14",
+            "room": "SL322",
+            "candidates": null
+          },
+          {
+            "building": "Sluppenvegen 14",
+            "room": "SL325",
+            "candidates": null
+          },
+          {
+            "building": "Sluppenvegen 14",
+            "room": "SL420",
+            "candidates": null
+          }
+        ]
+      }
+    ],
+    "studyYear": 2025,
+    "availableYears": [
+      2025,
+      2024,
+      2023,
+      2022,
+      2021,
+      2020,
+      2019,
+      2018,
+      2017,
+      2016,
+      2015,
+      2014,
+      2013,
+      2012,
+      2011,
+      2010,
+      2009,
+      2008,
+      2007
+    ],
+    "notices": [
+      "Det tilbys ikke lenger undervisning i emnet."
+    ],
+    "courseLinks": [
+      {
+        "label": "Faglærers emneside",
+        "url": "https://wiki.math.ntnu.no/tma4100"
+      }
+    ]
+  }
+}

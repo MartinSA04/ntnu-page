@@ -1,9 +1,10 @@
 ---
 import catalogData from "../../../data/catalog.json";
 import semestersData from "../../../data/semesters.json";
+import WeekTabs from "../../components/WeekTabs.astro";
 import Layout from "../../layouts/Layout.astro";
-// The week is rendered by components/planner/grid.ts, so this page needs the
-// same geometry /planlegger/ uses — one shared stylesheet, not a second copy.
+// This page mounts the same `weekView` /planlegger/ does, so it needs the same
+// geometry — one shared stylesheet, not a second copy.
 import "../../styles/planner-week.css";
 
 export function getStaticPaths() {
@@ -154,7 +155,13 @@ const description = `${course.code} ${course.name}: timeplan, eksamen og nøkkel
     data-offered={String(isOffered)}
   >
     <section class="emne-section" id="timetable-section">
-      <h2 class="np-kicker emne-section-head">Timeplan</h2>
+      {/* The Uke/Liste pair is in the STATIC shell, hidden until there is a
+          week to view. Built at mount it would pop a control in a frame late,
+          on top of a frame already holding its own height. */}
+      <div class="emne-section-head-row">
+        <h2 class="np-kicker emne-section-head">Timeplan</h2>
+        <div data-role="tabs" hidden><WeekTabs idPrefix="emne" /></div>
+      </div>
       <p class="emne-loading np-hint" data-role="status" data-reserve aria-live="polite">
         Henter timeplanen …
       </p>
@@ -271,6 +278,15 @@ const description = `${course.code} ${course.name}: timeplan, eksamen og nøkkel
   }
   .emne-section-head {
     margin-bottom: var(--space-3);
+  }
+  /* The kicker and the view switch share a baseline, the way the planner's bar
+     puts the same pair at the top of its page. */
+  .emne-section-head-row {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--gap-3);
+    flex-wrap: wrap;
   }
 
   /* The three fetched sections each collapsed to a one-line "Henter … …" and

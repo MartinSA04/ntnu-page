@@ -1,0 +1,6 @@
+{
+  "url": "http://127.0.0.1:8788/api/course/TMA4100/timetable?year=2025&version=1",
+  "status": 200,
+  "contentType": "application/json; charset=utf-8",
+  "body": []
+}

@@ -21,11 +21,29 @@ import {
 } from "../../lib/planner/data.js";
 import { applyGroupSelection } from "../../lib/planner/groups.js";
 import { naturalHue } from "../../lib/planner/hues.js";
-import { entriesInSemester } from "../../lib/planner/schedule.js";
+import { entriesInSemester, parseWeeks } from "../../lib/planner/schedule.js";
 import { el } from "../planner/dom.js";
-import { fitBlockLabels, renderGrid, setScrollFade } from "../planner/grid.js";
 import { beginLayerChange } from "../planner/layerMotion.js";
 import type { PlanCourseState } from "../planner/types.js";
+import { mountWeekView } from "../planner/weekView.js";
+
+/**
+ * The Uke/Liste pair `[code].astro` server-rendered, revealed now that there is
+ * a week to view. Hidden until here rather than absent: a control built at
+ * mount pops in a frame late, on top of a frame already holding its own height.
+ */
+function tabsFor(
+  section: HTMLElement,
+): { kolonner: HTMLButtonElement; tavle: HTMLButtonElement } | null {
+  const host = section.querySelector<HTMLElement>('[data-role="tabs"]');
+  const kolonner = document.getElementById("emne-view-kolonner");
+  const tavle = document.getElementById("emne-view-tavle");
+  if (!host || !(kolonner instanceof HTMLButtonElement) || !(tavle instanceof HTMLButtonElement)) {
+    return null;
+  }
+  host.hidden = false;
+  return { kolonner, tavle };
+}
 
 /** The planner's entry shape plus the `term` field only this page reads. */
 export interface CourseTimetableEntry extends PlannerTimetableEntry {
@@ -42,8 +60,13 @@ export interface CourseTimetableOptions {
   year: number;
   /** The semester the plan is for, so an off-semester timetable can say so. */
   semester: { season: string; year: number; label: string; teachingWeeks: number[] };
-  /** The page's lifecycle signal — the window-level scroll/resize listeners hang off it. */
-  signal?: AbortSignal;
+  /**
+   * The page's lifecycle signal. REQUIRED: the week binds a minute timer, a
+   * window resize and a document visibilitychange to it, and a ClientRouter
+   * navigation to the next course page would otherwise leave all three running
+   * against a detached frame.
+   */
+  signal: AbortSignal;
   /** The stored programme, for the "bare min undervisning" narrowing. */
   programCode?: string | null;
   /** The student's group picks for this course, when it is in the plan. */
@@ -104,6 +127,25 @@ export function entriesForSemester(
   if (terms.length === 0) return entries;
   const newest = terms.reduce((a, b) => (termRank(b) > termRank(a) ? b : a));
   return entries.filter((e) => e.term === newest);
+}
+
+/**
+ * The weeks the drawn entries actually carry, ascending and deduped.
+ *
+ * Both views filter their entries through `entriesInSemester`, and this page
+ * cannot hand them the PLANNED semester's teaching weeks: `entriesForSemester`
+ * falls back to the newest term the response carries when nothing intersects,
+ * and that term's weeks are by definition not the planned semester's. Handing
+ * over the planned weeks would filter the fallback straight back out and leave
+ * an empty week where last term's honest timetable belongs.
+ *
+ * The narrowing has already happened by the time this is asked, so the view's
+ * own filter is a no-op over exactly these.
+ */
+export function weeksOf(entries: CourseTimetableEntry[]): number[] {
+  const weeks = new Set<number>();
+  for (const entry of entries) for (const week of parseWeeks(entry.weeks)) weeks.add(week);
+  return [...weeks].sort((a, b) => a - b);
 }
 
 /**
@@ -282,50 +324,10 @@ export async function mountCourseTimetable(
   body.append(scopeLine);
 
   // Same class names as /planlegger/'s week: the geometry lives in
-  // src/styles/planner-week.css, which both surfaces import.
+  // src/styles/planner-week.css, which every surface that draws one imports.
   const frame = el("div", "planner-grid-frame");
-  // `renderGrid` emits a `<button>` per block and wires a click only when the
-  // caller supplies `onBlockClick`. This surface has nothing to hand it — the
-  // popover edits the student's *plan*, and this page is a reference for one
-  // course — so it carried 24 focusable, hover-lit controls that answered no
-  // click. The affordance is withdrawn rather than faked: no tab stops, and
-  // `data-static` for the cursor/hover rule in planner-week.css.
-  frame.dataset.static = "true";
   const notes = el("div", "planner-grid-notes");
-  // At 360 px the frame closes just after TOR with more than half a lecture
-  // behind the edge, and nothing said the frame was swipeable. The mask lives
-  // in planner-week.css, so both surfaces get it from one place.
-  //
-  // `/planlegger/`'s `scrollToToday` is deliberately NOT ported: there is no
-  // "today" in a week that repeats for one course, and a non-zero starting
-  // scrollLeft would fade the near edge of a week nobody has touched.
   body.append(frame, notes);
-
-  /** Mirrors plannerApp's `syncGridScroll`: the edge fades only when a day really is off-frame. */
-  function syncScroll(): void {
-    const grid = frame.querySelector<HTMLElement>(".planner-grid");
-    const hiddenPx = grid ? grid.getBoundingClientRect().width - frame.clientWidth : 0;
-    if (hiddenPx <= 1) {
-      delete frame.dataset.scroll;
-      return;
-    }
-    const maxScroll = frame.scrollWidth - frame.clientWidth;
-    const left = frame.scrollLeft;
-    frame.dataset.scroll = left <= 1 ? "start" : left >= maxScroll - 1 ? "end" : "middle";
-    setScrollFade(frame, left, maxScroll);
-  }
-
-  frame.addEventListener("scroll", syncScroll, { passive: true, signal: options.signal });
-  // Same pair as the planner's: a resize moves both the frame's edge and what
-  // each bar has room to say (`fitBlockLabels`).
-  window.addEventListener(
-    "resize",
-    () => {
-      syncScroll();
-      fitBlockLabels(frame);
-    },
-    { passive: true, signal: options.signal },
-  );
 
   // One-course plan: the grid's conflict pass is lecture×lecture across
   // *different* courses, so a single course can never paint itself red here.
@@ -341,6 +343,25 @@ export async function mountCourseTimetable(
     loading: false,
   };
 
+  /**
+   * The week itself, on the same terms `/planlegger/` draws it: both views,
+   * the same tab pair, the same blocks and the same session popover.
+   *
+   * `onOpenSettings` is null. The popover is a READ card — the facts of the
+   * session you pointed at — which is exactly what a visitor deciding between
+   * five parallels needs; but there is no course-settings modal on this page to
+   * send them to, so the card carries facts and no verb.
+   */
+  const week = mountWeekView({
+    frame,
+    notes,
+    tabs: tabsFor(section),
+    surface: "emne",
+    onOpenSettings: null,
+    onRerender: () => draw(toggle.getAttribute("aria-pressed") === "true"),
+    signal: options.signal,
+  });
+
   function draw(showOthers: boolean): void {
     // The narrowing happens on the ENTRIES handed in, not on `showAllGroups`.
     // That flag stays true either way: it says "this is the course's page, not
@@ -350,18 +371,15 @@ export async function mountCourseTimetable(
     const drawn =
       scope === "mine" ? applyGroupSelection(shown, options.selectedGroups, programCode) : shown;
     state.bundle = bundleFromEntries(drawn);
-    const result = renderGrid(frame, notes, [state], showOthers, { showAllGroups: true });
-    // Blocks are rebuilt on every draw, so the tab stops come off every time.
-    // They keep their aria-label and title, which is where a keyboard or
-    // screen-reader user gets the room, activity and week range.
-    for (const block of Array.from(frame.querySelectorAll<HTMLElement>(".planner-block"))) {
-      block.tabIndex = -1;
-    }
-    // B7a: when nothing classifies as a lecture the grid reveals the muted
+    const result = week.render([state], {
+      // The entries' OWN weeks, not the planned semester's — see `weeksOf`.
+      teachingWeeks: weeksOf(drawn),
+      showOthers,
+      showAllGroups: true,
+    });
+    // B7a: when nothing classifies as a lecture the week reveals the muted
     // layer unasked, so the toggle has to describe what is on screen.
     if (result.mutedLayerAutoRevealed) toggle.setAttribute("aria-pressed", "true");
-    // Toggling øvinger can widen the grid (a Saturday column) — re-measure.
-    syncScroll();
   }
 
   // Same grammar as the layer toggle beside it: a deliberate switch that

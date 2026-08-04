@@ -37,10 +37,9 @@ async function settingsFromBlock(page: Page, block = gridBlocks(page).first()): 
 const courseSettingsBtn = (page: Page, code: string) =>
   page.locator(`#planner-course-rows .planner-course-open[data-code="${code}"]`);
 /**
- * A drawn session in the planner's week. `#planner-grid-frame` is
- * /planlegger/'s own id, and the planner draws Uke — the transposed grid's
- * `.planner-block` survives on /emne/[code]/, whose frame carries the class but
- * no id, and the two course-page tests below address it there directly.
+ * A drawn session in the planner's week. Scoped to `#planner-grid-frame`,
+ * /planlegger/'s own id, because /emne/[code]/ and /user/<navn> now draw the
+ * same two views into frames of their own and a bare class would match theirs.
  *
  * A helper rather than a literal because ~45 call sites go through it, and
  * they did once already: as `.planner-block` alone it was 28 of the 46 e2e
@@ -659,8 +658,7 @@ test("week: Uke and Liste show the same week two ways", async ({ page }) => {
   // open øvingsvindu and still look equal to the other.
   const sessions = await page.locator(".planner-cols-block, .planner-cols-band").count();
   expect(sessions).toBeGreaterThan(0);
-  // The transposed grid is /emne/[code]/'s alone now; the planner never draws
-  // it, in either view.
+  // Rader is deleted, not relocated: no surface draws a transposed week.
   await expect(page.locator(".planner-grid")).toHaveCount(0);
   // Five weekday columns, each headed by its own day.
   await expect(page.locator(".planner-cols-day")).toHaveCount(5);
@@ -1716,47 +1714,6 @@ test.describe("nålen", () => {
   });
 });
 
-/**
- * The transposed grid's own geometry, on the ONE surface that still draws it.
- * `/emne/[code]/` mounts `renderGrid` into its own `.planner-grid-frame` — the
- * planner stopped offering Rader as a view, so a claim about a day ROW has to
- * be made where a day row still exists.
- */
-test("course page: every bar is centred in its row", async ({ page }) => {
-  // `--planner-lane-h` is a stride (bar + gap), so N lanes occupy N strides
-  // LESS one trailing gap. Without that subtraction every row in the week was
-  // off-centre — and the row's real height is max(spine, field), which the
-  // spine won, so no amount of padding could have fixed it.
-  await page.goto("/emne/TDT4120/");
-  await expect(page.locator(".planner-grid-frame .planner-block").first()).toBeVisible({
-    timeout: 45_000,
-  });
-
-  const gaps = await page.evaluate(() =>
-    Array.from(document.querySelectorAll(".planner-grid-frame .planner-grid-row")).flatMap((row) => {
-      const field = row.querySelector(".planner-grid-field") as HTMLElement;
-      const fr = field.getBoundingClientRect();
-      return Array.from(field.querySelectorAll(".planner-block")).map((bar) => {
-        const r = bar.getBoundingClientRect();
-        return {
-          band: bar.classList.contains("is-band"),
-          above: Math.round(r.top - fr.top),
-          below: Math.round(fr.bottom - r.bottom),
-        };
-      });
-    }),
-  );
-  expect(gaps.length).toBeGreaterThan(0);
-  for (const g of gaps) {
-    // A lane bar sits one pad from the top; a band sits one pad from the
-    // bottom. Whichever it is, its own side must be the pad exactly.
-    expect(g.band ? g.below : g.above).toBe(8);
-  }
-  // And with one lane and no band the two ends match, which is the claim.
-  const single = gaps.filter((g) => !g.band && g.below === 8);
-  expect(single.length).toBeGreaterThan(0);
-});
-
 test("the layer leaves in the reverse of the order it arrived in", async ({ page }) => {
   // The sequence was already mirrored — space opens, then bars arrive; bars
   // leave, then space closes — but the STAGGER was not: departures all vanished
@@ -1978,32 +1935,6 @@ test.describe("the banner's pair", () => {
 
 test.describe("the phone's week", () => {
   test.use({ viewport: { width: 390, height: 844 } });
-
-  test("a room is printed whole or not printed", async ({ page }) => {
-    // One ellipsis standing in for one character, because the room and the
-    // activity name shared a box. They are two boxes now and `fitBlockLabels`
-    // drops whichever the bar cannot hold — the room whole or not at all.
-    //
-    // On /emne/[code]/, because `fitBlockLabels` belongs to the transposed grid
-    // and that is the one surface still drawing it. The column week's own
-    // `.planner-cols-sub` ellipsises ON PURPOSE — a block there is as wide as
-    // its share of a weekday, not as long as its session.
-    await page.goto("/emne/TDT4120/");
-    await expect(page.locator(".planner-grid-frame .planner-block").first()).toBeVisible({
-      timeout: 45_000,
-    });
-
-    // `Array.from`, not a spread, and no generic type arguments: this file is
-    // in the Node typecheck pass, whose `lib` has neither DOM.Iterable nor the
-    // typed `querySelector` overloads.
-    const cut = await page.evaluate(() =>
-      Array.from(document.querySelectorAll(".planner-grid .planner-block-room"))
-        .filter((room) => getComputedStyle(room).display !== "none")
-        .filter((room) => room.scrollWidth > room.clientWidth + 1)
-        .map((room) => room.textContent),
-    );
-    expect(cut).toEqual([]);
-  });
 
   test("the hours stay put while the week is dragged", async ({ page }) => {
     // Five days and eight hours do not fit a phone, so the axis scrolls — and
@@ -2350,7 +2281,12 @@ test.describe("the course page says what its week is showing", () => {
     await expect(mine).toBeVisible({ timeout: 45_000 });
     await expect(mine).toHaveAttribute("aria-pressed", "false");
 
-    const blocks = page.locator("#timetable-section .planner-block");
+    // View-agnostic on purpose: the claim is that narrowing DRAWS FEWER
+    // sessions, which is true in Uke and in Liste, and the student's view
+    // choice is shared across surfaces now.
+    const blocks = page.locator(
+      "#timetable-section .planner-cols-block, #timetable-section .planner-board-row",
+    );
     const before = await blocks.count();
     expect(before).toBeGreaterThan(0);
 
@@ -2365,5 +2301,72 @@ test.describe("the course page says what its week is showing", () => {
     const next = page.locator(".timetable-mine");
     await expect(next).toBeVisible({ timeout: 45_000 });
     await expect(next).toHaveAttribute("aria-pressed", "false");
+  });
+});
+
+/**
+ * ONE WEEK, THREE SURFACES.
+ *
+ * `/planlegger/`, `/emne/[code]/` and `/user/<navn>` draw the same two views
+ * through the same controller. For a while they did not: the planner moved to
+ * Uke and Liste while the course page stayed on the transposed geometry, which
+ * had been deleted as a view but kept alive as a module for it.
+ *
+ * These test the MECHANISM rather than the look — that the choice travels, and
+ * that a course taught in another term still draws something. Neither is
+ * visible by looking at one page.
+ */
+test.describe("the course page draws the week the planner draws", () => {
+  test("the view choice is one fact, and it crosses surfaces", async ({ page }) => {
+    // `np:weekView` is a preference about how you read a week, not about which
+    // week you are reading — so a student who chose a list on a phone chose it
+    // for weeks, not for one page.
+    await page.addInitScript(() => localStorage.setItem("np:weekView", "tavle"));
+    await page.goto("/emne/TDT4120/");
+    await expect(page.locator("#timetable-section .planner-board")).toBeVisible({
+      timeout: 45_000,
+    });
+    await expect(page.locator("#emne-view-tavle")).toHaveAttribute("aria-pressed", "true");
+
+    // And the pair on this page really switches it, rather than being decoration
+    // beside a week only the planner can change.
+    await page.click("#emne-view-kolonner");
+    await expect(page.locator("#timetable-section .planner-cols")).toBeVisible();
+    expect(await page.evaluate(() => localStorage.getItem("np:weekView"))).toBe("kolonner");
+  });
+
+  test("a course taught in the other term still draws its own week", async ({ page }) => {
+    // TDT4100's only entries are 2026_VÅR while the canonical semester is Høst
+    // 2026, so `entriesForSemester` falls back to the term the response
+    // actually carries. Both views then filter through `entriesInSemester`, and
+    // handing them the PLANNED semester's teaching weeks filters that fallback
+    // straight back out — an empty week where last term's honest timetable
+    // belongs. `weeksOf` is what stops it.
+    await page.goto("/emne/TDT4100/");
+    const week = page.locator("#timetable-section .planner-cols, #timetable-section .planner-board");
+    await expect(week).toBeVisible({ timeout: 45_000 });
+    const sessions = await page
+      .locator("#timetable-section .planner-cols-block, #timetable-section .planner-board-row")
+      .count();
+    expect(sessions, "an off-term course drew an empty week").toBeGreaterThan(0);
+    // And it says which term that is, rather than passing spring off as autumn.
+    await expect(page.locator(".timetable-term")).toContainText("Ikke undervist i Høst 2026");
+  });
+
+  test("a block opens the session, and offers no editor this page does not have", async ({
+    page,
+  }) => {
+    // The popover is a READ card, which is exactly what a visitor deciding
+    // between five parallels needs. What it must NOT carry here is the verb:
+    // there is no course-settings modal on this page to send them to.
+    await page.goto("/emne/TDT4120/");
+    const block = page.locator("#timetable-section .planner-cols-block").first();
+    await expect(block).toBeVisible({ timeout: 45_000 });
+    await block.click();
+    const popover = page.locator("#planner-block-popover");
+    await expect(popover).toBeVisible();
+    await expect(popover.locator(".block-popover-edit")).toHaveCount(0);
+    // The way OUT is the course itself, which every popover carries.
+    await expect(popover.locator(".np-link-out")).toBeVisible();
   });
 });
