@@ -1,14 +1,13 @@
-import { beforeEach, describe, expect, it, test, vi } from "vitest";
+import { readFileSync } from "node:fs";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   activeCourses,
   createPlanStore,
   type EventTargetLike,
-  formatPlanHash,
   LAST_SEMESTER_KEY,
   PLANS_STORAGE_KEY,
   type PlanCourse,
   PROFILE_STORAGE_KEY,
-  parsePlanHash,
   type StorageLike,
 } from "../../src/lib/planner/store.js";
 
@@ -467,289 +466,6 @@ describe("setCourseGroups", () => {
   });
 });
 
-describe("parsePlanHash / formatPlanHash — hash grammar", () => {
-  it("parses a hash with semester, program, and mixed items", () => {
-    const parsed = parsePlanHash("#26h;MTDT.2024;TDT4100,TMA4100.2,-IT2805,+PSY1000");
-    expect(parsed).toEqual({
-      semesterId: "26h",
-      program: { code: "MTDT", cohort: 2024, direction: null },
-      courses: [
-        { code: "TDT4100", version: "1", source: "program", groups: [] },
-        { code: "TMA4100", version: "2", source: "program", groups: [] },
-        { code: "IT2805", version: "1", source: "program", dropped: true, groups: [] },
-        { code: "PSY1000", version: "1", source: "manual", groups: [] },
-      ],
-    });
-  });
-
-  it('parses a hash with no program ("-" segment)', () => {
-    const parsed = parsePlanHash("#26h;-;TDT4100");
-    expect(parsed?.program).toBeNull();
-    expect(parsed?.courses).toEqual([
-      { code: "TDT4100", version: "1", source: "program", groups: [] },
-    ]);
-  });
-
-  it("parses a hash with no items", () => {
-    const parsed = parsePlanHash("#26h;-;");
-    expect(parsed).toEqual({ semesterId: "26h", program: null, courses: [] });
-  });
-
-  it("parses without the leading #", () => {
-    const parsed = parsePlanHash("26h;-;TDT4100");
-    expect(parsed?.semesterId).toBe("26h");
-  });
-
-  it("drops empty/malformed course tokens", () => {
-    const parsed = parsePlanHash("#26h;-;TDT4100,,+ ,TMA4100");
-    expect(parsed?.courses.map((c) => c.code)).toEqual(["TDT4100", "TMA4100"]);
-  });
-
-  it("returns null for an empty hash", () => {
-    expect(parsePlanHash("")).toBeNull();
-    expect(parsePlanHash("#")).toBeNull();
-  });
-
-  it("returns null when the first segment is not a semester id (kills every old #v2;… link by construction)", () => {
-    expect(parsePlanHash("#v2;26h;-;TDT4100")).toBeNull();
-    expect(parsePlanHash("#v9;whatever")).toBeNull();
-    expect(parsePlanHash("#banana;-;TDT4100")).toBeNull();
-  });
-
-  it("formats a full plan (program + drops + manual + non-default versions)", () => {
-    const hash = formatPlanHash({
-      semesterId: "26h",
-      program: { code: "MTDT", name: "Datateknologi", cohort: 2024 },
-      courses: [
-        { code: "TDT4100", name: "A", version: "1", source: "program" },
-        { code: "TMA4100", name: "B", version: "2", source: "program" },
-        { code: "IT2805", name: "C", version: "1", source: "program", dropped: true },
-        { code: "PSY1000", name: "D", version: "1", source: "manual" },
-      ],
-    });
-    expect(hash).toBe("#26h;MTDT.2024;TDT4100,TMA4100.2,-IT2805,%2BPSY1000");
-  });
-
-  /**
-   * `formatPlanHash` is not only the URL — it is this product's plan-identity
-   * function, and `applyPulledPlan` compares two of them to decide whether a
-   * pulled plan differs from the one on screen. The old `else if` encoded
-   * `dropped` for `source: "program"` only, so a dropped manual course and an
-   * undropped one produced the identical token: the repaint gate returned
-   * early and left screen and storage disagreeing. An encoder used as an
-   * equality key has to be injective over the type it encodes.
-   */
-  it("encodes dropped for a manual course too, so the two do not hash alike", () => {
-    const dropped = formatPlanHash({
-      semesterId: "26h",
-      courses: [{ code: "PSY1000", name: "D", version: "1", source: "manual", dropped: true }],
-    });
-    const kept = formatPlanHash({
-      semesterId: "26h",
-      courses: [{ code: "PSY1000", name: "D", version: "1", source: "manual" }],
-    });
-    expect(dropped).not.toBe(kept);
-
-    // The parser reads BOTH prefixes, so the course survives rather than
-    // failing `CODE_PATTERN` and being thrown away whole. What it does with
-    // `dropped` on a manual row is the model's own long-standing invariant
-    // (`coerceCourse`: "manual adds are never dropped"), unchanged here.
-    const parsed = parsePlanHash(dropped);
-    expect(parsed?.courses).toEqual([
-      { code: "PSY1000", version: "1", source: "manual", groups: [] },
-    ]);
-  });
-
-  it("still reads the single-flag tokens every link in the wild carries", () => {
-    const parsed = parsePlanHash("#26h;-;-IT2805,+PSY1000");
-    expect(parsed?.courses).toEqual([
-      { code: "IT2805", version: "1", source: "program", dropped: true, groups: [] },
-      { code: "PSY1000", version: "1", source: "manual", groups: [] },
-    ]);
-  });
-
-  it('formats a plan with no program as a "-" segment', () => {
-    const hash = formatPlanHash({ semesterId: "26h", courses: [] });
-    expect(hash).toBe("#26h;-;");
-  });
-
-  it("appends the studieretning to the programme segment when one is chosen", () => {
-    const hash = formatPlanHash({
-      semesterId: "26h",
-      program: {
-        code: "MTDT",
-        name: "Datateknologi",
-        cohort: 2024,
-        direction: { code: "MTDTDS-24", name: "Databaser og søk" },
-      },
-      courses: [{ code: "TDT4117", name: "A", version: "1", source: "program" }],
-    });
-    expect(hash).toBe("#26h;MTDT.2024.MTDTDS-24;TDT4117");
-  });
-
-  it("parses the studieretning back out of the programme segment", () => {
-    const parsed = parsePlanHash("#26h;MTDT.2024.MTDTDS-24;TDT4117");
-    expect(parsed?.program).toEqual({
-      code: "MTDT",
-      cohort: 2024,
-      direction: "MTDTDS-24",
-    });
-  });
-
-  it("still parses a programme segment written before studieretning existed", () => {
-    const parsed = parsePlanHash("#26h;MTDT.2024;TDT4100");
-    expect(parsed?.program).toEqual({ code: "MTDT", cohort: 2024, direction: null });
-  });
-
-  it("round-trips format → parse for every field (program, drops, extras, non-default versions)", () => {
-    const original: Parameters<typeof formatPlanHash>[0] = {
-      semesterId: "27v",
-      program: { code: "MTIOT", name: "Datateknologi", cohort: 2023 },
-      courses: [
-        { code: "TDT4110", name: "X", version: "1", source: "program" },
-        { code: "TMA4115", name: "Y", version: "3", source: "program", dropped: true },
-        { code: "IT3708", name: "Z", version: "1", source: "manual" },
-      ],
-    };
-    const hash = formatPlanHash(original);
-    const parsed = parsePlanHash(hash);
-    expect(parsed).toEqual({
-      semesterId: "27v",
-      program: { code: "MTIOT", cohort: 2023, direction: null },
-      courses: [
-        { code: "TDT4110", version: "1", source: "program", groups: [] },
-        { code: "TMA4115", version: "3", source: "program", dropped: true, groups: [] },
-        { code: "IT3708", version: "1", source: "manual", groups: [] },
-      ],
-    });
-  });
-
-  it("round-trips an empty plan", () => {
-    const hash = formatPlanHash({ semesterId: "26h", courses: [] });
-    expect(parsePlanHash(hash)).toEqual({ semesterId: "26h", program: null, courses: [] });
-  });
-});
-
-describe("parsePlanHash / formatPlanHash — groups", () => {
-  test("group keys round-trip on a course token", () => {
-    const hash = formatPlanHash({
-      semesterId: "26h",
-      courses: [
-        {
-          code: "TDT4110",
-          name: "ITGK",
-          version: "1",
-          source: "manual",
-          groups: ["forelesningsparallell-2", "øvingsgruppe-5"],
-        },
-      ],
-    });
-    expect(hash).toBe("#26h;-;%2BTDT4110~forelesningsparallell-2~%C3%B8vingsgruppe-5");
-    const parsed = parsePlanHash(hash);
-    expect(parsed?.courses[0]?.groups).toEqual(["forelesningsparallell-2", "øvingsgruppe-5"]);
-  });
-  test("no groups → bare token and empty array on parse", () => {
-    const hash = formatPlanHash({
-      semesterId: "26h",
-      courses: [{ code: "TMA4100", name: "", version: "1", source: "program" }],
-    });
-    expect(hash).toBe("#26h;-;TMA4100");
-    expect(parsePlanHash(hash)?.courses[0]?.groups).toEqual([]);
-  });
-  test("an old versioned hash is simply invalid", () => {
-    expect(parsePlanHash("#v2;26h;-;TMA4100")).toBeNull();
-  });
-});
-
-describe("parsePlanHash / formatPlanHash — encoding and validation (B10)", () => {
-  it("round-trips a direction code containing Ø", () => {
-    // BSPL kull 2026 → "Bachelor i sykepleie (Gjøvik)". Written raw, the
-    // browser handed the hash back percent-encoded, the direction lookup
-    // missed, the campus question re-opened and the banner showed a machine
-    // code — every Gjøvik/Ålesund campus split was affected.
-    const plan = {
-      semesterId: "26h",
-      program: {
-        code: "BSPL",
-        name: "Sykepleie",
-        cohort: 2026,
-        direction: { code: "BSPL26-V-GJØVIK", name: "Gjøvik" },
-      },
-      courses: [],
-    };
-    const hash = formatPlanHash(plan);
-    expect(hash).toBe("#26h;BSPL.2026.BSPL26-V-GJ%C3%98VIK;");
-    expect(parsePlanHash(hash)?.program).toEqual({
-      code: "BSPL",
-      cohort: 2026,
-      direction: "BSPL26-V-GJØVIK",
-    });
-  });
-
-  it("round-trips a programme code containing Ø and a literal slash", () => {
-    const plan = {
-      semesterId: "26h",
-      program: { code: "MSØK/5", name: "Samfunnsøkonomi", cohort: 2024 },
-      courses: [],
-    };
-    const parsed = parsePlanHash(formatPlanHash(plan));
-    expect(parsed?.program?.code).toBe("MSØK/5");
-  });
-
-  it("round-trips a course code containing Ø", () => {
-    const plan = {
-      semesterId: "26h",
-      courses: [
-        { code: "BØA1100", name: "Bedriftsøkonomi", version: "1", source: "manual" as const },
-      ],
-    };
-    const hash = formatPlanHash(plan);
-    expect(hash).toBe("#26h;-;%2BB%C3%98A1100");
-    expect(parsePlanHash(hash)?.courses).toEqual([
-      { code: "BØA1100", version: "1", source: "manual", groups: [] },
-    ]);
-  });
-
-  it("keeps the field separator and dropped-prefix readable", () => {
-    // encodeURIComponent leaves "." and "-" alone, which is what lets the
-    // grammar's own punctuation survive the encoding. "+" does not survive —
-    // it becomes %2B — which is fine, since it is written and read back by
-    // the same parser and never meant to be hand-typed.
-    const hash = formatPlanHash({
-      semesterId: "26h",
-      program: { code: "MTDT", name: "Datateknologi", cohort: 2024 },
-      courses: [
-        { code: "TMA4100", name: "M1", version: "2", source: "program" as const },
-        { code: "IT2805", name: "Web", version: "1", source: "program" as const, dropped: true },
-      ],
-    });
-    expect(hash).toBe("#26h;MTDT.2024;TMA4100.2,-IT2805");
-  });
-
-  it("rejects a programme segment whose cohort is not a plausible year", () => {
-    // The grammar PRODUCT §6 used to document put *courses* in this slot;
-    // feeding that form to the shipped parser produced {code:"TDT4100",
-    // cohort:1}, a 400 from ?year=1 and a banner reading "TDT4100 · kull 1".
-    const parsed = parsePlanHash("#26h;TDT4100.1,TMA4100.1;IT2805.1");
-    expect(parsed?.program).toBeNull();
-    expect(parsed?.semesterId).toBe("26h");
-  });
-
-  it("rejects a cohort far in the future or before the university had plans", () => {
-    expect(parsePlanHash("#26h;MTDT.3025;")?.program).toBeNull();
-    expect(parsePlanHash("#26h;MTDT.1899;")?.program).toBeNull();
-    expect(parsePlanHash("#26h;MTDT.2026;")?.program).not.toBeNull();
-  });
-
-  it("survives a hand-mangled percent escape instead of losing the whole plan", () => {
-    // The mangled token itself is now dropped by the code-shape guard
-    // — "B%ZZA1100" is not a course code and could only ever 404 — but the
-    // point of the case stands: one bad token must not cost the other five.
-    const parsed = parsePlanHash("#26h;-;+TDT4100,+B%ZZA1100");
-    expect(parsed?.courses.map((c) => c.code)).toEqual(["TDT4100"]);
-  });
-});
-
 describe("one entry per code (edit-1 / store-6)", () => {
   let storage: StorageLike;
   let events: EventTargetLike;
@@ -815,12 +531,6 @@ describe("one entry per code (edit-1 / store-6)", () => {
     const courses = store.loadPlan().courses;
     expect(courses.map((c) => c.code)).toEqual(["TDT4109", "TMA4100"]);
     expect(courses[0]).toMatchObject({ source: "program", credits: 7.5 });
-  });
-
-  it("a hash repeating a code yields one course, first token wins", () => {
-    const parsed = parsePlanHash("#26h;-;+TDT4136,+TDT4136,TMA4100");
-    expect(parsed?.courses.map((c) => c.code)).toEqual(["TDT4136", "TMA4100"]);
-    expect(parsed?.courses[0]?.source).toBe("manual");
   });
 });
 
@@ -935,7 +645,6 @@ describe("blocked or failing storage (store-1 / sec-2)", () => {
       const plan = store.loadPlan();
       expect(plan.courses.map((c) => c.code)).toEqual(["TDT4100", "TMA4100"]);
       expect(activeCourses(plan).map((c) => c.code)).toEqual(["TMA4100"]);
-      expect(formatPlanHash(plan)).toBe("#26h;-;-TDT4100,%2BTMA4100");
     },
   );
 
@@ -954,38 +663,6 @@ describe("blocked or failing storage (store-1 / sec-2)", () => {
 });
 
 describe("code-shape validation (sec-1)", () => {
-  it("rejects a programme segment whose code is not a code", () => {
-    const parsed = parsePlanHash(
-      "#26h;ADVARSEL%3A%20kontoen%20er%20sperret%20-%20ring%20800%2012%20345.2024;TDT4100",
-    );
-    expect(parsed?.program).toBeNull();
-    expect(parsed?.courses.map((c) => c.code)).toEqual(["TDT4100"]);
-  });
-
-  it("drops a course token whose code is not a code", () => {
-    const parsed = parsePlanHash("#26h;-;+Ring%20800%2012%20345,+TDT4100");
-    expect(parsed?.courses.map((c) => c.code)).toEqual(["TDT4100"]);
-  });
-
-  it("drops a direction that is not a code, keeping the programme", () => {
-    const parsed = parsePlanHash("#26h;MTDT.2024.kontoen%20din%20er%20sperret;TDT4100");
-    expect(parsed?.program).toEqual({ code: "MTDT", cohort: 2024, direction: null });
-  });
-
-  it("still accepts every real code shape (punctuation and Æ/Ø/Å included)", () => {
-    // From the crawled data: EMNE/HF, MSECT+OH and MSØK/5 are real programme
-    // codes; SIVING-ARBERFARING24 (20 chars) is a real studieretning code.
-    expect(parsePlanHash("#26h;EMNE%2FHF.2024;")?.program?.code).toBe("EMNE/HF");
-    expect(parsePlanHash("#26h;MSECT%2BOH.2024;")?.program?.code).toBe("MSECT+OH");
-    expect(parsePlanHash("#26h;MS%C3%98K%2F5.2024;")?.program?.code).toBe("MSØK/5");
-    expect(parsePlanHash("#26h;MTDT.2024.SIVING-ARBERFARING24;")?.program?.direction).toBe(
-      "SIVING-ARBERFARING24",
-    );
-    expect(parsePlanHash("#26h;-;%2BB%C3%98A1100")?.courses.map((c) => c.code)).toEqual([
-      "BØA1100",
-    ]);
-  });
-
   it("drops an already-poisoned profile and course list on read", () => {
     const storage = fakeStorage();
     storage.setItem(
@@ -1024,16 +701,6 @@ describe("code-shape validation (sec-1)", () => {
     );
     const store = createPlanStore("26h", { storage, events: fakeEvents() });
     expect(store.loadPlan().program?.direction?.code).toBe("BSPL26-V-GJØVIK");
-  });
-});
-
-describe("semester id casing (store-7)", () => {
-  it("normalises an uppercased semester id to the stored lowercase form", () => {
-    // A hand-typed or autocapitalised "#26H" passed the case-insensitive
-    // grammar check and then failed `knownSemester`, so the link note
-    // apologised for not being able to plan the semester it was showing.
-    expect(parsePlanHash("#26H;MTDT.2024;TDT4136")?.semesterId).toBe("26h");
-    expect(parsePlanHash("#27V;-;")?.semesterId).toBe("27v");
   });
 });
 
@@ -1079,5 +746,30 @@ describe("credits carried into the plan (B9.1)", () => {
     creditStore.dropCourse("TMA4101");
     creditStore.setProgramPlan(program, [{ code: "TMA4101", name: "Matematikk 2", credits: 7.5 }]);
     expect(creditStore.loadPlan().courses[0]).toMatchObject({ credits: 7.5, dropped: true });
+  });
+});
+
+/**
+ * The `#v2;…` grammar is gone, superseded by `/user/<navn>` (spec §5). Nothing
+ * was ever sent through it — the project has never been connected to
+ * Cloudflare — so there is no back-compat shim to keep alive.
+ */
+describe("the plan hash is gone", () => {
+  it("exports no hash grammar", async () => {
+    const store = await import("../../src/lib/planner/store.js");
+    expect("parsePlanHash" in store).toBe(false);
+    expect("formatPlanHash" in store).toBe(false);
+  });
+
+  it("leaves no hash handling in the planner", () => {
+    // Comments stripped: the file carries tombstones saying what was deleted
+    // and why, which is exactly the prose this asserts on.
+    const source = readFileSync("src/components/planner/plannerApp.ts", "utf8")
+      .replace(/\/\*[\s\S]*?\*\//g, "")
+      .replace(/(^|\s)\/\/.*$/gm, "");
+    expect(source).not.toMatch(/hashchange/);
+    expect(source).not.toMatch(/replacedPlan/);
+    expect(source).not.toMatch(/withStoredFacts/);
+    expect(source).not.toMatch(/syncHash/);
   });
 });

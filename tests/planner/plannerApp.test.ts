@@ -284,7 +284,6 @@ const IDS = [
 
 let byId: Map<string, FakeEl>;
 let body: FakeEl;
-let replaceStateCalls: { state: unknown; url: string }[] = [];
 let winListeners: Map<string, ((e: unknown) => void)[]> = new Map();
 let docListeners: Map<string, ((e: unknown) => void)[]> = new Map();
 let planStorage: Map<string, string>;
@@ -321,7 +320,6 @@ function installDom(): void {
     byId.set(id, e);
     body.append(e);
   }
-  replaceStateCalls = [];
   docListeners = new Map();
   const doc = {
     body,
@@ -385,11 +383,12 @@ function installDom(): void {
   g.window = win;
   g.localStorage = win.localStorage;
   g.matchMedia = win.matchMedia;
+  // The planner writes no history entry any more (the URL stopped being the
+  // plan when the hash was deleted). Kept as a no-op so anything that reaches
+  // for it fails loudly on its own terms rather than on a missing global.
   g.history = {
     state: { index: 3, scrollX: 0, scrollY: 0 },
-    replaceState: (state: unknown, _t: string, url: string) => {
-      replaceStateCalls.push({ state, url });
-    },
+    replaceState: () => {},
     pushState: () => {},
   };
   g.location = { hash: "", search: "", pathname: "/planlegger/", href: "http://x/planlegger/" };
@@ -572,16 +571,54 @@ describe("mountPlannerApp — audit repro", () => {
     vi.unstubAllGlobals();
   });
 
+  /**
+   * The plan a test starts from.
+   *
+   * It used to be a `#v2;…` hash string — the URL was the plan, so seeding one
+   * seeded the other. The hash is gone (spec §5) and `localStorage` is the only
+   * source now, so a seed says what it means: which semester, which programme,
+   * which course codes.
+   */
+  interface PlanSeed {
+    semesterId?: string;
+    program?: { code: string; name: string; cohort: number };
+    /** A bare code is the common case; the object form is for a stored row
+     *  carrying facts the catalog does not have (B9.1's credits fallback). */
+    courses?: Array<string | { code: string; name?: string; credits?: number }>;
+  }
+
   async function mount(
     routes: Record<string, () => unknown>,
-    hash: string,
+    seed: PlanSeed,
     semesters: unknown = SEMESTERS,
   ) {
     (globalThis as unknown as Record<string, unknown>).location = {
-      hash,
+      hash: "",
       search: "",
       pathname: "/planlegger/",
     };
+    const semesterId = seed.semesterId ?? "26h";
+    const storage = (globalThis as unknown as { localStorage: StorageLike }).localStorage;
+    storage.setItem(
+      "np:plans",
+      JSON.stringify({
+        [semesterId]: (seed.courses ?? []).map((entry) => {
+          const row = typeof entry === "string" ? { code: entry } : entry;
+          return {
+            code: row.code,
+            // Defaults to the code, as a plan built from codes alone holds it:
+            // the search-index backfill is what fills real names in, and
+            // several tests below are about that path.
+            name: row.name ?? row.code,
+            version: "1",
+            source: "manual",
+            ...(row.credits === undefined ? {} : { credits: row.credits }),
+          };
+        }),
+      }),
+    );
+    storage.setItem("np:lastSemester", semesterId);
+    if (seed.program) storage.setItem("np:profile", JSON.stringify({ program: seed.program }));
     const fetchMock = vi.fn(async (url: string) => {
       for (const [pattern, make] of Object.entries(routes)) {
         if (url.includes(pattern)) {
@@ -624,7 +661,7 @@ describe("mountPlannerApp — audit repro", () => {
           exams: [],
         }),
       },
-      "#26h;-;%2BTDT4109,%2BTMA4400,%2BTMA4412",
+      { courses: ["TDT4109", "TMA4400", "TMA4412"] },
     );
     const status = find("planner-grid-status");
     expect(status.textContent).toBe("kan ikke sjekkes, mangler timeplan for 1 emne");
@@ -647,7 +684,7 @@ describe("mountPlannerApp — audit repro", () => {
           exams: [],
         }),
       },
-      "#26h;-;%2BTDT4109,%2BTMA4412",
+      { courses: ["TDT4109", "TMA4412"] },
     );
     const status = find("planner-grid-status");
     // DR-1: the engine only ever compares LECTURES, so the pass says which
@@ -690,7 +727,7 @@ describe("mountPlannerApp — audit repro", () => {
           exams: [],
         }),
       },
-      "#26h;-;%2BMH2000,%2BMH2001",
+      { courses: ["MH2000", "MH2001"] },
     );
     const status = find("planner-grid-status");
     expect(status.textContent).toBe("kan ikke sjekkes, ingen forelesninger i planen");
@@ -716,7 +753,7 @@ describe("mountPlannerApp — audit repro", () => {
           exams: [],
         }),
       },
-      "#26h;-;%2BTDT4109",
+      { courses: ["TDT4109"] },
     );
     const prov = find("planner-provenance");
     expect(prov.textContent).toBe("");
@@ -738,7 +775,7 @@ describe("mountPlannerApp — audit repro", () => {
           exams: [],
         }),
       },
-      "#26h;-;%2BTDT4109,%2BTMA4400",
+      { courses: ["TDT4109", "TMA4400"] },
     );
     // The line states ONLY what could not be verified now
     //: no "Timeplan hentet direkte fra NTNU nå", because
@@ -784,20 +821,16 @@ describe("mountPlannerApp — audit repro", () => {
           exams: [],
         }),
       },
-      "#26h;MTMT.2026;",
+      { program: { code: "MTMT", name: "MTMT", cohort: 2026 } },
     );
     const prov = find("planner-provenance").textContent;
     expect(prov).toContain("Studieplan for kull 2024, det finnes ingen egen plan for kull 2026.");
   });
 
-  it("app-1: syncHash never writes a null history state", async () => {
-    await mount(
-      { "/data/search-index.json": () => ({ year: 2026, courses: [] }) },
-      "#26h;-;%2BTDT4109",
-    );
-    expect(replaceStateCalls.length).toBeGreaterThan(0);
-    for (const call of replaceStateCalls) expect(call.state).not.toBeNull();
-  });
+  /* `app-1: syncHash never writes a null history state` is DELETED with
+     `syncHash`. The planner writes no history entry at all now — the URL
+     stopped being the plan when `/user/<navn>` became the thing you hand over,
+     so there is no `replaceState` left to get wrong. */
 
   it("ux-3/ux-fail-2: a failed fetch beats an open studieretning question, and Prøv igjen is reachable", async () => {
     await mount(
@@ -841,7 +874,7 @@ describe("mountPlannerApp — audit repro", () => {
           exams: [],
         }),
       },
-      "#26h;MTDT.2026;%2BTDT4109",
+      { program: { code: "MTDT", name: "MTDT", cohort: 2026 }, courses: ["TDT4109"] },
     );
     const frame = find("planner-grid-frame");
     expect(frame.textContent).toContain("Fikk ikke hentet timeplanen.");
@@ -866,7 +899,7 @@ describe("mountPlannerApp — audit repro", () => {
           exams: [],
         }),
       },
-      "#26h;-;%2BTDT4109",
+      { courses: ["TDT4109"] },
     );
     const examHost = find("planner-exam-list-host");
     expect(examHost.textContent).toContain("Fikk ikke hentet eksamensdatoene.");
@@ -896,7 +929,7 @@ describe("mountPlannerApp — audit repro", () => {
           ],
         }),
       },
-      "#26h;MPPR.2026;",
+      { program: { code: "MPPR", name: "MPPR", cohort: 2026 } },
     );
     expect(find("planner-direction").hidden).toBe(false);
     expect(find("planner-direction-title").textContent).toBe("Ingen emner i studieplanen");
@@ -911,10 +944,14 @@ describe("mountPlannerApp — audit repro", () => {
       releasePlan = resolve;
     });
     (globalThis as unknown as Record<string, unknown>).location = {
-      hash: "#26h;MTDT.2026;",
+      hash: "",
       search: "",
       pathname: "/planlegger/",
     };
+    (globalThis as unknown as { localStorage: StorageLike }).localStorage.setItem(
+      "np:profile",
+      JSON.stringify({ program: { code: "MTDT", name: "MTDT", cohort: 2026 } }),
+    );
     (globalThis as unknown as Record<string, unknown>).fetch = vi.fn(async (url: string) => {
       if (url.includes("/data/search-index.json")) return jsonResponse({ year: 2026, courses: [] });
       if (url.includes("/api/program/MTDT/plan")) {
@@ -959,14 +996,10 @@ describe("mountPlannerApp — audit repro", () => {
     const mounted = mountPlannerApp(SEMESTERS as never, undefined);
     await new Promise((r) => setTimeout(r, 0));
 
-    // The student pastes a program-less shared link while the plan fetch is
-    // still in flight (the 404 ladder can spend three round trips here).
-    (globalThis as unknown as Record<string, unknown>).location = {
-      hash: "#26h;-;%2BPSY1000",
-      search: "",
-      pathname: "/planlegger/",
-    };
-    for (const fn of winListeners.get("hashchange") ?? []) fn({});
+    // The student clears the programme while the plan fetch is still in flight
+    // (the 404 ladder can spend three round trips here).
+    const { createPlanStore } = await import("../../src/lib/planner/store.js");
+    createPlanStore("26h").removeProgram();
     await new Promise((r) => setTimeout(r, 0));
     expect(find("planner-title").textContent).toBe("Semesterplan");
 
@@ -994,7 +1027,7 @@ describe("mountPlannerApp — audit repro", () => {
           exams: [],
         }),
       },
-      "#26h;-;%2BTDT4109,%2BTMA4400",
+      { courses: ["TDT4109", "TMA4400"] },
     );
     // the row itself is identity plus one mark that
     // there is something to read; the sentence and the retry live in the
@@ -1030,7 +1063,7 @@ describe("mountPlannerApp — audit repro", () => {
         }),
         "/api/course/TMA4100/timetable": () => [],
       },
-      "#26h;-;%2BTMA4100",
+      { courses: ["TMA4100"] },
     );
     // The row flags that there is something to read; the sentence itself is in
     // the settings modal (D2).
@@ -1046,27 +1079,19 @@ describe("mountPlannerApp — audit repro", () => {
     expect(dialog?.textContent).not.toContain("Fikk ikke hentet");
   });
 
-  it("app-3: the link note stops naming a semester after the student switches", async () => {
+  /* `app-3: the link note stops naming a semester after the student switches`
+     is DELETED. C4's note explained a semester substituted for a LINK's own,
+     and `planFromHash` was its only writer — nothing points at a semester any
+     more. What survives is the correction itself, covered below: a stored plan
+     for a term this build cannot plan falls back silently. */
+  it("a stored plan for a term this build cannot plan falls back to the default", async () => {
     await mount(
       { "/data/search-index.json": () => ({ year: 2026, courses: [] }) },
-      // A shared link for a term this build cannot plan: the note fires and the
-      // planner falls back to Høst 2026.
-      "#25h;-;%2BTDT4109",
+      { semesterId: "25h", courses: ["TDT4109"] },
       SEMESTERS_TWO,
     );
-    const note = find("planner-link-note");
-    expect(note.hidden).toBe(false);
-    expect(note.textContent).toContain("Viser Høst 2026");
-
-    // studieinfo's Lagre → store.setSemester → savePlan. It does NOT go through
-    // `hashchange` (syncHash uses replaceState), which is why nothing cleared it.
-    const { createPlanStore } = await import("../../src/lib/planner/store.js");
-    createPlanStore("26h").setSemester("27v");
-    for (let i = 0; i < 5; i++) await new Promise((r) => setTimeout(r, 0));
-
-    expect(find("planner-context-line").textContent).toContain("Vår 2027");
-    expect(note.textContent).toBe("");
-    expect(note.hidden).toBe(true);
+    expect(find("planner-context-line").textContent).toContain("Høst 2026");
+    expect(find("planner-link-note").hidden).toBe(true);
   });
 
   it("app-4/D3: Dropp lives in the course's settings, and the row says it is dropped", async () => {
@@ -1102,7 +1127,7 @@ describe("mountPlannerApp — audit repro", () => {
         "/api/course/TDT4136/timetable": () => [entry("TDT4136", 1, "08:15", "10:00")],
         "/api/course/": () => DETAILS,
       },
-      "#26h;MTDT.2026;",
+      { program: { code: "MTDT", name: "MTDT", cohort: 2026 } },
     );
     // The row carries no Dropp of its own any more — it opens the settings
     // modal, and the verb is there. That relaxes PRODUCT §1.3's "one tap to
@@ -1141,27 +1166,15 @@ describe("mountPlannerApp — audit repro", () => {
     ).toBeDefined();
   });
 
-  it("store-4: a reload from the hash keeps the study plan's credits on disk", async () => {
+  it("store-4: a reload keeps the study plan's own credits and name", async () => {
     // What the B9.1 fallback wrote: a study-plan elective the catalog does not
-    // list, carrying the plan's own name and sp. The hash carries neither.
-    planStorage.set("np:lastSemester", "26h");
-    planStorage.set(
-      "np:plans",
-      JSON.stringify({
-        "26h": [
-          {
-            code: "ZZZ9999",
-            name: "Fordypningsemne i studieplanen",
-            version: "1",
-            source: "manual",
-            credits: 15,
-          },
-        ],
-      }),
-    );
+    // list, carrying the plan's own name and sp. Nothing on a reload may
+    // overwrite either with the code and a gap.
     await mount(
       { "/data/search-index.json": () => ({ year: 2026, courses: [] }) },
-      "#26h;-;%2BZZZ9999",
+      {
+        courses: [{ code: "ZZZ9999", name: "Fordypningsemne i studieplanen", credits: 15 }],
+      },
     );
     expect(planStorage.get("np:plans")).toContain('"credits":15');
     expect(planStorage.get("np:plans")).toContain("Fordypningsemne i studieplanen");
@@ -1196,7 +1209,7 @@ describe("mountPlannerApp — audit repro", () => {
           period([obligatory("KJ3900", "Masteroppgave i kjemi", 60)]),
         "/api/course/": () => ({ ...DETAILS, credits: 60 }),
       },
-      "#26h;MSCHEM.2026;",
+      { program: { code: "MSCHEM", name: "MSCHEM", cohort: 2026 } },
     );
     const note = find("planner-credit-note");
     expect(note.hidden).toBe(false);
@@ -1236,7 +1249,7 @@ describe("mountPlannerApp — audit repro", () => {
         }),
         "/api/course/": () => DETAILS,
       },
-      "#26h;MJORM.2026;",
+      { program: { code: "MJORM", name: "MJORM", cohort: 2026 } },
     );
     expect(find("planner-credit-note").textContent).toContain("Fjern det du ikke tar");
   });
@@ -1260,7 +1273,7 @@ describe("mountPlannerApp — audit repro", () => {
           ],
         }),
       },
-      "#26h;MPPR.2026;",
+      { program: { code: "MPPR", name: "MPPR", cohort: 2026 } },
     );
     // The informative half survives — a modal cannot tell you there is a gap
     // before you open it.
@@ -1280,7 +1293,7 @@ describe("mountPlannerApp — audit repro", () => {
         "/api/course/TDT4109/timetable": () => [entry("TDT4109", 1, "08:15", "10:00")],
         "/api/course/": () => DETAILS,
       },
-      "#26h;-;%2BTDT4109",
+      { courses: ["TDT4109"] },
     );
     const frame = find("planner-grid-frame");
     const grid = frame.querySelector(".planner-cols");
@@ -1323,7 +1336,7 @@ describe("mountPlannerApp — audit repro", () => {
         }),
         "/api/course/": () => DETAILS,
       },
-      "#26h;-;%2BAAA1000,%2BBBB1000",
+      { courses: ["AAA1000", "BBB1000"] },
       {
         ...SEMESTERS,
         semesters: [{ ...SEMESTERS.semesters[0], examFinalDate: "2099-02-01" }],
@@ -1417,7 +1430,7 @@ describe("mountPlannerApp — audit repro", () => {
         "/data/search-index.json": () => ({ year: 2026, courses: [] }),
         "/api/program/KNOAND/plan": () => "FAIL404",
       },
-      "#26h;KNOAND.2026;",
+      { program: { code: "KNOAND", name: "KNOAND", cohort: 2026 } },
     );
     expect(find("planner-direction").hidden).toBe(false);
     expect(find("planner-direction-title").textContent).toBe("Fant ingen studieplan");
@@ -1440,7 +1453,7 @@ describe("mountPlannerApp — audit repro", () => {
         "/data/search-index.json": () => ({ year: 2026, courses: [] }),
         "/api/program/KNOAND/plan": () => "FAIL",
       },
-      "#26h;KNOAND.2026;",
+      { program: { code: "KNOAND", name: "KNOAND", cohort: 2026 } },
     );
     expect(find("planner-direction-title").textContent).not.toBe("Fant ingen studieplan");
     expect(find("planner-provenance").textContent).toContain(
@@ -1529,7 +1542,7 @@ describe("mountPlannerApp — audit repro", () => {
           "/api/program/BIT/plan": () => PROGRAM,
           "/api/course/": () => DETAILS,
         },
-        "#26h;BIT.2026;",
+        { program: { code: "BIT", name: "BIT", cohort: 2026 } },
       );
       find("planner-add-course-btn").click();
     }
@@ -1579,7 +1592,7 @@ describe("mountPlannerApp — audit repro", () => {
           "/api/program/BIT/plan": () => PROGRAM,
           "/api/course/": () => ({ ...DETAILS, credits: 30 }),
         },
-        "#26h;BIT.2026;",
+        { program: { code: "BIT", name: "BIT", cohort: 2026 } },
       );
       // 30 sp: nothing is missing, so nothing preempts the search the button
       // says it opens.
@@ -1598,7 +1611,7 @@ describe("mountPlannerApp — audit repro", () => {
         "/api/course/TDT4109/timetable": () => [entry("TDT4109", 1, "08:15", "10:00")],
         "/api/course/": () => DETAILS,
       },
-      "#26h;-;%2BTDT4109",
+      { courses: ["TDT4109"] },
     );
     find("planner-add-course-btn").click();
     const dialog = body.querySelector(".add-course-dialog");
@@ -1658,23 +1671,34 @@ describe("mountPlannerApp — audit repro", () => {
  * must repaint, a pull that does not must stay quiet, and neither may ever
  * schedule a push of its own.
  *
- * `replaceStateCalls.length` is the signal for "did a repaint happen":
- * `syncHash()` calls `history.replaceState` unconditionally exactly once
- * per `applyPlanUpdate`, including the one unconditional call every ordinary
- * mount already makes before its first paint — so the baseline after a
- * plain mount is 1, and a pull-triggered repaint (or the deliberate absence
- * of one) shows up as a clean +1 or +0 rather than something inferred from
- * DOM content that a différent render could produce by coincidence.
+ * "Did a repaint happen" used to be read off `history.replaceState`, which
+ * `syncHash()` called once per `applyPlanUpdate`. The hash is gone and so is
+ * that counter, so the signal is now the DOM itself: a repaint REBUILDS the
+ * course rows, so the child nodes are different objects afterwards, and a
+ * quiet pull leaves the very same objects in place. That is also the thing
+ * being protected — the rebuild is what costs the layer animation and the CLS
+ * budget — rather than a proxy for it.
+ *
+ * The pull is GATED behind `holdSyncGet` until after the first paint, so both
+ * tests ask their question about a window they control instead of relying on a
+ * round trip landing late by luck.
  */
 /** Wires the fake sync server behind `/api/sync/*` and the ordinary course
  *  fixtures behind everything else, onto the one global `fetch` the
  *  planner's own `createSyncClient` and `loadBundles` both call through.
  *  Shared by every describe block below that mounts the planner with a sync
  *  session already in `localStorage`. */
-function installCombinedFetch(server: ReturnType<typeof makeSyncServer>): void {
+function installCombinedFetch(
+  server: ReturnType<typeof makeSyncServer>,
+  /** Held before every sync GET, so a test can decide when the pull lands. */
+  gate?: Promise<void>,
+): void {
   (globalThis as unknown as Record<string, unknown>).fetch = vi.fn(
     async (url: string, init?: RequestInit) => {
-      if (url.startsWith("/api/sync/")) return server.handle(url, init);
+      if (url.startsWith("/api/sync/")) {
+        if (gate && (init?.method ?? "GET") === "GET") await gate;
+        return server.handle(url, init);
+      }
       if (url.includes("/data/search-index.json")) return jsonResponse({ year: 2026, courses: [] });
       if (url.includes("/api/course/TDT4109/timetable")) {
         return jsonResponse([entry("TDT4109", 1, "08:15", "10:00")]);
@@ -1711,7 +1735,13 @@ describe("mountPlannerApp — a successful sync pull re-renders without pushing"
       search: "",
       pathname: "/planlegger/",
     };
-    installCombinedFetch(server);
+    let releasePull = (): void => {};
+    installCombinedFetch(
+      server,
+      new Promise<void>((resolve) => {
+        releasePull = resolve;
+      }),
+    );
     const localStorageLike = (globalThis as unknown as { localStorage: StorageLike }).localStorage;
     const deviceB = createSyncClient({
       storage: localStorageLike,
@@ -1737,6 +1767,10 @@ describe("mountPlannerApp — a successful sync pull re-renders without pushing"
 
     await mountPlannerApp(SEMESTERS as never, undefined);
     for (let i = 0; i < 20; i++) await new Promise((r) => setTimeout(r, 0));
+    // The first paint has happened and the pull has not. Everything after this
+    // line is the pull's doing and nothing else's.
+    const paintedRows = find("planner-course-rows").children;
+    releasePull();
     // Real time, past `schedulePush`'s 1s debounce: if the pull's repaint
     // had gone through the `onPlanChange` path instead of its own
     // `applyPulledPlan`, a push would fire in this window. A short flush
@@ -1748,9 +1782,9 @@ describe("mountPlannerApp — a successful sync pull re-renders without pushing"
       .descendants()
       .find((e) => e.dataset.code === "TDT4109");
     expect(row).toBeDefined();
-    // …the repaint happened exactly once on top of the mount's own first
-    // paint (2 = 1 baseline + 1 from the pull)…
-    expect(replaceStateCalls.length).toBe(2);
+    // …the rows really were rebuilt rather than the row having been there all
+    // along…
+    expect(find("planner-course-rows").children).not.toBe(paintedRows);
     // …and none of that repainting scheduled or fired a push of the plan
     // this tab just pulled back to the server.
     expect(server.puts.length).toBe(putsBefore);
@@ -1773,7 +1807,13 @@ describe("mountPlannerApp — a successful sync pull re-renders without pushing"
       search: "",
       pathname: "/planlegger/",
     };
-    installCombinedFetch(server);
+    let releasePull = (): void => {};
+    installCombinedFetch(
+      server,
+      new Promise<void>((resolve) => {
+        releasePull = resolve;
+      }),
+    );
     const localStorageLike = (globalThis as unknown as { localStorage: StorageLike }).localStorage;
     const deviceB = createSyncClient({
       storage: localStorageLike,
@@ -1793,12 +1833,17 @@ describe("mountPlannerApp — a successful sync pull re-renders without pushing"
 
     await mountPlannerApp(SEMESTERS as never, undefined);
     for (let i = 0; i < 20; i++) await new Promise((r) => setTimeout(r, 0));
+    const paintedRows = find("planner-course-rows").children;
+    const paintedRow = paintedRows[0];
+    releasePull();
+    await new Promise((r) => setTimeout(r, 1100));
 
-    // Only the mount's own unconditional first paint — the pull found
-    // nothing new and stayed quiet rather than spending a repaint on a no-op.
-    expect(replaceStateCalls.length).toBe(1);
+    // The pull found nothing new and stayed quiet: the very same nodes are
+    // still on screen, not identical ones rebuilt over the top.
+    expect(find("planner-course-rows").children).toBe(paintedRows);
+    expect(find("planner-course-rows").children[0]).toBe(paintedRow);
     expect(server.puts.length).toBe(putsBefore);
-  });
+  }, 10_000);
 });
 
 /**
@@ -2411,171 +2456,13 @@ describe("mountPlannerApp — an edit inside a pull's own round trip is not dest
   }, 10_000);
 });
 
-/**
- * The same race, arriving from the other side: the shared-link branch writes
- * a `#…` plan into storage SYNCHRONOUSLY, but it runs long after the on-load
- * pull was fired and long before `store.onPlanChange`'s subscriber is
- * registered — so nothing bumped `planGen` and the tab read as clean. The
- * pull's answer then overwrote the friend's plan, `applyPlanUpdate` cleared
- * `replacedPlan` and `syncHash()` rewrote the URL: the link, the plan and the
- * way back all vanished after a ~200 ms flash. The link application bumps the
- * counter now, so the pull guard covers this case with no separate logic.
- */
-describe("mountPlannerApp — an on-load pull does not eat a shared link", () => {
-  beforeEach(() => {
-    installDom();
-    vi.resetModules();
-  });
-  afterEach(() => {
-    vi.unstubAllGlobals();
-  });
-
-  it("keeps the link's plan and the way back to the student's own", async () => {
-    const server = makeSyncServer();
-    // The account holds a DIFFERENT plan (TDT4136) from both the link
-    // (TDT4109) and this device's stored one (TMA4400).
-    const storageA = fakeStorage({
-      "np:plans":
-        '{"26h":[{"code":"TDT4136","name":"TDT4136 navn","version":"1","source":"manual"}]}',
-    });
-    const deviceA = createSyncClient({
-      storage: storageA,
-      fetch: server.handle as unknown as typeof fetch,
-    });
-    await deviceA.signup("martin", "482913", "Mac");
-
-    (globalThis as unknown as Record<string, unknown>).location = {
-      hash: "#26h;-;%2BTDT4109",
-      search: "",
-      pathname: "/planlegger/",
-    };
-    (globalThis as unknown as Record<string, unknown>).fetch = vi.fn(
-      async (url: string, init?: RequestInit) => {
-        if (url.startsWith("/api/sync/")) return server.handle(url, init);
-        if (url.includes("/data/search-index.json"))
-          return jsonResponse({ year: 2026, courses: [] });
-        if (url.includes("/api/course/TDT4109/timetable")) {
-          return jsonResponse([entry("TDT4109", 1, "08:15", "10:00")]);
-        }
-        if (url.includes("/api/course/TDT4136/timetable")) {
-          return jsonResponse([entry("TDT4136", 2, "10:15", "12:00")]);
-        }
-        if (url.includes("/api/course/")) return jsonResponse(DETAILS);
-        return { ok: false, status: 404, json: async () => ({ error: "Not found" }) };
-      },
-    );
-
-    const localStorageLike = (globalThis as unknown as { localStorage: StorageLike }).localStorage;
-    const deviceB = createSyncClient({
-      storage: localStorageLike,
-      fetch: server.handle as unknown as typeof fetch,
-    });
-    await deviceB.login("martin", "482913", "Tavle · nettleser");
-    // This device had a plan of its own before the link arrived — which is
-    // what makes `replacedPlan` (the "Behold min egen" way back) real.
-    planStorage.set(
-      "np:plans",
-      '{"26h":[{"code":"TMA4400","name":"TMA4400 navn","version":"1","source":"manual"}]}',
-    );
-
-    const { mountPlannerApp } = await import("../../src/components/planner/plannerApp.js");
-    const { clearCourseBundleMemo, clearPlannerIndexMemo } = await import(
-      "../../src/lib/planner/data.js"
-    );
-    clearCourseBundleMemo();
-    clearPlannerIndexMemo();
-
-    await mountPlannerApp(SEMESTERS as never, undefined);
-    for (let i = 0; i < 20; i++) await new Promise((r) => setTimeout(r, 0));
-
-    // The link's plan is what is on screen and in storage — not the account's.
-    expect(planStorage.get("np:plans")).toContain("TDT4109");
-    expect(planStorage.get("np:plans")).not.toContain("TDT4136");
-    const rows = find("planner-course-rows").descendants();
-    expect(rows.find((e) => e.dataset.code === "TDT4109")).toBeDefined();
-    // …and the way back to the student's own plan is still offered.
-    const note = find("planner-link-note");
-    expect(note.hidden).toBe(false);
-    expect(note.textContent).toContain("Denne delte planen erstattet din egen.");
-  }, 10_000);
-
-  /**
-   * The other direction, and the worse one. Opening a link REPLACES
-   * `np:plans`, and the tab was left dirty with no push armed — `schedulePush`
-   * needs the `onPlanChange` subscriber, which is registered long after the
-   * link branch runs. So the friend's plan sat there as unsent work until
-   * something flushed it: the first visibility flip, or the search-index name
-   * backfill a few hundred ms later (which fires for EVERY link, since a hash
-   * carries codes and not names). Either one pushed a plan the student had
-   * merely looked at into their own account, over their own plan on every
-   * device.
-   *
-   * A viewed link is now a viewer: this tab neither sends nor receives until
-   * the student settles it.
-   */
-  it("never pushes a link the student only opened", async () => {
-    const server = makeSyncServer();
-    const storageA = fakeStorage({
-      "np:plans":
-        '{"26h":[{"code":"TDT4136","name":"TDT4136 navn","version":"1","source":"manual"}]}',
-    });
-    const deviceA = createSyncClient({
-      storage: storageA,
-      fetch: server.handle as unknown as typeof fetch,
-    });
-    await deviceA.signup("martin", "482913", "Mac");
-
-    (globalThis as unknown as Record<string, unknown>).location = {
-      hash: "#26h;-;%2BTDT4109",
-      search: "",
-      pathname: "/planlegger/",
-    };
-    installCombinedFetch(server);
-
-    const localStorageLike = (globalThis as unknown as { localStorage: StorageLike }).localStorage;
-    const deviceB = createSyncClient({
-      storage: localStorageLike,
-      fetch: server.handle as unknown as typeof fetch,
-    });
-    await deviceB.login("martin", "482913", "Tavle · nettleser");
-    planStorage.set(
-      "np:plans",
-      '{"26h":[{"code":"TMA4400","name":"TMA4400 navn","version":"1","source":"manual"}]}',
-    );
-
-    const { mountPlannerApp } = await import("../../src/components/planner/plannerApp.js");
-    const { clearCourseBundleMemo, clearPlannerIndexMemo } = await import(
-      "../../src/lib/planner/data.js"
-    );
-    clearCourseBundleMemo();
-    clearPlannerIndexMemo();
-    const putsBefore = server.puts.length;
-
-    await mountPlannerApp(SEMESTERS as never, undefined);
-    for (let i = 0; i < 20; i++) await new Promise((r) => setTimeout(r, 0));
-
-    // Trigger one: a write the PAGE makes on the link's behalf — the name
-    // backfill's `savePlan`, reaching the subscriber like any other change.
-    (
-      globalThis as unknown as { window: { dispatchEvent: (ev: { type: string }) => void } }
-    ).window.dispatchEvent({ type: PLAN_CHANGE_EVENT });
-    // Trigger two: the student switches tabs and comes back.
-    fireVisibilityChange(true);
-    fireVisibilityChange(false);
-
-    // Real time, past `schedulePush`'s 1s debounce, so a push that WAS armed
-    // would have fired inside this test rather than after it.
-    await new Promise((r) => setTimeout(r, 1100));
-    for (let i = 0; i < 20; i++) await new Promise((r) => setTimeout(r, 0));
-
-    // Nothing was sent…
-    expect(server.puts.length).toBe(putsBefore);
-    // …and the account still holds the student's own plan, not the friend's.
-    await pullNow(deviceA);
-    expect(storageA.getItem("np:plans")).toContain("TDT4136");
-    expect(storageA.getItem("np:plans")).not.toContain("TDT4109");
-  }, 10_000);
-});
+/* The two shared-link race tests are DELETED with the branch they guarded.
+   Both were about a link WRITING itself into `np:plans` — one that an on-load
+   pull could then eat, and one that a signed-in tab could push into the
+   student's own account. A shared plan is a page now
+   (`/user/<navn>`) and touches no storage at all, so neither race has a way to
+   start. The generation guard they exercised is still covered by the pull
+   tests above. */
 
 /**
  * Signing in is the OTHER write to `np:plans` that bypasses `store.savePlan`:

@@ -46,11 +46,9 @@ import {
   type AddCourseInput,
   activeCourses,
   DEFAULT_VERSION,
-  formatPlanHash,
   type PlanCourse,
   type PlanProgram,
   type PlanState,
-  parsePlanHash,
 } from "../../lib/planner/store.js";
 import type { SyncResult, SyncSession } from "../../lib/planner/syncClient.js";
 import { isoWeekNumber, weekdayDates } from "../../lib/planner/weekDates.js";
@@ -350,6 +348,32 @@ function semesterLabel(semester: SemesterSummary | undefined): string {
 }
 
 /**
+ * "Is this the same plan?" — the gate on the pull's repaint.
+ *
+ * `formatPlanHash` used to answer this, as a second job beside being the URL,
+ * and it went with the hash. What replaces it is deliberately NOT
+ * `JSON.stringify(plan)`: display names and credits arrive asynchronously (the
+ * search-index backfill, a study-plan fetch), and a plan that differs only by
+ * a name the other device happened to have resolved first is the SAME plan —
+ * repainting on it is the gratuitous-repaint problem the sync work spent a
+ * round closing. So the key is what the student actually chose: the semester,
+ * the programme, and each course's code, version, source, dropped state and
+ * group picks.
+ */
+export function planIdentity(plan: PlanState): string {
+  const program = plan.program
+    ? `${plan.program.code}.${plan.program.cohort}.${plan.program.direction?.code ?? ""}`
+    : "-";
+  const courses = plan.courses
+    .map(
+      (c) =>
+        `${c.code}.${c.version}.${c.source}.${c.dropped ? 1 : 0}.${(c.groups ?? []).join("~")}`,
+    )
+    .join(",");
+  return `${plan.semesterId};${program};${courses}`;
+}
+
+/**
  * What Del does, given the session it finds.
  *
  * There is ONE sharing mechanism: `/user/<navn>`, which needs an account and
@@ -516,42 +540,13 @@ export async function mountPlannerApp(
   let syncedGen = 0;
   const isDirty = () => planGen !== syncedGen;
 
-  /**
-   * This tab is showing a plan it only OPENED — a shared link whose content
-   * differed from what this device had stored — and the student has not acted
-   * on it. Set a few hundred lines below, where the link is applied.
-   *
-   * While it is true the tab is a VIEWER: it neither sends (`schedulePush`)
-   * nor receives (`handleVisibilityPull`). Sending is the data loss: opening a
-   * link writes it straight into `np:plans` (§7's "hash wins over storage"),
-   * and a signed-in tab then pushed the friend's plan into the student's own
-   * account and over their plan on every device — a link they merely looked
-   * at, adopted account-wide, with no action of theirs anywhere in the chain.
-   * Not receiving is the other half of the same rule: the account's own plan
-   * arriving mid-visit would silently repaint the link away (`applyPulledPlan`
-   * → `applyPlanUpdate` also clears `replacedPlan` and rewrites the URL),
-   * which is a worse answer to "here is my week" than showing it.
-   *
-   * A flag rather than a one-line settle at the write itself, because a link
-   * does not stop there: the search-index name backfill (`loadIndex`) fires
-   * for every link — a hash carries codes, not names — and a link carrying a
-   * programme reaches `loadPeriodCourses`' own `savePlan`/`setProgramPlan` a
-   * few hundred ms later. Each of those goes through the ordinary subscriber
-   * and would have armed exactly the push this exists to prevent.
-   *
-   * Cleared by "Behold min egen" (`renderLinkNote`), the one gesture the UI
-   * offers for settling a link. There is deliberately nothing else: PRODUCT §4
-   * flow 5's adoption half ("bruk denne") is unbuilt, and the sync design's §5
-   * deletes this branch outright — a viewed link stops touching the
-   * recipient's storage at all, which is the durable form of this rule. The
-   * known limit until then: this page writes its own plan back into the hash
-   * on every change, so RELOADING a link the student kept re-enters the branch
-   * with hash and storage agreeing and the flag off, i.e. the ordinary path.
-   * That is the same "a link you keep becomes your plan" this branch has
-   * always had; what is fixed here is the visit where the student chose
-   * nothing at all.
-   */
-  let viewingSharedLink = false;
+  /* The viewed-link sync suppression is DELETED with the hash it defended
+     against. It stopped a tab that had merely OPENED a shared link from
+     pushing the friend's plan into the student's own account — necessary while
+     a link wrote itself straight into `np:plans`, and meaningless now that a
+     shared plan is a page at `/user/<navn>` which touches no storage at all
+     (`components/planner/publicPlan.ts`). The durable form of the rule is that
+     there is nothing to suppress. */
 
   /**
    * What a successful pull needs that a same-tab edit gets for free through
@@ -572,18 +567,16 @@ export async function mountPlannerApp(
    * the server does not have yet. Pushing them is not a bug (see `planGen`'s
    * own comment on why nothing suppresses that here any more) — the other
    * device pulls the same enrichment, re-derives the identical result,
-   * `formatPlanHash` matches, and nothing repaints or pushes again. It
+   * `planIdentity` matches, and nothing repaints or pushes again. It
    * converges rather than ping-ponging.
    *
-   * Repaints only when the pulled plan actually differs: `formatPlanHash` is
-   * the same identity check the `hashchange` handler below already uses for
-   * "is this actually different" — a pull that came back identical to what
-   * is already on screen must not spend the week's layer-motion animation or
-   * CLS budget on a no-op.
+   * Repaints only when the pulled plan actually differs — a pull that came
+   * back identical to what is already on screen must not spend the week's
+   * layer-motion animation or CLS budget on a no-op.
    */
   function applyPulledPlan(): void {
     const next = store.loadPlan();
-    if (formatPlanHash(next) === formatPlanHash(plan)) return;
+    if (planIdentity(next) === planIdentity(plan)) return;
     applyPlanUpdate(next);
   }
 
@@ -664,11 +657,6 @@ export async function mountPlannerApp(
    *  armed at the moment it is asked. */
   function schedulePush(): void {
     if (sync.session() === null) return;
-    // A plan this device only opened is not this device's to send — see
-    // `viewingSharedLink`. Every write that follows a link (the name backfill,
-    // a programme derive, an edit on top of it) arrives here through the same
-    // subscriber, so this one line covers all of them.
-    if (viewingSharedLink) return;
     if (pushTimer !== null) clearTimeout(pushTimer);
     pushTimer = setTimeout(() => {
       pushTimer = null;
@@ -770,11 +758,6 @@ export async function mountPlannerApp(
    * before: `isDirty()` is false and this reaches the pull immediately.
    */
   async function handleVisibilityPull(): Promise<void> {
-    // A tab viewing a shared link is neither stale nor dirty in the sense
-    // either half of this function means: there is nothing of the student's to
-    // flush (`schedulePush` never armed one) and nothing to correct, since
-    // what is on screen is a link and not this account's plan.
-    if (viewingSharedLink) return;
     if (isDirty()) {
       if (pushTimer !== null) {
         clearTimeout(pushTimer);
@@ -949,145 +932,31 @@ export async function mountPlannerApp(
     if (ctx) courseSettings.showFor(ctx);
   }
 
-  /** One line explaining what we did with a link we could not honour (C4). */
+  /**
+   * One line about the plan that no control on the page explains — today only
+   * a failed share (C4's semester-substitution note went with the hash, which
+   * was its only writer).
+   */
   let linkNote: string | null = null;
 
-  /**
-   * Only a semester this build ships plannable data for may enter the state.
-   * A verbatim `#v2;25h;…` filtered 2025 entries against 26h's teaching weeks,
-   * and `#v2;banana;…` produced a permanently empty grid with no error — then
-   * `syncHash()` wrote the bad id straight back.
-   */
+  /** Only a semester this build ships plannable data for may enter the state. */
   function knownSemester(id: string): boolean {
     return semesters.some((s) => s.id === id);
   }
 
-  /** Hash → plan. Names aren't in the hash; loadPeriodCourses backfills them. */
-  function planFromHash(parsed: NonNullable<ReturnType<typeof parsePlanHash>>): PlanState {
-    let program: PlanProgram | undefined;
-    if (parsed.program) {
-      program = {
-        code: parsed.program.code,
-        name: parsed.program.code,
-        cohort: parsed.program.cohort,
-      };
-      if (parsed.program.direction) {
-        program.direction = { code: parsed.program.direction, name: parsed.program.direction };
-      }
-    }
-    let semesterId = parsed.semesterId;
-    if (!knownSemester(semesterId)) {
-      const fallback = semesters.find((s) => s.id === defaultSemesterId) ?? semesters[0];
-      linkNote = `Lenken pekte på et semester vi ikke kan planlegge ennå. Viser ${semesterLabel(fallback)}.`;
-      semesterId = fallback?.id ?? defaultSemesterId;
-    }
-    return {
-      semesterId,
-      courses: parsed.courses.map((c) => ({
-        code: c.code,
-        name: c.code,
-        version: c.version,
-        source: c.source,
-        ...(c.dropped ? { dropped: true } : {}),
-        // A shared link's group picks must survive the hash → plan hop.
-        ...(c.groups.length > 0 ? { groups: c.groups } : {}),
-      })),
-      ...(program ? { program } : {}),
-    };
-  }
-
-  /**
-   * Carries the two facts the hash grammar cannot hold — `credits` and the
-   * course's real `name` — from the plan already on disk onto the hash-derived
-   * one.
-   *
-   * The page writes its own hash on every render, so a plain F5 goes through
-   * the hash-wins branch below; replacing outright *persisted* `{name: code}`
-   * with no credits, losing the 7,5 sp only the study plan knows.
-   *
-   * Only same-semester storage is read (`np:plans` is keyed by semester).
-   * Everything the hash *does* carry still wins outright.
-   */
-  function withStoredFacts(next: PlanState, stored: PlanState): PlanState {
-    if (stored.semesterId !== next.semesterId) return next;
-    const byCode = new Map(stored.courses.map((c) => [c.code, c]));
-    return {
-      ...next,
-      courses: next.courses.map((course) => {
-        const previous = byCode.get(course.code);
-        if (!previous) return course;
-        return {
-          ...course,
-          ...(course.name === course.code && previous.name !== "" ? { name: previous.name } : {}),
-          ...(previous.credits != null ? { credits: previous.credits } : {}),
-        };
-      }),
-    };
-  }
-
-  // Hash wins over storage on load (PRODUCT.md §6) — but only a hash that
-  // carries a plan. Every load ends by writing the current plan back into the
-  // hash, so a trivially-empty hash (`#v2;26h;-;`) is indistinguishable from
-  // "no hash was ever set" and must defer to localStorage instead of wiping it.
-  const hashPlan = parsePlanHash(location.hash);
-  const hashHasPlan =
-    hashPlan !== null && (hashPlan.program !== null || hashPlan.courses.length > 0);
   let plan: PlanState = store.loadPlan();
-  /**
-   * The plan a shared link overwrote, kept so the student can have it back.
-   *
-   * Opening a link REPLACES local state (§7's "hash wins over storage"), which
-   * is right — a link that did not show its own plan would be pointless — but
-   * it was doing so silently and irreversibly, over a plan the recipient may
-   * have spent the evening on. PRODUCT §4 flow 5 asks for three actions here
-   * (bruk denne / slå sammen / behold min egen); the merge half is Phase 3 and
-   * unbuilt, but the destructive half is live TODAY, so the way back is what
-   * ships now. Null whenever there was nothing to lose, or the link carries
-   * what is already stored — which is every ordinary reload, since this page
-   * writes its own plan into the hash on every change.
-   */
-  let replacedPlan: PlanState | null = null;
-  if (hashPlan && hashHasPlan) {
-    const storedHadPlan = plan.program !== undefined || plan.courses.length > 0;
-    const incoming = withStoredFacts(planFromHash(hashPlan), plan);
-    // `differs` is the whole question for BOTH flags: identical hash and
-    // storage is every ordinary reload (this page writes its own plan into the
-    // hash on every change), which must keep behaving exactly as before —
-    // including staying dirty, since that is how an edit whose push failed in
-    // a previous session is recovered by the next flush.
-    const differs = formatPlanHash(plan) !== formatPlanHash(incoming);
-    if (storedHadPlan && differs) replacedPlan = plan;
-    // A link that brought something else is a plan this device is VIEWING, and
-    // sync stops in both directions until the student settles it — see
-    // `viewingSharedLink` up in the sync block.
-    viewingSharedLink = differs;
-    plan = incoming;
-    // A program-less link must CLEAR any stored profile, not just omit one:
-    // `savePlan` can only ever write `np:profile`, never clear it, so the
-    // header chip would keep naming the old programme.
-    if (hashPlan.program === null) store.removeProgram();
-    store.savePlan(plan);
-    // A shared link is a write to `np:plans`, and this one is invisible to the
-    // counter otherwise: `store.onPlanChange`'s subscriber is not registered
-    // until the very end of this function, so the `savePlan` above fires an
-    // event nobody is listening to and `planGen` would stay 0. The on-load
-    // pull was fired a few hundred lines above and its GET is on the wire
-    // right now — with the tab reading as clean, its answer overwrote the
-    // friend's plan, `applyPlanUpdate` cleared `replacedPlan` and `syncHash()`
-    // rewrote the URL, so the link, the plan and the way back all vanished
-    // after a ~200 ms flash. Bumping the counter is what makes
-    // `pullAndRefresh`'s guard see the generation move and refuse that answer.
-    // It cannot also arm a push — `schedulePush` needs the subscriber that is
-    // registered at the end of this function — which left the tab dirty with
-    // nothing scheduled; `viewingSharedLink` (above) is what stops the first
-    // visibility flip from flushing that as the student's own work.
-    planGen++;
-  } else if (!knownSemester(plan.semesterId)) {
-    // Stored state can outlive a semester too — silently, since no link lied.
+  if (!knownSemester(plan.semesterId)) {
+    // Stored state can outlive a semester. Nothing lied — the plan was made
+    // for a term this build no longer ships data for — so it is corrected
+    // silently rather than explained.
     plan = { ...plan, semesterId: defaultSemesterId };
     store.savePlan(plan);
-    // Same reason as the branch above: nothing is subscribed yet, and this
-    // write is real local content the server has not seen.
+    // `store.onPlanChange`'s subscriber is not registered until the very end
+    // of this function, so the `savePlan` above fires an event nobody is
+    // listening to and `planGen` would stay 0 — while the on-load pull's GET
+    // is already on the wire. Bumping it by hand is what makes
+    // `pullAndRefresh`'s guard see the generation move and refuse an answer
+    // about the older plan.
     planGen++;
   }
 
@@ -1139,8 +1008,6 @@ export async function mountPlannerApp(
     | { kind: "error" } = { kind: "pending" };
   /** Study-plan credits of the current prefill, when it exceeds a semester (B9.4). */
   let suspiciousPrefillCredits: number | null = null;
-  /** The last hash this page wrote, so its own `replaceState` isn't read back as a paste. */
-  let lastWrittenHash = "";
 
   function currentSemester(): SemesterSummary | undefined {
     return semesters.find((s) => s.id === plan.semesterId) ?? semestersFile.current ?? undefined;
@@ -1153,16 +1020,13 @@ export async function mountPlannerApp(
     return { fromDate: semester.fromDate, examFinalDate: semester.examFinalDate };
   }
 
-  /**
-   * `history.state` is carried through, never replaced with `null`: Astro's
-   * ClientRouter seeds every entry with `{index, scrollX, scrollY}` and its
-   * `onPopState` returns early on a null state, so writing `null` here leaves
-   * this entry dead — Back onto it changes the URL and never swaps the page.
-   */
-  function syncHash(): void {
-    lastWrittenHash = formatPlanHash(plan);
-    history.replaceState(history.state, "", lastWrittenHash);
-  }
+  /* `syncHash` is DELETED with the grammar it wrote. THE URL IS NO LONGER THE
+     PLAN: `/planlegger/` is one address whatever is in the plan, and the thing
+     you hand over is `/user/<navn>`. Two consequences worth stating rather than
+     rediscovering — bookmarking and browser tab-sync stop carrying the plan
+     (acceptable only because the account now does that job properly, and it
+     would not have been before), and D13's "breaks shared-URL parity" veto is
+     void, which does not revive anything it killed. */
 
   /** A bundle's timetable, narrowed to this programme's sections and this semester's weeks. */
   function semesterEntries(bundle: CourseBundle | null): TimetableEntry[] {
@@ -3103,42 +2967,19 @@ export async function mountPlannerApp(
   }
 
   /**
-   * The line above the week that is about the LINK rather than about the plan:
-   * a semester we substituted (C4), or a plan this link replaced.
+   * The line above the week that is about SHARING rather than about the plan.
    *
-   * The second carries a verb, because it is the only way back to something the
-   * page took away without asking. It is not "Angre" — nothing the student did
-   * is being undone — and not "Fjern", which §7 reserves for an outright
-   * removal. It names the thing you get: your own plan.
+   * It used to carry two more things, and both went with the hash: the
+   * semester-substitution note (nothing points at a semester any more) and
+   * "Denne delte planen erstattet din egen · Behold min egen" — the way back
+   * from a link that overwrote your plan. A link overwrites nothing now, so
+   * there is nothing to offer back.
    */
   function renderLinkNote(): void {
     const host = elements.linkNote;
     host.replaceChildren();
     if (linkNote !== null) host.append(linkNote);
-    if (replacedPlan !== null) {
-      if (linkNote !== null) host.append(" ");
-      host.append("Denne delte planen erstattet din egen. ");
-      const restore = el("button", "np-navlink planner-link-restore", "Behold min egen");
-      restore.type = "button";
-      restore.addEventListener("click", () => {
-        const mine = replacedPlan;
-        if (!mine) return;
-        // Cleared FIRST: `savePlan` re-enters through `onPlanChange` → renderAll
-        // → here, and a note still offering the plan it just restored would
-        // hand the shared one back on a second press.
-        replacedPlan = null;
-        linkNote = null;
-        // The link is settled, and settled toward the student's own plan: this
-        // tab stops being a viewer and syncs again from the write below. The
-        // only gesture that clears this — there is no "Bruk denne" yet, and §5
-        // of the sync design deletes the whole branch rather than adding one.
-        viewingSharedLink = false;
-        if (mine.program === undefined) store.removeProgram();
-        store.savePlan(mine);
-      });
-      host.append(restore);
-    }
-    host.hidden = linkNote === null && replacedPlan === null;
+    host.hidden = linkNote === null;
   }
 
   function renderAll(): void {
@@ -3353,25 +3194,16 @@ export async function mountPlannerApp(
   let lastDerivationKey: string | null = null;
 
   /**
-   * Paints `next` onto the page: the in-memory `plan`, the address bar, both
-   * rendered views, and — if the derivation key moved — a re-fetch of the
-   * study plan. The one shared step between a same-tab plan write (below)
-   * and a successful sync pull (`applyPulledPlan`, near the sync setup
-   * above).
+   * Paints `next` onto the page: the in-memory `plan`, both rendered views,
+   * and — if the derivation key moved — a re-fetch of the study plan. The one
+   * shared step between a same-tab plan write (below) and a successful sync
+   * pull (`applyPulledPlan`, near the sync setup above).
    */
   function applyPlanUpdate(next: PlanState): void {
-    // C4's note only explains a semester we SUBSTITUTED for the link's own, so
-    // a deliberate switch is when it stops being true. Nothing else clears it:
-    // studieinfo's Lagre goes through `savePlan` and `syncHash`'s replaceState,
-    // which fires no `hashchange`.
-    if (next.semesterId !== plan.semesterId) linkNote = null;
-    // Once the student edits the arrived plan they have chosen it, and an offer
-    // to "keep my own" would by then throw away the shared plan AND the edits
-    // they just made on top of it — a destructive action wearing the word
-    // recovery. The restore path clears this itself before saving.
-    replacedPlan = null;
+    // The share note is about the last press of Del, so any edit to the plan
+    // it was about is when it stops being worth reading.
+    linkNote = null;
     plan = next;
-    syncHash();
     renderAll();
     void loadBundles();
     const key = derivationKey();
@@ -3396,50 +3228,13 @@ export async function mountPlannerApp(
   });
   signal?.addEventListener("abort", unsubscribe);
 
-  /**
-   * The hash is re-read on every change, or pasting a shared plan into an
-   * already-open planner would change the address bar and nothing else — and
-   * the next edit would rewrite the hash from local state. Our own
-   * `replaceState` writes are ignored by comparing against the exact string we
-   * last wrote (pure ASCII, so the browser does not re-normalise it).
-   */
-  window.addEventListener(
-    "hashchange",
-    () => {
-      if (location.hash === lastWrittenHash) return;
-      const parsed = parsePlanHash(location.hash);
-      if (!parsed) return;
-      if (parsed.program === null && parsed.courses.length === 0) return;
-      linkNote = null;
-      // Same merge as the initial load: a pasted link re-stating courses
-      // already in the plan must not strip their credits.
-      const incoming = withStoredFacts(planFromHash(parsed), plan);
-      // …and the same rescue. Pasting a link into an ALREADY-OPEN planner
-      // replaces the plan exactly as arriving on one does, so it owes the same
-      // way back — `onPlanChange` below clears this, so it is captured here and
-      // re-set after the save that triggers it.
-      const displaced =
-        plan.program !== undefined || plan.courses.length > 0
-          ? formatPlanHash(plan) !== formatPlanHash(incoming)
-            ? plan
-            : null
-          : null;
-      // Same as the initial load: a program-less link clears the stored profile
-      // (savePlan cannot), so the chip stops naming the old programme.
-      if (parsed.program === null) store.removeProgram();
-      store.savePlan(incoming);
-      if (displaced) {
-        replacedPlan = displaced;
-        renderLinkNote();
-      }
-    },
-    { signal },
-  );
+  /* The `hashchange` listener is DELETED with the grammar it read. Pasting a
+     plan into an already-open planner is not a thing that can happen any more:
+     a shared plan is a page, and opening it navigates. */
 
   loadIndex();
 
-  // First paint from the initial (hash-or-storage) plan, then kick off fetches.
-  syncHash();
+  // First paint from the stored plan, then kick off fetches.
   renderAll();
 
   lastDerivationKey = derivationKey();

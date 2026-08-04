@@ -1,5 +1,5 @@
 import type { Page } from "@playwright/test";
-import { expect, test } from "./harness.js";
+import { expect, gotoPlanner, seedSharingAccount, test } from "./harness.js";
 
 /**
  * The modal-first flow, end to end against live NTNU data. Every scenario
@@ -163,63 +163,36 @@ test("onboarding: panel → programme + kull + retning → a full week", async (
   // Programme and kull, and no semester: the term is the `<select>` on the same
   // bar, and a title restating the control beside it is redundancy (DESIGN §9).
   await expect(planTitle(page)).toHaveText("MTDT Kull 24");
-  expect(page.url()).toMatch(/#26h;MTDT\.2024/);
 });
 
-test("share: the hash reproduces the plan in a fresh context", async ({ page, browser }) => {
-  await page.goto("/planlegger/#26h;MTDT.2026;");
-  await expect(courseRows(page)).toHaveCount(5, { timeout: 30_000 });
-  await expect(gridBlocks(page).first()).toBeVisible({ timeout: 30_000 });
-  const codes = (await courseCodesOf(page)).sort();
-  expect(codes).toContain("TDT4109");
+/* "share: the hash reproduces the plan in a fresh context" is DELETED with the
+   grammar it was about — a URL no longer carries a plan, and `e2e/publish.pw.ts`
+   covers what replaced it: publish, then open `/user/<navn>` as a stranger.
 
-  const url = page.url();
-  const freshContext = await browser.newContext();
-  try {
-    const freshPage = await freshContext.newPage();
-    await freshPage.goto(url);
-    await expect(courseRows(freshPage)).toHaveCount(5, { timeout: 30_000 });
-    const freshCodes = (await courseCodesOf(freshPage)).sort();
-    expect(freshCodes).toEqual(codes);
-  } finally {
-    await freshContext.close();
-  }
-});
+   "share: a program-less link clears the profile chip" goes with it. Its defect
+   — `savePlan` can write `np:profile` but never clear it, so the header kept
+   naming a programme the incoming link did not have — needed a link that
+   overwrites local state, and nothing does that any more. `store.removeProgram`
+   is still the only way to clear it and is still covered by unit tests. */
 
-test("share: a program-less link clears the profile chip", async ({ page }) => {
-  // A program-less shared link opened in the SAME context must clear the stored
-  // profile — savePlan can only ever WRITE np:profile, never clear it, so
-  // without removeProgram the header chip kept naming the old programme.
-  await page.goto("/planlegger/#26h;MTDT.2026;");
+test("a stored programme is read back after a real document load", async ({ page }) => {
+  // The half of the deleted test that still has a subject: the profile is
+  // genuinely in storage rather than held in memory, proven by leaving the page
+  // and coming back to a planner that still knows the programme.
+  await gotoPlanner(page, { program: { code: "MTDT", name: "MTDT", cohort: 2026 } });
   await expect(courseRows(page)).toHaveCount(5, { timeout: 30_000 });
   await expect(planTitle(page)).toContainText("MTDT", { timeout: 30_000 });
 
-  // A different-path hop first guarantees a real document load, so the initial
-  // hash-load path runs. The proof the profile is genuinely stored rather than
-  // held in memory is the planner reading it back after the hop.
   await page.goto("/");
-  await expect(page.locator("#studieinfo-chip")).toHaveCount(0);
-
-  await page.goto("/planlegger/#26h;-;%2BTDT4100");
-  await expect(courseRows(page)).toHaveCount(1, { timeout: 30_000 });
-  // A program-less plan has no code to be the title, so the page falls back to
-  // its own name — and the hint carries the invitation instead of a programme.
-  await expect(planTitle(page)).toHaveText("Semesterplan");
-  await expect(planTitle(page)).not.toContainText("MTDT");
-  // The stored programme is GONE from storage, not merely unpainted — which is
-  // the whole defect: `savePlan` can only write `np:profile`, never clear it.
-  // Read from storage rather than by opening the picker and inspecting it: what
-  // this test is about is the write, and where the picker lives is a design
-  // decision that has moved twice.
-  expect(
-    await page.evaluate(() => JSON.parse(localStorage.getItem("np:profile") || "{}").program),
-  ).toBeFalsy();
+  await page.goto("/planlegger/");
+  await expect(planTitle(page)).toContainText("MTDT", { timeout: 30_000 });
+  await expect(courseRows(page)).toHaveCount(5, { timeout: 30_000 });
 });
 
 test("overlap: two colliding courses take a lane each, both readable", async ({ page }) => {
   // MTDT 2026's obligatory TDT4109 collides with a manually added TDT4120 —
   // the exact clash the old suite's clash-preview (ekstraemne) test verified.
-  await page.goto("/planlegger/#26h;MTDT.2026;%2BTDT4120");
+  await gotoPlanner(page, { program: { code: "MTDT", name: "MTDT", cohort: 2026 }, courses: ["TDT4120"] });
   await expect(courseRows(page)).toHaveCount(6, { timeout: 30_000 });
   await expect(gridBlocks(page).first()).toBeVisible({ timeout: 30_000 });
 
@@ -270,7 +243,7 @@ test("verdict: a failed timetable fetch refuses the check instead of clearing it
     }),
   );
 
-  await page.goto("/planlegger/#26h;MTDT.2026;");
+  await gotoPlanner(page, { program: { code: "MTDT", name: "MTDT", cohort: 2026 } });
   await expect(courseRows(page)).toHaveCount(5, { timeout: 30_000 });
   // The rest of the week still draws — a mixed outcome, which is exactly the
   // case the all-courses-empty fallback card cannot reach.
@@ -297,7 +270,7 @@ test("groups: switching parallel updates the grid and survives the URL", async (
   // A bare manual add, no programme — TDT4110's own numbered-parallel
   // fallback (groups.ts) is what decides the default here, not any
   // programme narrowing.
-  await page.goto("/planlegger/#26h;-;%2BTDT4110");
+  await gotoPlanner(page, { courses: ["TDT4110"] });
 
   await expect(gridBlocks(page)).toHaveCount(1, { timeout: 30_000 });
   const block = gridBlocks(page).first();
@@ -316,12 +289,10 @@ test("groups: switching parallel updates the grid and survives the URL", async (
   // block count drops to zero, replaced by exactly one Wednesday block.
   await expect(gridBlocks(page)).toHaveCount(1);
   await expect(gridBlocks(page).first()).toHaveAttribute("aria-label", /onsdag/i);
-  expect(page.url()).toMatch(/~forelesningsparallell-2/);
 
   await page.reload();
   await expect(gridBlocks(page)).toHaveCount(1, { timeout: 30_000 });
   await expect(gridBlocks(page).first()).toHaveAttribute("aria-label", /onsdag/i);
-  expect(page.url()).toMatch(/~forelesningsparallell-2/);
 });
 
 test("groups: a non-default parallel renders with a programme set", async ({ page }) => {
@@ -343,7 +314,7 @@ test("groups: a non-default parallel renders with a programme set", async ({ pag
       '#planner-grid-frame .planner-cols-block[aria-label^="TMA4400"][aria-label*="onsdag 08:15"]',
     );
 
-  await page.goto("/planlegger/#26h;MTDT.2026;");
+  await gotoPlanner(page, { program: { code: "MTDT", name: "MTDT", cohort: 2026 } });
   await expect(courseRows(page)).toHaveCount(5, { timeout: 30_000 });
   await expect(tmaBlocks().first()).toBeVisible({ timeout: 45_000 });
 
@@ -359,7 +330,6 @@ test("groups: a non-default parallel renders with a programme set", async ({ pag
   // The picked MTBYGG parallel (Wednesday) must now draw — pre-fix it drew
   // nothing at all for TMA4400.
   await expect(mtbyggBlock()).toHaveCount(1);
-  expect(page.url()).toMatch(/TMA4400~forelesning-2-mtbygg/i);
 
   // …and the student's OTHER Matematikk 1 sessions must survive it. A pick is
   // not an allow-list over the whole course: one tick used to delete every
@@ -375,7 +345,7 @@ test("groups: the picker lists this semester's groups, not the whole year's", as
   // EXPH0300 publishes 36 seminar groups and 5 lecture parallels across three
   // cities over a full year, and the picker listed all 44 — on a phone that put
   // its own actions ~1 000 px below the fold behind another city's seminars.
-  await page.goto("/planlegger/#26h;MTDT.2026;");
+  await gotoPlanner(page, { program: { code: "MTDT", name: "MTDT", cohort: 2026 } });
   const exphBlock = gridBlocks(page).filter({ hasText: "EXPH0300" }).first();
   await expect(exphBlock).toBeVisible({ timeout: 45_000 });
   await settingsFromBlock(page, exphBlock);
@@ -407,7 +377,7 @@ test("groups: the picker lists this semester's groups, not the whole year's", as
 test("course settings: closes from its own button, not just Esc", async ({ page }) => {
   // `showModal()` gives Esc and a backdrop back, but the × stays: on touch
   // there is no Esc, and a backdrop tap is not a gesture to guess at.
-  await page.goto("/planlegger/#26h;-;%2BTDT4110");
+  await gotoPlanner(page, { courses: ["TDT4110"] });
 
   await expect(gridBlocks(page)).toHaveCount(1, { timeout: 30_000 });
   const settings = page.locator("#planner-course-settings");
@@ -433,7 +403,7 @@ test("course settings: never offers a picker with only one option", async ({ pag
 
   // TDT4110 (3 numbered parallels) and TDT4109 (a single lecture entry) —
   // opposite ends of the gate, both loaded at once.
-  await page.goto("/planlegger/#26h;-;%2BTDT4110,%2BTDT4109");
+  await gotoPlanner(page, { courses: ["TDT4110", "TDT4109"] });
   await expect(gridBlocks(page).first()).toBeVisible({ timeout: 30_000 });
 
   const blocks = await gridBlocks(page).count();
@@ -464,7 +434,7 @@ test("course settings: complementary lecture sessions are not offered as a choic
   // lectures, both drawn. The count-only gate made them two checkboxes,
   // inviting the student to untick teaching they attend. The gate is now "is
   // there anything to switch TO".
-  await page.goto("/planlegger/#26h;-;%2BTMA4401");
+  await gotoPlanner(page, { courses: ["TMA4401"] });
   await expect(gridBlocks(page).first()).toBeVisible({ timeout: 45_000 });
 
   await settingsFromBlock(page);
@@ -481,7 +451,7 @@ test("one control opens studieinfo, and semester lives only inside it", async ({
   // the PLAN'S OWN NAME: press the fact to change the fact. (The topbar briefly
   // held this door on 2026-08-03; it kept the account and gave the picker back,
   // because a programme is a fact about the plan and sign-in is not.)
-  await page.goto("/planlegger/#26h;MTDT.2026;");
+  await gotoPlanner(page, { program: { code: "MTDT", name: "MTDT", cohort: 2026 } });
   await expect(courseRows(page).first()).toBeVisible({ timeout: 30_000 });
 
   await expect(page.locator("#planner-context-change")).toHaveCount(0);
@@ -541,7 +511,7 @@ test("week: three overlapping lectures stack into three lanes, no pile", async (
     );
   }
 
-  await page.goto(`/planlegger/#26h;-;${codes.map((c) => `%2B${c}`).join(",")}`);
+  await gotoPlanner(page, { courses: codes });
 
   // Lanes delete the pile rather than managing it: three simultaneous lectures
   // are three blocks side by side in Monday's column, each still naming itself.
@@ -625,7 +595,7 @@ test("session popover: the card names the building, the length and the collision
     }),
   );
 
-  await page.goto("/planlegger/#26h;-;%2BTDT4110,%2BTDT4120");
+  await gotoPlanner(page, { courses: ["TDT4110", "TDT4120"] });
   const bar = gridBlocks(page).filter({ hasText: "TDT4110" });
   await expect(bar).toBeVisible({ timeout: 30_000 });
   await bar.click();
@@ -664,7 +634,7 @@ test("session popover: the card names the building, the length and the collision
 });
 
 test("week: Uke and Liste show the same week two ways", async ({ page }) => {
-  await page.goto("/planlegger/#26h;MTDT.2026;");
+  await gotoPlanner(page, { program: { code: "MTDT", name: "MTDT", cohort: 2026 } });
   await expect(gridBlocks(page).first()).toBeVisible({ timeout: 45_000 });
 
   // Uke is what a cold load draws, so the tab is pressed before anything is
@@ -748,7 +718,7 @@ test("kolonner: the week is dealt out in whole days at every width", async ({ pa
   // and the middle wrong: between "all five fit" and "properly a scroller" the
   // frame closed mid-column and a strip of Friday hung past the edge. The count
   // of days is floored now, so the scroll only ever hides whole ones.
-  await page.goto("/planlegger/#26h;MTDT.2026;");
+  await gotoPlanner(page, { program: { code: "MTDT", name: "MTDT", cohort: 2026 } });
   await expect(gridBlocks(page).first()).toBeVisible({ timeout: 45_000 });
   await page.click("#planner-view-kolonner");
   await expect(page.locator("#planner-grid-frame .planner-cols")).toBeVisible();
@@ -834,9 +804,12 @@ test("uke: an open øvingsvindu names itself, opens, and stacks", async ({ page 
   // exactly on top of the other. Live 2026: two courses publish drop-in windows
   // over the five-hour threshold on the same days, so every weekday carries
   // two.
-  await page.goto(
-    "/planlegger/#26h;-;%2BTDT4120~%C3%B8vingsveiledning,%2BTDT4110~ferdighetstrening",
-  );
+  await gotoPlanner(page, {
+    courses: [
+      { code: "TDT4120", groups: ["øvingsveiledning"] },
+      { code: "TDT4110", groups: ["ferdighetstrening"] },
+    ],
+  });
   await expect(gridBlocks(page).first()).toBeVisible({ timeout: 45_000 });
   await page.click("#planner-others-toggle");
 
@@ -915,7 +888,7 @@ test("liste: the collision marks the two sessions, not the day around them", asy
   // morning's lecture too. Friday from live 2026 data carries one clean lecture
   // and one overlapping pair, so the week has five lecture rows and exactly one
   // collision.
-  await page.goto("/planlegger/#26h;-;%2BTDT4110,%2BTDT4120,%2BTMA4401");
+  await gotoPlanner(page, { courses: ["TDT4110", "TDT4120", "TMA4401"] });
   await expect(gridBlocks(page).first()).toBeVisible({ timeout: 45_000 });
   expect(await settledVerdict(page)).toMatch(/1 kollisjon/);
 
@@ -944,7 +917,7 @@ test("modals: a click on the backdrop dismisses every one of them", async ({ pag
   // The implementation is `closedby="any"` on all three, so this is really a
   // test that the attribute is set and that nothing inside the card sits in the
   // dialog's own box swallowing the click.
-  await page.goto("/planlegger/#26h;-;%2BTDT4110");
+  await gotoPlanner(page, { courses: ["TDT4110"] });
   await expect(gridBlocks(page).first()).toBeVisible({ timeout: 45_000 });
 
   // Well outside every card: all three are pinned near the top and none is
@@ -992,7 +965,7 @@ test("add dialog: the search field holds still while the results change", async 
 test("landing page: Nå answers with the room, not a course count", async ({ page }) => {
   //. The plan is seeded through the planner (the store is
   // per-origin localStorage), then the landing page is asked what it shows.
-  await page.goto("/planlegger/#26h;MTDT.2026;");
+  await gotoPlanner(page, { program: { code: "MTDT", name: "MTDT", cohort: 2026 } });
   await expect(gridBlocks(page).first()).toBeVisible({ timeout: 45_000 });
 
   await page.goto("/");
@@ -1022,7 +995,7 @@ test("landing page: Nå answers with the room, not a course count", async ({ pag
 test("week: the øving layer shows picked groups, not the whole cohort's", async ({ page }) => {
   // EXPH0300 publishes 14 seminar groups. Before this, turning the toggle on
   // drew every one of them — 41 blocks in an MTDT week.
-  await page.goto("/planlegger/#26h;MTDT.2026;");
+  await gotoPlanner(page, { program: { code: "MTDT", name: "MTDT", cohort: 2026 } });
   await expect(gridBlocks(page).first()).toBeVisible({ timeout: 45_000 });
   const before = await gridBlocks(page).count();
 
@@ -1055,7 +1028,7 @@ test("week: the øving toggle moves the layer and leaves nothing behind", async 
   // leaves. What can break in the field is the scaffolding: a stuck
   // `is-settling` freezes every bar's geometry mid-transition, and an orphaned
   // ghost is a bar that is not in the plan.
-  await page.goto("/planlegger/#26h;MTDT.2026;");
+  await gotoPlanner(page, { program: { code: "MTDT", name: "MTDT", cohort: 2026 } });
   await expect(gridBlocks(page).first()).toBeVisible({ timeout: 45_000 });
   // Settled, not merely painted: the bundles land one by one and the block
   // count is still climbing on the frame the first one appears. The verdict is
@@ -1190,7 +1163,7 @@ test("manual adds stay in their semester", async ({ page }) => {
 
 test("failure honesty: API down shows retry, not 'publiseres'", async ({ page, context }) => {
   await context.route("**/api/**", (route) => route.abort());
-  await page.goto("/planlegger/#26h;-;%2BTDT4109");
+  await gotoPlanner(page, { courses: ["TDT4109"] });
 
   const card = page.locator("#planner-grid-frame .planner-week-card");
   await expect(card).toBeVisible({ timeout: 30_000 });
@@ -1203,10 +1176,11 @@ test("failure honesty: API down shows retry, not 'publiseres'", async ({ page, c
 });
 
 test("MTIØT: a programme code containing Æ/Ø/Å resolves, not a 400 (B1)", async ({ page }) => {
-  // Before B1's decode fix, /api/program/MTI%C3%98T/plan?year=… 400'd from
-  // the worker and this exact hash produced a silent blank week.
-  const hash = `#26h;${encodeURIComponent("MTIØT")}.2024;`;
-  await page.goto(`/planlegger/${hash}`);
+  // Before B1's decode fix, /api/program/MTI%C3%98T/plan?year=… 400'd from the
+  // worker and this programme produced a silent blank week. The code still
+  // travels percent-encoded — it is `encodeURIComponent`'d into the request
+  // path by `programPlan.ts` — which is the half this exercises.
+  await gotoPlanner(page, { program: { code: "MTIØT", name: "MTIØT", cohort: 2024 } });
 
   await expect(page.locator("#planner-title")).toContainText("MTIØT", { timeout: 15_000 });
 
@@ -1227,7 +1201,7 @@ test("MTIØT: a programme code containing Æ/Ø/Å resolves, not a 400 (B1)", as
 test("BSPL: a campus choice whose own code contains Ø survives a reload (B10)", async ({
   page,
 }) => {
-  await page.goto("/planlegger/#26h;BSPL.2026;");
+  await gotoPlanner(page, { program: { code: "BSPL", name: "BSPL", cohort: 2026 } });
 
   const question = page.locator("#planner-direction");
   await expect(question).toBeVisible({ timeout: 30_000 });
@@ -1259,15 +1233,13 @@ test("BSPL: a campus choice whose own code contains Ø survives a reload (B10)",
 
   // The direction code itself carries Ø (…GJØVIK) — this is exactly the
   // character `parsePlanHash` used to drop before B10.
-  expect(page.url()).toMatch(/BSPL\.2026\.[^;]*GJ(%C3%98|Ø)VIK/i);
 
   await page.reload();
   await expect(courseRows(page).first()).toBeVisible({ timeout: 30_000 });
-  expect(page.url()).toMatch(/BSPL\.2026\.[^;]*GJ(%C3%98|Ø)VIK/i);
 });
 
 test("drop and restore a programme course", async ({ page }) => {
-  await page.goto("/planlegger/#26h;MTDT.2026;");
+  await gotoPlanner(page, { program: { code: "MTDT", name: "MTDT", cohort: 2026 } });
   await expect(courseRows(page)).toHaveCount(5, { timeout: 30_000 });
   await expect(gridBlocks(page).first()).toBeVisible({ timeout: 30_000 });
 
@@ -1287,7 +1259,6 @@ test("drop and restore a programme course", async ({ page }) => {
   await expect(row).toHaveClass(/is-dropped/);
   await expect(courseRows(page)).toHaveCount(5);
   await expect(gridBlocks(page).filter({ hasText: code })).toHaveCount(0);
-  expect(page.url()).toContain(`-${code}`);
 
   await courseSettingsBtn(page, code).click();
   await settings.locator(".course-settings-action", { hasText: "Legg tilbake" }).click();
@@ -1300,7 +1271,7 @@ test("dropping from a block's settings keeps focus in the document", async ({ pa
   // "Dropp" destroys the block that opened the surface, and the old non-modal
   // popover then called focus() on a detached node — a silent no-op that
   // dropped focus to <body>, so the next Tab restarted at the skip link.
-  await page.goto("/planlegger/#26h;MTDT.2026;");
+  await gotoPlanner(page, { program: { code: "MTDT", name: "MTDT", cohort: 2026 } });
   await expect(courseRows(page)).toHaveCount(5, { timeout: 30_000 });
   await expect(gridBlocks(page).first()).toBeVisible({ timeout: 45_000 });
 
@@ -1351,7 +1322,7 @@ test.describe("time passing", () => {
   test("the week follows the day across midnight", async ({ page }) => {
     // Wednesday of teaching week 36, mid-morning.
     await page.clock.install({ time: new Date("2026-09-02T10:40:00+02:00") });
-    await page.goto("/planlegger/#26h;MTDT.2026;");
+    await gotoPlanner(page, { program: { code: "MTDT", name: "MTDT", cohort: 2026 } });
     await expect(gridBlocks(page).first()).toBeVisible({ timeout: 45_000 });
     const today = page.locator("#planner-grid-frame .planner-cols-day[data-today]");
     const marker = page.locator("#planner-grid-frame .planner-cols-now");
@@ -1396,7 +1367,7 @@ test.describe("time passing", () => {
   test("the landing card counts its own minutes down", async ({ page }) => {
     // Monday of teaching week 36, 15 minutes into TMA4412's 08:15 lecture.
     await page.clock.install({ time: new Date("2026-08-31T08:30:00+02:00") });
-    await page.goto("/planlegger/#26h;MTDT.2026;");
+    await gotoPlanner(page, { program: { code: "MTDT", name: "MTDT", cohort: 2026 } });
     await expect(gridBlocks(page).first()).toBeVisible({ timeout: 45_000 });
 
     await page.goto("/");
@@ -1421,7 +1392,7 @@ test.describe("the exam list on a phone", () => {
     // As a third cell of the row the countdown had no column at 390 px, so it
     // dropped to a second grid row and made one row two lines tall with a hole
     // beside it. It is a segment on the rule now.
-    await page.goto("/planlegger/#26h;MTDT.2026;");
+    await gotoPlanner(page, { program: { code: "MTDT", name: "MTDT", cohort: 2026 } });
     const rows = page.locator(".exam-list .exam-row");
     await expect(rows.first()).toBeVisible({ timeout: 45_000 });
     await expect(page.locator(".exam-gap.is-away")).toHaveCount(1);
@@ -1450,7 +1421,7 @@ test("ett navn: the plan is named once, and the switch is not a third toggle", a
   // Two faults, one test, because they share a cause — controls and facts that
   // looked like each other: the plan was named twice 100 px apart, and a radio
   // group and a checkbox were three identical uppercase mono toggles in a row.
-  await page.goto("/planlegger/#26h;MTDT.2026;");
+  await gotoPlanner(page, { program: { code: "MTDT", name: "MTDT", cohort: 2026 } });
   await expect(gridBlocks(page).first()).toBeVisible({ timeout: 45_000 });
 
   // ETT NAVN, and one statement of each fact in it: programme and kull here,
@@ -1512,7 +1483,7 @@ test("ett navn: the plan is named once, and the switch is not a third toggle", a
  * is doing — so the handler existed, read correctly, and never ran.
  */
 test("the block popover closes when you tab off its end", async ({ page }) => {
-  await page.goto("/planlegger/#26h;MTDT.2026;");
+  await gotoPlanner(page, { program: { code: "MTDT", name: "MTDT", cohort: 2026 } });
   const block = gridBlocks(page).first();
   await expect(block).toBeVisible({ timeout: 45_000 });
   await block.click();
@@ -1565,7 +1536,7 @@ test.describe("target sizes", () => {
   ] as const) {
     test(`every target on the planner clears ${MIN}px — ${label}`, async ({ page }) => {
       await page.setViewportSize({ width, height });
-      await page.goto("/planlegger/#26h;MTDT.2026;");
+      await gotoPlanner(page, { program: { code: "MTDT", name: "MTDT", cohort: 2026 } });
       await expect(gridBlocks(page).first()).toBeVisible({ timeout: 45_000 });
       expect(await undersized(page)).toEqual([]);
 
@@ -1599,7 +1570,7 @@ test.describe("target sizes", () => {
      */
     test(`the clash verdict's jump target clears ${MIN}px — ${label}`, async ({ page }) => {
       await page.setViewportSize({ width, height });
-      await page.goto("/planlegger/#26h;-;%2BTDT4109,%2BTDT4120");
+      await gotoPlanner(page, { courses: ["TDT4109", "TDT4120"] });
       const jump = page.locator("button.planner-chip.is-jump");
       await expect(jump).toBeVisible({ timeout: 45_000 });
       const box = await jump.boundingBox();
@@ -1625,7 +1596,7 @@ test.describe("nålen", () => {
 
     // Tuesday of teaching week 36, inside EXPH0300's 08:15 lecture.
     await page.clock.install({ time: new Date("2026-09-01T09:05:00+02:00") });
-    await page.goto("/planlegger/#26h;MTDT.2026;");
+    await gotoPlanner(page, { program: { code: "MTDT", name: "MTDT", cohort: 2026 } });
     await expect(gridBlocks(page).first()).toBeVisible({ timeout: 45_000 });
     await expect(marker).toBeVisible();
 
@@ -1702,7 +1673,7 @@ test("the layer leaves in the reverse of the order it arrived in", async ({ page
   // leave, then space closes — but the STAGGER was not: departures all vanished
   // on the same frame, which is not the reverse of an order but the absence of
   // one.
-  await page.goto("/planlegger/#26h;MTDT.2026;");
+  await gotoPlanner(page, { program: { code: "MTDT", name: "MTDT", cohort: 2026 } });
   await expect(gridBlocks(page).first()).toBeVisible({ timeout: 45_000 });
 
   const indices = (selector: string, prop: string) =>
@@ -1737,7 +1708,7 @@ test("the all-day row opens with the layer instead of snapping", async ({ page }
   // is also why the row is drawn at zero height rather than not drawn: a row
   // that is absent in one state and present in the next cannot animate at all.
   // TDT4120's weekday-long Øvingsveiledning is exactly this case.
-  await page.goto("/planlegger/#26h;-;%2BTDT4120,%2BTMA4412");
+  await gotoPlanner(page, { courses: ["TDT4120", "TMA4412"] });
   await expect(gridBlocks(page).first()).toBeVisible({ timeout: 45_000 });
   await page.locator("#planner-others-toggle").click();
   await expect(page.locator(".planner-note-groups").first()).toBeVisible({ timeout: 20_000 });
@@ -1781,7 +1752,7 @@ test("the list's own height animates too, so nothing under it jumps", async ({ p
   // list's rows are in normal flow, so removing them makes the container short
   // on the frame the render lands and everything underneath jumps. FLIP cannot
   // carry it — a translated row still occupies its original box.
-  await page.goto("/planlegger/#26h;MTDT.2026;");
+  await gotoPlanner(page, { program: { code: "MTDT", name: "MTDT", cohort: 2026 } });
   await expect(gridBlocks(page).first()).toBeVisible({ timeout: 45_000 });
   await page.locator("#planner-view-tavle").click();
   const board = page.locator("#planner-grid-frame .planner-board");
@@ -1823,7 +1794,7 @@ test.describe("the banner's pair", () => {
     // and a wrapping row of controls used to get in between them. They share a
     // box of their own now, so nothing CAN — which is a stronger guarantee than
     // the grid areas it replaced, and it survives any control being added.
-    await page.goto("/planlegger/#26h;MTDT.2026;");
+    await gotoPlanner(page, { program: { code: "MTDT", name: "MTDT", cohort: 2026 } });
     await expect(gridBlocks(page).first()).toBeVisible({ timeout: 45_000 });
 
     const box = (sel: string) =>
@@ -1890,7 +1861,7 @@ test.describe("the banner's pair", () => {
     // "ingen kollisjoner" is the answer to a question nobody asked; a
     // collision is not. TDT4120's Friday lecture collides with TDT4109's, the
     // clash the suite already establishes elsewhere.
-    await page.goto("/planlegger/#26h;MTDT.2026;%2BTDT4120");
+    await gotoPlanner(page, { program: { code: "MTDT", name: "MTDT", cohort: 2026 }, courses: ["TDT4120"] });
     await expect(gridBlocks(page).first()).toBeVisible({ timeout: 45_000 });
 
     const verdict = page.locator("#planner-grid-status");
@@ -1904,7 +1875,7 @@ test.describe("the banner's pair", () => {
     // the pass has nothing to qualify — "ingen forelesninger kolliderer" and
     // nothing else, which is the line that spends a row of the first screen
     // saying nothing is wrong.
-    await page.goto("/planlegger/#26h;-;%2BTDT4110,%2BTDT4120");
+    await gotoPlanner(page, { courses: ["TDT4110", "TDT4120"] });
     await expect(gridBlocks(page).first()).toBeVisible({ timeout: 45_000 });
     const status = page.locator("#planner-grid-status");
     await expect
@@ -1949,7 +1920,7 @@ test.describe("the phone's week", () => {
     // Five days and eight hours do not fit a phone, so the axis scrolls — and
     // the one thing that may not scroll with it is the rail saying which hour
     // you are reading.
-    await page.goto("/planlegger/#26h;MTDT.2026;");
+    await gotoPlanner(page, { program: { code: "MTDT", name: "MTDT", cohort: 2026 } });
     await expect(gridBlocks(page).first()).toBeVisible({ timeout: 45_000 });
 
     const frame = page.locator("#planner-grid-frame");
@@ -1973,7 +1944,7 @@ test.describe("the phone's week", () => {
   test("the margin notes fold to one line that still qualifies the verdict", async ({ page }) => {
     // mob-D. HMS0002 publishes no lecture-classified activity, so MTDT's week
     // carries exactly one note — 83 px of paragraph under a 233 px week.
-    await page.goto("/planlegger/#26h;MTDT.2026;");
+    await gotoPlanner(page, { program: { code: "MTDT", name: "MTDT", cohort: 2026 } });
     await expect(gridBlocks(page).first()).toBeVisible({ timeout: 45_000 });
 
     const fold = page.locator("#planner-grid-notes details.planner-notes-fold");
@@ -1992,7 +1963,7 @@ test.describe("the phone's week", () => {
 test("the week is not labelled 'Uke', but the region still has that name", async ({ page }) => {
   // A grid of weekdays under an hour ruler does not need to be told it is a
   // week. The heading stays in the tree because the section is named by it.
-  await page.goto("/planlegger/#26h;MTDT.2026;");
+  await gotoPlanner(page, { program: { code: "MTDT", name: "MTDT", cohort: 2026 } });
   await expect(gridBlocks(page).first()).toBeVisible({ timeout: 45_000 });
   const heading = page.locator("#planner-week-heading");
   await expect(heading).toHaveText("Uke");
@@ -2024,7 +1995,11 @@ test("the week is not labelled 'Uke', but the region still has that name", async
  */
 test("del: the mark has a size, and confirming moves nothing", async ({ page, context }) => {
   await context.grantPermissions(["clipboard-read", "clipboard-write"]);
-  await page.goto("/planlegger/#26h;MTDT.2026;");
+  // Del hands over `/user/<navn>`, so it needs an account that is already
+  // sharing; without one the button opens signup instead of copying, which is
+  // its own behaviour and covered in publish.pw.ts.
+  await seedSharingAccount(page);
+  await gotoPlanner(page, { program: { code: "MTDT", name: "MTDT", cohort: 2026 } });
   await expect(gridBlocks(page).first()).toBeVisible({ timeout: 45_000 });
 
   const share = page.locator("#planner-share");
@@ -2224,6 +2199,7 @@ test.describe("the plan bar on a phone", () => {
     // Without the grant `writeText` rejects and the label never swaps — the
     // confirmation this test is about would be missing for the wrong reason.
     await context.grantPermissions(["clipboard-read", "clipboard-write"]);
+    await seedSharingAccount(page);
     await seedProgram(page);
     await page.goto("/planlegger/");
     const menu = page.locator("#planner-tools-btn");

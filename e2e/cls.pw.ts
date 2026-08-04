@@ -1,5 +1,5 @@
 import type { Page } from "@playwright/test";
-import { expect, test } from "./harness.js";
+import { expect, gotoPlanner, test } from "./harness.js";
 
 /**
  * Layout stability, as a budget per surface.
@@ -100,7 +100,7 @@ async function clsOf(page: Page, url: string): Promise<number> {
  * half of what is tested is the pre-paint probe reading it out of localStorage.
  */
 async function seedPlan(page: Page): Promise<void> {
-  await page.goto("/planlegger/#26h;MTDT.2026;");
+  await gotoPlanner(page, { program: { code: "MTDT", name: "MTDT", cohort: 2026 } });
   await expect(page.locator("#planner-grid-frame .planner-cols-block").first()).toBeVisible({
     timeout: 45_000,
   });
@@ -222,7 +222,7 @@ test.describe("layout stability", () => {
    * The first version of it passed with both halves of the fix disabled.
    */
   test("the week gives its reserved space back when the view changes", async ({ page }) => {
-    await page.goto("/planlegger/#26h;-;%2BTDT4120");
+    await gotoPlanner(page, { courses: ["TDT4120"] });
     await expect(page.locator("#planner-grid-frame .planner-cols-block").first()).toBeVisible({
       timeout: 45_000,
     });
