@@ -128,9 +128,47 @@ export function mountBlockPopover(
   let invoker: HTMLElement | null = null;
   const desktop = window.matchMedia(DESKTOP_QUERY);
 
+  /**
+   * The dim behind the SHEET form, and the surface that catches the tap that
+   * dismisses it. Two jobs, and both are the reason it exists only below 60rem.
+   *
+   * The anchored desktop card is a small non-modal thing over a live page, and a
+   * click going through to what was pointed at is the point — it is what lets
+   * one bar hand the card to the next. The sheet is full width and reads as
+   * modal, so the page behind it must actually be out of reach and must LOOK it:
+   * a modal sheet with an invisible scrim tells the reader they can still touch
+   * what they can still see, and they cannot (Material's bottom-sheet rule).
+   *
+   * It also fixes the tap that used to leak. Dismissing on `pointerdown` left
+   * the surface gone before the touch's synthesised click arrived, so that click
+   * landed on the control underneath and one tap did two things. The scrim is
+   * still there at click time and absorbs it — the same mechanism, and the same
+   * `click` rather than `pointerdown`, as the chrome menu's scrim.
+   */
+  let scrim: HTMLElement | null = null;
+
+  function dropScrim(): void {
+    scrim?.remove();
+    scrim = null;
+  }
+
+  function raiseScrim(): void {
+    if (scrim || desktop.matches) return;
+    scrim = document.createElement("div");
+    scrim.className = "block-popover-scrim";
+    scrim.addEventListener("click", close);
+    dialog.before(scrim);
+  }
+
   function close(): void {
+    dropScrim();
     if (dialog.open) dialog.close();
   }
+
+  // Crossing the breakpoint re-shapes the card between the two forms, and the
+  // promises do not survive the trip: a sheet's scrim left over a desktop card
+  // greys out a live page, and a card grown into a sheet has none.
+  desktop.addEventListener("change", () => close(), { signal });
 
   /**
    * Tabbing off the end of a NON-MODAL dialog walks straight out of it — into
@@ -334,7 +372,12 @@ export function mountBlockPopover(
   document.addEventListener(
     "pointerdown",
     (event) => {
-      if (dialog.open && !dialog.contains(event.target as Node)) close();
+      // Only the anchored card dismisses from out here. The sheet has a scrim
+      // that covers everything this listener would otherwise have to reason
+      // about, and it closes on the CLICK so the tap has nowhere left to go.
+      if (!dialog.open || !desktop.matches) return;
+      if (dialog.contains(event.target as Node)) return;
+      close();
     },
     { signal },
   );
@@ -343,10 +386,14 @@ export function mountBlockPopover(
     // another can run it AFTER `showFor` re-targeted the dialog, which would
     // steal focus back from the bar being opened.
     if (dialog.open) return;
+    dropScrim();
     if (invoker?.isConnected) invoker.focus();
     invoker = null;
   });
-  signal.addEventListener("abort", () => dialog.remove());
+  signal.addEventListener("abort", () => {
+    dropScrim();
+    dialog.remove();
+  });
 
   return {
     showFor(ctx, anchor) {
@@ -354,6 +401,7 @@ export function mountBlockPopover(
       render(ctx);
       dialog.scrollTop = 0;
       if (!dialog.open) dialog.show();
+      raiseScrim();
       position(anchor);
     },
     close,

@@ -38,12 +38,13 @@
  * derived key.
  *
  * Follows `courseSettings.ts`'s modal pattern: a `<dialog>` built with `el`,
- * `showModal()`, `closedby="any"`, appended to `document.body`, idempotent
+ * `showModal()`, `dismissOnBackdropClick`, appended to `document.body`, idempotent
  * against a stale dialog left by a previous mount. Unlike that dialog's
  * per-row invoker, this one is opened from static controls in the page chrome
  * that are never removed from the document — so the native
  * `showModal()`/`close()` focus return needs no manual fallback.
  */
+import { dismissOnBackdropClick } from "../../lib/dialogDismiss.js";
 import { semesterYear } from "../../lib/planner/schedule.js";
 import { activeCourses, type PlanCourse, type PlanStore } from "../../lib/planner/store.js";
 import {
@@ -441,8 +442,10 @@ export function mountProfilePanel(deps: ProfilePanelDeps): ProfilePanelHandle {
   const dialog = el("dialog", "np-frame profile-panel-dialog") as HTMLDialogElement;
   dialog.id = "planner-profile-panel";
   dialog.setAttribute("aria-labelledby", "profile-panel-title");
-  // Light dismiss: Esc *and* a backdrop click, same as every other modal here.
-  dialog.setAttribute("closedby", "any");
+  // Esc and the close watcher from the platform, the backdrop click by hand,
+  // same as every other modal here (`dialogDismiss.ts`).
+  dialog.setAttribute("closedby", "closerequest");
+  dismissOnBackdropClick(dialog, deps.signal);
   document.body.append(dialog);
 
   /** What Task 8 calls after every push — reflected live only while signed in

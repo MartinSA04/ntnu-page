@@ -12,14 +12,15 @@
  * The section itself is unchanged and unmoved: `buildStudieinfoSection` already
  * returns a self-contained handle, so this file is only the room it stands in.
  * Same modal pattern as `courseSettings.ts` — built with `el`, `showModal()`,
- * `closedby="any"`, appended to `document.body`, idempotent against a stale
- * dialog left by a previous mount.
+ * `dismissOnBackdropClick`, appended to `document.body`, idempotent against a
+ * stale dialog left by a previous mount.
  *
  * Built ONCE per mount rather than per open: the section stages edits and holds
  * two in-flight study-plan fetch tokens, so rebuilding it on every open would
  * throw away a half-picked programme. `reset()` on open is what discards one
  * deliberately.
  */
+import { dismissOnBackdropClick } from "../../lib/dialogDismiss.js";
 import type { PlanStore } from "../../lib/planner/store.js";
 import { el, icon } from "./dom.js";
 import { buildStudieinfoSection, type StudieinfoSectionHandle } from "./studieinfo.js";
@@ -53,7 +54,8 @@ export function mountStudieinfoDialog(
   // Light dismiss: Esc and a backdrop click. Nothing is written until Lagre, so
   // a stray click discards a half-picked programme rather than committing one —
   // the same contract the section had inside the profile panel.
-  dialog.setAttribute("closedby", "any");
+  dialog.setAttribute("closedby", "closerequest");
+  dismissOnBackdropClick(dialog, signal);
   document.body.append(dialog);
 
   function close(): void {

@@ -223,6 +223,37 @@
   be carried into `PlanCourseState.course` or the list draws no figures and the
   load track draws nothing — no bundle has landed when those rows are written.
 
+- **Every dismissal is decided on the CLICK, and a modal surface has a visible
+  scrim.** A touch synthesises `mousedown`/`mouseup`/`click` only after
+  `touchend`, i.e. after `pointerup`, so anything that dismisses at or before
+  `pointerup` is gone when its own click is dispatched and the browser
+  hit-tests that click against the page underneath: one tap closed the surface
+  AND pressed the control behind it. The click is the last event of the
+  gesture, so a dismissal decided there has nothing trailing it. Four things
+  here look wrong and are not.
+  (a) **`closedby="any"` is deliberately NOT used** — `src/lib/dialogDismiss.ts`
+  hand-wires the backdrop click for all four modals instead, and `closedby`
+  stays on as `"closerequest"` for Esc and the close watcher. Two reasons: the
+  attribute is Chrome 134+/Firefox 141+ and still "preview" on Safari and iOS,
+  so on an iPhone it did nothing and those modals had no backdrop dismissal at
+  all; and light dismiss is *defined* to close at `pointerup`, so it leaks its
+  own click on touch (the same algorithm backs `popover=auto`, which leaks with
+  a mouse too — nothing inert to retarget through). Do not "simplify" this back
+  to the attribute.
+  (b) The helper requires the gesture to **begin** on the backdrop as well as
+  end there, which is the property `closedby="any"` was chosen for: a text
+  selection dragged out of the field and released on the backdrop must not
+  dismiss. The bare `event.target === dialog` recipe gets this wrong, because
+  the click's target is then the common ancestor, which is the dialog.
+  (c) `menuPanel`'s scrim and `blockPopover`'s sheet scrim close on **`click`,
+  not `pointerdown`**, so the scrim is still in the document to absorb it.
+  (d) The sheet scrim is **visibly dimmed**, not a transparent click-catcher,
+  and exists **only below 60rem** — the anchored desktop card is non-modal over
+  a live page and its pass-through is what lets one bar hand the card to the
+  next (DESIGN §9).
+  `e2e/touch.pw.ts` is the gate, and the only spec that asks for a phone
+  viewport with `hasTouch`; the desktop project cannot see any of this.
+
 - **There is ONE control height, at every pointer type.** `--control-h` is 36px
   and the `@media (pointer: coarse)` step to 44px is **deleted**: it bought hit
   area by making every phone layout taller, which is paying in the dimension a

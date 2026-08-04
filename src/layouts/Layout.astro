@@ -341,7 +341,6 @@ const crawlDate = formatCrawlDate(semestersData.crawledAt);
     <script>
       import { mountMenuPanel } from "../lib/menuPanel.ts";
       import { onPage } from "../lib/pageLifecycle.ts";
-
       // Per page-load, never once per module: the topbar is re-rendered by the
       // server on every ClientRouter swap, so a top-level mount would leave
       // this button dead after any in-site navigation.

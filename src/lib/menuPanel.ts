@@ -67,7 +67,13 @@ export function mountMenuPanel(options: MenuPanelOptions): MenuPanelHandle {
     trigger.setAttribute("aria-expanded", "true");
     scrim = document.createElement("div");
     scrim.className = "np-menu-scrim";
-    scrim.addEventListener("pointerdown", close);
+    // `click`, NOT `pointerdown`. A touch synthesises its click after
+    // `touchend`, so a scrim removed at `pointerdown` is no longer there to
+    // receive it and the browser hands it to whatever the scrim was covering —
+    // one tap dismissed the menu and pressed the page behind it. Closing on the
+    // click means the scrim has already absorbed it. Every dismissal here is
+    // decided on the click for that reason; `dialogDismiss.ts` states it once.
+    scrim.addEventListener("click", close);
     document.body.append(scrim);
     panel.querySelector<HTMLElement>(FOCUSABLE)?.focus();
   }

@@ -3,9 +3,10 @@
  * callers hand it the same context: a course row in the Emner list, and a
  * block in the week/day grid.
  *
- * A real modal (`showModal()`), so Esc, backdrop dismissal (`closedby="any"`)
- * and focus return to the invoker are native behaviour, and the grid
- * re-rendering underneath cannot knock it out of position.
+ * A real modal (`showModal()`), so Esc and focus return to the invoker are
+ * native behaviour, and the grid re-rendering underneath cannot knock it out of
+ * position. Backdrop dismissal is `dismissOnBackdropClick`, not `closedby="any"`
+ * — see that file for why the attribute had to go.
  *
  * `setCourseGroups` writes on every edit, so the grid behind the backdrop is
  * already correct when the modal closes; `renderContent` is a full idempotent
@@ -14,6 +15,7 @@
  * `lecturesAreExclusive` and `nextSelection` have twice deleted real teaching
  * from a student's week, so they stay pure and stay tested.
  */
+import { dismissOnBackdropClick } from "../../lib/dialogDismiss.js";
 import type { GroupOption } from "../../lib/planner/groups.js";
 import type { CourseSource, PlanStore } from "../../lib/planner/store.js";
 import { el, formatCreditNumber, icon } from "./dom.js";
@@ -212,7 +214,8 @@ export function mountCourseSettings(store: PlanStore, signal: AbortSignal): Cour
   // Light dismiss: Esc *and* a backdrop click. Every edit here is written to
   // the store as it is made, so a stray click throws nothing away — the ×
   // stays for touch, where neither gesture exists.
-  dialog.setAttribute("closedby", "any");
+  dialog.setAttribute("closedby", "closerequest");
+  dismissOnBackdropClick(dialog, signal);
   document.body.append(dialog);
 
   /** The context currently on screen; null while closed. */

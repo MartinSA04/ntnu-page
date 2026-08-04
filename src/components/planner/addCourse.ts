@@ -22,9 +22,12 @@
  * that cannot do anything.
  *
  * Esc is native `showModal()` behaviour as long as nothing inside eats the key
- * (see `searchInput.type`). Backdrop clicks dismiss via `closedby="any"` —
- * native light dismiss, so a text selection dragged onto the backdrop does not
- * close it, which the hand-rolled `event.target === dialog` idiom gets wrong.
+ * (see `searchInput.type`). Backdrop clicks dismiss through
+ * `dismissOnBackdropClick`, which replaced `closedby="any"` — that attribute is
+ * absent on iOS and leaks its dismissing tap into the page underneath where it
+ * exists. A text selection dragged from the field onto the backdrop still does
+ * not close it: the helper requires the gesture to BEGIN on the backdrop too,
+ * which is the part the bare `event.target === dialog` idiom gets wrong.
  *
  * **No per-row clash preview here, and none on `/emner/` either.** Searching is
  * not the moment a plan is judged. Do not reintroduce it on a search surface on
@@ -39,6 +42,7 @@
  * function reads `deps.foo` at call time.
  */
 
+import { dismissOnBackdropClick } from "../../lib/dialogDismiss.js";
 import type { PlannerIndex } from "../../lib/planner/data.js";
 import { type AddCourseInput, DEFAULT_VERSION, type PlanStore } from "../../lib/planner/store.js";
 import { searchCatalog } from "../site/catalogSearch.js";
@@ -184,8 +188,11 @@ export function mountAddCourse(deps: AddCourseDeps, signal: AbortSignal): AddCou
   const dialog = el("dialog", "np-frame add-course-dialog") as HTMLDialogElement;
   dialog.id = "planner-add-dialog";
   dialog.setAttribute("aria-labelledby", "add-course-title");
-  // Light dismiss: Esc *and* a backdrop click. See the file header.
-  dialog.setAttribute("closedby", "any");
+  // Esc and the close watcher from the platform; the backdrop click by hand,
+  // because `closedby="any"` is absent on iOS and leaks its click on touch
+  // where it exists (`dialogDismiss.ts`).
+  dialog.setAttribute("closedby", "closerequest");
+  dismissOnBackdropClick(dialog, signal);
 
   // The masthead the planner's other surfaces open on, in its paper variant:
   // this dialog is about the catalog, not one course, so it has no hue. Outside

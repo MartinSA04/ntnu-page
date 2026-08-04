@@ -921,6 +921,42 @@ Settled, with the reasoning, so they are not re-opened by the next reviewer.
   other's taps**, so a control closer to its neighbour than the shortfall does
   not get one.
 
+- **EVERY DISMISSAL IS DECIDED ON THE CLICK, and a modal surface has a visible
+  scrim.** One rule, and it replaced three different ones.
+
+  A touch has no click of its own: the browser synthesises `mousedown` /
+  `mouseup` / `click` after `touchend`, which is after `pointerup`. Every
+  dismissal here used to happen at or before `pointerup`, so the surface was
+  gone when its own click landed and the browser hit-tested that click against
+  the page it had been covering. One tap closed the sheet and pressed what was
+  behind it — a semester select opened, a layer toggled, a link navigated. On a
+  phone that is most of the screen, because all three surfaces are full width
+  down there.
+
+  The click is the LAST event of the gesture, so a dismissal decided there has
+  nothing trailing it. That is what the chrome menu's scrim does, and now what
+  the session sheet's scrim and every modal's backdrop do.
+
+  **`closedby="any"` had to go, and it was not only the leak.** The attribute is
+  Chrome 134+ and Firefox 141+; on Safari and iOS it is still "preview", so on an
+  iPhone it did nothing at all and those four modals could not be dismissed by
+  tapping outside them. And the light-dismiss algorithm — shared by popovers and
+  dialogs, so `popover=auto` leaks the same way, with a mouse too — is *defined*
+  to close at `pointerup`. `closedby="closerequest"` stays, because Esc and the
+  close watcher are the halves with no defect. `dialogDismiss.ts` keeps the one
+  property the attribute was chosen for: a text selection dragged from inside the
+  card and released on the backdrop is not a dismissal, because the gesture has
+  to begin outside as well as end there.
+
+  **A modal surface's scrim is visible, never a transparent click-catcher.** The
+  session card below 60rem is a full-width bottom sheet and reads as modal, so
+  the page behind it is out of reach — and it has to LOOK out of reach, or the
+  reader is told they can still touch what they can still see. Above 60rem the
+  same card is a small anchored non-modal thing over a live page, it gets no
+  scrim, and the click going through is the point: it is what lets one bar hand
+  the card to the next. Two shapes, two promises; on the phone, moving between
+  bars costs a second tap.
+
 - **The view switch is a segmented control**, a recessed track with the live
   view raised out of it. A travelling underline was right when it lived in a
   section head, where a hairline was the local idiom; in a bar beside two

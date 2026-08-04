@@ -845,6 +845,24 @@
   display: block;
 }
 
+/* The dim behind the SHEET form only, built by blockPopover.ts and never above
+   60rem — the anchored card is non-modal over a live page and must not grey it.
+   Under the card (z 40) and over everything else.
+
+   It is a real, VISIBLE dim rather than a transparent click-catcher: the sheet
+   is full width and reads as modal, and a modal surface whose scrim cannot be
+   seen tells the reader they may still touch what they can still see. 32% is
+   `.np-menu-scrim`'s value, which is the same idiom at a different scale.
+
+   Not a `::backdrop`: that pseudo-element belongs to the top layer, and this
+   card is `show()`, not `showModal()`. */
+.block-popover-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 39;
+  background: color-mix(in srgb, var(--fg) 32%, transparent);
+}
+
 @media (max-width: 59.9375rem) {
   .block-popover {
     inset-inline: 0;
