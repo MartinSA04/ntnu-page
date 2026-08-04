@@ -299,6 +299,29 @@ describe("the public page", () => {
     expect(res.headers.get("x-robots-tag")).toBe("noindex, nofollow");
   });
 
+  it("asks the asset server for the directory, not for index.html", async () => {
+    // The asset server answers the explicit file with a 307 to the directory,
+    // and the worker would hand that redirect to the browser — which then lands
+    // on `/user/`, a path the branch does not match. The page came back with no
+    // noindex header, no unfurl rewrite and no name to look up.
+    const asked: string[] = [];
+    const env = {
+      ASSETS: {
+        fetch: async (request: Request) => {
+          asked.push(new URL(request.url).pathname);
+          return new URL(request.url).pathname.endsWith("index.html")
+            ? new Response(null, { status: 307, headers: { Location: "/user/" } })
+            : new Response("shell", { status: 200 });
+        },
+      },
+      SYNC: fakeKv(),
+    } as Env;
+
+    const res = await worker.fetch(new Request("https://x/user/martin"), env);
+    expect(asked).toEqual(["/user/"]);
+    expect(res.status).toBe(200);
+  });
+
   it("does not disallow /user/ in robots.txt — that would hide the noindex", async () => {
     const { readFileSync } = await import("node:fs");
     const robots = readFileSync("public/robots.txt", "utf8");

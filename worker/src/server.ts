@@ -248,7 +248,12 @@ export default {
     // emits `/user/index.html` and nothing else under `/user/`.
     const pageName = nameIn(PUBLIC_PAGE_PATH, pathname);
     if (pageName !== null) {
-      const shell = await env.ASSETS.fetch(new Request(new URL("/user/index.html", url), request));
+      // `/user/`, NOT `/user/index.html`: the asset server answers the explicit
+      // file with a 307 to the directory, and the worker would hand that
+      // redirect straight to the browser — which then lands on `/user/`, a path
+      // this branch does not match, so the page came back with no noindex
+      // header, no unfurl rewrite and no name to look up.
+      const shell = await env.ASSETS.fetch(new Request(new URL("/user/", url), request));
       return withNoIndex(withSecurityHeaders(await withUnfurl(shell, pageName, env)));
     }
 
