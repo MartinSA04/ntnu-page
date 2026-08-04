@@ -33,7 +33,12 @@ const description = "En delt semesterplan fra Semesterplan.";
     data-unfurl="description"
   />
   <meta slot="head" property="og:type" content="website" />
-  <meta slot="head" name="twitter:card" content="summary" />
+  {/* ONE STATIC CARD, not a rendered week. Drawing a plan to PNG inside a
+      Worker is not worth what it costs; this is the site mark on its own
+      ground, and the plan's own facts are in the title and description the
+      worker fills in per name. */}
+  <meta slot="head" property="og:image" content="/og-card.png" />
+  <meta slot="head" name="twitter:card" content="summary_large_image" />
 
   {/* `data-reserve` is a lease, not a layout: `publicPlan.ts` drops the
       attribute on reaching a terminal state — a drawn week, an empty answer or

@@ -34,6 +34,7 @@ import {
   type SyncKv,
   syncUnavailable,
 } from "./sync.js";
+import { unfurlMeta } from "./unfurl.js";
 
 /**
  * Cloudflare Workers Assets + optional KV cache bindings, typed structurally
@@ -140,11 +141,7 @@ function withNoIndex(response: Response): Response {
   return next;
 }
 
-/**
- * Dispatches one `/api/sync/<navn>` request. `env.SYNC` absent is reported
- * as 503 rather than silently falling back to memory — a planner that
- * looked like it saved but didn't is worse than one that says it cannot.
- */
+/** One set of handler deps, shared by every route that touches the account. */
 function syncDeps(kv: SyncKv): SyncDeps {
   return {
     kv,
@@ -159,6 +156,11 @@ function syncDeps(kv: SyncKv): SyncDeps {
   };
 }
 
+/**
+ * Dispatches one `/api/sync/<navn>` request. `env.SYNC` absent is reported
+ * as 503 rather than silently falling back to memory — a planner that
+ * looked like it saved but didn't is worse than one that says it cannot.
+ */
 async function handleSync(request: Request, env: Env, name: string): Promise<Response> {
   // `syncUnavailable`, not a hand-built `Response`: this was the one answer on
   // the sync surface that shipped without `Cache-Control: no-store`.
@@ -178,6 +180,50 @@ async function handleSync(request: Request, env: Env, name: string): Promise<Res
     default:
       return methodNotAllowed();
   }
+}
+
+/**
+ * `HTMLRewriter`, structurally. It is a Workers-only global, and this file is
+ * compiled by the Node pass too (CLAUDE.md's two-pass rule) — so it is declared
+ * rather than imported, and the reference stays in this file. `unfurl.ts` holds
+ * the pure half so tests can reach it.
+ */
+interface ElementLike {
+  setAttribute(name: string, value: string): void;
+}
+interface RewriterLike {
+  on(selector: string, handlers: { element(el: ElementLike): void }): RewriterLike;
+  transform(response: Response): Response;
+}
+declare const HTMLRewriter: { new (): RewriterLike };
+
+/**
+ * Fills the shell's `og:` defaults in with this account's own plan.
+ *
+ * Runs on the same response that carries `X-Robots-Tag: noindex` — see
+ * `unfurl.ts` for why those do not contradict each other. A name that is not
+ * shared (or an unbound KV) leaves the generic defaults in place, which is the
+ * honest preview for a link that leads to "fant ingen delt plan her".
+ *
+ * **No per-plan `og:image`.** Rendering a week to PNG in a Worker is not worth
+ * it; the shell points at one static card. Said here so the next reader does
+ * not go looking for the code that was supposed to generate one.
+ */
+async function withUnfurl(shell: Response, name: string, env: Env): Promise<Response> {
+  if (!env.SYNC) return shell;
+  const read = await handlePublicRead(name, syncDeps(env.SYNC));
+  if (!read.ok) return shell;
+  const record = (await read.json()) as { plain?: unknown };
+  if (typeof record.plain !== "string") return shell;
+  const meta = unfurlMeta(record.plain, name);
+  return new HTMLRewriter()
+    .on('meta[data-unfurl="title"]', {
+      element: (el) => el.setAttribute("content", meta.title),
+    })
+    .on('meta[data-unfurl="description"]', {
+      element: (el) => el.setAttribute("content", meta.description),
+    })
+    .transform(shell);
 }
 
 /** The share toggle. Both halves need the account's own credential. */
@@ -200,9 +246,10 @@ export default {
     // `/user/<navn>` — one static shell for every name, kept out of search.
     // Before the asset branch below, which would serve the 404 page: the build
     // emits `/user/index.html` and nothing else under `/user/`.
-    if (PUBLIC_PAGE_PATH.test(pathname)) {
+    const pageName = nameIn(PUBLIC_PAGE_PATH, pathname);
+    if (pageName !== null) {
       const shell = await env.ASSETS.fetch(new Request(new URL("/user/index.html", url), request));
-      return withNoIndex(withSecurityHeaders(shell));
+      return withNoIndex(withSecurityHeaders(await withUnfurl(shell, pageName, env)));
     }
 
     // `/api` (no trailing slash) is part of the API surface too: falling
