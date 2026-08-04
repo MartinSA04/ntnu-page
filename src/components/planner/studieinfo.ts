@@ -52,7 +52,21 @@ import {
 export interface StudieinfoSectionDeps {
   store: PlanStore;
   /**
-   * Called after a Lagre that actually wrote. The panel closes itself on it:
+   * WHEN a pick is written, which is the only thing this section's two hosts
+   * disagree about.
+   *
+   * `"explicit"` is the dialog's. It edits a plan that already exists, where a
+   * stray chip press must not rewrite it, so Lagre is the write and a light
+   * dismiss discards the staging.
+   *
+   * `"on-kull"` is the first-run screen's. The sentence above the field
+   * promises the week is ready once programme and kull are given, and a third
+   * press would make that false — so the kull IS the commit, and no Lagre is
+   * rendered at all.
+   */
+  commit: "explicit" | "on-kull";
+  /**
+   * Called after a commit that actually wrote. The dialog closes itself on it:
    * the student came here to answer a question, the answer is stored, and the
    * week behind the modal has already redrawn.
    */
@@ -229,12 +243,14 @@ export function buildStudieinfoSection(deps: StudieinfoSectionDeps): StudieinfoS
   let commitToken = 0;
 
   // --- DOM skeleton (built once) ------------------------------------------
+  // NO HEADING AND NO HINT OF ITS OWN. The section used to print "Studieinfo"
+  // over "Programmet og kullet ditt fyller ukeplanen.", which inside a 300px
+  // dialog meant three titles ("Studieprogram" in the head, "Studieinfo" here,
+  // "STUDIEPROGRAM" on the field) stacked above one input. Both hosts already
+  // say what this is: the dialog in its head, the first-run screen in its <h1>
+  // and its one sentence. So the section names itself nowhere and takes its
+  // accessible name from whichever room it stands in.
   const section = el("section", "studieinfo-section");
-  const heading = el("h3", "profile-panel-heading", "Studieinfo");
-  heading.id = "studieinfo-heading";
-  section.setAttribute("aria-labelledby", heading.id);
-  section.append(heading);
-  section.append(el("p", "np-hint", "Programmet og kullet ditt fyller ukeplanen."));
 
   const body = el("div", "studieinfo-body");
   section.append(body);
@@ -318,29 +334,30 @@ export function buildStudieinfoSection(deps: StudieinfoSectionDeps): StudieinfoS
   hint.setAttribute("aria-live", "polite");
   body.append(hint);
 
+  // ONLY THE DIALOG HAS A LAGRE. Under `"on-kull"` the kull press is the write,
+  // so an action row here would be a second way to do the thing that already
+  // happened.
+  //
   // NOT `.np-actions`: that primitive is a CARD's footer and brings its own
-  // hairline, and this is a section inside one. The panel already draws a rule
-  // between studieinfo and the account — a second one 50 px above it is ruling
-  // that has stopped dividing anything (DESIGN §4).
-  const actions = el("div", "studieinfo-actions");
-  // The section's own primary, and the panel's only one: saving your studieinfo
-  // is what a first-run student came here to do, and the account below is
-  // strictly opt-in (mandate 8). There is no Avbryt beside it — the panel's
-  // own × is the way out, and closing discards the staging, which is exactly
-  // what Avbryt did.
-  const saveBtn = el(
-    "button",
-    "np-btn np-btn--primary studieinfo-save",
-    "Lagre",
-  ) as HTMLButtonElement;
-  saveBtn.type = "button";
-  saveBtn.id = "studieinfo-save";
-  // A refused Lagre writes its reason into the hint; describing the button with
-  // it makes the reason reachable from the control that caused it. An empty
-  // hint contributes no description.
-  saveBtn.setAttribute("aria-describedby", "studieinfo-hint");
-  actions.append(saveBtn);
-  body.append(actions);
+  // hairline, and this is a section inside one.
+  let saveBtn: HTMLButtonElement | null = null;
+  if (deps.commit === "explicit") {
+    const actions = el("div", "studieinfo-actions");
+    // PAPER, not `.np-btn--primary`. It wore the accent while this section was
+    // the profile panel's one job; the panel's own submit is the accent now,
+    // and an accent here would be a second one on the same surface (DESIGN §5).
+    // There is no Avbryt beside it — the dialog's × is the way out, and closing
+    // discards the staging, which is exactly what Avbryt did.
+    saveBtn = el("button", "np-btn studieinfo-save", "Lagre") as HTMLButtonElement;
+    saveBtn.type = "button";
+    saveBtn.id = "studieinfo-save";
+    // A refused Lagre writes its reason into the hint; describing the button
+    // with it makes the reason reachable from the control that caused it. An
+    // empty hint contributes no description.
+    saveBtn.setAttribute("aria-describedby", "studieinfo-hint");
+    actions.append(saveBtn);
+    body.append(actions);
+  }
 
   // --- Programme typeahead ------------------------------------------------
   let programMatches: ProgramOption[] = [];
@@ -643,7 +660,12 @@ export function buildStudieinfoSection(deps: StudieinfoSectionDeps): StudieinfoS
       chip.setAttribute("aria-label", `Kull ${year}`);
       chip.setAttribute("aria-pressed", String(year === stagedCohort));
       chip.addEventListener("click", () => {
-        void loadCohort(year, false);
+        // Under `"on-kull"` this press IS the save. It waits for the kull's own
+        // plan first, because `commit` classifies the period against it and
+        // would otherwise write a programme with no prefilled courses.
+        void loadCohort(year, false).then(() => {
+          if (deps.commit === "on-kull") return commit();
+        });
       });
       kullChips.append(chip);
     }
@@ -723,6 +745,23 @@ export function buildStudieinfoSection(deps: StudieinfoSectionDeps): StudieinfoS
   function renderHint(): void {
     hint.classList.toggle("sr-only", hintText === "");
     hint.textContent = hintText;
+    renderSave();
+  }
+
+  /**
+   * Lagre is dead until there is something to write. Called from `renderHint`,
+   * which every staging change already goes through.
+   *
+   * The test is "is anything pending", NOT "is the pick complete": a programme
+   * staged without a kull must stay pressable, because pressing it is what
+   * produces "Velg kull for å lagre studieprogrammet." and moves focus to the
+   * chips — a disabled button explains nothing. What it refuses is the pristine
+   * form, where a press did nothing and said nothing. A cleared programme over
+   * a stored one is also pending: that press commits the removal.
+   */
+  function renderSave(): void {
+    if (!saveBtn) return;
+    saveBtn.disabled = stagedProgram === null && deps.store.loadPlan().program === undefined;
   }
 
   retningSelect.addEventListener("change", () => {
@@ -806,7 +845,7 @@ export function buildStudieinfoSection(deps: StudieinfoSectionDeps): StudieinfoS
     deps.onSaved();
   }
 
-  saveBtn.addEventListener("click", () => void commit());
+  saveBtn?.addEventListener("click", () => void commit());
 
   function reset(): void {
     // Invalidate any commit still awaiting its plan fetch from a prior open.

@@ -53,6 +53,10 @@ export function mountStudieinfoDialog(
 
   const section: StudieinfoSectionHandle = buildStudieinfoSection({
     store,
+    // The dialog edits a plan that already exists: nothing is written until
+    // Lagre, so the light dismiss above discards a half-picked programme
+    // rather than committing one.
+    commit: "explicit",
     // A saved studieinfo is a finished errand: the week behind the dialog has
     // already redrawn, so staying open would leave the student looking at the
     // form they just submitted instead of at the answer.

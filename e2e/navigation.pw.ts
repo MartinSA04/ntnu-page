@@ -240,7 +240,10 @@ test.describe("the topbar carries the account, and no plan state", () => {
       // and kull left on 2026-08-03 for the planner's own dialog: they are
       // facts about a plan, like the semester that never followed them up
       // here, and only sign-in is a fact about the person.
-      await expect(panel.locator("#studieinfo-heading"), where).toHaveCount(0);
+      // The programme FIELD, not a heading: the section stopped naming itself
+      // when the dialog trimmed its three titles to one, so a heading assertion
+      // here would pass against markup that no longer exists anywhere.
+      await expect(panel.locator("#studieinfo-program-input"), where).toHaveCount(0);
       await panel.locator(".profile-panel-close").click();
       await expect(panel, where).toBeHidden();
     }

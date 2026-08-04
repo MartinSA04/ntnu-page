@@ -79,7 +79,7 @@ async function openStudieinfo(page: Page): Promise<void> {
   if (await door.isEnabled()) await door.click();
   else await page.getByRole("button", { name: "Velg studieprogram" }).click();
   await expect(studieinfoDialog(page)).toBeVisible();
-  await expect(studieinfoDialog(page).locator("#studieinfo-heading")).toBeVisible();
+  await expect(studieinfoDialog(page).locator("#studieinfo-dialog-title")).toBeVisible();
 }
 
 /**
