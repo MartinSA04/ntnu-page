@@ -401,8 +401,15 @@ export function renderExamList(
   options: ExamRenderOptions = {},
 ): ExamRenderResult {
   const loading = options.loading ?? false;
+  // Nothing to list, and nothing to apologise for: the planner hides the whole
+  // Eksamener section at zero active courses (`renderSectionPresence`), so this
+  // renders into a box nobody can see. Not `renderEmpty(host, null)` — that
+  // spelling means "loading" there, and this is not loading, it is empty. The
+  // copy it replaces ("Legg til emner for å se eksamensdatoer.") was wrong
+  // anyway for a plan whose courses are all dropped.
   if (courses.length === 0) {
-    return renderEmpty(listHost, "Legg til emner for å se eksamensdatoer.");
+    listHost.replaceChildren();
+    return { collisionCount: 0, state: "empty" };
   }
 
   const hueByCode = new Map(courses.map((c) => [c.course.code, c.hueVar]));

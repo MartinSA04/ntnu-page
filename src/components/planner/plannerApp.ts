@@ -248,6 +248,8 @@ interface PlannerElements {
   deadline: HTMLElement;
   creditNote: HTMLElement;
   creditStrip: HTMLElement;
+  loadFoot: HTMLElement;
+  examsSection: HTMLElement;
   direction: HTMLElement;
   directionTitle: HTMLElement;
   directionNote: HTMLElement;
@@ -288,6 +290,8 @@ function getElements(): PlannerElements | null {
     deadline: byId<HTMLElement>("planner-deadline"),
     creditNote: byId<HTMLElement>("planner-credit-note"),
     creditStrip: byId<HTMLElement>("planner-credit-strip"),
+    loadFoot: byId<HTMLElement>("planner-load-foot"),
+    examsSection: byId<HTMLElement>("planner-region-exams"),
     direction: byId<HTMLElement>("planner-direction"),
     directionTitle: byId<HTMLElement>("planner-direction-title"),
     directionNote: byId<HTMLElement>("planner-direction-note"),
@@ -2037,10 +2041,10 @@ export async function mountPlannerApp(
     // reservation was bridging (paint → mount).
     delete elements.courseRows.dataset.reserve;
     elements.courseRows.replaceChildren();
-    if (plan.courses.length === 0) {
-      elements.courseRows.append(el("p", "np-hint", "Ingen emner i planen ennå."));
-      return;
-    }
+    // No "Ingen emner i planen ennå." A heading over a sentence restating the
+    // heading is not information; the section is its name and its "Legg til
+    // emne" button, and the absence of rows says the rest.
+    if (plan.courses.length === 0) return;
 
     const ordered = [...plan.courses].sort((a, b) => {
       if (a.source !== b.source) return a.source === "program" ? -1 : 1;
@@ -3029,11 +3033,39 @@ export async function mountPlannerApp(
     host.hidden = linkNote === null;
   }
 
+  /**
+   * A SECTION APPEARS WITH ITS ROWS. At zero courses Eksamener printed its
+   * heading over "Legg til emner for å se eksamensdatoer." and the load track
+   * printed "0 av 30 sp" over an empty rail — two headings and two apologies
+   * for content the student has not created yet.
+   *
+   * This is a real state rather than a transitional one: a programme whose
+   * study plan has no published period lands in it (`PROGRAM_MISSING_HINT`)
+   * and stays there until courses are added by hand.
+   *
+   * Emner is the exception and stays whenever the page is up, because it is
+   * where the first course is added — it keeps its heading and its button, and
+   * lost only its own "Ingen emner i planen ennå." line.
+   *
+   * `hidden` is right here, unlike on `.planner-load` itself: these must NOT
+   * stay laid out. The strip's own emptiness is a state class for the opposite
+   * reason (it has to keep occupying its 15px so the rows below it do not move
+   * when the first segment lands), so it is hidden as a whole here and left
+   * alone the rest of the time.
+   */
+  function renderSectionPresence(): void {
+    const bare = activeCourses(plan).length === 0;
+    elements.examsSection.hidden = bare;
+    elements.creditStrip.hidden = bare;
+    elements.loadFoot.hidden = bare;
+  }
+
   function renderAll(): void {
     syncCourseStates();
     // First, because it decides whether the rest of this is even on screen: a
     // plan-less load is the first-run screen and nothing else.
     syncFirstRun();
+    renderSectionPresence();
     renderLinkNote();
     renderBanner();
     renderDeadline();

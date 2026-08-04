@@ -251,6 +251,10 @@ const IDS = [
   "planner-load-legend",
   "planner-credit-note",
   "planner-credit-strip",
+  // The two surfaces that go ABSENT at zero active courses rather than printing
+  // a heading over an apology (`renderSectionPresence`).
+  "planner-load-foot",
+  "planner-region-exams",
   "planner-direction",
   "planner-direction-title",
   "planner-direction-note",
@@ -908,6 +912,49 @@ describe("mountPlannerApp — audit repro", () => {
     const prov = find("planner-provenance").textContent;
     expect(prov).toContain("Fikk ikke hentet eksamensdatoene.");
     expect(prov).not.toContain("ikke publisert");
+  });
+
+  /**
+   * A section appears with its rows. Not a claim about how the sections LOOK —
+   * a claim that a surface computed from courses is absent when there are none,
+   * rather than printing its heading over an apology for content the student
+   * has not created yet. The state is real: a programme whose study plan has no
+   * published period lands in it and stays there.
+   */
+  it("Eksamener and the load track go absent at zero active courses", async () => {
+    await mount(
+      { "/data/search-index.json": () => ({ year: 2026, courses: [] }) },
+      { courses: [] },
+    );
+
+    expect(find("planner-region-exams").hidden).toBe(true);
+    expect(find("planner-credit-strip").hidden).toBe(true);
+    expect(find("planner-load-foot").hidden).toBe(true);
+    // Emner is the exception: it is where the first course is added, so it
+    // keeps its heading and its button. What it lost is its own apology.
+    expect(find("planner-course-rows").hidden).not.toBe(true);
+    expect(find("planner-course-rows").textContent).not.toContain("Ingen emner i planen");
+  });
+
+  it("…and are back the moment the plan holds one", async () => {
+    await mount(
+      {
+        "/data/search-index.json": () => ({ year: 2026, courses: [] }),
+        "/api/course/TDT4109/timetable": () => [entry("TDT4109", 1, "08:15", "10:00")],
+        "/api/course/": () => ({
+          courseCode: "TDT4109",
+          courseName: "ITGK",
+          credits: 7.5,
+          location: null,
+          assessmentScheme: null,
+          exams: [],
+        }),
+      },
+      { courses: ["TDT4109"] },
+    );
+
+    expect(find("planner-region-exams").hidden).not.toBe(true);
+    expect(find("planner-load-foot").hidden).not.toBe(true);
   });
 
   it("plan-2: a period that exists but names nothing says so", async () => {
