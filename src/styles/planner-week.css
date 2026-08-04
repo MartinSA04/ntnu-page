@@ -1118,6 +1118,37 @@ html[data-view="tavle"] #planner-grid-frame[data-reserve] {
   left: 0;
 }
 
+/* --- A PENDING week ------------------------------------------------------
+   Drawn in the shape of the view that is about to land, because the step from
+   nothing to a week is the largest shift on any page that draws one and
+   /user/<navn> holds this state for its whole first round-trip.
+
+   Same restraint as the transposed skeleton it replaces: a wash, and the
+   ruling off so the box does not read as a real week with nothing in it. No
+   shimmer and no pulse — DESIGN §7 has no entrance choreography, and a
+   breathing week is exactly that. */
+.planner-cols.is-skeleton,
+.planner-board.is-skeleton {
+  opacity: 0.5;
+}
+
+.planner-cols.is-skeleton .planner-cols-day {
+  background-image: none;
+}
+
+.planner-cols.is-skeleton .planner-cols-lanes,
+.planner-board.is-skeleton .planner-skeleton-row {
+  background: var(--card-nested);
+  border-radius: var(--radius-sm);
+}
+
+/* Liste has no geometry of its own to stand in for — its height is a session
+   count — so its rows carry one: a session row plus its air, five times. */
+.planner-board.is-skeleton .planner-skeleton-row {
+  height: 3rem;
+  margin-bottom: var(--space-2);
+}
+
 /* AN EVENT. Printed colour with the code knocked out, divided by its own
    cluster rather than by the day's worst moment.
 
