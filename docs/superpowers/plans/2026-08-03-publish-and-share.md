@@ -4,9 +4,11 @@
 
 **Depends on:** `docs/superpowers/plans/2026-08-03-sync-accounts.md` must land first. Publishing needs the account, so nothing here can ship on its own.
 
-**Goal:** Sharing becomes one mechanism — publish your plan, send `/user/<navn>`. The recipient *views* it and their own storage is never touched. The `#v2;…` hash grammar is deleted outright.
+**Goal:** Sharing becomes one mechanism — make your account public, send `/user/<navn>`. The recipient *views* it and their own storage is never touched. The `#v2;…` hash grammar is deleted outright.
 
-**Architecture:** Publishing writes a plaintext copy into the existing `user:<navn>` record beside the ciphertext, which stays the private source of truth. `/user/<navn>` is rewritten by the worker to a static shell that fetches the published plan and renders it with the planner's own grid modules, read-only. Search engines are refused by header, not by `robots.txt`.
+**Architecture:** `public` is a standing flag on the existing `user:<navn>` record, and while it is set every ordinary sync push refreshes a plaintext copy beside the ciphertext, which stays the private source of truth. So `/user/<navn>` is **live** — a read-only mirror of the plan the student is working on, not a snapshot frozen at the moment they pressed Del. The page is a static shell the worker rewrites to, fetching that copy and rendering it with the planner's own grid modules. Search engines are refused by header, not by `robots.txt`.
+
+**Which semester the mirror shows:** the one the owner is planning (`np:lastSemester`, already inside the sync payload). "A live copy of their plan" has no other honest reading — a stored per-semester choice would be a second thing to keep in sync and a second thing to get wrong. The page names the semester it is showing.
 
 **Tech Stack:** Cloudflare Workers + KV, Astro static shell with a worker rewrite, TypeScript, vitest, Playwright.
 
@@ -54,7 +56,7 @@ work, check out the session's true starting commit in a worktree.
 - Two-pass typecheck; structural interfaces in worker files.
 - Biome with `--error-on-warnings`.
 - **Never `Disallow: /user/` in `robots.txt`** — a blocked crawl means the noindex directive is never read, and the URL can still be listed. Allow the crawl, refuse the index.
-- The published copy is **per-semester**: `/user/<navn>` shows the semester that was published, not whatever the owner is looking at now.
+- The public copy is **live**: `public` is a standing account flag, every push refreshes `plain` while it is set, and turning it off clears `plain` outright. A private account never has a plaintext copy stored at all.
 - Spec: `docs/superpowers/specs/2026-08-02-accountless-sync-design.md` §5.
 
 ---

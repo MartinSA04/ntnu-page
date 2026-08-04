@@ -267,13 +267,25 @@ export async function handleSyncPut(
   // deliberately different fields so a PIN change is one PUT rather than a
   // separate route.
   const newAuthKey = fields?.authKey;
+  // The readable copy behind `/user/<navn>`, carried by the SAME write as the
+  // ciphertext so the two cannot drift: `/user/<navn>` is a live mirror, not a
+  // snapshot, and a second round trip per edit to keep it current would be both
+  // slower and a window where they disagree. Ignored — never stored — unless
+  // this account is actually public; see the write below.
+  const plain = fields?.plain;
   if (typeof blob !== "string" || typeof version !== "number") {
     return json({ error: "bad_body" }, 400);
   }
   if (newAuthKey !== undefined && typeof newAuthKey !== "string") {
     return json({ error: "bad_body" }, 400);
   }
+  if (plain !== undefined && typeof plain !== "string") {
+    return json({ error: "bad_body" }, 400);
+  }
   if (blob.length > MAX_BLOB_CHARS) return json({ error: "blob_too_large" }, 413);
+  if (typeof plain === "string" && plain.length > MAX_BLOB_CHARS) {
+    return json({ error: "blob_too_large" }, 413);
+  }
   // Stale write: hand back the server's copy so the client can reconcile
   // rather than guess. This is the stale-tab guard, not an offline merge.
   // Checked BEFORE any credential swap: a stale PUT writes nothing at all,
@@ -290,6 +302,12 @@ export async function handleSyncPut(
     version: found.version + 1,
     updatedAt: deps.now(),
     ...(newAuthKey !== undefined ? { authHash: await sha256Hex(newAuthKey) } : {}),
+    // `found.public` is the gate, not the caller's word for it. A student who
+    // never asked to share must not end up with a readable copy of their week
+    // in KV because some client sent one — and a client that keeps sending
+    // `plain` after sharing was turned off (an open tab, a stale session) must
+    // not be able to put it back.
+    ...(found.public && typeof plain === "string" ? { plain } : {}),
   };
   await deps.kv.put(recordKey(name), JSON.stringify(next));
   return json({ version: next.version }, 200);

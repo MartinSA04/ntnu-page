@@ -240,6 +240,43 @@ describe("publishing", () => {
     });
   });
 
+  it("keeps the public copy live: an ordinary push refreshes it", async () => {
+    const kv = fakeKv();
+    await handleSyncClaim("martin", { authKey: AUTH, blob: "cipher" }, deps(kv));
+    await handlePublish("martin", AUTH, { plain: PLAN }, deps(kv));
+
+    const NEXT = JSON.stringify({ semesterId: "26h", courses: [{ code: "TMA4100" }] });
+    expect(
+      (await handleSyncPut("martin", AUTH, { blob: "cipher2", version: 1, plain: NEXT }, deps(kv)))
+        .status,
+    ).toBe(200);
+
+    expect(await (await handlePublicRead("martin", deps(kv))).json()).toMatchObject({
+      plain: NEXT,
+    });
+  });
+
+  it("stores no plaintext for a private account, whatever the push carries", async () => {
+    const kv = fakeKv();
+    await handleSyncClaim("martin", { authKey: AUTH, blob: "cipher" }, deps(kv));
+    await handleSyncPut("martin", AUTH, { blob: "cipher2", version: 1, plain: PLAN }, deps(kv));
+    // Not merely unserved — never written. A student who never asked to share
+    // must not have a readable copy of their week sitting in KV.
+    expect(kv.map.get("user:martin")).not.toContain("TDT4120");
+    expect((await handlePublicRead("martin", deps(kv))).status).toBe(404);
+  });
+
+  it("drops the plaintext the moment sharing is turned off, and a later push cannot revive it", async () => {
+    const kv = fakeKv();
+    await handleSyncClaim("martin", { authKey: AUTH, blob: "cipher" }, deps(kv));
+    await handlePublish("martin", AUTH, { plain: PLAN }, deps(kv));
+    await handleUnpublish("martin", AUTH, deps(kv));
+
+    await handleSyncPut("martin", AUTH, { blob: "cipher2", version: 1, plain: PLAN }, deps(kv));
+    expect(kv.map.get("user:martin")).not.toContain("TDT4120");
+    expect((await handlePublicRead("martin", deps(kv))).status).toBe(404);
+  });
+
   it("refuses an oversized plain copy, as the private blob already does", async () => {
     const kv = fakeKv();
     await handleSyncClaim("martin", { authKey: AUTH, blob: "cipher" }, deps(kv));
