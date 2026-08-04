@@ -71,7 +71,6 @@ import {
   renderExamList,
   renderExamMessage,
 } from "./examList.js";
-import { beginLayerChange } from "./layerMotion.js";
 import {
   type ClassifiedCourse,
   findProgramPlan,
@@ -159,7 +158,6 @@ interface PlannerElements {
   directionActions: HTMLElement;
   directionButton: HTMLButtonElement;
   othersToggle: HTMLButtonElement;
-  othersPending: HTMLElement;
   share: HTMLButtonElement;
   shareLabel: HTMLElement;
   viewKolonner: HTMLButtonElement;
@@ -201,7 +199,6 @@ function getElements(): PlannerElements | null {
     directionActions: byId<HTMLElement>("planner-direction-actions"),
     directionButton: byId<HTMLButtonElement>("planner-direction-btn"),
     othersToggle: byId<HTMLButtonElement>("planner-others-toggle"),
-    othersPending: byId<HTMLElement>("planner-others-pending"),
     share: byId<HTMLButtonElement>("planner-share"),
     shareLabel: byId<HTMLElement>("planner-share-label"),
     viewKolonner: byId<HTMLButtonElement>("planner-view-kolonner"),
@@ -517,6 +514,7 @@ export async function mountPlannerApp(
     frame: elements.gridFrame,
     notes: elements.gridNotes,
     tabs: { kolonner: elements.viewKolonner, tavle: elements.viewTavle },
+    layerToggle: elements.othersToggle,
     surface: "planner",
     onOpenSettings: openCourseSettings,
     popoverContext,
@@ -987,7 +985,6 @@ export async function mountPlannerApp(
   let plannerIndexFailed = false;
   /** Lazy by-code lookup over the raw index (`offeredYears` etc.). Reset with the index. */
   let indexByCodeMemo: Map<string, PlannerIndexCourse> | null = null;
-  let showOthers = false;
   /* Which view is on screen, and whether the next render may play the
      strike-in, both belong to `week` — it is how you are looking at the plan
      rather than what you are looking at, and all three surfaces share it. */
@@ -2221,33 +2218,6 @@ export async function mountPlannerApp(
   }
 
   /**
-   * What the øving layer is still waiting on, said ON the control that reveals
-   * it.
-   *
-   * The layer draws PICKED groups only, and that narrowing is right — drawing
-   * every group of every course put 41 blocks in one week (`visibleLayer`). But
-   * it made the control dishonest: on a five-course plan, ticking «Øvinger og
-   * labber» added two blocks, because the four courses with a real choice in
-   * them drew nothing at all. A toggle that visibly does nothing reads as "I
-   * have no øvinger", which is the opposite of true.
-   *
-   * So the control carries the count, and the margin keeps naming the courses
-   * and staying clickable. Only while the layer is ON: beside an unticked box
-   * "3 mangler gruppe" would be a fact about something not on screen.
-   */
-  function renderOthersPending(codes: string[]): void {
-    const host = elements.othersPending;
-    const on = elements.othersToggle.getAttribute("aria-pressed") === "true";
-    if (!on || codes.length === 0) {
-      host.replaceChildren();
-      host.hidden = true;
-      return;
-    }
-    host.replaceChildren(el("span", "np-data", String(codes.length)), " mangler gruppe");
-    host.hidden = false;
-  }
-
-  /**
    * The load, said where the verdict is said.
    *
    * Only when it is over 30 sp: "37,5 av 30 sp" is a thing to look at, "22,5 av
@@ -2441,20 +2411,10 @@ export async function mountPlannerApp(
       // passed by one branch only.
       gridResult = week.render(filteredStates, {
         teachingWeeks: currentSemester()?.teachingWeeks ?? [],
-        showOthers,
         loading: anyLoading,
         pendingChoiceMessage: question?.weekMessage ?? null,
       });
     }
-
-    // B7a: the grid can reveal the muted øving layer on its own when nothing
-    // classifies as a lecture, and the toggle has to say so. This is not the
-    // student's `showOthers` — not persisted, only mirrored.
-    elements.othersToggle.setAttribute(
-      "aria-pressed",
-      String(showOthers || gridResult?.mutedLayerAutoRevealed === true),
-    );
-    renderOthersPending(gridResult?.pendingGroupCourses ?? []);
 
     // `anyLoading` stays in: the list reads `bundle.details.exams` to tell an
     // ordinary sitting from an "Utsatt" one, so a list painted before the
@@ -2892,17 +2852,6 @@ export async function mountPlannerApp(
     }
     renderPlanDependents();
   }
-
-  elements.othersToggle.addEventListener("click", () => {
-    showOthers = !showOthers;
-    elements.othersToggle.setAttribute("aria-pressed", String(showOthers));
-    // One layer arriving or leaving, not a new week: what was already on screen
-    // travels, what changed is what moves. The snapshot has to be taken before
-    // the re-render tears the subtree down, hence the two calls around it.
-    const settle = beginLayerChange(elements.gridFrame, showOthers ? "reveal" : "hide");
-    renderGridAndExams();
-    settle();
-  });
 
   /**
    * Skipped when nothing the study plan depends on changed: `onPlanChange` used

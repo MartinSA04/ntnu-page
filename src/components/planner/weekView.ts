@@ -199,6 +199,29 @@ export function buildWeekTabs(idPrefix: string): {
   return { host, kolonner, tavle };
 }
 
+/**
+ * The øving/lab box, built at runtime. The twin of
+ * `components/WeekLayerToggle.astro`, for `/user/<navn>` — see `buildWeekTabs`
+ * for why that one surface builds its controls instead of rendering them.
+ */
+export function buildLayerToggle(idPrefix: string): {
+  toggle: HTMLButtonElement;
+} {
+  const toggle = el("button", "planner-others-toggle");
+  toggle.type = "button";
+  toggle.id = `${idPrefix}-others-toggle`;
+  toggle.setAttribute("aria-pressed", "false");
+  const check = el("span", "planner-check");
+  check.setAttribute("aria-hidden", "true");
+  check.innerHTML =
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5"><path d="m4 12 6 6L20 6"/></svg>';
+  const pending = el("span", "planner-others-pending");
+  pending.id = `${idPrefix}-others-pending`;
+  pending.hidden = true;
+  toggle.append(check, "Øvinger og labber", pending);
+  return { toggle };
+}
+
 export interface WeekViewOptions {
   /** The scroll container the week is drawn into. */
   frame: HTMLElement;
@@ -206,6 +229,13 @@ export interface WeekViewOptions {
   notes: HTMLElement;
   /** The Uke/Liste pair the page server-rendered, or null where it has none. */
   tabs: { kolonner: HTMLButtonElement; tavle: HTMLButtonElement } | null;
+  /**
+   * The øving/lab box. Owned here rather than by each page: the state, the
+   * click, the layer choreography, the count and the auto-reveal mirroring were
+   * written out twice and had already diverged in look. One control, one
+   * behaviour, wherever a week is drawn.
+   */
+  layerToggle: HTMLButtonElement | null;
   surface: WeekSurface;
   /**
    * The popover's way out to the editor. `null` on a surface with no editor to
@@ -223,10 +253,14 @@ export interface WeekViewOptions {
   onChoiceClick?: (code: string) => void;
   /**
    * Something changed that this module cannot redraw on its own. `"view"` is a
-   * tab press, `"viewport"` the column cap's boundary, `"day"` the date rolling
-   * under a page left open.
+   * tab press, `"layer"` the øving box, `"viewport"` the column cap's boundary,
+   * `"day"` the date rolling under a page left open.
+   *
+   * The caller re-renders SYNCHRONOUSLY here — the layer change snapshots the
+   * week before this call and settles it after, and a re-render that happens
+   * later than that travels nothing.
    */
-  onRerender?: (reason: "view" | "viewport" | "day") => void;
+  onRerender?: (reason: "view" | "layer" | "viewport" | "day") => void;
   /**
    * What "today" the week is drawn for. The default is the local weekday, which
    * is what the week itself depends on; `/planlegger/` overrides it because its
@@ -239,7 +273,6 @@ export interface WeekViewOptions {
 export interface WeekRenderInput {
   /** The semester's weeks. Also what decides whether the week is dated. */
   teachingWeeks: number[];
-  showOthers: boolean;
   /** Every parallel and every group — `/emne/[code]/`'s rule. */
   showAllGroups?: boolean;
   /** A bundle fetch is in flight: draw a pending week, not an empty one. */
@@ -255,6 +288,8 @@ export interface WeekRenderResult extends WeekNotesResult {
 
 export interface WeekViewHandle {
   render(states: PlanCourseState[], input: WeekRenderInput): WeekRenderResult;
+  /** Whether the øving/lab layer is on. The page's own copy of this is gone. */
+  readonly showOthers: boolean;
   /** A sentence where the week would be. `null` clears the frame entirely. */
   message(text: string | null): void;
   /** A centred card where the week would be, for the states that carry a verb. */
@@ -451,6 +486,67 @@ export function mountWeekView(options: WeekViewOptions): WeekViewHandle {
     options.onRerender?.("view");
   }
 
+  // --- The øving layer ------------------------------------------------------
+
+  /**
+   * Whether the muted layer is drawn. NOT persisted: it is a question about the
+   * week in front of you rather than a preference, and a remembered one would
+   * open every future week already flooded.
+   */
+  let showOthers = false;
+
+  const layerToggle = options.layerToggle;
+
+  if (layerToggle) {
+    layerToggle.addEventListener(
+      "click",
+      () => {
+        showOthers = !showOthers;
+        layerToggle.setAttribute("aria-pressed", String(showOthers));
+        // One layer arriving or leaving, not a new week: what was already on
+        // screen travels, what changed is what moves. The snapshot has to be
+        // taken before the re-render tears the subtree down, hence the two
+        // calls around it.
+        const settle = beginLayerChange(frame, showOthers ? "reveal" : "hide");
+        options.onRerender?.("layer");
+        settle();
+      },
+      { signal },
+    );
+  }
+
+  /**
+   * The control's whole state: pressed, and what the layer is still waiting on.
+   *
+   * The layer draws PICKED groups only, and that narrowing is right — drawing
+   * every group of every course put 41 blocks in one week (`visibleLayer`). But
+   * it made the control dishonest: on a five-course plan, ticking «Øvinger og
+   * labber» added two blocks, because the four courses with a real choice in
+   * them drew nothing at all. A toggle that visibly does nothing reads as "I
+   * have no øvinger", which is the opposite of true.
+   *
+   * So the control carries the count, and the margin keeps naming the courses
+   * and staying clickable. Only while the layer is ON: beside an unticked box
+   * "3 mangler gruppe" would be a fact about something not on screen.
+   */
+  function renderLayerState(result: WeekNotesResult): void {
+    if (!layerToggle) return;
+    // B7a: the week can reveal the muted layer on its own when nothing
+    // classifies as a lecture, and the control has to describe what is on
+    // screen. Not the student's `showOthers` — mirrored, never persisted.
+    layerToggle.setAttribute("aria-pressed", String(showOthers || result.mutedLayerAutoRevealed));
+    const host = layerToggle.querySelector<HTMLElement>(".planner-others-pending");
+    if (!host) return;
+    const codes = result.pendingGroupCourses;
+    if (!showOthers || codes.length === 0) {
+      host.replaceChildren();
+      host.hidden = true;
+      return;
+    }
+    host.replaceChildren(el("span", "np-data", String(codes.length)), " mangler gruppe");
+    host.hidden = false;
+  }
+
   if (tabs) {
     tabs.kolonner.addEventListener("click", () => setWeekView("kolonner"), { signal });
     tabs.tavle.addEventListener("click", () => setWeekView("tavle"), { signal });
@@ -576,13 +672,15 @@ export function mountWeekView(options: WeekViewOptions): WeekViewHandle {
     const weekday = new Date().getDay();
     todayNumber = dated && weekday >= 1 && weekday <= 6 ? weekday : null;
 
-    const result = weekNotes(notes, states, input.showOthers, {
+    const result = weekNotes(notes, states, showOthers, {
       loading: input.loading ?? false,
       pendingChoiceMessage: input.pendingChoiceMessage ?? null,
       showAllGroups: input.showAllGroups ?? false,
       ...(options.onChoiceClick ? { onChoiceClick: options.onChoiceClick } : {}),
       onConflictClick: flashConflict,
     });
+
+    renderLayerState(result);
 
     if (result.state === "loading") {
       renderWeekSkeleton(frame, view);
@@ -604,10 +702,13 @@ export function mountWeekView(options: WeekViewOptions): WeekViewHandle {
       showAllGroups: input.showAllGroups ?? false,
       onBlockClick: openBlockPopover,
     };
+    // The layer the grid may have revealed on its own counts as shown, or the
+    // week and the control disagree about what is on screen.
+    const drawOthers = showOthers || result.mutedLayerAutoRevealed;
     const blockCount =
       view === "tavle"
-        ? renderBoard(frame, states, input.teachingWeeks, input.showOthers, shared).rowCount
-        : renderColumnGrid(frame, states, input.teachingWeeks, input.showOthers, {
+        ? renderBoard(frame, states, input.teachingWeeks, drawOthers, shared).rowCount
+        : renderColumnGrid(frame, states, input.teachingWeeks, drawOthers, {
             ...shared,
             // Undefined leaves the columns drawing bare weekday names, which is
             // what a pattern week is.
@@ -629,6 +730,9 @@ export function mountWeekView(options: WeekViewOptions): WeekViewHandle {
 
   return {
     render,
+    get showOthers(): boolean {
+      return showOthers;
+    },
     message(text: string | null): void {
       renderWeekMessage(frame, notes, text);
     },

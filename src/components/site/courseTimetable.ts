@@ -28,21 +28,27 @@ import type { PlanCourseState } from "../planner/types.js";
 import { mountWeekView } from "../planner/weekView.js";
 
 /**
- * The Uke/Liste pair `[code].astro` server-rendered, revealed now that there is
- * a week to view. Hidden until here rather than absent: a control built at
- * mount pops in a frame late, on top of a frame already holding its own height.
+ * The week's two controls, `[code].astro` server-rendered, revealed now that
+ * there is a week to view. Hidden until here rather than absent: a control
+ * built at mount pops in a frame late, on top of a frame already holding its
+ * own height.
  */
-function tabsFor(
-  section: HTMLElement,
-): { kolonner: HTMLButtonElement; tavle: HTMLButtonElement } | null {
-  const host = section.querySelector<HTMLElement>('[data-role="tabs"]');
+function controlsFor(section: HTMLElement): {
+  tabs: { kolonner: HTMLButtonElement; tavle: HTMLButtonElement } | null;
+  layerToggle: HTMLButtonElement | null;
+} {
+  const host = section.querySelector<HTMLElement>('[data-role="week-controls"]');
   const kolonner = document.getElementById("emne-view-kolonner");
   const tavle = document.getElementById("emne-view-tavle");
-  if (!host || !(kolonner instanceof HTMLButtonElement) || !(tavle instanceof HTMLButtonElement)) {
-    return null;
-  }
-  host.hidden = false;
-  return { kolonner, tavle };
+  const layerToggle = document.getElementById("emne-others-toggle");
+  if (host) host.hidden = false;
+  return {
+    tabs:
+      kolonner instanceof HTMLButtonElement && tavle instanceof HTMLButtonElement
+        ? { kolonner, tavle }
+        : null,
+    layerToggle: layerToggle instanceof HTMLButtonElement ? layerToggle : null,
+  };
 }
 
 /** The planner's entry shape plus the `term` field only this page reads. */
@@ -298,11 +304,11 @@ export async function mountCourseTimetable(
    *  in a frame late. */
   let scope: TimetableScope = "all";
 
+  // The øving layer's box is NOT here: it is the same control /planlegger/
+  // carries, so it is server-rendered into the section head beside the view
+  // tabs and `weekView` owns everything it does. What is left in this row is
+  // the one control only this page has.
   const controls = el("div", "timetable-controls");
-  const toggle = el("button", "np-toggle timetable-others", "Vis øvinger og labber");
-  toggle.type = "button";
-  toggle.setAttribute("aria-pressed", "false");
-  controls.append(toggle);
 
   // Only when it would change something — see `narrowingChangesWeek`.
   const canNarrow = narrowingChangesWeek(shown, options.selectedGroups, programCode);
@@ -311,7 +317,7 @@ export async function mountCourseTimetable(
   mine.setAttribute("aria-pressed", "false");
   if (canNarrow) controls.append(mine);
 
-  body.append(controls);
+  if (canNarrow) body.append(controls);
 
   // WHAT THIS WEEK IS. Every parallel and every group, said out loud, because
   // six lectures on screen with nothing naming them read as six lectures you
@@ -352,17 +358,19 @@ export async function mountCourseTimetable(
    * five parallels needs; but there is no course-settings modal on this page to
    * send them to, so the card carries facts and no verb.
    */
+  const controlHosts = controlsFor(section);
   const week = mountWeekView({
     frame,
     notes,
-    tabs: tabsFor(section),
+    tabs: controlHosts.tabs,
+    layerToggle: controlHosts.layerToggle,
     surface: "emne",
     onOpenSettings: null,
-    onRerender: () => draw(toggle.getAttribute("aria-pressed") === "true"),
+    onRerender: () => draw(),
     signal: options.signal,
   });
 
-  function draw(showOthers: boolean): void {
+  function draw(): void {
     // The narrowing happens on the ENTRIES handed in, not on `showAllGroups`.
     // That flag stays true either way: it says "this is the course's page, not
     // one student's plan", which is still what the surface is — the switch is
@@ -371,15 +379,11 @@ export async function mountCourseTimetable(
     const drawn =
       scope === "mine" ? applyGroupSelection(shown, options.selectedGroups, programCode) : shown;
     state.bundle = bundleFromEntries(drawn);
-    const result = week.render([state], {
+    week.render([state], {
       // The entries' OWN weeks, not the planned semester's — see `weeksOf`.
       teachingWeeks: weeksOf(drawn),
-      showOthers,
       showAllGroups: true,
     });
-    // B7a: when nothing classifies as a lecture the week reveals the muted
-    // layer unasked, so the toggle has to describe what is on screen.
-    if (result.mutedLayerAutoRevealed) toggle.setAttribute("aria-pressed", "true");
   }
 
   // Same grammar as the layer toggle beside it: a deliberate switch that
@@ -390,20 +394,10 @@ export async function mountCourseTimetable(
     mine.setAttribute("aria-pressed", String(scope === "mine"));
     syncScopeLine();
     const settle = beginLayerChange(frame, scope === "mine" ? "hide" : "reveal");
-    draw(toggle.getAttribute("aria-pressed") === "true");
+    draw();
     settle();
   });
 
-  toggle.addEventListener("click", () => {
-    const next = toggle.getAttribute("aria-pressed") !== "true";
-    toggle.setAttribute("aria-pressed", String(next));
-    // The same button on /planlegger/ moves the layer rather than rebuilding
-    // the week. It is one control; it cannot behave two ways per page.
-    const settle = beginLayerChange(frame, next ? "reveal" : "hide");
-    draw(next);
-    settle();
-  });
-
-  draw(false);
+  draw();
   return shown;
 }

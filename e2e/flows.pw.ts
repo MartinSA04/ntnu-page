@@ -2367,7 +2367,7 @@ test.describe("the course page draws the week the planner draws", () => {
     await expect(sessions.first()).toBeVisible({ timeout: 45_000 });
     const lecturesOnly = await sessions.count();
 
-    const toggle = page.locator(".timetable-others");
+    const toggle = page.locator("#emne-others-toggle");
     await expect(toggle).toHaveAttribute("aria-pressed", "false");
     await toggle.click();
     await expect(toggle).toHaveAttribute("aria-pressed", "true");

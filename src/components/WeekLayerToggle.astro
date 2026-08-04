@@ -1,0 +1,36 @@
+---
+/**
+ * The øving/lab layer, for every surface that draws a week.
+ *
+ * A BOX YOU TICK, not a pill you press. It ADDS a layer to the week; it does
+ * not choose how the week is drawn, and the pair beside it (Uke/Liste) does —
+ * so the two read as different kinds of control because they are.
+ * `/planlegger/` is where that grammar was settled and the other surfaces
+ * mirror it; there is one set of styles, in planner-week.css.
+ *
+ * Server-rendered for the same reason `WeekTabs.astro` is: building a control
+ * at mount pops it into a bar a frame late. `weekView.ts` binds this button
+ * rather than creating it, and owns everything it does — the state, the layer
+ * choreography, and the count below.
+ */
+interface Props {
+  /** Namespaces the ids, so three surfaces can carry the control at once. */
+  idPrefix: string;
+}
+const { idPrefix } = Astro.props;
+---
+
+<button type="button" class="planner-others-toggle" id={`${idPrefix}-others-toggle`} aria-pressed="false">
+  <span class="planner-check" aria-hidden="true">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5">
+      <path d="m4 12 6 6L20 6"></path>
+    </svg>
+  </span>
+  Øvinger og labber
+  {/* What the layer is still waiting on. The narrowing that makes this
+      necessary is deliberate (drawing every group put 41 blocks in one week) —
+      what was not deliberate is that the control said nothing about it, so
+      ticking the box on a five-course plan appeared to do nothing at all.
+      Filled by `weekView`. */}
+  <span class="planner-others-pending" id={`${idPrefix}-others-pending`} hidden></span>
+</button>

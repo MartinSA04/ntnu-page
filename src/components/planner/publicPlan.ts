@@ -30,7 +30,7 @@ import {
 import { entriesInSemester, semesterYear } from "../../lib/planner/schedule.js";
 import { el, formatCreditNumber } from "./dom.js";
 import type { PlanCourseState } from "./types.js";
-import { buildWeekTabs, mountWeekView } from "./weekView.js";
+import { buildLayerToggle, buildWeekTabs, mountWeekView } from "./weekView.js";
 
 /** The semester rows the page ships from `data/semesters.json` — teaching weeks and a name. */
 export interface PublicSemester {
@@ -191,8 +191,11 @@ function renderPlan(deps: PublicPlanDeps, plan: PublicPlan): void {
   // one write — `buildWeekTabs` is the runtime twin of WeekTabs.astro, which
   // the two surfaces with a static shell use instead.
   const tabs = buildWeekTabs("user");
+  const layer = buildLayerToggle("user");
   const weekHead = el("div", "public-plan-weekhead");
-  weekHead.append(tabs.host);
+  // Same order as /planlegger/'s bar and /emne/[code]/'s section head: the
+  // layer you add, then the view you choose, with the pair at the far right.
+  weekHead.append(layer.toggle, tabs.host);
   root.append(weekHead);
 
   const frame = el("div", "planner-grid-frame");
@@ -222,7 +225,7 @@ function renderPlan(deps: PublicPlanDeps, plan: PublicPlan): void {
   foot.append(ctaLink());
   root.append(foot);
 
-  drawWeek(deps, plan, frame, notes, tabs);
+  drawWeek(deps, plan, frame, notes, tabs, layer.toggle);
 }
 
 /**
@@ -240,6 +243,7 @@ function drawWeek(
   frame: HTMLElement,
   notes: HTMLElement,
   tabs: { kolonner: HTMLButtonElement; tavle: HTMLButtonElement },
+  layerToggle: HTMLButtonElement,
 ): void {
   const year = semesterYear(plan.semesterId);
   const semester = deps.semesters.find((s) => s.id === plan.semesterId);
@@ -272,6 +276,7 @@ function drawWeek(
     frame,
     notes,
     tabs,
+    layerToggle,
     surface: "user",
     onOpenSettings: null,
     onRerender: () => draw(states.some((s) => s.loading)),
@@ -279,11 +284,7 @@ function drawWeek(
   });
 
   const draw = (loading: boolean): void => {
-    week.render(states, {
-      teachingWeeks: semester?.teachingWeeks ?? [],
-      showOthers: false,
-      loading,
-    });
+    week.render(states, { teachingWeeks: semester?.teachingWeeks ?? [], loading });
   };
 
   draw(true);

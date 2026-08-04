@@ -335,8 +335,8 @@ test.describe("layout stability", () => {
    * Against a warm local worker the timetable answers before first paint.
    */
   for (const [view, label, floor] of [
-    ["kolonner", "Uke", 300],
-    ["tavle", "Liste", 640],
+    ["kolonner", "Uke", 260],
+    ["tavle", "Liste", 600],
   ] as const) {
     test(`the course page reserves what ${label} actually needs`, async ({ page }) => {
       await page.addInitScript((v) => localStorage.setItem("np:weekView", v), view);

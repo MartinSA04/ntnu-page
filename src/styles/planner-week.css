@@ -191,6 +191,72 @@ html[data-view="tavle"] [data-surface="planner"] .planner-grid-frame[data-reserv
   color: var(--fg);
 }
 
+/* --- The øving layer's box ------------------------------------------------
+   Here rather than in a page's scoped block because three surfaces carry it,
+   and /planlegger/ is where the grammar was settled. */
+/* The layer, not a view: a box you tick. Nothing about it is shaped like the
+   pair beside it — it ADDS øvinger and labber; it does not choose how the
+   week is drawn. */
+.planner-others-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--gap-2);
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  color: var(--muted);
+  /* Same trade as the tabs: a 24px target, none of it spent on layout. */
+  margin-block: -7px;
+  padding-block: 7px;
+  border-radius: var(--radius-xs);
+  transition: color var(--dur-fast) var(--ease);
+}
+
+.planner-others-toggle:hover,
+.planner-others-toggle[aria-pressed="true"] {
+  color: var(--fg);
+}
+
+/* Not a badge and not a warning — a count the label finishes on. Amber would
+   make an ordinary unmade choice look like a problem (§2's Red-Is-Collision
+   and its amber sibling are both about the PLAN, not about our narrowing), so
+   it is quiet ink set off by a middle dot. */
+/* Set off from the count before it by space, not by a mark. */
+.planner-others-pending:not([hidden]) {
+  display: inline;
+  margin-inline-start: var(--gap-2);
+  color: var(--muted);
+}
+
+.planner-check {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 14px;
+  height: 14px;
+  border: 1px solid var(--control-edge);
+  border-radius: var(--radius-xs);
+  transition:
+    background var(--dur-fast) var(--ease),
+    border-color var(--dur-fast) var(--ease);
+}
+
+.planner-others-toggle[aria-pressed="true"] .planner-check {
+  background: var(--ui);
+  border-color: var(--ui);
+}
+
+.planner-check svg {
+  width: 10px;
+  height: 10px;
+  color: var(--ui-contrast);
+  opacity: 0;
+  transition: opacity var(--dur-fast) var(--ease);
+}
+
+.planner-others-toggle[aria-pressed="true"] .planner-check svg {
+  opacity: 1;
+}
+
 /* An apology is not a week, but it stands where one would: with the frame
    holding the week's height from first paint, a message left at the top would
    read as a caption on a large empty box. */

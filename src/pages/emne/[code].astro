@@ -1,6 +1,7 @@
 ---
 import catalogData from "../../../data/catalog.json";
 import semestersData from "../../../data/semesters.json";
+import WeekLayerToggle from "../../components/WeekLayerToggle.astro";
 import WeekTabs from "../../components/WeekTabs.astro";
 import Layout from "../../layouts/Layout.astro";
 // This page mounts the same `weekView` /planlegger/ does, so it needs the same
@@ -155,12 +156,18 @@ const description = `${course.code} ${course.name}: timeplan, eksamen og nøkkel
     data-offered={String(isOffered)}
   >
     <section class="emne-section" id="timetable-section">
-      {/* The Uke/Liste pair is in the STATIC shell, hidden until there is a
-          week to view. Built at mount it would pop a control in a frame late,
-          on top of a frame already holding its own height. */}
+      {/* The week's two controls, in the STATIC shell and hidden until there
+          is a week to view. Built at mount they would pop in a frame late, on
+          top of a frame already holding its own height.
+
+          Same pair and same order as /planlegger/'s bar: the layer you add,
+          then the view you choose, with the tabs at the far right. */}
       <div class="emne-section-head-row">
         <h2 class="np-kicker emne-section-head">Timeplan</h2>
-        <div data-role="tabs" hidden><WeekTabs idPrefix="emne" /></div>
+        <div class="emne-week-controls" data-role="week-controls" hidden>
+          <WeekLayerToggle idPrefix="emne" />
+          <WeekTabs idPrefix="emne" />
+        </div>
       </div>
       <p class="emne-loading np-hint" data-role="status" data-reserve aria-live="polite">
         Henter timeplanen …
@@ -283,9 +290,20 @@ const description = `${course.code} ${course.name}: timeplan, eksamen og nøkkel
      puts the same pair at the top of its page. */
   .emne-section-head-row {
     display: flex;
-    align-items: baseline;
+    align-items: center;
     justify-content: space-between;
-    gap: var(--gap-3);
+    gap: var(--space-2) var(--gap-4);
+    flex-wrap: wrap;
+    margin-bottom: var(--space-3);
+  }
+  .emne-section-head-row .emne-section-head {
+    margin-bottom: 0;
+  }
+  /* The same run /planlegger/'s bar puts these two in, in the same order. */
+  .emne-week-controls:not([hidden]) {
+    display: flex;
+    align-items: center;
+    gap: var(--gap-4);
     flex-wrap: wrap;
   }
 
@@ -310,18 +328,20 @@ const description = `${course.code} ${course.name}: timeplan, eksamen og nøkkel
 
      The two views have unrelated geometries and one number cannot serve both.
      Measured in Chromium on the real stylesheets, one-course plan, TDT4120:
-     Uke 377 (390px) / 357 (1280px), Liste 720 (390px) / 739 (1280px). A single
-     24rem reservation therefore over-held Uke slightly and under-held Liste by
-     ~340px, which is the shift a student in Liste actually saw.
+     Uke 333 (390px) / 313 (1280px), Liste 676 (390px) / 695 (1280px). A single
+     24rem reservation therefore over-held Uke and under-held Liste by ~340px,
+     which is the shift a student in Liste actually saw.
 
      Each is set a little UNDER the narrower measurement, so the residual is a
      small downward nudge rather than the page snatching upward under a thumb.
-     `html[data-view]` is written before first paint by Layout.astro's probe. */
+     Re-measure when anything joins or leaves this section: the layer box moving
+     up into the section head took ~44px off both. `html[data-view]` is written
+     before first paint by Layout.astro's probe. */
   #timetable-section [data-role="status"][data-reserve] {
-    min-height: 21.5rem;
+    min-height: 19rem;
   }
   :global(html[data-view="tavle"]) #timetable-section [data-role="status"][data-reserve] {
-    min-height: 44rem;
+    min-height: 41.5rem;
   }
   #details-section [data-role="status"][data-reserve] {
     min-height: 8rem;
@@ -387,10 +407,10 @@ const description = `${course.code} ${course.name}: timeplan, eksamen og nøkkel
     margin-bottom: var(--space-3);
   }
 
-  /* The week's two switches share a row: WHAT is drawn (øvinger og labber) and
-     HOW MUCH of it (alle / bare min). They wrap on a narrow phone rather than
-     compressing — a `.np-toggle` at its min-height is already a phone target,
-     and two of them do not fit 358px side by side. */
+  /* What is left in this row is the one control only this page has: HOW MUCH
+     of the week is drawn (alle / bare min). WHAT is drawn is the layer box, up
+     in the section head beside the view tabs, exactly as /planlegger/'s bar
+     carries the same pair. */
   :global(.timetable-controls) {
     display: flex;
     flex-wrap: wrap;

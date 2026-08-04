@@ -1,5 +1,6 @@
 ---
 import Icon from "../../components/Icon.astro";
+import WeekLayerToggle from "../../components/WeekLayerToggle.astro";
 import WeekTabs from "../../components/WeekTabs.astro";
 import Layout from "../../layouts/Layout.astro";
 // The week's geometry and ink live in one stylesheet because every surface that
@@ -142,26 +143,9 @@ const description =
           bar's own flex children; below it, it is the ⋯ menu's panel. */}
       <div class="planner-tools" id="planner-tools">
         {/* The layer is a box you tick; the view is a switch you throw. They read
-          as two kinds of control because they are. */}
-        <button
-          type="button"
-          class="planner-others-toggle"
-          id="planner-others-toggle"
-          aria-pressed="false"
-        >
-        <span class="planner-check" aria-hidden="true">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5">
-            <path d="m4 12 6 6L20 6" />
-          </svg>
-        </span>
-        Øvinger og labber
-        {/* What the layer is still waiting on. The narrowing that makes this
-            necessary is deliberate (drawing every group put 41 blocks in one
-            week) — what was not deliberate is that the control said nothing
-            about it, so ticking the box on a five-course plan appeared to do
-            nothing at all. Filled by `renderOthersPending`. */}
-          <span class="planner-others-pending" id="planner-others-pending" hidden></span>
-        </button>
+          as two kinds of control because they are. Both are components now:
+          every surface that draws a week carries the same pair. */}
+        <WeekLayerToggle idPrefix="planner" />
 
         {/* THE PLAN IS THE URL, AND NOTHING ON THE PAGE SAID SO. Shared-link
           creations are PRODUCT §2's north-star metric, `syncHash` has kept the
@@ -997,68 +981,8 @@ const description =
   /* The Uke ⇄ Liste pair's own styles live in planner-week.css: three surfaces
      carry it now, and a page-scoped rule ships only with its page. */
 
-  /* The layer, not a view: a box you tick. Nothing about it is shaped like the
-     pair beside it — it ADDS øvinger and labber; it does not choose how the
-     week is drawn. */
-  .planner-others-toggle {
-    display: inline-flex;
-    align-items: center;
-    gap: var(--gap-2);
-    font-family: var(--font-sans);
-    font-size: var(--text-sm);
-    color: var(--muted);
-    /* Same trade as the tabs: a 24px target, none of it spent on layout. */
-    margin-block: -7px;
-    padding-block: 7px;
-    border-radius: var(--radius-xs);
-    transition: color var(--dur-fast) var(--ease);
-  }
-
-  .planner-others-toggle:hover,
-  .planner-others-toggle[aria-pressed="true"] {
-    color: var(--fg);
-  }
-
-  /* Not a badge and not a warning — a count the label finishes on. Amber would
-     make an ordinary unmade choice look like a problem (§2's Red-Is-Collision
-     and its amber sibling are both about the PLAN, not about our narrowing), so
-     it is quiet ink set off by a middle dot. */
-  /* Set off from the count before it by space, not by a mark. */
-  .planner-others-pending:not([hidden]) {
-    display: inline;
-    margin-inline-start: var(--gap-2);
-    color: var(--muted);
-  }
-
-  .planner-check {
-    display: grid;
-    place-items: center;
-    flex: none;
-    width: 14px;
-    height: 14px;
-    border: 1px solid var(--control-edge);
-    border-radius: var(--radius-xs);
-    transition:
-      background var(--dur-fast) var(--ease),
-      border-color var(--dur-fast) var(--ease);
-  }
-
-  .planner-others-toggle[aria-pressed="true"] .planner-check {
-    background: var(--ui);
-    border-color: var(--ui);
-  }
-
-  .planner-check svg {
-    width: 10px;
-    height: 10px;
-    color: var(--ui-contrast);
-    opacity: 0;
-    transition: opacity var(--dur-fast) var(--ease);
-  }
-
-  .planner-others-toggle[aria-pressed="true"] .planner-check svg {
-    opacity: 1;
-  }
+  /* The layer box's own styles live in planner-week.css beside the Uke ⇄ Liste
+     pair's, for the same reason: three surfaces carry the control now. */
 
   /* The exam head's own verdict, which is still one sentence rather than a run
      of chips: `.is-clean` there means the same as it does above. */
