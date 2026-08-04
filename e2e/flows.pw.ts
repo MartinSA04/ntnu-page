@@ -116,24 +116,22 @@ function courseCodesOf(page: Page): Promise<string[]> {
   return page.locator("#planner-course-rows .planner-course-code").allTextContents();
 }
 
-test("onboarding: panel → programme + kull + retning → a full week", async ({ page }) => {
+test("onboarding: first run → programme + kull + retning → a full week", async ({ page }) => {
   await page.goto("/planlegger/");
 
-  // The empty state is a card in the week frame, not a dead end: the picker it
-  // points at used to be authored `hidden`, so an empty planner offered nothing
-  // at all. Its button is now the page's ONLY "Velg studieprogram" — both the
-  // banner's identically-labeled control and the topbar chip are gone.
-  const card = page.locator("#planner-grid-frame .planner-week-card");
-  await expect(card).toBeVisible({ timeout: 15_000 });
-  await card.locator("button", { hasText: "Velg studieprogram" }).click();
+  // FIRST RUN OWNS THE PAGE. It is not a card in the middle of a drawn planner
+  // any more: the bar and everything under it are gated off by
+  // `html:not([data-plan])`, which the pre-paint probe already writes, so a
+  // student with no plan never sees four controls that act on nothing.
+  await expect(page.locator("#planner-firstrun")).toBeVisible({ timeout: 15_000 });
+  await expect(page.locator(".planner-banner")).toBeHidden();
+  await expect(page.locator("#planner-main")).toBeHidden();
 
-  // The FIRST-RUN PATH, and it is one press: the picker opens with the caret
-  // already in the programme search. It used to open a settings panel whose own
-  // "Endre" link opened studieinfo on top of it, and then briefly the topbar's
-  // account panel — it is the planner's own dialog now.
-  const dialog = page.locator("#planner-studieinfo");
-  await expect(dialog).toBeVisible();
-  await expect(page.locator("#studieinfo-program-input")).toBeFocused();
+  // The picker is ON THE SCREEN, not behind a press. There is no dialog in this
+  // path at all, and no Lagre in it: the sentence above promises a ready week
+  // for two facts, so a third press would make that false.
+  await expect(page.locator("#planner-studieinfo")).toHaveCount(0);
+  await expect(page.locator("#studieinfo-save")).toHaveCount(0);
 
   await page.fill("#studieinfo-program-input", "Datateknologi");
   // "Datateknologi" alone matches MIDT/MTDT/PHCOS too (B6) — the code span
@@ -148,21 +146,34 @@ test("onboarding: panel → programme + kull + retning → a full week", async (
   await expect(kullChips.first()).toBeVisible({ timeout: 20_000 });
   expect(await kullChips.count()).toBeGreaterThanOrEqual(4);
 
-  // An older kull: MTDT 2024 at 26h is a 3rd-year autumn, gated behind
-  // studieretning — the retning select must appear before Lagre resolves it.
+  // THE KULL PRESS IS THE COMMIT. An older kull: MTDT 2024 at 26h is a 3rd-year
+  // autumn, gated behind studieretning — which first run does NOT ask, because
+  // `#planner-direction` asks it afterwards, when the study plan has landed and
+  // it knows whether it matters.
   await page.locator("#studieinfo-kull-chips button", { hasText: "2024" }).click();
 
+  // The screen gives way to the planner off that one write: the store change
+  // repaints, and the probe puts `data-plan` back on `<html>`. No reload.
+  await expect(page.locator("#planner-firstrun")).toBeHidden({ timeout: 20_000 });
+  await expect(page.locator(".planner-banner")).toBeVisible();
+  await expect(planTitle(page)).toHaveText("MTDT Kull 24");
+
+  // …and the dialog still works after first run, which is the half of the
+  // lazy mount that could silently break: it is built on this first open,
+  // because two live studieinfo sections would collide on every id.
+  const direction = page.locator("#planner-direction");
+  await expect(direction).toBeVisible({ timeout: 30_000 });
+  await direction.locator("#planner-direction-btn").click();
+
+  const dialog = page.locator("#planner-studieinfo");
+  await expect(dialog).toBeVisible();
   const retningSelect = page.locator("#studieinfo-retning-select");
   await expect(retningSelect).toBeVisible({ timeout: 20_000 });
   await retningSelect.selectOption({ index: 1 }); // index 0 is the "Ikke valgt ennå" placeholder
-
   await page.click("#studieinfo-save");
   await expect(dialog).toBeHidden();
 
   await expect(gridBlocks(page).first()).toBeVisible({ timeout: 45_000 });
-  // Programme and kull, and no semester: the term is the `<select>` on the same
-  // bar, and a title restating the control beside it is redundancy (DESIGN §9).
-  await expect(planTitle(page)).toHaveText("MTDT Kull 24");
 });
 
 /* "share: the hash reproduces the plan in a fresh context" is DELETED with the
@@ -944,7 +955,10 @@ test("add dialog: the search field holds still while the results change", async 
   // length, so the caret travelled up and down the screen while the student was
   // still typing. It is pinned near the top instead.
   await page.goto("/planlegger/");
-  await page.click("#planner-add-course-btn");
+  // From a plan-less planner the route into the add dialog is the first-run
+  // screen's own quiet line: the bar that carries "Legg til emne" is gated off
+  // until there is a plan for it to act on.
+  await page.click("#planner-firstrun-add");
   const dialog = page.locator("#planner-add-dialog");
   await expect(dialog).toBeVisible();
 
@@ -1135,7 +1149,9 @@ test("catalog: the subject chips come from the query's own hits", async ({ page 
 test("manual adds stay in their semester", async ({ page }) => {
   await page.goto("/planlegger/");
 
-  await page.click("#planner-add-course-btn");
+  // The bar that carries "Legg til emne" is gated off until there is a plan, so
+  // the first-run screen's own line is the way in.
+  await page.click("#planner-firstrun-add");
   const addDialog = page.locator("#planner-add-dialog");
   await expect(addDialog).toBeVisible();
   await addDialog.locator("input.add-course-input").fill("TDT4100");
@@ -1298,7 +1314,10 @@ test("add dialog: one Escape from the search field closes it", async ({ page }) 
   // is the point: an empty search input has nothing to clear and would pass
   // even with the bug.
   await page.goto("/planlegger/");
-  await page.click("#planner-add-course-btn");
+  // From a plan-less planner the route into the add dialog is the first-run
+  // screen's own quiet line: the bar that carries "Legg til emne" is gated off
+  // until there is a plan for it to act on.
+  await page.click("#planner-firstrun-add");
   const addDialog = page.locator("#planner-add-dialog");
   await expect(addDialog).toBeVisible();
 
@@ -2122,23 +2141,16 @@ test.describe("the programme picker lives on the planner", () => {
     page,
   }) => {
     await page.goto("/planlegger/");
-    // With no programme the title is a word rather than a fact, so it is NOT a
-    // door — and the strict-mode resolution below is the assertion: an enabled
-    // one here would be a second control named "Velg studieprogram" on a
-    // screen that already has the card's.
-    await expect(page.locator("#planner-name-btn")).toBeDisabled();
-    // The empty state's own primary route still lands in the programme field.
-    await page.getByRole("button", { name: "Velg studieprogram" }).click();
-    const dialog = page.locator("#planner-studieinfo");
-    await expect(dialog).toBeVisible();
-    await expect(page.locator("#studieinfo-program-input")).toBeFocused();
-    await page.keyboard.press("Escape");
-    await expect(dialog).toBeHidden();
+    // With no programme there is no title to be a door: the whole bar is gated
+    // off and the picker is the screen instead, so the question "where do I say
+    // which programme I am on" has exactly one answer on this page.
+    await expect(page.locator("#planner-name-btn")).toBeHidden();
+    await expect(page.locator("#planner-firstrun #studieinfo-program-input")).toBeVisible();
 
     // The account's door opens a room with no programme field IN it. Scoped to
-    // the panel, not to the document: the picker's own dialog is mounted at
-    // page load and holds that input the whole time — it is just somewhere
-    // else now, which is the entire point of the change.
+    // the panel, not to the document: the picker holds that input the whole
+    // time — it is just somewhere else now, which is the entire point of the
+    // change.
     await page.locator("#site-account-btn").click();
     await expect(page.locator("#planner-profile-panel")).toBeVisible();
     await expect(page.locator("#planner-profile-panel #studieinfo-program-input")).toHaveCount(0);

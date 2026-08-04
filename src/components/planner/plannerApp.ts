@@ -92,8 +92,16 @@ import {
   prefillCredits,
   resolvePeriodFor,
 } from "./programPlan.js";
-import { publishMonthFor } from "./studieinfo.js";
-import { mountStudieinfoDialog, type StudieinfoFocus } from "./studieinfoDialog.js";
+import {
+  buildStudieinfoSection,
+  publishMonthFor,
+  type StudieinfoSectionHandle,
+} from "./studieinfo.js";
+import {
+  mountStudieinfoDialog,
+  type StudieinfoDialogHandle,
+  type StudieinfoFocus,
+} from "./studieinfoDialog.js";
 import type { PlanCourseState } from "./types.js";
 
 export interface SemesterSummary {
@@ -495,7 +503,21 @@ export async function mountPlannerApp(
   setAccountRepaint(() => onAuthenticated());
   lifeSignal.addEventListener("abort", () => setAccountRepaint(null));
 
-  const studieinfoDialog = mountStudieinfoDialog(store, lifeSignal);
+  /**
+   * ONE STUDIEINFO SECTION ON THE PAGE AT A TIME, and that is a hard constraint
+   * rather than a preference: `buildStudieinfoSection` hard-codes its ids
+   * (`studieinfo-program-input`, `studieinfo-kull-chips`, `studieinfo-hint`,
+   * the listbox its combobox owns through `aria-controls`), so two live
+   * instances would duplicate every one of them and break the label, the
+   * combobox wiring and every `getElementById` that reaches into it.
+   *
+   * The two hosts are mutually exclusive states, so they are mounted that way:
+   * the first-run screen's section exists only while there is no plan, and the
+   * dialog is built on its first open — which cannot happen before a plan
+   * exists, because both of its openers (the plan's own name, and the
+   * studieretning question) require one.
+   */
+  let studieinfoDialog: StudieinfoDialogHandle | null = null;
 
   /**
    * Opens the programme picker, with the caret on whichever control asked for
@@ -504,8 +526,60 @@ export async function mountPlannerApp(
    * and sign-in is a fact about the person.
    */
   function openStudieinfo(focus?: StudieinfoFocus): void {
+    studieinfoDialog ??= mountStudieinfoDialog(store, lifeSignal);
     studieinfoDialog.open(focus);
   }
+
+  const firstRunHost = document.getElementById("planner-firstrun-picker");
+  let firstRun: StudieinfoSectionHandle | null = null;
+  /** Latched by `syncFirstRun` the first time this load has a plan. */
+  let firstRunDone = false;
+
+  /**
+   * The first-run screen's picker: the SAME unit the dialog hosts, under the
+   * other commit policy. The screen owns the presentation of a first run and
+   * `studieinfo.ts` owns the picking; the only thing they agree on is when a
+   * pick is written.
+   *
+   * Nothing repaints from here. `setProgramPlan` writes through the store, the
+   * `onPlanChange` subscription at the foot of this file turns that into a
+   * `renderAll()`, and `planProbe.ts` puts `data-plan` on `<html>` — which is
+   * what takes this screen down and brings the planner up. All of it off the
+   * one write, with no reload.
+   */
+  function syncFirstRun(): void {
+    if (!firstRunHost || firstRunDone) return;
+    if (plan.program !== undefined || plan.courses.length > 0) {
+      // ONE-WAY, FOR THE REST OF THE PAGE-LOAD. `data-plan` is a fact about the
+      // CURRENT SEMESTER's list, so a student with manual adds and no programme
+      // who switches to an empty term would otherwise be thrown back to
+      // onboarding — with the semester control gated off behind it, which is
+      // the one control that would get them back. First run is a decision about
+      // a load, not a live state.
+      //
+      // The attribute rides `<html>` beside `data-plan` because the gate is
+      // CSS and has to hold before the first frame. Astro's
+      // `swapRootAttributes()` wipes it on a ClientRouter swap, which is
+      // correct: the next page-load re-decides from its own stored plan.
+      firstRunDone = true;
+      document.documentElement.setAttribute("data-planner-ready", "");
+      firstRun?.element.remove();
+      firstRun = null;
+      return;
+    }
+    if (firstRun) return;
+    firstRun = buildStudieinfoSection({ store, commit: "on-kull", onSaved: () => {} });
+    firstRunHost.append(firstRun.element);
+    // `reset()` is what requests the programme catalogue — the dialog gets it
+    // from every open, and this section has no open to hook. Paying for it up
+    // front is right here and only here: on this screen the picker IS the
+    // screen, so the student is by definition about to search it.
+    firstRun.reset();
+  }
+
+  document
+    .getElementById("planner-firstrun-add")
+    ?.addEventListener("click", () => openAddFromQuestion(), { signal: lifeSignal });
 
   const courseSettings = mountCourseSettings(store, lifeSignal);
   // A click in the week asks "what is this session", not "let me edit this
@@ -2558,49 +2632,15 @@ export async function mountPlannerApp(
       anyBundlesLoaded &&
       states.every((s) => s.bundle === null || semesterEntries(s.bundle).length === 0);
 
-    const noProfile = plan.program === undefined && plan.courses.length === 0;
-    const showFallback = noProfile || (states.length > 0 && !anyLoading && (!published || empty));
+    // NO `noProfile` BRANCH. A plan-less planner is not a planner with a card
+    // in the middle of it any more: the page's own first-run screen replaces
+    // this whole surface, gated on `html:not([data-plan])` before the first
+    // frame. Keeping a week card for the same state would be a second answer to
+    // the same question, drawn under a bar the gate has already hidden.
+    const showFallback = states.length > 0 && !anyLoading && (!published || empty);
 
     let gridResult: GridRenderResult | null = null;
-    if (noProfile) {
-      // State 1: no plan at all.
-      renderWeekCard((card) => {
-        // DESIGN §8: an empty state is an invitation to act. "Ingen plan ennå."
-        // is a STATUS — it named the absence and left the page saying nothing
-        // about what the tool is for, on the one screen where the student has
-        // no other evidence. This is PRODUCT §1.1's mandate in one sentence.
-        card.append(
-          el(
-            "p",
-            "np-hint planner-week-card-hint",
-            "Velg studieprogrammet og kullet ditt, så er uka klar med forelesninger, kollisjoner og eksamensdatoer.",
-          ),
-        );
-        // THE ACCENT GOES ON THE MANDATE'S OWN PATH. This was a paper button
-        // while "Legg til emne" wore the accent — so on the empty state the
-        // loudest thing on the page was the SECONDARY route, and the primary
-        // one read as its footnote. `renderBanner` demotes "Legg til emne"
-        // while there is no plan, so there is still exactly one accent on
-        // screen (§8's One-Job-Accent).
-        //
-        // FIRST RUN GOES STRAIGHT TO THE FIELD. The panel opens with the
-        // caret in the programme search, so this button and the next keystroke
-        // are one continuous action — the panel's account half is below the
-        // fold of the student's attention, which is where an opt-in thing
-        // belongs.
-        const primary = el("button", "np-btn np-btn--primary", "Velg studieprogram");
-        primary.type = "button";
-        primary.addEventListener("click", () => openStudieinfo("program"));
-        card.append(primary);
-        // The panel is the way in; the dialog is the "I already know a code"
-        // escape hatch. A paper button rather than `.np-navlink`, which at
-        // --muted with no underline did not read as pressable at all.
-        const secondary = el("button", "np-btn planner-week-card-secondary", "Jeg har emnekodene");
-        secondary.type = "button";
-        secondary.addEventListener("click", () => openAddFromQuestion());
-        card.append(secondary);
-      });
-    } else if (showFallback && semester) {
+    if (showFallback && semester) {
       // Ordered by severity, not by narrative. A question used to win over both
       // branches below, so a student who lost connectivity was told to pick a
       // studieretning with no "Prøv igjen" anywhere. Neither is answerable by
@@ -2991,8 +3031,9 @@ export async function mountPlannerApp(
 
   function renderAll(): void {
     syncCourseStates();
-    // An empty plan is not a dead end: the week frame shows the onboarding card
-    // and the Emner rail keeps its "Legg til emne" button mounted.
+    // First, because it decides whether the rest of this is even on screen: a
+    // plan-less load is the first-run screen and nothing else.
+    syncFirstRun();
     renderLinkNote();
     renderBanner();
     renderDeadline();

@@ -18,6 +18,46 @@ const description =
 ---
 
 <Layout title="Planlegger" description={description} wide>
+  {/* FIRST RUN. The predicate is `html:not([data-plan])`, and it is not a new
+      mechanism: Layout's pre-paint probe sets `data-plan` when a programme or a
+      course is stored and REMOVES it otherwise, so its absence is exactly "no
+      plan". It is written before the first frame and kept true for the rest of
+      the visit by `planProbe.ts`, which is what lets a CSS-gated static panel
+      paint WITH the document — no mount flash, no reserved void, and no
+      reservation to lease and release.
+
+      The predicate is COMPLETE because the `#v2;…` hash is gone (PRODUCT §6):
+      localStorage is now the only way a plan can reach this page, so what the
+      probe reads is the whole truth about whether this load has one.
+
+      It replaces the week card that used to stand in the middle of a fully
+      drawn planner whose every control acted on nothing — a layer box, a view
+      switch, a semester select and a countdown to registering courses the
+      student had not chosen yet. */}
+  <section class="planner-firstrun" id="planner-firstrun" aria-labelledby="planner-firstrun-title">
+    {/* The invitation, not "Semesterplan": the wordmark says that 100px above,
+        and a page title repeating the wordmark spends the largest type on the
+        screen saying nothing. */}
+    <h1 class="planner-firstrun-title" id="planner-firstrun-title">
+      Lag timeplanen for semesteret
+    </h1>
+    <p class="np-hint planner-firstrun-lead">
+      Velg studieprogrammet og kullet ditt, så er uka klar med forelesninger, kollisjoner og
+      eksamensdatoer.
+    </p>
+    {/* The picker itself, mounted by `plannerApp.ts` under `commit: "on-kull"`.
+        No autofocus: it is the only control on the screen, and an autofocus
+        opens a phone keyboard over the sentence explaining why it is there. */}
+    <div class="planner-firstrun-picker" id="planner-firstrun-picker"></div>
+    <p class="np-hint planner-firstrun-alt">
+      Har du emnekodene? <button
+        type="button"
+        class="np-navlink planner-firstrun-link"
+        id="planner-firstrun-add">Legg dem til direkte.</button
+      >
+    </p>
+  </section>
+
   <div class="planner-banner">
     {/* ETT NAVN. The plan is named ONCE, here, in the notation a student
         types: MTDT · 2026 · Høst 2026. The topbar's chip carried the same
@@ -336,6 +376,71 @@ const description =
 </Layout>
 
 <style>
+  /* --- First run ---------------------------------------------------------- */
+
+  /* THE GATE. Two rules, one predicate, and the probe already writes it.
+     First run owns the page outright: no bar, no tools, no deadline, no
+     verdict, no week frame, no Eksamener, no Emner. Everything on those
+     surfaces presupposes the content that is missing, which is why the empty
+     planner read worse than an empty page — four controls acting on nothing
+     around a card floating in 900px of white. */
+  .planner-firstrun {
+    display: none;
+  }
+
+  /* `:not([data-planner-ready])` is the one-way half: `data-plan` describes the
+     CURRENT SEMESTER, so without it a switch to an empty term would put a
+     mid-visit student back on the onboarding screen and gate off the semester
+     control that is their way out. `plannerApp.ts` stamps it the first time a
+     load has a plan, and a ClientRouter swap wipes it so the next page-load
+     decides for itself. */
+  html:not([data-plan]):not([data-planner-ready]) .planner-firstrun {
+    display: block;
+  }
+
+  html:not([data-plan]):not([data-planner-ready]) .planner-banner,
+  html:not([data-plan]):not([data-planner-ready]) #planner-main {
+    display: none;
+  }
+
+  /* Narrower than the page: this is one question, and a 90rem measure would
+     set a single input adrift in it. */
+  .planner-firstrun {
+    max-width: 34rem;
+    margin: var(--space-7) auto 0;
+  }
+
+  .planner-firstrun-title {
+    margin-bottom: var(--space-2);
+    font-size: var(--text-2xl);
+    font-weight: var(--weight-semibold);
+    letter-spacing: -0.01em;
+  }
+
+  .planner-firstrun-lead {
+    margin-bottom: var(--space-5);
+    max-width: 30rem;
+  }
+
+  /* The picker mounts a frame after paint and everything under it moves when it
+     does, so its height is held from the first frame. 4rem against a measured
+     69.8px settle: deliberately a few px UNDER, so the residual nudges the line
+     below it down rather than snatching it upward (the house rule for every
+     reservation here). Re-measure before changing this. */
+  .planner-firstrun-picker {
+    min-height: 4rem;
+    margin-bottom: var(--space-4);
+  }
+
+  /* The secondary route is one quiet line, not a paper button competing with
+     the field above it. */
+  .planner-firstrun-link {
+    display: inline;
+    padding: 0;
+    text-decoration: underline;
+    text-underline-offset: 0.2em;
+  }
+
   /* --- Banner ------------------------------------------------------------ */
 
   /* Facts only — the identity block carries no control of its own. Every

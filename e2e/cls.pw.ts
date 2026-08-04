@@ -26,7 +26,7 @@ import { expect, gotoPlanner, test } from "./harness.js";
 const BUDGETS = {
   home: 0.02, // 0.006 — the "Nå" card's hold, and the pitch's predicted demotion
   planner: 0.06, // 0.028 — residual is `#planner-grid-notes`, see below
-  plannerEmpty: 0.02, // 0.000
+  plannerEmpty: 0.02, // 0.0006 — first run; the picker's residual under its 4rem hold
   plannerView: 0.03, // 0.000 in both — the per-view reservations, cold (no remembered box)
   catalogQuery: 0.02, // 0.000
   catalogPlan: 0.02, // 0.002
