@@ -1178,10 +1178,44 @@ test("manual adds stay in their semester", async ({ page }) => {
 });
 
 /**
- * The trap the one-way first-run gate would otherwise set. `data-plan` is a
- * fact about the CURRENT semester, so a plan-less term looks exactly like a
- * cold arrival — and if the planner went back to onboarding there, the semester
- * control that is the way out would be gated off behind it.
+ * Emptying the plan is a return to first run, and it has to be, because every
+ * surface left behind presupposes the courses that are gone: a week frame with
+ * one grey sentence floating in ~500px of white, a layer box and a view switch
+ * acting on nothing, and a countdown to registering courses the student no
+ * longer has. That is the exact screen the first-run design replaced.
+ */
+test("removing the last course returns to first run", async ({ page }) => {
+  await page.goto("/planlegger/");
+  await page.click("#planner-firstrun-add");
+  const addDialog = page.locator("#planner-add-dialog");
+  await expect(addDialog).toBeVisible();
+  await addDialog.locator("input.add-course-input").fill("TDT4100");
+  const row = addDialog.locator(".add-course-row", { hasText: "TDT4100" }).first();
+  await expect(row).toBeVisible({ timeout: 15_000 });
+  await row.locator(".add-course-add").click();
+  await addDialog.locator(".add-course-close").click();
+  await expect(page.locator("#planner-firstrun")).toBeHidden();
+
+  await page.locator('#planner-course-rows .planner-course-open[data-code="TDT4100"]').click();
+  const settings = page.locator("#planner-course-settings");
+  await expect(settings).toBeVisible();
+  await settings.getByRole("button", { name: /Fjern/ }).click();
+
+  await expect(page.locator("#planner-firstrun")).toBeVisible();
+  await expect(page.locator(".planner-banner")).toBeHidden();
+  // ONE studieinfo section in the document. The dialog holds a second copy of
+  // the same unit with the same hard-coded ids, so coming back here has to
+  // destroy it — two live copies break the label, the combobox wiring and every
+  // getElementById that reaches into either.
+  await expect(page.locator("#studieinfo-program-input")).toHaveCount(1);
+  await expect(page.locator("#studieinfo-program-input")).toBeVisible();
+});
+
+/**
+ * The other direction, and the reason the gate is not simply "this term is
+ * empty". A student sitting in a term they have not filled yet still has a
+ * plan; greeting them as a first-time visitor would hide the semester control
+ * that is their way back to it.
  */
 test("an empty semester keeps the planner, and every way out of it", async ({ page }) => {
   await page.goto("/planlegger/");
@@ -1204,6 +1238,13 @@ test("an empty semester keeps the planner, and every way out of it", async ({ pa
   // only route to a programme from here now that the week's card is gone.
   await openStudieinfo(page);
   await expect(studieinfoDialog(page)).toBeVisible();
+
+  // EXACTLY ONE studieinfo section in the document, and this is the assertion
+  // that actually bites. The CSS gate reads `data-plan`, so if `syncFirstRun`
+  // decided on a different predicate than the probe does, the planner would
+  // still LOOK right while a second copy of the same unit was mounted into the
+  // hidden first-run host — duplicating every id it hard-codes, silently.
+  await expect(page.locator("#studieinfo-program-input")).toHaveCount(1);
 });
 
 test("failure honesty: API down shows retry, not 'publiseres'", async ({ page, context }) => {

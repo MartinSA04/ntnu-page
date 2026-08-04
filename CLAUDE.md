@@ -280,12 +280,22 @@
   (`docs/DESIGN.md` §9 has the reasoning). (a) Its predicate is
   `html:not([data-plan])`, which the pre-paint probe already writes — do not
   replace it with a JS-set class, because the whole point is painting with the
-  document. (b) It is gated one-way per page-load via `data-planner-ready`:
-  `data-plan` describes the CURRENT semester, so without the latch switching to
-  an empty term throws a mid-visit student back to onboarding *and* hides the
-  semester control that is their way out. (c) The screen and the studieinfo
-  dialog mount the same `buildStudieinfoSection`, which hard-codes its element
-  ids — so the dialog is built lazily on first open and the screen's section is
-  removed once a plan exists. Two live instances collide on every id.
+  document. (b) **The probe's two facts have different scopes on purpose:**
+  `--plan-courses` is the CURRENT semester's row count (reservations are
+  measured in rows being drawn), while `data-plan`'s presence means "a plan
+  exists ANYWHERE", value `"elsewhere"` for one that is not in this term. That
+  is what makes the screen reversible — emptying the plan brings it back —
+  without throwing a student who switched to an empty semester into onboarding
+  with the semester control hidden behind it. `syncFirstRun` must test the same
+  thing the probe does; a JS predicate that disagrees leaves the page looking
+  right while a second picker mounts into the hidden host. (c) The screen and
+  the studieinfo dialog mount the same `buildStudieinfoSection`, which
+  hard-codes its element ids — so the dialog is built lazily on first open and
+  `destroy()`d when first run returns. Two live instances collide on every id.
+- `.planner-context-field`, `.home-now-next li` and friends need `:global()`:
+  Astro stamps its scoping attribute on what it *compiled*, and these nodes are
+  built at runtime by `el()`, so a scoped selector matches nothing. The failure
+  is silent and looks like a missing space ("Undervisning fra uke 34Høst 2026"),
+  not like a broken build.
 - `mise run check` and `mise run e2e` must both stay green; UI copy is
   Norwegian bokmål, sentence case, comma decimals ("7,5 sp").

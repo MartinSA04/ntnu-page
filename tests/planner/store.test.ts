@@ -68,6 +68,48 @@ describe("createPlanStore", () => {
     expect(store.loadPlan().semesterId).toBe("27v");
   });
 
+  /**
+   * `hasAnyCourses` is the "has this person used the tool" question, and it is
+   * a different question from `loadPlan()`'s. The planner's first-run screen
+   * turns on it: a student sitting in a term they have not filled yet still has
+   * a plan, and greeting them as a first-time visitor would hide the semester
+   * control that is their way back to it.
+   */
+  describe("hasAnyCourses", () => {
+    it("is false for empty storage", () => {
+      expect(createPlanStore("26h", { storage, events }).hasAnyCourses()).toBe(false);
+    });
+
+    it("is false when every semester's list is empty", () => {
+      storage.setItem(PLANS_STORAGE_KEY, JSON.stringify({ "26h": [], "27v": [] }));
+      expect(createPlanStore("26h", { storage, events }).hasAnyCourses()).toBe(false);
+    });
+
+    it("is true for a course in ANOTHER semester than the current one", () => {
+      storage.setItem(LAST_SEMESTER_KEY, "27v");
+      storage.setItem(
+        PLANS_STORAGE_KEY,
+        JSON.stringify({ "26h": [{ code: "TDT4100", name: "OOP", version: "1" }], "27v": [] }),
+      );
+      const store = createPlanStore("26h", { storage, events });
+      expect(store.loadPlan().courses).toEqual([]);
+      expect(store.hasAnyCourses()).toBe(true);
+    });
+
+    it("goes false again once the last course anywhere is removed", () => {
+      const store = createPlanStore("26h", { storage, events });
+      store.addCourse({ code: "TDT4100", name: "OOP" });
+      expect(store.hasAnyCourses()).toBe(true);
+      store.removeCourse("TDT4100");
+      expect(store.hasAnyCourses()).toBe(false);
+    });
+
+    it("survives a malformed payload rather than throwing", () => {
+      storage.setItem(PLANS_STORAGE_KEY, "{not json");
+      expect(createPlanStore("26h", { storage, events }).hasAnyCourses()).toBe(false);
+    });
+  });
+
   it("addCourse appends and persists, defaulting version and source", () => {
     const store = createPlanStore("26h", { storage, events });
     store.addCourse({ code: "TDT4100", name: "Objektorientert programmering" });

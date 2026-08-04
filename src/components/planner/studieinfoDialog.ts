@@ -30,6 +30,15 @@ export type StudieinfoFocus = "program" | "direction";
 export interface StudieinfoDialogHandle {
   open(focus?: StudieinfoFocus): void;
   close(): void;
+  /**
+   * Takes the dialog out of the document, section and all.
+   *
+   * The planner calls this when it goes BACK to first run, because the screen
+   * it is about to build hosts a second `buildStudieinfoSection` and the unit
+   * hard-codes its ids. Rebuilding on the next `open()` is cheap; two live
+   * copies are not recoverable.
+   */
+  destroy(): void;
 }
 
 export function mountStudieinfoDialog(
@@ -82,6 +91,10 @@ export function mountStudieinfoDialog(
   signal.addEventListener("abort", () => dialog.remove());
 
   return {
+    destroy(): void {
+      close();
+      dialog.remove();
+    },
     open(focus?: StudieinfoFocus): void {
       // Re-staged from the store on every open, so a programme abandoned last
       // time is gone rather than resurrected.

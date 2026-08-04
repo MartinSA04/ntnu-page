@@ -299,6 +299,14 @@ export interface PlanStore {
   removeProgram(): PlanState;
   /** Replaces a course's selected group keys; `[]` clears back to defaults. */
   setCourseGroups(code: string, groups: string[]): PlanState;
+  /**
+   * Does this student hold any course in ANY semester?
+   *
+   * `loadPlan()` answers for the current term only, which is the right scope
+   * for the week but the wrong one for "has this person used the tool" — a
+   * manual add sitting in another semester is still a plan.
+   */
+  hasAnyCourses(): boolean;
   onPlanChange(cb: (plan: PlanState) => void): () => void;
 }
 
@@ -344,6 +352,11 @@ export function createPlanStore(
     plans[semesterId] = courses;
     storage.setItem(PLANS_STORAGE_KEY, JSON.stringify(plans));
     return plans;
+  }
+
+  /** See `PlanStore.hasAnyCourses`. */
+  function hasAnyCourses(): boolean {
+    return Object.values(readPlans()).some((list) => list.length > 0);
   }
 
   function loadPlan(): PlanState {
@@ -566,6 +579,7 @@ export function createPlanStore(
     setProgram,
     removeProgram,
     setCourseGroups,
+    hasAnyCourses,
     onPlanChange,
   };
 }

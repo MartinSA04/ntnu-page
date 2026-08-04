@@ -51,7 +51,8 @@ other's sessions. Three honest fallback states including a real retry path.
 
 **Onboarding and the empty states.** A plan-less `/planlegger/` is a first-run
 screen and nothing else, gated on the pre-paint probe's own `data-plan`
-absence and one-way per page-load. The same picker hosts it under an
+absence, and reversible: emptying the plan brings it back, while a term you
+have not filled yet does not. The same picker hosts it under an
 `"on-kull"` commit policy, so programme and kull are two presses and no Lagre.
 Sections appear with their rows: Eksamener and the load track go absent at zero
 active courses instead of printing a heading over an apology. Login and

@@ -536,8 +536,6 @@ export async function mountPlannerApp(
 
   const firstRunHost = document.getElementById("planner-firstrun-picker");
   let firstRun: StudieinfoSectionHandle | null = null;
-  /** Latched by `syncFirstRun` the first time this load has a plan. */
-  let firstRunDone = false;
 
   /**
    * The first-run screen's picker: the SAME unit the dialog hosts, under the
@@ -552,26 +550,24 @@ export async function mountPlannerApp(
    * one write, with no reload.
    */
   function syncFirstRun(): void {
-    if (!firstRunHost || firstRunDone) return;
-    if (plan.program !== undefined || plan.courses.length > 0) {
-      // ONE-WAY, FOR THE REST OF THE PAGE-LOAD. `data-plan` is a fact about the
-      // CURRENT SEMESTER's list, so a student with manual adds and no programme
-      // who switches to an empty term would otherwise be thrown back to
-      // onboarding — with the semester control gated off behind it, which is
-      // the one control that would get them back. First run is a decision about
-      // a load, not a live state.
-      //
-      // The attribute rides `<html>` beside `data-plan` because the gate is
-      // CSS and has to hold before the first frame. Astro's
-      // `swapRootAttributes()` wipes it on a ClientRouter swap, which is
-      // correct: the next page-load re-decides from its own stored plan.
-      firstRunDone = true;
-      document.documentElement.setAttribute("data-planner-ready", "");
+    if (!firstRunHost) return;
+    // The SAME predicate the probe writes `data-plan` from, so the CSS gate and
+    // this mount can never disagree: a programme, or a course in any semester.
+    // `plan.courses` alone would be wrong in both directions — it throws a
+    // student who switched to an empty term back to onboarding, and it leaves
+    // the onboarding screen off for one who has just emptied their plan.
+    if (plan.program !== undefined || store.hasAnyCourses()) {
       firstRun?.element.remove();
       firstRun = null;
       return;
     }
     if (firstRun) return;
+    // RETURNING to first run, which happens when the last course is removed.
+    // The dialog holds a second studieinfo section with the same hard-coded
+    // ids, so it has to go before this one is built; `openStudieinfo` rebuilds
+    // it on demand.
+    studieinfoDialog?.destroy();
+    studieinfoDialog = null;
     firstRun = buildStudieinfoSection({ store, commit: "on-kull", onSaved: () => {} });
     firstRunHost.append(firstRun.element);
     // `reset()` is what requests the programme catalogue — the dialog gets it
@@ -1250,7 +1246,7 @@ export async function mountPlannerApp(
     // Not the title's face — that swap is gone, the title is one size and one
     // family. This keeps `--plan-courses` and `data-plan` true for the
     // reservations, and it is the one function that runs on every later change.
-    syncPlanProbe(plan);
+    syncPlanProbe(plan, store.hasAnyCourses());
 
     const title = elements.title;
     title.replaceChildren();
@@ -2442,7 +2438,16 @@ export async function mountPlannerApp(
     if (grid.conflictCount === 0) {
       const chip = el("span", "planner-chip is-clean");
       chip.append(icon("circleCheck"));
-      chip.append("Ingen forelesninger kolliderer");
+      // The words go in ONE box, not straight into the chip. `.planner-chip` is
+      // an `inline-flex` with a `gap`, so every direct child is a flex item
+      // with space before it — which was fine while the caveat below opened
+      // with a separator mark and is wrong now that it opens with a full stop.
+      // Appended bare, it rendered "Ingen forelesninger kolliderer . 1 emne er
+      // ikke sjekket." The gap's job is to separate the mark from the sentence,
+      // and it still does exactly that.
+      const words = el("span", "planner-chip-words");
+      words.append("Ingen forelesninger kolliderer");
+      chip.append(words);
       // A PASS THAT SAYS WHAT IT PASSED ON. Some courses publish sessions but
       // nothing this app can call a lecture, so the DR-1 check goes over them
       // rather than on them — and an unqualified green then claims five
@@ -2454,7 +2459,7 @@ export async function mountPlannerApp(
       const unchecked = grid.uncheckedCourses.length;
       if (unchecked > 0) {
         chip.classList.add("is-qualified");
-        chip.append(
+        words.append(
           el(
             "span",
             "planner-chip-caveat",

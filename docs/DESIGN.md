@@ -480,12 +480,29 @@ Settled, with the reasoning, so they are not re-opened by the next reviewer.
   reservation to lease and release. It is complete only because the `#v2;…`
   hash is gone — localStorage is now the only way a plan can reach the page.
 
-  **The gate is one-way per page-load** (`data-planner-ready`, stamped by
-  `plannerApp.ts`). `data-plan` describes the CURRENT semester, so without the
-  latch a student with manual adds and no programme who switched to an empty
-  term was thrown back onto the onboarding screen — with the semester control
-  gated off behind it, which was the one control that would get them out.
-  First run is a decision about a load, not a live state.
+  **It is live and reversible, and the predicate is "a plan ANYWHERE".**
+  Emptying the plan returns to this screen, because everything left behind
+  presupposes the courses that are gone — a week frame with one grey sentence
+  in ~500 px of white, a layer box and a view switch acting on nothing, a
+  countdown to registering courses the student just deleted. That is the screen
+  this design replaced, so arriving back at it by another route is the same
+  defect.
+
+  But *empty in this term* is not *empty*. `--plan-courses` stays the current
+  semester's count (reservations are measured in rows being drawn), while
+  `data-plan`'s **presence** answers "does this student have a plan at all",
+  across every semester and the programme profile — `"elsewhere"` is the value
+  for a plan that exists but not here. A student who switched to a term they
+  have not filled keeps the planner, and keeps the semester control that is
+  their way back to it.
+
+  An earlier attempt made the gate one-way per page-load instead
+  (`data-planner-ready`). It fixed the semester case and broke the emptying
+  case, which is what a latch on the wrong fact will do; the fix was to widen
+  the fact, not to remember a past state. **`syncFirstRun` and the probe must
+  keep testing the same thing** — the CSS gate reads `data-plan`, so a JS
+  predicate that disagrees leaves the page looking correct while a second
+  studieinfo section mounts into the hidden host and duplicates every id.
 
   **One picker, two hosts, never at once.** The first-run screen and the
   studieinfo dialog mount the same `buildStudieinfoSection`, differing only in

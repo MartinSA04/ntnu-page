@@ -16,13 +16,28 @@
  */
 import type { PlanState, PlanStore } from "./planner/store.js";
 
-/** Writes the probe onto `<html>`: the course count, and whether a programme is set. */
-export function syncPlanProbe(plan: PlanState): void {
+/**
+ * Writes the probe onto `<html>`.
+ *
+ * The two facts have DIFFERENT SCOPES, and that is the point:
+ *
+ *  - `--plan-courses` is **this semester's** count, because every reservation
+ *    is `calc(var(--plan-courses) * …)` and a row that is not being drawn must
+ *    not be reserved for.
+ *  - `data-plan`'s presence is **"does this student have a plan at all"**,
+ *    across every semester and the programme profile. `/planlegger/` gates its
+ *    first-run screen on the absence of it, and a manual add sitting in another
+ *    term is still a plan — someone who switched to an empty semester has not
+ *    become a first-time visitor. The `"elsewhere"` value names exactly that
+ *    case: a plan, but not in the term on screen.
+ */
+export function syncPlanProbe(plan: PlanState, hasAnyCourses: boolean): void {
   const root = document.documentElement;
   const count = plan.courses.length;
   root.style.setProperty("--plan-courses", String(count));
   if (plan.program) root.setAttribute("data-plan", "program");
   else if (count > 0) root.setAttribute("data-plan", "courses");
+  else if (hasAnyCourses) root.setAttribute("data-plan", "elsewhere");
   else root.removeAttribute("data-plan");
 }
 
@@ -32,10 +47,10 @@ export function syncPlanProbe(plan: PlanState): void {
  * like every other subscription.
  */
 export function watchPlanProbe(
-  store: Pick<PlanStore, "loadPlan" | "onPlanChange">,
+  store: Pick<PlanStore, "loadPlan" | "onPlanChange" | "hasAnyCourses">,
   signal: AbortSignal,
 ): void {
-  const sync = (): void => syncPlanProbe(store.loadPlan());
+  const sync = (): void => syncPlanProbe(store.loadPlan(), store.hasAnyCourses());
   sync();
   signal.addEventListener("abort", store.onPlanChange(sync));
 }

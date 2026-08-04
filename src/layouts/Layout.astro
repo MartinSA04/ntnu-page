@@ -154,6 +154,7 @@ const crawlDate = formatCrawlDate(semestersData.crawledAt);
           var root = document.documentElement;
           var count = 0;
           var program = false;
+          var anyCourses = false;
           try {
             var last = localStorage.getItem(LAST_SEMESTER_KEY) || DEFAULT_SEMESTER_ID;
             var plans = JSON.parse(localStorage.getItem(PLANS_KEY) || "{}");
@@ -161,18 +162,30 @@ const crawlDate = formatCrawlDate(semestersData.crawledAt);
             // Dropped courses are counted: they still draw a row in the course
             // list, which is what the reservation is measured in.
             if (Array.isArray(courses)) count = courses.length;
+            // ANY semester, not just this one — see below.
+            if (plans && typeof plans === "object") {
+              for (var key in plans) {
+                if (Array.isArray(plans[key]) && plans[key].length > 0) anyCourses = true;
+              }
+            }
             var profile = JSON.parse(localStorage.getItem(PROFILE_KEY) || "{}");
             program = !!(profile && profile.program && profile.program.code);
           } catch (e) {
             count = 0;
             program = false;
+            anyCourses = false;
           }
-          // Two separate facts: the COUNT sizes the reservations, and whether a
-          // programme is stored decides which face the planner's title is set
-          // in — swapping between them at mount moved the whole page 12px.
+          // TWO FACTS, TWO SCOPES, and keeping them apart is the whole point.
+          // The COUNT is this semester's and sizes the reservations, so a row
+          // that is not being drawn is not reserved for. `data-plan`'s PRESENCE
+          // is "does this student have a plan at all", across every semester:
+          // /planlegger/ gates its first-run screen on the absence of it, and
+          // someone who switched to an empty term has not become a first-time
+          // visitor. `syncPlanProbe` must keep agreeing with this.
           root.style.setProperty("--plan-courses", String(count));
           if (program) root.setAttribute("data-plan", "program");
           else if (count > 0) root.setAttribute("data-plan", "courses");
+          else if (anyCourses) root.setAttribute("data-plan", "elsewhere");
           else root.removeAttribute("data-plan");
           // Whether this load carries a search query. A static build cannot see
           // `?q=`, so /emner/ — whose status line changes for it — needs the

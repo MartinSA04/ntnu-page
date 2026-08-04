@@ -19,12 +19,20 @@ const description =
 
 <Layout title="Planlegger" description={description} wide>
   {/* FIRST RUN. The predicate is `html:not([data-plan])`, and it is not a new
-      mechanism: Layout's pre-paint probe sets `data-plan` when a programme or a
-      course is stored and REMOVES it otherwise, so its absence is exactly "no
-      plan". It is written before the first frame and kept true for the rest of
-      the visit by `planProbe.ts`, which is what lets a CSS-gated static panel
-      paint WITH the document — no mount flash, no reserved void, and no
-      reservation to lease and release.
+      mechanism: Layout's pre-paint probe sets `data-plan` when a programme is
+      stored or ANY semester holds a course, and removes it otherwise — so its
+      absence is exactly "no plan anywhere". Written before the first frame and
+      kept true for the rest of the visit by `planProbe.ts`, which is what lets
+      a CSS-gated static panel paint WITH the document: no mount flash, no
+      reserved void, no reservation to lease and release.
+
+      ANYWHERE is load-bearing. `--plan-courses` is this term's count, because
+      reservations are measured in rows being drawn; the ATTRIBUTE is global,
+      because a student sitting in a term they have not filled has not become a
+      first-time visitor, and greeting them as one hides the semester control
+      that is their way back. The gate is live in both directions: emptying the
+      plan brings this screen back, which it must, since everything the planner
+      draws over an empty plan presupposes the courses that are gone.
 
       The predicate is COMPLETE because the `#v2;…` hash is gone (PRODUCT §6):
       localStorage is now the only way a plan can reach this page, so what the
@@ -404,18 +412,17 @@ const description =
     display: none;
   }
 
-  /* `:not([data-planner-ready])` is the one-way half: `data-plan` describes the
-     CURRENT SEMESTER, so without it a switch to an empty term would put a
-     mid-visit student back on the onboarding screen and gate off the semester
-     control that is their way out. `plannerApp.ts` stamps it the first time a
-     load has a plan, and a ClientRouter swap wipes it so the next page-load
-     decides for itself. */
-  html:not([data-plan]):not([data-planner-ready]) .planner-firstrun {
+  /* ONE predicate, and the probe already writes it. `data-plan` is present
+     whenever the student has a plan ANYWHERE — a programme, or a course in any
+     semester — so switching to an empty term keeps the planner while emptying
+     the plan outright brings this screen back. `syncFirstRun` mounts the picker
+     on exactly the same test. */
+  html:not([data-plan]) .planner-firstrun {
     display: block;
   }
 
-  html:not([data-plan]):not([data-planner-ready]) .planner-banner,
-  html:not([data-plan]):not([data-planner-ready]) #planner-main {
+  html:not([data-plan]) .planner-banner,
+  html:not([data-plan]) #planner-main {
     display: none;
   }
 
@@ -713,8 +720,14 @@ const description =
 
   /* One field per fact, set off by space rather than by a mark. A margin
      between SIBLINGS, not a flex gap: the line is nowrap with an ellipsis at
-     the phone width below, and a flex container would break that. */
-  .planner-context-field + .planner-context-field {
+     the phone width below, and a flex container would break that.
+
+     `:global()` because the spans are BUILT IN JS — Astro stamps its scoping
+     attribute on what it compiled, and a runtime node never gets one, so the
+     scoped form matched nothing and the fields ran together
+     ("Undervisning fra uke 34Høst 2026"). Same trap the homepage documents for
+     `.home-now-next li`. */
+  :global(.planner-context-field) + :global(.planner-context-field) {
     margin-inline-start: var(--gap-3);
   }
 
