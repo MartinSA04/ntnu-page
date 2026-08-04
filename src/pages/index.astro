@@ -10,7 +10,7 @@ const isAutumn = currentSemester ? /h$/i.test(currentSemester.id) : true;
 const seasonWord = isAutumn ? "høsten" : "våren";
 ---
 
-<Layout title="Semesterplan · planlegg semesteret ved NTNU" description={description}>
+<Layout title="Semesterplan" description={description}>
   {/* The returning student's answer, when there is one to give: which room,
       right now. It renders above the pitch and replaces it — a page that
       already knows your week should not open by explaining what it is.
@@ -44,7 +44,7 @@ const seasonWord = isAutumn ? "høsten" : "våren";
     <p class="np-kicker home-kicker">Semesterplan</p>
     <h1 class="home-title">Se timeplanen din for {seasonWord}.</h1>
     <p class="np-hint home-subcopy">
-      Velg studieprogram og kull i planleggeren, så vises ukeplanen med en gang — en uoffisiell
+      Velg studieprogram og kull i planleggeren, så vises ukeplanen med en gang. En uoffisiell
       side, ikke laget av NTNU.
     </p>
 
@@ -359,7 +359,7 @@ const seasonWord = isAutumn ? "høsten" : "våren";
       // sentence steps down rather than wrapping across three lines. Ordinary
       // codes keep the display size, which is the point of the figure.
       room.classList.toggle("is-long", !s.room || s.room.length > 8 || /\s/.test(s.room));
-      course.textContent = `${s.code} · ${s.courseName}`;
+      course.textContent = `${s.code} ${s.courseName}`;
       sub.textContent = [
         s.activity,
         `${DAYS[s.dayNumber - 1] ?? ""} ${s.startTime}–${s.endTime}`.trim(),
@@ -368,13 +368,13 @@ const seasonWord = isAutumn ? "høsten" : "våren";
         s.roomsExtra > 0 ? `+${s.roomsExtra} rom` : "",
       ]
         .filter(Boolean)
-        .join(" · ");
+        .join(", ");
 
       bar.hidden = !running;
       if (running) {
         const fill = bar.firstElementChild as HTMLElement | null;
         if (fill) fill.style.width = `${Math.round(verdict.progress * 100)}%`;
-        label.textContent = `Nå · ${verdict.minutesLeft} min igjen`;
+        label.textContent = `Nå, ${verdict.minutesLeft} min igjen`;
       }
       link.setAttribute(
         "aria-label",
@@ -389,7 +389,7 @@ const seasonWord = isAutumn ? "høsten" : "våren";
         when.textContent = `${DAYS[item.dayNumber - 1]?.slice(0, 3) ?? ""} ${item.startTime}`;
         const what = document.createElement("span");
         what.className = "home-now-what";
-        what.textContent = `${item.code} · ${item.activity}`;
+        what.textContent = `${item.code} ${item.activity}`;
         const where = document.createElement("span");
         where.className = "np-data home-now-where";
         where.textContent = item.room;

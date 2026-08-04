@@ -1374,9 +1374,9 @@ test.describe("time passing", () => {
     const label = page.locator("#home-now-label");
     // A card labelled "Nå" was computed once and then left: it claimed the
     // minute it was rendered in for as long as the tab stayed open.
-    await expect(label).toHaveText("Nå · 90 min igjen", { timeout: 45_000 });
+    await expect(label).toHaveText("Nå, 90 min igjen", { timeout: 45_000 });
     await page.clock.runFor("00:10:00");
-    await expect(label).toHaveText("Nå · 80 min igjen");
+    await expect(label).toHaveText("Nå, 80 min igjen");
 
     // And it hands over when the session ends rather than counting past it.
     await page.clock.runFor("02:00:00");
@@ -1952,7 +1952,7 @@ test.describe("the phone's week", () => {
     // Closed on a phone, and the line still says the check is incomplete —
     // the fold may take the explanation, never the qualification.
     expect(await fold.evaluate((el: HTMLDetailsElement) => el.open)).toBe(false);
-    await expect(fold.locator("summary")).toContainText("kollisjonssjekken er ufullstendig");
+    await expect(fold.locator("summary")).toContainText("Kollisjonssjekken er ufullstendig");
     await expect(fold.locator(".planner-grid-note")).toBeHidden();
 
     await fold.locator("summary").click();
@@ -2073,7 +2073,7 @@ test.describe("the topbar's phone menu", () => {
     await expect(page.locator(".theme-toggle")).toBeVisible();
     await expect(page.locator('#site-menu-panel a[href="/emner/"]')).toBeVisible();
     // Whoever you are is still on the accessible name, at every width.
-    await expect(btn).toHaveAttribute("aria-label", "Profil · Kari Nordmann");
+    await expect(btn).toHaveAttribute("aria-label", "Profil for Kari Nordmann");
 
     // Esc, and focus returns to the control that opened it.
     await page.keyboard.press("Escape");
@@ -2160,7 +2160,7 @@ test.describe("the programme picker lives on the planner", () => {
       await door.locator(".planner-title").evaluate((n) => getComputedStyle(n).textDecorationLine),
     ).toBe("none");
     // The accessible name is the errand, not the whole banner read end to end.
-    await expect(door).toHaveAttribute("aria-label", "Endre studieprogram · MTDT kull 2026");
+    await expect(door).toHaveAttribute("aria-label", "Endre studieprogram, MTDT kull 2026");
     await door.click();
     await expect(page.locator("#planner-studieinfo")).toBeVisible();
   });

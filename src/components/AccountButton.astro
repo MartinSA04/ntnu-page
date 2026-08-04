@@ -72,7 +72,7 @@ const SYNC_KEY = SYNC_STORAGE_KEY;
       var el = document.getElementById("site-account-name");
       if (el) el.textContent = navn;
       var btn = document.getElementById("site-account-btn");
-      if (btn) btn.setAttribute("aria-label", "Profil · " + navn);
+      if (btn) btn.setAttribute("aria-label", "Profil for " + navn);
     } catch (e) {
       /* storage denied, or a session we cannot parse — stay on "Profil" */
     }

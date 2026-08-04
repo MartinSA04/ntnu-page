@@ -59,8 +59,8 @@ function formatPercent(value: number): string {
  */
 function countLabel(semester: GradeSemester): string {
   const base = `${semester.candidates} kandidater`;
-  if (semester.scale === "passfail") return `${base} · bestått/ikke bestått`;
-  if (semester.scale === "mixed") return `${base} · to karakterskalaer`;
+  if (semester.scale === "passfail") return `${base}, bestått/ikke bestått`;
+  if (semester.scale === "mixed") return `${base}, to karakterskalaer`;
   return base;
 }
 
@@ -70,7 +70,7 @@ function semesterNote(semester: GradeSemester): string {
   if (semester.candidates >= MIN_CHART_CANDIDATES && awarded.length === 1) {
     return `Alle kandidatene fikk ${awarded[0]?.grade}.`;
   }
-  const listed = awarded.map((bar) => `${bar.grade} ${bar.count}`).join(" · ");
+  const listed = awarded.map((bar) => `${bar.grade} ${bar.count}`).join(", ");
   return `For få kandidater til å vise andeler: ${listed}.`;
 }
 
@@ -115,7 +115,7 @@ function renderSemester(semester: GradeSemester, peak: number): HTMLElement {
     column.setAttribute("role", "img");
     // Native tooltip: the exact count, which the visible label trades for the
     // share. No custom tooltip layer for one integer.
-    column.title = `${bar.grade} · ${bar.count} kandidater · ${formatPercent(bar.percent)} %`;
+    column.title = `${bar.grade}, ${bar.count} kandidater, ${formatPercent(bar.percent)} %`;
     plot.append(column);
   }
 

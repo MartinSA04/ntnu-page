@@ -1571,7 +1571,7 @@ describe("mountPlannerApp — audit repro", () => {
       // Not "0 treff": the catalog has the course and the filter is the reason
       // it is not here, so the sentence names the control that lets it in.
       expect(status()?.textContent).toContain("Ingen treff i studieplanen din.");
-      expect(status()?.textContent).toContain("slå av «Fra studieplanen»");
+      expect(status()?.textContent).toContain("Slå av «Fra studieplanen»");
     });
 
     it("turning the filter off searches the whole catalog again", async () => {

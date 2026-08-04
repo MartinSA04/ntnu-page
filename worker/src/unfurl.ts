@@ -37,7 +37,7 @@ export function unfurlMeta(plain: string, navn: string): { title: string; descri
       ...(credits > 0 ? [`${formatCredits(credits)} sp`] : []),
       ...(label === "" ? [] : [label]),
     ];
-    return { title, description: escapeAttr(parts.join(" · ")) };
+    return { title, description: escapeAttr(parts.join(", ")) };
   } catch {
     return { title, description: "Delt semesterplan" };
   }

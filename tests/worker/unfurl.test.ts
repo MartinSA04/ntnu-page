@@ -14,7 +14,7 @@ describe("unfurlMeta", () => {
   it("names the sharer, the count and the credit total with a comma decimal", () => {
     expect(unfurlMeta(PLAN, "martin")).toEqual({
       title: "martin deler en plan",
-      description: "2 emner · 15 sp · Høst 2026",
+      description: "2 emner, 15 sp, Høst 2026",
     });
   });
 
@@ -24,7 +24,7 @@ describe("unfurlMeta", () => {
       semesterLabel: "Høst 2026",
       courses: [{ code: "TDT4120", name: "Algoritmer", credits: 7.5 }],
     });
-    expect(unfurlMeta(odd, "kari").description).toBe("1 emne · 7,5 sp · Høst 2026");
+    expect(unfurlMeta(odd, "kari").description).toBe("1 emne, 7,5 sp, Høst 2026");
   });
 
   it("omits a credit total nobody published rather than claiming 0 sp (DR-6)", () => {
@@ -33,7 +33,7 @@ describe("unfurlMeta", () => {
       semesterLabel: "Høst 2026",
       courses: [{ code: "TDT4120", name: "Algoritmer" }],
     });
-    expect(unfurlMeta(unpriced, "kari").description).toBe("1 emne · Høst 2026");
+    expect(unfurlMeta(unpriced, "kari").description).toBe("1 emne, Høst 2026");
   });
 
   it("degrades to a safe title rather than throwing on junk", () => {

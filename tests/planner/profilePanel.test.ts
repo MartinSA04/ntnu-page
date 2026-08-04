@@ -32,17 +32,17 @@ describe("deviceLabel", () => {
       deviceLabel(
         "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15",
       ),
-    ).toBe("Mac · Safari");
+    ).toBe("Mac Safari");
     expect(
       deviceLabel(
         "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1",
       ),
-    ).toBe("iPhone · Safari");
+    ).toBe("iPhone Safari");
     expect(
       deviceLabel(
         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36",
       ),
-    ).toBe("Windows · Chrome");
+    ).toBe("Windows Chrome");
   });
 
   it("falls back to a generic label rather than an empty one", () => {
@@ -97,8 +97,8 @@ describe("creditsFor", () => {
  * The one prompt this design keeps, and the copy defect that made it dangerous:
  * "Behold denne enheten" / "Behold <den andre>" swap the WHOLE `np:plans` map,
  * but the question described `lastSemester` alone. A student with a full 25h
- * plan and an empty 26h read "Denne enheten — 0 emner · 0 sp" against "MacBook
- * — 5 emner · 30 sp", pressed the obvious button, and lost the 25h draft the
+ * plan and an empty 26h read "Denne enheten, 0 emner og 0 sp" against "MacBook
+ * , 5 emner og 30 sp", pressed the obvious button, and lost the 25h draft the
  * prompt had never mentioned.
  */
 describe("collisionLines", () => {
@@ -132,11 +132,11 @@ describe("collisionLines", () => {
       devices: [],
     };
 
-    expect(collisionLines(local, remote, "Mac · Safari")).toEqual([
+    expect(collisionLines(local, remote, "Mac Safari")).toEqual([
       {
         semester: "Høst 2025",
-        local: "Denne enheten — 2 emner · 15 sp",
-        remote: "Mac · Safari — ingen emner · mangler TDT4100, TDT4120",
+        local: "Denne enheten, 2 emner og 15 sp",
+        remote: "Mac Safari, ingen emner, mangler TDT4100, TDT4120",
       },
     ]);
   });
@@ -155,11 +155,11 @@ describe("collisionLines", () => {
       devices: [],
     };
 
-    expect(collisionLines(local, remote, "iPhone · Safari")).toEqual([
+    expect(collisionLines(local, remote, "iPhone Safari")).toEqual([
       {
         semester: "Vår 2027",
-        local: "Denne enheten — 1 emne · 7,5 sp · mangler TMA4115",
-        remote: "iPhone · Safari — 1 emne · 7,5 sp · mangler TMA4105",
+        local: "Denne enheten, 1 emne og 7,5 sp, mangler TMA4115",
+        remote: "iPhone Safari, 1 emne og 7,5 sp, mangler TMA4105",
       },
     ]);
   });
@@ -174,7 +174,7 @@ describe("collisionLines", () => {
       lastSemester: "26h",
       devices: [],
     };
-    expect(collisionLines(local, remote, "Mac · Safari")).toEqual([]);
+    expect(collisionLines(local, remote, "Mac Safari")).toEqual([]);
   });
 });
 
@@ -199,7 +199,7 @@ function fakeSyncClient(overrides: Partial<SyncClient> = {}): SyncClient {
 describe("attemptAuth", () => {
   it("resolves ok on a normal successful signup", async () => {
     const sync = fakeSyncClient({ signup: async () => ({ ok: true }) as SyncResult });
-    await expect(attemptAuth(sync, "signup", "Ola", "482913", "Mac · Safari")).resolves.toEqual({
+    await expect(attemptAuth(sync, "signup", "Ola", "482913", "Mac Safari")).resolves.toEqual({
       ok: true,
     });
   });
@@ -208,7 +208,7 @@ describe("attemptAuth", () => {
     const sync = fakeSyncClient({
       login: async () => ({ ok: false, reason: "bad_pin" }) as SyncResult,
     });
-    await expect(attemptAuth(sync, "login", "Ola", "482913", "Mac · Safari")).resolves.toEqual({
+    await expect(attemptAuth(sync, "login", "Ola", "482913", "Mac Safari")).resolves.toEqual({
       ok: false,
       hint: "Feil PIN.",
     });
@@ -228,7 +228,7 @@ describe("attemptAuth", () => {
     const sync = fakeSyncClient({
       signup: async () => ({ ok: false, reason: "taken" }) as SyncResult,
     });
-    await expect(attemptAuth(sync, "signup", "Ola", "482913", "Mac · Safari")).resolves.toEqual({
+    await expect(attemptAuth(sync, "signup", "Ola", "482913", "Mac Safari")).resolves.toEqual({
       ok: false,
       hint: "Det navnet er tatt. Har du kontoen alt? Logg inn i stedet.",
     });
@@ -238,7 +238,7 @@ describe("attemptAuth", () => {
     const sync = fakeSyncClient({
       login: async () => ({ ok: false, reason: "no_account" }) as SyncResult,
     });
-    await expect(attemptAuth(sync, "login", "Ola", "482913", "Mac · Safari")).resolves.toEqual({
+    await expect(attemptAuth(sync, "login", "Ola", "482913", "Mac Safari")).resolves.toEqual({
       ok: false,
       hint: "Fant ingen konto med det navnet. Opprett konto i stedet.",
     });
@@ -264,7 +264,7 @@ describe("attemptAuth", () => {
    */
   it("never rejects — a signup that throws resolves the same generic retry copy a failed response would", async () => {
     const sync = fakeSyncClient({ signup: () => Promise.reject(new Error("network")) });
-    await expect(attemptAuth(sync, "signup", "Ola", "482913", "Mac · Safari")).resolves.toEqual({
+    await expect(attemptAuth(sync, "signup", "Ola", "482913", "Mac Safari")).resolves.toEqual({
       ok: false,
       hint: "Noe gikk galt. Prøv igjen.",
     });
@@ -282,7 +282,7 @@ describe("attemptAuth", () => {
     const sync = fakeSyncClient({
       login: async () => ({ ok: false, reason: "collision", local, remote }) as LoginResult,
     });
-    await expect(attemptAuth(sync, "login", "Ola", "482913", "Mac · Safari")).resolves.toEqual({
+    await expect(attemptAuth(sync, "login", "Ola", "482913", "Mac Safari")).resolves.toEqual({
       ok: false,
       collision: { local, remote },
     });

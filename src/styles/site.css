@@ -255,10 +255,6 @@
   color: var(--ui);
 }
 
-.site-footer-sep {
-  color: var(--faint);
-}
-
 /* --- Studieinfo -----------------------------------------------------------
    Programme, kull and studieretning — a SECTION of the profile panel, not a
    modal of its own. It was one (`.studieinfo-dialog`, deleted with its rules:
@@ -345,11 +341,10 @@
   font-size: var(--text-sm);
 }
 
-.studieinfo-chip-sep {
-  color: var(--faint);
-}
-
+/* The code and the name are two fields. They were divided by a glyph; they
+   are divided by space now, which is the house rule for a data row. */
 .studieinfo-chip-name {
+  margin-inline-start: var(--gap-2);
   font-family: var(--font-sans);
   font-weight: var(--weight-normal);
 }
@@ -928,6 +923,12 @@
 
 .block-popover-clock {
   font-weight: var(--weight-medium);
+}
+
+/* Duration and weeks are two fields on one row. The mark between them is
+   gone, so the space has to be real. */
+.block-popover-meta > * + * {
+  margin-inline-start: var(--gap-2);
 }
 
 .block-popover-clash {

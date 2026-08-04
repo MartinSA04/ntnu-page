@@ -275,7 +275,7 @@ describe("y-scales (course-5/cpc-5)", () => {
     expect(barHeights()).toEqual([16, 36, 96, 100, 68, 84, 100, 20]);
     expect(textsOf("grades-chart-count")).toEqual([
       "100 kandidater",
-      "100 kandidater · bestått/ikke bestått",
+      "100 kandidater, bestått/ikke bestått",
     ]);
   });
 

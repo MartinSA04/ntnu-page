@@ -69,11 +69,13 @@ export function deadlineParts(deadline: RegistrationDeadline): {
   date: string;
   after: string;
 } {
-  const after =
+  // The countdown leads and the date closes the sentence, so the two halves
+  // read as one clause instead of needing a mark to divide them.
+  const when =
     deadline.daysLeft === 0
-      ? " — i dag"
+      ? "i dag"
       : deadline.daysLeft === 1
-        ? " — 1 dag igjen"
-        : ` — ${deadline.daysLeft} dager igjen`;
-  return { before: "Oppmelding stenger ", date: deadline.word, after };
+        ? "om 1 dag"
+        : `om ${deadline.daysLeft} dager`;
+  return { before: `Oppmelding stenger ${when}, `, date: deadline.word, after: "" };
 }

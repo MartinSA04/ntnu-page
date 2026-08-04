@@ -432,7 +432,7 @@ function buildRow(
   // about a session at four o'clock this afternoon.
   name.append(el("span", "planner-board-now-tag", "nå"));
   what.append(name);
-  const sub = [entry.courseCode, entry.label].filter(Boolean).join(" · ");
+  const sub = [entry.courseCode, entry.label].filter(Boolean).join(", ");
   what.append(el("span", "planner-board-sub np-data", sub));
   row.append(what);
 

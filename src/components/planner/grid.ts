@@ -749,7 +749,7 @@ function buildClashZone(
 
 /** The activity/group label a block shows — merged parallels count themselves. */
 function groupLabel(entry: GridEntry): string {
-  return entry.groupCount > 1 ? `${entry.name} · ${entry.groupCount} grupper` : entry.name;
+  return entry.groupCount > 1 ? `${entry.name}, ${entry.groupCount} grupper` : entry.name;
 }
 
 /**
@@ -759,7 +759,7 @@ function groupLabel(entry: GridEntry): string {
  * room survives in the block's `title`, aria-label and popover.
  */
 export function metaLine(entry: { rooms: string; startTime: string }): string {
-  return [entry.startTime, entry.rooms].filter(Boolean).join(" · ");
+  return [entry.startTime, entry.rooms].filter(Boolean).join(", ");
 }
 
 /**
@@ -818,7 +818,7 @@ function buildBlock(
   const timeRange = `${entry.startTime}–${entry.endTime}`;
   block.title = [entry.courseCode, label, timeRange, entry.rooms, entry.weeksLabel]
     .filter(Boolean)
-    .join(" · ");
+    .join(", ");
 
   // One line, and the code is the half that may never be cut. The bar prints
   // no start time — the labelled axis already says it — which is what frees
@@ -942,7 +942,7 @@ function foldNotes(notes: HTMLElement[], count: number, incomplete: boolean): HT
   summary.append(count === 1 ? " merknad" : " merknader");
   // The half of the sentence to act on, said without opening anything. Ink,
   // never red: an incomplete check is a gap, not a clash (DESIGN §2).
-  summary.append(incomplete ? " · kollisjonssjekken er ufullstendig" : " om uka");
+  summary.append(incomplete ? ". Kollisjonssjekken er ufullstendig" : " om uka");
   fold.append(summary);
   fold.append(...notes);
   return fold;
@@ -960,18 +960,18 @@ function fillConflictNote(host: HTMLElement, group: ConflictGroup): string {
   host.append(el("span", "np-data", day));
   host.append(" ");
   host.append(el("span", "np-data", time));
-  host.append(" · ");
+  host.append(", ");
   group.codes.forEach((code, i) => {
     if (i > 0) host.append(i === group.codes.length - 1 ? " og " : ", ");
     host.append(el("span", "np-data", code));
   });
   host.append(" kolliderer");
   if (weeks) {
-    host.append(" · ");
+    host.append(", ");
     host.append(el("span", "np-data", weeks));
   }
 
-  return `${day} ${time} · ${joinList(group.codes)} kolliderer${weeks ? ` · ${weeks}` : ""}`;
+  return `${day} ${time}, ${joinList(group.codes)} kolliderer${weeks ? `, ${weeks}` : ""}`;
 }
 
 /** A margin sentence about undrawable courses; codes in `.np-data`. */

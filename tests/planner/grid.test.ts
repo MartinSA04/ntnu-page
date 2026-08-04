@@ -545,7 +545,7 @@ describe("margin notes fold behind one line (mob-D)", () => {
     const fold = notes.find("planner-notes-fold")[0];
     expect(fold).toBeDefined();
     const summary = notes.find("planner-notes-summary")[0];
-    expect(summary?.textContent).toBe("1 merknad · kollisjonssjekken er ufullstendig");
+    expect(summary?.textContent).toBe("1 merknad. Kollisjonssjekken er ufullstendig");
     // The sentence itself is inside the fold, not deleted.
     expect(fold?.find("planner-grid-note")[0]?.textContent).toContain(
       "Fikk ikke hentet timeplan for",

@@ -573,7 +573,6 @@ export function buildStudieinfoSection(deps: StudieinfoSectionDeps): StudieinfoS
       chipHost.replaceChildren();
       const chip = el("span", "np-tag studieinfo-program-chip");
       chip.append(el("span", "np-data studieinfo-chip-code", stagedProgram.code));
-      chip.append(el("span", "studieinfo-chip-sep", "·"));
       chip.append(el("span", "studieinfo-chip-name", stagedProgram.name));
       const remove = el("button", "np-icon-btn studieinfo-chip-remove") as HTMLButtonElement;
       remove.append(icon("close"));

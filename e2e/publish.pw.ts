@@ -179,7 +179,7 @@ test("…and still unfurls richly, because those are different crawlers", async 
   // What an unfurler sees: raw HTML, no JavaScript run.
   const html = await (await page.request.get(`/user/${navn}`)).text();
   expect(html).toContain(`content="${navn} deler en plan"`);
-  expect(html).toMatch(/property="og:description" content="1 emne · /);
+  expect(html).toMatch(/property="og:description" content="1 emne, /);
 
   // The card is a real image, not a 404 wearing a PNG name — it is hand-encoded
   // (no rendering dependency in this repo), so something has to open it.

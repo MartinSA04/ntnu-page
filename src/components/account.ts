@@ -119,7 +119,7 @@ export function mountAccount(signal: AbortSignal, defaultSemesterId: string): vo
     const navn = sync.session()?.navn ?? "";
     const label = navn === "" ? "Profil" : navn;
     if (nameEl) nameEl.textContent = label;
-    button?.setAttribute("aria-label", navn === "" ? "Profil" : `Profil · ${navn}`);
+    button?.setAttribute("aria-label", navn === "" ? "Profil" : `Profil for ${navn}`);
   }
 
   renderName();

@@ -233,8 +233,9 @@ export function mountBlockPopover(
     const meta = el("span", "block-popover-meta");
     const duration = durationLabel(detail.startTime, detail.endTime);
     if (duration) meta.append(el("span", "np-data", duration));
+    // Two facts side by side, separated by space rather than by a mark: they
+    // are a data row, not a sentence.
     if (detail.weeksLabel) {
-      if (duration) meta.append(" · ");
       meta.append(el("span", "np-data", detail.weeksLabel));
     }
     row("Tid", when, meta.childElementCount > 0 ? meta : null);
@@ -246,7 +247,7 @@ export function mountBlockPopover(
     // The one thing about this session a clock cannot say: you do not have to
     // be there at any particular minute of it.
     if (isDropIn(detail)) {
-      row("Merk", "Åpent vindu — du kan stikke innom når du vil.");
+      row("Merk", "Åpent vindu. Du kan stikke innom når du vil.");
     } else if (detail.isLecture && ctx.lectureAlternatives > 1) {
       row("Merk", `Én av ${ctx.lectureAlternatives} alternative forelesninger.`);
     }

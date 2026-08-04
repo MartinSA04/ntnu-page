@@ -35,11 +35,11 @@ const cityFacets = [
 ].sort((a, b) => a.localeCompare(b, "nb"));
 ---
 
-<Layout title="Emner · Semesterplan" description={description} wide>
+<Layout title="Emner" description={description} wide>
   <p class="np-kicker emner-kicker">Emner</p>
   <div class="emner-masthead">
     <h1 class="emner-title">Emnekatalog</h1>
-    <p class="np-note emner-scale" id="emner-scale">{catalogSize} emner · katalog {catalogYear}</p>
+    <p class="np-note emner-scale" id="emner-scale">{catalogSize} emner i katalogen for {catalogYear}</p>
   </div>
 
   <div class="np-field emner-search">
@@ -704,7 +704,7 @@ const cityFacets = [
         return false;
       }
       for (const course of known) resultsEl?.append(buildRow(course, !isTaught(course)));
-      showTable(`I planen · ${known.length} ${known.length === 1 ? "emne" : "emner"}`);
+      showTable(`I planen, ${known.length} ${known.length === 1 ? "emne" : "emner"}`);
       return true;
     }
 
@@ -814,7 +814,7 @@ const cityFacets = [
         toggle.type = "button";
         toggle.className = "np-summary emner-fold-btn";
         toggle.setAttribute("aria-expanded", String(open));
-        toggle.textContent = `Ikke undervist i ${index.year} · ${stale.length} ${
+        toggle.textContent = `Ikke undervist i ${index.year}, ${stale.length} ${
           stale.length === 1 ? "emne" : "emner"
         }`;
         cell.append(toggle);
@@ -922,7 +922,7 @@ const cityFacets = [
         loading = false;
       }
       if (scaleEl) {
-        scaleEl.textContent = `${index.courses.length.toLocaleString("nb-NO")} emner · katalog ${index.year}`;
+        scaleEl.textContent = `${index.courses.length.toLocaleString("nb-NO")} emner i katalogen for ${index.year}`;
       }
       renderFacets();
       render();

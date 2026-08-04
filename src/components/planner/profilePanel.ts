@@ -147,7 +147,7 @@ export function deviceLabel(ua: string): string {
         : /Safari\//.test(ua)
           ? "Safari"
           : "nettleser";
-  return `${platform} · ${browser}`;
+  return `${platform} ${browser}`;
 }
 
 /**
@@ -244,7 +244,7 @@ export async function attemptAuth(
 function syncStatusLine(state: SyncUiState): string {
   if (state === "syncing") return "Synkroniserer …";
   if (state === "unauthorised") return REAUTH_COPY;
-  if (state === "failed") return "Ikke synkronisert · prøv igjen";
+  if (state === "failed") return "Ikke synkronisert. Prøv igjen.";
   return "Sist synkronisert nå";
 }
 
@@ -337,7 +337,7 @@ export interface CollisionLine {
   remote: string;
 }
 
-/** One side of one semester: "2 emner · 15 sp · mangler TDT4120". */
+/** One side of one semester: "2 emner og 15 sp, mangler TDT4120". */
 function sideLine(
   name: string,
   payload: SyncPayload,
@@ -348,9 +348,9 @@ function sideLine(
   const held =
     count === 0
       ? "ingen emner"
-      : `${count} ${courseWord(count)} · ${formatCreditNumber(creditsFor(payload, semesterId))} sp`;
-  const lacks = missing.length > 0 ? ` · mangler ${missing.join(", ")}` : "";
-  return `${name} — ${held}${lacks}`;
+      : `${count} ${courseWord(count)} og ${formatCreditNumber(creditsFor(payload, semesterId))} sp`;
+  const lacks = missing.length > 0 ? `, mangler ${missing.join(", ")}` : "";
+  return `${name}, ${held}${lacks}`;
 }
 
 /**
@@ -496,7 +496,7 @@ export function mountProfilePanel(deps: ProfilePanelDeps): ProfilePanelHandle {
 
     account.append(el("p", "np-hint", "Planen lagres kryptert. Vi kan ikke lese den."));
     account.append(
-      el("p", "np-hint", "Husk PIN-en — du trenger den for å logge inn på en ny enhet."),
+      el("p", "np-hint", "Husk PIN-en. Du trenger den for å logge inn på en ny enhet."),
     );
 
     // Permanently mounted, never `hidden` — mirrors studieinfo's own hint, so
@@ -641,7 +641,7 @@ export function mountProfilePanel(deps: ProfilePanelDeps): ProfilePanelHandle {
       const row = el("li", "profile-panel-device-row");
       const suffix =
         device.id === session.deviceId ? syncSuffix(syncState) : relativeSince(device.lastSeen);
-      row.append(el("span", undefined, `${device.label} — ${suffix}`));
+      row.append(el("span", undefined, `${device.label}, ${suffix}`));
       list.append(row);
     }
     account.append(list);

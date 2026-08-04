@@ -17,7 +17,7 @@ const description =
 // `studieinfo.ts` fetches the first time a student opens the panel.
 ---
 
-<Layout title="Planlegger · Semesterplan" description={description} wide>
+<Layout title="Planlegger" description={description} wide>
   <div class="planner-banner">
     {/* ETT NAVN. The plan is named ONCE, here, in the notation a student
         types: MTDT · 2026 · Høst 2026. The topbar's chip carried the same
@@ -490,10 +490,6 @@ const description =
     font-size: var(--text-xs);
   }
 
-  :global(.course-settings-group-own)::before {
-    content: "· ";
-  }
-
   :global(.planner-chip-caveat) {
     color: var(--muted);
     font-weight: var(--weight-normal);
@@ -592,6 +588,13 @@ const description =
 
   :global(.planner-title-part) {
     white-space: nowrap;
+  }
+
+  /* One field per fact, set off by space rather than by a mark. A margin
+     between SIBLINGS, not a flex gap: the line is nowrap with an ellipsis at
+     the phone width below, and a flex container would break that. */
+  .planner-context-field + .planner-context-field {
+    margin-inline-start: var(--gap-3);
   }
 
   .planner-context-line {
@@ -975,13 +978,11 @@ const description =
      make an ordinary unmade choice look like a problem (§2's Red-Is-Collision
      and its amber sibling are both about the PLAN, not about our narrowing), so
      it is quiet ink set off by a middle dot. */
+  /* Set off from the count before it by space, not by a mark. */
   .planner-others-pending:not([hidden]) {
     display: inline;
+    margin-inline-start: var(--gap-2);
     color: var(--muted);
-  }
-
-  .planner-others-pending::before {
-    content: " · ";
   }
 
   .planner-check {

@@ -281,7 +281,7 @@ function sessionButton(
   const timeRange = `${entry.startTime}–${entry.endTime}`;
   node.title = [entry.courseCode, entry.label, timeRange, entry.rooms, entry.weeksLabel]
     .filter(Boolean)
-    .join(" · ");
+    .join(", ");
   node.setAttribute(
     "aria-label",
     [
@@ -358,7 +358,7 @@ function buildBand(
   // Room first, then the hours: this is the one session whose time the grid
   // does NOT draw, so the chip has to say it — and where you have to walk is
   // still the fact you opened the row for, so it is what survives the ellipsis.
-  const what = [entry.rooms, `${entry.startTime}–${entry.endTime}`].filter(Boolean).join(" · ");
+  const what = [entry.rooms, `${entry.startTime}–${entry.endTime}`].filter(Boolean).join(", ");
   band.append(el("span", "planner-cols-sub", what));
   return band;
 }

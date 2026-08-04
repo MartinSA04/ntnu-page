@@ -264,7 +264,7 @@ test("the footer states provenance and the caveat, and links nowhere", async ({ 
   await page.goto("/planlegger/");
   const footer = page.locator(".site-footer");
   await expect(footer).toContainText("Data hentet");
-  await expect(footer).toContainText("uoffisiell, med forbehold om feil");
+  await expect(footer).toContainText("Uoffisiell, med forbehold om feil");
   await expect(footer.locator("a")).toHaveCount(0);
 });
 

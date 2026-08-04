@@ -78,7 +78,7 @@ export function planSummary(plan: PublicPlan, label: string): string {
   // page for a viewer has no business making. The bare figure states the fact.
   if (credits > 0) parts.push(`${formatCreditNumber(credits)} sp`);
   if (label !== "") parts.push(label);
-  return parts.join(" · ");
+  return parts.join(", ");
 }
 
 /** The one call to action: this page is a week, and the way to get your own is the planner. */
@@ -174,7 +174,7 @@ function renderPlan(deps: PublicPlanDeps, plan: PublicPlan): void {
   head.append(el("h1", "public-plan-title", navn));
   if (plan.program) {
     head.append(
-      el("p", "np-hint public-plan-program", `${plan.program.name} · Kull ${plan.program.cohort}`),
+      el("p", "np-hint public-plan-program", `${plan.program.name}, kull ${plan.program.cohort}`),
     );
   }
   head.append(el("p", "np-data public-plan-summary", planSummary(plan, label)));

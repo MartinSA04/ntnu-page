@@ -45,15 +45,15 @@ describe("deadlineParts", () => {
     expect(d).not.toBeNull();
     if (!d) return;
     const parts = deadlineParts(d);
-    expect(parts.before).toBe("Oppmelding stenger ");
+    expect(parts.before).toBe("Oppmelding stenger om 45 dager, ");
     expect(parts.date).toBe("15. september");
-    expect(parts.after).toBe(" — 45 dager igjen");
+    expect(parts.after).toBe("");
   });
 
   test("one day is singular, and the day itself is neither", () => {
     const one = registrationDeadline("26h", new Date(2026, 8, 14));
-    expect(one && deadlineParts(one).after).toBe(" — 1 dag igjen");
+    expect(one && deadlineParts(one).before).toBe("Oppmelding stenger om 1 dag, ");
     const today = registrationDeadline("26h", new Date(2026, 8, 15));
-    expect(today && deadlineParts(today).after).toBe(" — i dag");
+    expect(today && deadlineParts(today).before).toBe("Oppmelding stenger i dag, ");
   });
 });

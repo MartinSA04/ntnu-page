@@ -87,7 +87,7 @@ function formatDate(date: string | null): string | null {
 const description = `${course.code} ${course.name}: timeplan, eksamen og nøkkeltall fra NTNU.`;
 ---
 
-<Layout title={`${course.code} · ${course.name}`} description={description} wide>
+<Layout title={`${course.code} ${course.name}`} description={description} wide>
   <p class="np-data emne-code">{course.code}</p>
   <h1 class="emne-title">{course.name}</h1>
   <p class="emne-meta np-note">
@@ -102,7 +102,7 @@ const description = `${course.code} ${course.name}: timeplan, eksamen og nøkkel
     {
       !isOffered && (
         <span class="emne-stale">
-          ikke undervist i {catalogYear} · sist undervist {sourceYear}
+          ikke undervist i {catalogYear}, sist undervist {sourceYear}
         </span>
       )
     }
@@ -132,7 +132,7 @@ const description = `${course.code} ${course.name}: timeplan, eksamen og nøkkel
            hentet detaljer: Not found". The add dialog declines the same way —
            this says so instead of offering the dead end. */
         <p class="np-hint emne-plan-off">
-          Kan ikke legges til i planen — emnet er ikke undervist i {catalogYear}.
+          Kan ikke legges til i planen. Emnet er ikke undervist i {catalogYear}.
         </p>
       )
     }

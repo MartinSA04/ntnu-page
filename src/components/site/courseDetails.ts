@@ -102,7 +102,7 @@ function prose(heading: string, text: string | null): HTMLElement | null {
 function renderExamDetails(exams: CourseExam[]): HTMLElement | null {
   const rows = exams
     .map((exam) => {
-      const head = [exam.occasion, exam.season, exam.form].filter(Boolean).join(" · ");
+      const head = [exam.occasion, exam.season, exam.form].filter(Boolean).join(", ");
       const facts = [
         exam.timeText ?? exam.time,
         exam.duration,
@@ -112,7 +112,7 @@ function renderExamDetails(exams: CourseExam[]): HTMLElement | null {
       if (!head && facts.length === 0) return null;
       const row = el("li", "details-exam-row");
       if (head) row.append(el("span", "details-exam-form", head));
-      if (facts.length > 0) row.append(el("span", "details-exam-facts np-data", facts.join(" · ")));
+      if (facts.length > 0) row.append(el("span", "details-exam-facts np-data", facts.join(", ")));
       return row;
     })
     .filter((row): row is HTMLLIElement => row !== null);

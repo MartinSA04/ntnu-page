@@ -1197,7 +1197,7 @@ export async function mountPlannerApp(
     if (program) {
       nameBtn.setAttribute(
         "aria-label",
-        `Endre studieprogram · ${program.code} kull ${program.cohort}`,
+        `Endre studieprogram, ${program.code} kull ${program.cohort}`,
       );
     } else {
       nameBtn.removeAttribute("aria-label");
@@ -1205,9 +1205,14 @@ export async function mountPlannerApp(
 
     elements.contextLine.replaceChildren();
     const line = elements.contextLine;
+    // Each fact is its own field, separated by space rather than by a mark.
+    // Wrapped rather than appended bare so the spacing is a margin between
+    // SIBLINGS: the line is `white-space: nowrap` with an ellipsis on a phone,
+    // which a flex container would break.
     const append = (node: Node | string): void => {
-      if (line.childNodes.length > 0) line.append(" · ");
-      line.append(node);
+      const field = el("span", "planner-context-field");
+      field.append(node);
+      line.append(field);
     };
     // WHICH WEEK the grid's dates belong to, FIRST in the line. The week is a
     // pattern, but the page is open in one of them and the day headers carry
@@ -1225,7 +1230,9 @@ export async function mountPlannerApp(
         first === undefined
           ? "Mønsteruke"
           : (() => {
-              const span = el("span", undefined, "Mønsteruke · undervisning fra ");
+              // "Mønsteruke" and "Undervisning fra uke 34" are two fields, so they
+              // are appended as two rather than joined into one.
+              const span = el("span", undefined, "Undervisning fra ");
               span.append(el("span", "np-data", `uke ${first}`));
               return span;
             })(),
@@ -1326,7 +1333,7 @@ export async function mountPlannerApp(
     // it — a plan handed over as "MTDT Kull 26" alone would not say which term.
     const name = elements.title.textContent?.trim() || "Semesterplan";
     const term = semesterLabel(currentSemester());
-    const title = term === "" ? name : `${name} · ${term}`;
+    const title = term === "" ? name : `${name}, ${term}`;
     if (typeof navigator.share === "function") {
       try {
         await navigator.share({ title, url });
@@ -1442,7 +1449,7 @@ export async function mountPlannerApp(
       const seg = el("span", "planner-load-seg");
       seg.style.flexGrow = String(credits);
       seg.style.setProperty("--dot", `var(${state.hueVar})`);
-      seg.title = `${state.course.code} · ${formatCreditNumber(credits)} sp`;
+      seg.title = `${state.course.code}, ${formatCreditNumber(credits)} sp`;
       track.append(seg);
     }
     // The gap to a full load is empty track, not a segment: it is the absence
@@ -2350,7 +2357,7 @@ export async function mountPlannerApp(
           el(
             "span",
             "planner-chip-caveat",
-            ` · ${unchecked} ${unchecked === 1 ? "emne" : "emner"} ikke sjekket`,
+            `. ${unchecked} ${unchecked === 1 ? "emne" : "emner"} er ikke sjekket.`,
           ),
         );
       }
@@ -2566,7 +2573,7 @@ export async function mountPlannerApp(
           el(
             "p",
             "np-hint planner-week-card-hint",
-            "Velg studieprogram og kull, så tegner vi uka di — med forelesninger, kollisjoner og eksamensdatoer.",
+            "Velg studieprogrammet og kullet ditt, så er uka klar med forelesninger, kollisjoner og eksamensdatoer.",
           ),
         );
         // THE ACCENT GOES ON THE MANDATE'S OWN PATH. This was a paper button

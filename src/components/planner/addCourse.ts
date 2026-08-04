@@ -403,7 +403,7 @@ export function mountAddCourse(deps: AddCourseDeps, signal: AbortSignal): AddCou
       // whole catalog instead would be the scope escaping on its own.
       const outside = scoped ? searchCatalog(taught, query).length : 0;
       if (outside > 0) {
-        status.textContent = `Ingen treff i studieplanen din. ${outside} treff i resten av emnekatalogen — slå av «Fra studieplanen» for å se dem.`;
+        status.textContent = `Ingen treff i studieplanen din. ${outside} treff i resten av emnekatalogen. Slå av «Fra studieplanen» for å se dem.`;
         return;
       }
       // "0 treff" over a query that matched only not-taught courses reads as
