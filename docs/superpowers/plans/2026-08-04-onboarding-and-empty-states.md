@@ -1,6 +1,6 @@
 # Onboarding and Empty States Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** Turn `/planlegger/` with no plan from the product's weakest screen into a first-run screen that reaches a drawn week in two decisions, give a returning student a way to log in from that screen, and separate login from register everywhere they appear.
 
@@ -45,7 +45,7 @@ The gate goes in first so every string written by Tasks 2–7 lands under a gree
 - Consumes: nothing.
 - Produces: `tests/copy.test.ts` — a repo-wide gate later tasks must keep green. No exported symbols.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Create `tests/copy.test.ts`:
 
@@ -111,7 +111,7 @@ describe("user-facing copy", () => {
 });
 ```
 
-- [ ] **Step 2: Run the test to verify it fails**
+- [x] **Step 2: Run the test to verify it fails**
 
 Run: `mise run check -- tests/copy.test.ts`
 
@@ -119,7 +119,7 @@ Expected: FAIL. The first case lists ~57 offending lines across 22 files; the se
 
 If `tinyglobby` is not already a dependency, check `package.json` first and use whichever glob helper the existing tests use (`tests/bundle.test.mjs` and `tests/artifacts.test.mjs` both walk the tree — copy their approach rather than adding a dependency).
 
-- [ ] **Step 3: Sweep the 22 files**
+- [x] **Step 3: Sweep the 22 files**
 
 Rewrite by the rule **prose becomes sentences; data rows become spaced fields**. The adjudicated rewrites, from the spec's table:
 
@@ -145,19 +145,19 @@ Three of these are **not** string literals and need a different treatment:
 
 `<title>` tags use the dot as a brand separator. Rather than substituting a mark, subpages **drop the brand suffix**: `Planlegger`, `Emner`, `TDT4120 Algoritmer og datastrukturer`, `Fant ikke siden`. The homepage stays `Semesterplan`. Both calendars this project benchmarks against name the page and nothing else in the tab.
 
-- [ ] **Step 4: Run the copy gate and the full unit pass**
+- [x] **Step 4: Run the copy gate and the full unit pass**
 
 Run: `mise run check`
 
 Expected: PASS, including `tests/copy.test.ts`. Other suites may fail where they assert old copy — fix those assertions to the new strings; do **not** relax the gate.
 
-- [ ] **Step 5: Run the browser suite**
+- [x] **Step 5: Run the browser suite**
 
 Run: `mise run e2e`
 
 Expected: PASS. `e2e/*.pw.ts` asserts some visible copy; update those assertions to the new strings.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add tests/copy.test.ts src worker e2e
@@ -187,7 +187,7 @@ The first-run screen hosts the same picker the dialog hosts. The only thing they
   ```
   `"explicit"` is today's behaviour. `"on-kull"` renders no save button, no section heading and no section hint, and writes as soon as programme and kull are both known, calling `deps.onSaved()` on success. Task 3 passes `"on-kull"`; `studieinfoDialog.ts` passes `"explicit"`.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Append to `tests/planner/studieinfo.test.ts`, following the mount helpers already in that file:
 
@@ -239,13 +239,13 @@ describe("commit policy", () => {
 
 `testStore`, `pickProgram` and `pickCohort` are helpers — if the file does not already have equivalents, write them from the existing tests' setup rather than inventing a new fixture shape.
 
-- [ ] **Step 2: Run the test to verify it fails**
+- [x] **Step 2: Run the test to verify it fails**
 
 Run: `mise run check -- tests/planner/studieinfo.test.ts`
 
 Expected: FAIL — TypeScript rejects the unknown `commit` property, and `#studieinfo-save` is present.
 
-- [ ] **Step 3: Add the policy**
+- [x] **Step 3: Add the policy**
 
 In `studieinfo.ts`, extend the deps:
 
@@ -296,7 +296,7 @@ chip.addEventListener("click", () => {
 
 `commit()` is declared later in the same closure and hoisted, so the call site is fine where it stands.
 
-- [ ] **Step 4: Pass the policy from the dialog**
+- [x] **Step 4: Pass the policy from the dialog**
 
 In `studieinfoDialog.ts:54-60`:
 
@@ -311,19 +311,19 @@ const section: StudieinfoSectionHandle = buildStudieinfoSection({
 });
 ```
 
-- [ ] **Step 5: Trim the dialog's titles and its Lagre**
+- [x] **Step 5: Trim the dialog's titles and its Lagre**
 
 While the file is open (spec §3): the dialog prints "Studieprogram" (dialog head), "Studieinfo" (section heading) and "STUDIEPROGRAM" (field label) inside 300 px. Step 3 already removes the section heading and hint for `"on-kull"` — remove them for `"explicit"` too, leaving the dialog title and the field label. That means the `if (deps.commit === "explicit")` block from Step 3 goes away again; `section.setAttribute("aria-labelledby", …)` must then point at the dialog's own `#studieinfo-dialog-title` instead, set by `studieinfoDialog.ts` rather than by the section.
 
 Also: `saveBtn` starts `disabled` and is enabled only once a programme **and** a kull are staged, and drops `np-btn--primary` for plain `np-btn` — an accent-blue enabled button before anything is picked invites a press that does nothing.
 
-- [ ] **Step 6: Run the tests to verify they pass**
+- [x] **Step 6: Run the tests to verify they pass**
 
 Run: `mise run check -- tests/planner/studieinfo.test.ts`
 
 Expected: PASS. Adjust the "on-kull renders no save button" and heading expectations if Step 5 changed what `"explicit"` renders.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add src/components/planner/studieinfo.ts src/components/planner/studieinfoDialog.ts tests/planner/studieinfo.test.ts
@@ -347,7 +347,7 @@ and stops offering an enabled accent button before anything is picked."
 - Consumes: `buildStudieinfoSection({ store, commit: "on-kull", onSaved })` from Task 2.
 - Produces: `#planner-firstrun` — the static section. Task 6 appends its login line to `#planner-firstrun-alt`.
 
-- [ ] **Step 1: Write the failing e2e test**
+- [x] **Step 1: Write the failing e2e test**
 
 Add to `e2e/flows.pw.ts`:
 
@@ -371,13 +371,13 @@ test("first run reaches a drawn week without a dialog", async ({ page }) => {
 
 Use the ids the page actually renders — read `studieinfo.ts`'s typeahead markup for the real `#studieinfo-program` / list ids and correct the selectors before running.
 
-- [ ] **Step 2: Run it to verify it fails**
+- [x] **Step 2: Run it to verify it fails**
 
 Run: `mise run e2e -- --grep "first run reaches a drawn week"`
 
 Expected: FAIL — `#planner-firstrun` does not exist.
 
-- [ ] **Step 3: Add the static screen and the gate**
+- [x] **Step 3: Add the static screen and the gate**
 
 In `src/pages/planlegger/index.astro`, before `.planner-banner` (line 21):
 
@@ -428,7 +428,7 @@ html:not([data-plan]) #planner-main {
 }
 ```
 
-- [ ] **Step 4: Host the picker and delete the old branch**
+- [x] **Step 4: Host the picker and delete the old branch**
 
 In `plannerApp.ts`, mount the section into `#planner-firstrun-picker` from the same place the studieinfo dialog is mounted:
 
@@ -457,13 +457,13 @@ Wire `#planner-firstrun-add` to the same `openAddFromQuestion()` the deleted car
 
 Then **delete** the `noProfile` branch at `plannerApp.ts:2554-2595` entirely, along with the now-unused `noProfile` const, and let `showFallback` be computed from the remaining three states. The first-run screen replaces it; leaving both means two answers to the same question.
 
-- [ ] **Step 5: Run the e2e test to verify it passes**
+- [x] **Step 5: Run the e2e test to verify it passes**
 
 Run: `mise run e2e -- --grep "first run reaches a drawn week"`
 
 Expected: PASS.
 
-- [ ] **Step 6: Add the first-run CLS budget**
+- [x] **Step 6: Add the first-run CLS budget**
 
 The existing planner budgets in `e2e/cls.pw.ts` are measured **with** a plan and do not cover this state. Add a `/planlegger/` first-run entry with an empty `localStorage`. Measure the real number first, then set the budget just above it — do not copy a neighbouring budget.
 
@@ -471,7 +471,7 @@ Run: `mise run e2e -- --grep cls`
 
 Expected: PASS.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add src/pages/planlegger/index.astro src/components/planner/plannerApp.ts e2e/flows.pw.ts e2e/cls.pw.ts
@@ -496,7 +496,7 @@ Inside the planner, a section goes absent rather than printing an apology over p
 - Consumes: the plan state `plannerApp.ts` already holds.
 - Produces: nothing exported.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Add to `tests/planner/plannerApp.test.ts`, using the mount helper already in that file:
 
@@ -517,13 +517,13 @@ describe("zero-course sections", () => {
 
 Correct the ids and the helper name against what `plannerApp.test.ts` and the page actually use before running.
 
-- [ ] **Step 2: Run it to verify it fails**
+- [x] **Step 2: Run it to verify it fails**
 
 Run: `mise run check -- tests/planner/plannerApp.test.ts`
 
 Expected: FAIL — the placeholder strings are present.
 
-- [ ] **Step 3: Gate the three sections**
+- [x] **Step 3: Gate the three sections**
 
 - **Eksamener** — heading, status line and list are all absent when the plan has zero active courses. Delete the `"Legg til emner for å se eksamensdatoer."` string.
 - **The 30 sp load track** — the track, its figure and its legend are absent at zero courses. Delete the `"0 av 30 sp"` zero rendering. A load track over no load is ruling that has stopped dividing anything.
@@ -531,19 +531,19 @@ Expected: FAIL — the placeholder strings are present.
 
 Watch the layout-shift reservations: `planner-week.css`'s `.planner-grid-frame` `min-height` and every `calc(var(--plan-courses) * …)` are computed from the plan, which is zero here, so a removed section reserves nothing and releases nothing. Do not touch those numbers.
 
-- [ ] **Step 4: Run the tests to verify they pass**
+- [x] **Step 4: Run the tests to verify they pass**
 
 Run: `mise run check -- tests/planner/plannerApp.test.ts`
 
 Expected: PASS.
 
-- [ ] **Step 5: Run the full gates**
+- [x] **Step 5: Run the full gates**
 
 Run: `mise run check && mise run e2e`
 
 Expected: PASS.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add src/components/planner/plannerApp.ts tests/planner/plannerApp.test.ts
@@ -576,7 +576,7 @@ Today `profilePanel.ts:470-619` is one form carrying Navn, PIN and Gjenta PIN wi
   ```
   `show()` with no argument opens **login** when signed out. Task 6 calls `show("login")` and `show("signup")` explicitly.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Add to `tests/planner/profilePanel.test.ts`:
 
@@ -617,13 +617,13 @@ describe("login and register are separate paths", () => {
 
 `mountPanel` is the helper already in that file — reuse it rather than writing a second fixture.
 
-- [ ] **Step 2: Run it to verify it fails**
+- [x] **Step 2: Run it to verify it fails**
 
 Run: `mise run check -- tests/planner/profilePanel.test.ts`
 
 Expected: FAIL — `show` takes no argument, and `#profile-panel-submit` / `#profile-panel-switch` do not exist.
 
-- [ ] **Step 3: Rewrite `renderSignedOut` around a mode**
+- [x] **Step 3: Rewrite `renderSignedOut` around a mode**
 
 ```ts
 export type AuthMode = "login" | "signup";
@@ -736,7 +736,7 @@ function renderSignedOut(): void {
 
 Carry the existing validation into `submit()` unchanged, with `kind` taken from `authMode` and the repeat check guarded on `repeat !== null`.
 
-- [ ] **Step 4: Make `reasonCopy` switch the mode**
+- [x] **Step 4: Make `reasonCopy` switch the mode**
 
 `taken` and `no_account` currently name the other action in prose because there was no mode to move to. Now there is. Keep the sentence — an automatic flip would silently discard the typed PIN — but make the named action the switch link itself, and leave the typed name in place.
 
@@ -749,7 +749,7 @@ case "no_account":
   return "Fant ingen konto med det navnet. Opprett konto i stedet.";
 ```
 
-- [ ] **Step 5: Widen the handle**
+- [x] **Step 5: Widen the handle**
 
 ```ts
 return {
@@ -763,19 +763,19 @@ return {
 
 Delete the `:531-542` comment block about arbitrary Enter routing — it documents a defect this task removes, and a stale confession is worse than none.
 
-- [ ] **Step 6: Run the tests to verify they pass**
+- [x] **Step 6: Run the tests to verify they pass**
 
 Run: `mise run check -- tests/planner/profilePanel.test.ts`
 
 Expected: PASS.
 
-- [ ] **Step 7: Run the sync round-trip**
+- [x] **Step 7: Run the sync round-trip**
 
 Run: `mise run e2e -- --grep sync`
 
 Expected: PASS. `e2e/sync.pw.ts` drives real signup and login against `wrangler dev`'s local KV and will exercise both modes; update its selectors from the two old buttons to `#profile-panel-submit` plus `#profile-panel-switch`.
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add src/components/planner/profilePanel.ts tests/planner/profilePanel.test.ts e2e/sync.pw.ts
@@ -808,7 +808,7 @@ Some fresh visitors are returning ones: a student on a new browser has a plan on
   export interface AccountOpenDetail { mode?: AuthMode }
   ```
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Add to `e2e/flows.pw.ts`:
 
@@ -823,13 +823,13 @@ test("a returning student can log in from the first-run screen", async ({ page }
 });
 ```
 
-- [ ] **Step 2: Run it to verify it fails**
+- [x] **Step 2: Run it to verify it fails**
 
 Run: `mise run e2e -- --grep "returning student can log in"`
 
 Expected: FAIL — `#planner-firstrun-login` does not exist.
 
-- [ ] **Step 3: Add the open event**
+- [x] **Step 3: Add the open event**
 
 In `src/components/account.ts`, inside `mountAccount`, beside the existing button listener:
 
@@ -851,7 +851,7 @@ document.addEventListener(
 );
 ```
 
-- [ ] **Step 4: Add the line to the first-run screen**
+- [x] **Step 4: Add the line to the first-run screen**
 
 In `planlegger/index.astro`, inside `#planner-firstrun-alt`, after the existing "Legg til direkte" line:
 
@@ -881,7 +881,7 @@ document.getElementById("planner-firstrun-login")?.addEventListener(
 
 Hide the line when there is already a session — "Har du plan fra før?" is wrong for someone signed in. Read `sync.session()` at render and drop the element when it is non-null.
 
-- [ ] **Step 5: Add the line to the homepage**
+- [x] **Step 5: Add the line to the homepage**
 
 `#home-now` needs a **local** plan, so a returning student on a new device gets the cold pitch with one CTA and no way back to their account.
 
@@ -899,13 +899,13 @@ In `src/pages/index.astro`, after the CTA at line 51:
 
 In `src/components/site/now.ts`, in the branch that decides between `#home-now` and `#home-pitch`, reveal `#home-login-line` when `sync.session()` is null and leave it hidden otherwise, and dispatch `ACCOUNT_OPEN_EVENT` with `mode: "login"` from `#home-login`.
 
-- [ ] **Step 6: Run the tests to verify they pass**
+- [x] **Step 6: Run the tests to verify they pass**
 
 Run: `mise run check && mise run e2e -- --grep "returning student can log in"`
 
 Expected: PASS.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add src/components/account.ts src/pages/planlegger/index.astro src/pages/index.astro src/components/site/now.ts src/components/planner/plannerApp.ts e2e/flows.pw.ts tests/site/now.test.ts
@@ -935,7 +935,7 @@ dismissing leaves the planner exactly where it was."
   ```
   Ordered before `empty` in the union. `clashSentence` and `clashNode` both handle it. `empty` keeps its existing meaning and copy.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Add to `tests/site/planClash.test.ts`:
 
@@ -960,13 +960,13 @@ describe("no plan versus an empty plan", () => {
 
 Match `planClash`'s real signature from the file before running — the fourth argument is the programme code, and the store read may need a fixture.
 
-- [ ] **Step 2: Run it to verify it fails**
+- [x] **Step 2: Run it to verify it fails**
 
 Run: `mise run check -- tests/site/planClash.test.ts`
 
 Expected: FAIL — `"no-plan"` is not assignable to `ClashVerdict`.
 
-- [ ] **Step 3: Split the verdict**
+- [x] **Step 3: Split the verdict**
 
 ```ts
 export type ClashVerdict =
@@ -994,7 +994,7 @@ case "empty":
 
 In `planClash`, return `{ kind: "no-plan" }` when the store holds no courses for the semester **and** no programme, and `{ kind: "empty" }` when a plan exists but contributes no other courses. `clashNode` needs no branch of its own: `no-plan` is not `clash`, so it already falls to the `.np-hint` path.
 
-- [ ] **Step 4: Give the bare zero-result a recovery**
+- [x] **Step 4: Give the bare zero-result a recovery**
 
 `addCourse.ts:416` renders `"0 treff."` with nothing to do next. The scoped and not-taught-this-year branches beside it are already specific and stay untouched.
 
@@ -1002,19 +1002,19 @@ In `planClash`, return `{ kind: "no-plan" }` when the store holds no courses for
 : "0 treff. Prøv emnekode eller navn.";
 ```
 
-- [ ] **Step 5: Run the tests to verify they pass**
+- [x] **Step 5: Run the tests to verify they pass**
 
 Run: `mise run check -- tests/site/planClash.test.ts tests/planner/addCourse.test.ts`
 
 Expected: PASS.
 
-- [ ] **Step 6: Run the full gates**
+- [x] **Step 6: Run the full gates**
 
 Run: `mise run check && mise run e2e`
 
 Expected: PASS.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add src/components/site/planClash.ts src/components/planner/addCourse.ts tests/site/planClash.test.ts tests/planner/addCourse.test.ts
@@ -1039,32 +1039,32 @@ does not exist. The bare 0 treff gains a recovery."
 - Consumes: everything Tasks 1–7 built.
 - Produces: no code.
 
-- [ ] **Step 1: PRODUCT.md**
+- [x] **Step 1: PRODUCT.md**
 
 - §4 flow 1: the on-ramp is now the first-run screen, not the planner's week card. Programme and kull commit on the kull press; there is no Lagre on that screen. Record that the returning student's login line sits there and on the homepage, and that **neither gates the planner** — mandate 8's "strictly opt-in" is unchanged.
 - §11 killed list, so they do not come back: **no welcome modal, no guided tour, no coach marks, no progress stepper, no sample or demo plan, no illustrations in empty states.** The week is the demo and it is real. Record the reason: onboarding's job here is time-to-value, and the value is two decisions away.
 
-- [ ] **Step 2: DESIGN.md**
+- [x] **Step 2: DESIGN.md**
 
 - §8 (Voice and copy): the banned marks and the struck vocabulary, with the rewrite rule and the note that `tests/copy.test.ts` gates them.
 - §9 (Adjudicated decisions): a new entry for the login/register split — one mode, one submit, a link to the other path, name carried and PIN cleared across the switch, login the default because the two callers that know pass `signup` explicitly. State that this supersedes the deleted comment about arbitrary Enter routing.
 - §9: a second entry for the first-run screen — the predicate is the probe's existing `data-plan` absence, the picker is the same unit as the dialog's under a different commit policy, and the bar is gated on the **plan** rather than on drawn sessions so no control appears or vanishes after a fetch lands.
 
-- [ ] **Step 3: ROADMAP.md**
+- [x] **Step 3: ROADMAP.md**
 
 Move the onboarding and empty-state items into Shipped. Leave the spec's three out-of-scope items in Known-minor: the homepage's thin below-fold layout, `astro dev` shadowing `/data/programs.json` (the crawler record at the project root is served in place of the tuple endpoint, so the typeahead throws `programOptions.filter is not a function` under `npm run dev`), and the typeahead's lowercase `trondheim`.
 
-- [ ] **Step 4: CLAUDE.md**
+- [x] **Step 4: CLAUDE.md**
 
 Add the copy gate to the list of non-obvious rules: `tests/copy.test.ts` bans `—` and `·` in user-facing strings across `src/` and `worker/`, and bans "tegne uka". It strips comments before scanning, so the docs' and comments' em-dashed register is untouched. Do not relax it to land a string; rewrite the string.
 
-- [ ] **Step 5: Run everything**
+- [x] **Step 5: Run everything**
 
 Run: `mise run check && mise run e2e`
 
 Expected: PASS, both.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add docs CLAUDE.md
