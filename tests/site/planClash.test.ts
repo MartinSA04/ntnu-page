@@ -62,14 +62,40 @@ describe("semesterLabel", () => {
 });
 
 describe("planClash", () => {
-  it("reports an empty plan without fetching any partner timetable", async () => {
+  /**
+   * NO PLAN and an EMPTY PLAN are two states, and they got one sentence
+   * between them. `/emne/[code]/` is the largest cold-traffic surface on the
+   * site, so the common reader of this line has never touched the planner and
+   * was being told about "planen din" regardless.
+   */
+  it("reports no plan at all without fetching any partner timetable", async () => {
     globalThis.fetch = (() => {
       throw new Error("should not fetch");
     }) as unknown as typeof fetch;
     const verdict = await planClash({ code: "TDT4100", version: "1" }, plan(), SEMESTER, [
       entry("TDT4100"),
     ]);
+    expect(verdict).toEqual({ kind: "no-plan" });
+    expect(clashSentence(verdict, SEMESTER)).toBe(
+      "Du har ingen plan ennå. Legg til emnet, så er uka klar.",
+    );
+  });
+
+  it("still says 'empty' when a plan exists and holds nothing else", async () => {
+    globalThis.fetch = (() => {
+      throw new Error("should not fetch");
+    }) as unknown as typeof fetch;
+    // A programme, and no courses yet: the student HAS a plan, so the sentence
+    // may talk about it.
+    const withProgram: PlanState = {
+      ...plan(),
+      program: { code: "MTDT", name: "Datateknologi", cohort: 2026 },
+    };
+    const verdict = await planClash({ code: "TDT4100", version: "1" }, withProgram, SEMESTER, [
+      entry("TDT4100"),
+    ]);
     expect(verdict).toEqual({ kind: "empty" });
+    expect(clashSentence(verdict, SEMESTER)).toBe("Ingen andre emner i planen din for Høst 2026.");
   });
 
   it("ignores the viewed course's own row in the plan", async () => {

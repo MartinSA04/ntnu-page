@@ -43,6 +43,13 @@ export interface ClashPartner {
 }
 
 export type ClashVerdict =
+  /**
+   * No stored plan at all: this student has never used the planner. The line
+   * under the CTA is the REASON to press it, not a report about a plan that
+   * does not exist.
+   */
+  | { kind: "no-plan" }
+  /** A plan exists for this semester and holds no other courses. */
   | { kind: "empty" }
   | { kind: "off-semester" }
   /** Taught this semester, but no entry classifies as a lecture — nothing to diff. */
@@ -141,7 +148,15 @@ export async function planClash(
     // Off-semester is a fact about the COURSE, so it outranks the empty-plan
     // shortcut — a cold visitor's first add is who needs it most.
     if (own.inSemester.length === 0) return { kind: "off-semester" };
-    if (others.length === 0) return { kind: "empty" };
+    if (others.length === 0) {
+      // NO PLAN AT ALL is not an empty plan. This page is the largest
+      // cold-traffic surface on the site, so the common reader of this line
+      // arrived from a search engine and has never touched the planner —
+      // "Ingen andre emner i planen din" told them about a plan they do not
+      // have. The two states get two sentences.
+      const untouched = plan.program === undefined && plan.courses.length === 0;
+      return { kind: untouched ? "no-plan" : "empty" };
+    }
     // Taught here, but nothing reads as a lecture: there is nothing to diff,
     // and saying so is the honest gap. Never "undervises ikke".
     if (own.lectures.length === 0) return { kind: "unclassified" };
@@ -182,6 +197,8 @@ export async function planClash(
 export function clashSentence(verdict: ClashVerdict, semester: ClashSemester): string {
   const term = semesterLabel(semester.name);
   switch (verdict.kind) {
+    case "no-plan":
+      return "Du har ingen plan ennå. Legg til emnet, så er uka klar.";
     case "empty":
       return `Ingen andre emner i planen din for ${term}.`;
     case "off-semester":

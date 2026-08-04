@@ -413,7 +413,7 @@ export function mountAddCourse(deps: AddCourseDeps, signal: AbortSignal): AddCou
       status.textContent =
         hidden > 0
           ? `Ingen treff undervises i ${index.year}. ${subject} i emnekatalogen passer søket, men undervises ikke i år.`
-          : "0 treff.";
+          : "0 treff. Prøv emnekode eller navn.";
       // A true zero was the whole state: a sentence and a Lukk button, with the
       // register that searches more than this dialog does — it keeps the
       // not-taught rows this one drops — one page away and unmentioned.
