@@ -164,13 +164,35 @@ Two are co-primary: **the elective decide-loop (2)** and **the shared-plan
 handoff (5)**. The second is the growth loop, not plumbing.
 
 1. **On-ramp.** `/` is a landing: it shows the student's own next session and
-   room when a plan exists, and otherwise one CTA into `/planlegger/`. The
-   planner owns onboarding through its own empty states — its "Velg
-   studieprogram" opens the studieinfo dialog with the caret already in the
-   programme field, and that dialog is the only picker on the site. Once a
-   programme is stored the plan's own name in the bar is the way back into it;
-   while none is, the title is a word rather than a fact and is inert, so the
-   empty state's card is the single entrance.
+   room when a plan exists, and otherwise one CTA into `/planlegger/`.
+
+   **The planner owns onboarding, and with no plan it IS the onboarding.**
+   `/planlegger/` gated on `html:not([data-plan])` is a first-run screen and
+   nothing else: an `<h1>` invitation, one sentence, the programme field on the
+   page, and a quiet line for "I already have the codes". No bar, no tools, no
+   deadline, no verdict, no week frame, no Eksamener, no Emner — every one of
+   those presupposes the content that is missing, which is why the empty
+   planner used to read worse than an empty page. **Choosing a kull commits**:
+   the sentence promises a ready week for two facts, and a third press would
+   make that false, so there is no Lagre on that screen. Studieretning is not
+   asked there; `#planner-direction` asks it afterwards, once the study plan
+   has landed and it knows whether it matters.
+
+   Once a programme is stored the plan's own name in the bar is the way back
+   into the picker, through the studieinfo dialog — the only other place that
+   picker appears, and never at the same time as the first-run screen.
+
+   **A fresh visitor may be a returning one.** A student on a new browser has a
+   plan on their account and no local trace of it, so the first-run screen and
+   the landing page each carry one quiet line ("Har du plan fra før? Logg
+   inn.") that opens the account in **login** mode. It is a text link, not a
+   button: nothing here gates the planner, and mandate 8's "strictly opt-in" is
+   unchanged. A student who dismisses the panel is exactly where they were.
+
+   Inside the planner, **a section appears with its rows.** Eksamener and the
+   30 sp load track are absent at zero active courses rather than printing a
+   heading over an apology for content nobody has created yet. Emner is the
+   exception and stays, because it is where the first course is added.
 
 2. **Elective decide-loop (CO-PRIMARY, not built — ROADMAP Phase 4).**
    Choice group → "legg alle til vurdering" (shortlist tier) → **inline in
@@ -589,6 +611,15 @@ as primary content; bilingual UI chrome; a glossary or FAQ; the cross-course
 grade leaderboard; building-level campus filtering; the "+N til" overflow
 chip on deep clusters (a count the student could not act on, replaced by a
 pile block that names every session in it).
+
+**Killed onboarding apparatus, and it stays killed:** a welcome modal; a
+guided tour or coach marks; a progress stepper; a sample, demo or seeded
+"example" plan; illustrations in empty states. Onboarding's whole job here is
+time to value, and the value is two decisions and about fifteen seconds away —
+programme, kull, a drawn week with real rooms. Anything that stands between a
+student and that week costs more than it teaches, and the week itself is a
+better demonstration than a drawing of one could be. The empty states are the
+onboarding: they say what to do next and get out of the way.
 
 **Demoted to COULD, evidence-gated:** the `?mot=` two-course view as an add
 surface; English course names; par/odde single-cell rendering.

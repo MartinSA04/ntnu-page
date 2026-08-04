@@ -1277,16 +1277,20 @@ export async function mountPlannerApp(
     // takes it out of the tab order and out of the a11y tree's interactive
     // set, and the title keeps its ink and its place either way.
     const nameBtn = elements.nameBtn;
-    // Inert ONLY on the true empty state — no programme AND no courses — which
-    // is exactly when the week's own card is on screen saying "Velg
-    // studieprogram" in the accent. Two controls with that one accessible name
-    // is the two-doors-into-one-room shape the bar was cleaned of, and the card
-    // is the louder of the two, so the title yields to it.
+    // ALWAYS A DOOR, now that the bar is only ever on screen at all when there
+    // is something to name. It used to go inert on "no programme and no
+    // courses", because the week's own card was saying "Velg studieprogram" in
+    // the accent right below it and two controls with one accessible name is
+    // the two-doors-into-one-room shape the bar was cleaned of. That card is
+    // gone: the first-run SCREEN replaced it, and the bar is hidden underneath
+    // it, so there is nothing left to yield to.
     //
-    // A program-less plan that HAS courses (a pasted shared link) draws no
-    // card, so the title is the only way in and must stay a door. Gating on
-    // `!program` alone left that student with no route to the picker at all.
-    nameBtn.disabled = !program && plan.courses.length === 0;
+    // Leaving the old rule in place was a dead end. The first-run gate is
+    // one-way per page-load, so a student with manual adds and no programme who
+    // switches to an empty term keeps the bar — and that is exactly the state
+    // the rule disabled, with no card to fall back on and no other route to the
+    // picker anywhere on the page.
+    nameBtn.disabled = false;
     // The accessible name is the ERRAND, not the button's two children read
     // end to end: without this a screen reader announced the whole banner —
     // "MTFYMA Kull 24 Uke 34 · Master i fysikk og matematikk" — as one

@@ -1177,6 +1177,35 @@ test("manual adds stay in their semester", async ({ page }) => {
   await expect(courseRows(page)).toContainText("TDT4100");
 });
 
+/**
+ * The trap the one-way first-run gate would otherwise set. `data-plan` is a
+ * fact about the CURRENT semester, so a plan-less term looks exactly like a
+ * cold arrival — and if the planner went back to onboarding there, the semester
+ * control that is the way out would be gated off behind it.
+ */
+test("an empty semester keeps the planner, and every way out of it", async ({ page }) => {
+  await page.goto("/planlegger/");
+  await page.click("#planner-firstrun-add");
+  const addDialog = page.locator("#planner-add-dialog");
+  await expect(addDialog).toBeVisible();
+  await addDialog.locator("input.add-course-input").fill("TDT4100");
+  const row = addDialog.locator(".add-course-row", { hasText: "TDT4100" }).first();
+  await expect(row).toBeVisible({ timeout: 15_000 });
+  await row.locator(".add-course-add").click();
+  await addDialog.locator(".add-course-close").click();
+
+  await page.selectOption("#planner-semester-select", "27v");
+  await expect(courseRows(page)).toHaveCount(0);
+
+  // Still the planner, not the onboarding screen…
+  await expect(page.locator("#planner-firstrun")).toBeHidden();
+  await expect(page.locator("#planner-semester-select")).toBeVisible();
+  // …and the plan's name is still a working door into the picker, which is the
+  // only route to a programme from here now that the week's card is gone.
+  await openStudieinfo(page);
+  await expect(studieinfoDialog(page)).toBeVisible();
+});
+
 test("failure honesty: API down shows retry, not 'publiseres'", async ({ page, context }) => {
   await context.route("**/api/**", (route) => route.abort());
   await gotoPlanner(page, { courses: ["TDT4109"] });

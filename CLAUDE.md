@@ -263,5 +263,26 @@
   data redeploy; no-ops without Cloudflare secrets). Keep the crawler
   polite: identifying UA, request gaps, no retry layer outside ntnu-api's
   HttpClient.
+- **`tests/copy.test.ts` is a gate, not a style note.** No `—` and no `·` may
+  reach a string a student can read, anywhere in `src/` or `worker/`, **and no
+  substitute mark** — not `–`, not `|`, not a hyphen standing in for one. The
+  rewrite rule is *prose becomes sentences, data rows become spaced fields*;
+  subpage `<title>`s drop the brand suffix rather than substitute a separator.
+  It also bans **"tegne uka"** in every inflection; the idiom is "så er uka
+  klar". The test strips comments before scanning, so code comments and the
+  four docs keep their heavily em-dashed register on purpose — that asymmetry
+  is deliberate and is not a bug in the test. When it fails, rewrite the
+  string; do not loosen the regex, and do not add an exemption list.
+- **The planner's first-run screen has three non-obvious rules**
+  (`docs/DESIGN.md` §9 has the reasoning). (a) Its predicate is
+  `html:not([data-plan])`, which the pre-paint probe already writes — do not
+  replace it with a JS-set class, because the whole point is painting with the
+  document. (b) It is gated one-way per page-load via `data-planner-ready`:
+  `data-plan` describes the CURRENT semester, so without the latch switching to
+  an empty term throws a mid-visit student back to onboarding *and* hides the
+  semester control that is their way out. (c) The screen and the studieinfo
+  dialog mount the same `buildStudieinfoSection`, which hard-codes its element
+  ids — so the dialog is built lazily on first open and the screen's section is
+  removed once a plan exists. Two live instances collide on every id.
 - `mise run check` and `mise run e2e` must both stay green; UI copy is
   Norwegian bokmål, sentence case, comma decimals ("7,5 sp").

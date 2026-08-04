@@ -426,11 +426,86 @@ states are invitations to act. Semester names as NTNU writes them ("Høst
 **No upstream English reaches the UI.** Every fetch failure carries a ready
 Norwegian sentence; the raw string survives only as a debug detail.
 
+**No `—` and no `·` in any string a student can read**, anywhere in `src/` or
+`worker/`, **and no substitute mark** — not `–`, not `|`, not a hyphen standing
+in for one. They were doing three unrelated jobs at once (sentence punctuation,
+field separation, brand separation), so none of them read as deliberate. The
+rewrite rule is:
+
+> **Prose becomes sentences. Data rows become spaced fields.**
+
+Subpage `<title>` tags drop the brand suffix rather than substitute a
+separator: "Planlegger", "Emner", "TDT4120 Algoritmer og datastrukturer",
+"Fant ikke siden". The homepage stays "Semesterplan". Both calendars this
+project benchmarks against name the page and nothing else in the tab.
+
+**"Tegne uka" is struck from the vocabulary** — no "tegner vi uka di", no
+inflection of it, in UI copy or in new comments. The idiom is **"så er uka
+klar"**. The verb was wrong for this product: we assemble a week that already
+exists in NTNU's data, we do not invent one.
+
+`tests/copy.test.ts` gates both. It strips comments before scanning, so code
+comments and the four docs keep their heavily em-dashed register on purpose.
+When it fails, rewrite the string; do not loosen the test.
+
 ---
 
 ## 9. Adjudicated decisions
 
 Settled, with the reasoning, so they are not re-opened by the next reviewer.
+
+- **A plan-less planner is a first-run SCREEN, not a card in a drawn planner.**
+  The empty state used to be an invitation floating in ~900 px of white inside
+  a fully drawn page whose every control acted on nothing: a layer box, a
+  Uke/Liste switch, a semester select and a countdown to registering courses
+  the student had not chosen. Two more headings printed apologies over content
+  that did not exist. The screen replaces all of it.
+
+  **The predicate is `html:not([data-plan])`, and it is not a new mechanism.**
+  Layout's pre-paint probe already sets `data-plan` when a programme or a
+  course is stored and removes it otherwise, so its absence is exactly "no
+  plan", written before the first frame. That is what lets a CSS-gated static
+  panel paint *with* the document: no mount flash, no reserved void, no
+  reservation to lease and release. It is complete only because the `#v2;…`
+  hash is gone — localStorage is now the only way a plan can reach the page.
+
+  **The gate is one-way per page-load** (`data-planner-ready`, stamped by
+  `plannerApp.ts`). `data-plan` describes the CURRENT semester, so without the
+  latch a student with manual adds and no programme who switched to an empty
+  term was thrown back onto the onboarding screen — with the semester control
+  gated off behind it, which was the one control that would get them out.
+  First run is a decision about a load, not a live state.
+
+  **One picker, two hosts, never at once.** The first-run screen and the
+  studieinfo dialog mount the same `buildStudieinfoSection`, differing only in
+  a commit policy: `"on-kull"` writes as soon as programme and kull are known
+  and renders no Lagre, `"explicit"` stays the dialog's so a light dismiss
+  discards a half-picked programme. They must never both be live — the unit
+  hard-codes its ids — so the dialog is built on its first open and the
+  screen's section exists only while there is no plan.
+
+- **Login and register are two forms, not two buttons.** One form carried Navn,
+  PIN and Gjenta PIN under two co-equal buttons, which made Enter a coin flip:
+  the same fields fed both actions, so whichever button carried `type="submit"`
+  mis-routed one of the two populations. The mitigation was `reasonCopy` naming
+  the other action after the fact — a mitigation for a defect.
+
+  The panel has a **mode**. Login asks Navn and PIN; register asks for the PIN
+  twice and carries the two terms lines, which are about *creating* a
+  credential and have no business on a login form. Each has one submit, and a
+  **link below the form** switches — the returning-or-new choice is a link, not
+  a second button competing with the action. The switch carries the **name**
+  across and clears the **PIN**, because it means a different thing on the
+  other side (one to prove versus one to set).
+
+  Login is the default: the callers that know pass a mode explicitly, and a
+  door opened with no opinion is more often a returning student than a new one.
+  The submit wears the accent, which it could not while studieinfo shared this
+  surface and Lagre had it.
+
+  `taken` and `no_account` still name the other form rather than stopping at
+  the fact, and now that form is one press away. They are **not** auto-switches:
+  flipping the form under someone would discard the PIN they just typed.
 
 - **The verdict is green, not NTNU blue.** The tool's output is a verdict
   (fits / collides); green-vs-red is that verdict's native language. Blue is a
@@ -518,10 +593,17 @@ Settled, with the reasoning, so they are not re-opened by the next reviewer.
   **The picker's entrance is the plan's own name**, not a sixth control: the
   title states programme and kull, and pressing it is how you change them.
   That is what makes the entrance free — a control in the action run would
-  have cost a slot the phone's ⋯ menu then has to fold. With no programme
-  stored the title is a word rather than a fact, so it is **disabled**: the
-  empty state's card already says "Velg studieprogram", and an enabled door
-  beside it put two controls with one accessible name on one screen.
+  have cost a slot the phone's ⋯ menu then has to fold.
+
+  **It is always a door.** It used to go inert on "no programme and no
+  courses", because the week's card was saying "Velg studieprogram" in the
+  accent right below it and two controls with one accessible name is the
+  two-doors-into-one-room shape the bar was cleaned of. That card is gone —
+  the first-run screen replaced it and hides the bar underneath it — so there
+  is nothing left to yield to. Keeping the rule would have been a dead end:
+  the first-run gate is one-way per page-load, so a student with manual adds
+  and no programme who switches to an empty term keeps the bar, and that is
+  precisely the state the old rule disabled.
 
 - **The title is `MTFYMA Kull 24` — the programme and the kull, and NOT the
   semester.** It was `MTFYMA Kull 24 H26` until the bar grew a `<select>` for

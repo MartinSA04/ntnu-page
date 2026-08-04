@@ -46,8 +46,20 @@ semester is the planner bar's own select. One editing surface per course
 (`courseSettings.ts`); a read-only session popover on the bars; a catalog
 search modal for adding. Display-level parallel and øving group selection,
 narrowed per *session family* so a pick of one kind can never delete the
-other's sessions. Four honest empty and fallback states including a real
-retry path. `/studier/` and `/studier/[code]/` deleted outright.
+other's sessions. Three honest fallback states including a real retry path.
+`/studier/` and `/studier/[code]/` deleted outright.
+
+**Onboarding and the empty states.** A plan-less `/planlegger/` is a first-run
+screen and nothing else, gated on the pre-paint probe's own `data-plan`
+absence and one-way per page-load. The same picker hosts it under an
+`"on-kull"` commit policy, so programme and kull are two presses and no Lagre.
+Sections appear with their rows: Eksamener and the load track go absent at zero
+active courses instead of printing a heading over an apology. Login and
+register are two forms with one submit each and a link between them, and both
+the first-run screen and the landing page offer login to a returning student on
+a new browser. `/emne/[code]/` tells a cold arrival it has no plan yet rather
+than reporting on one it does not have. Sitewide, no `—` and no `·` reach a
+student, gated by `tests/copy.test.ts`.
 
 **The calendar direction** (`docs/DESIGN.md`). Tokens remapped to a white
 ground and a four-job colour scheme; type moved to the platform UI face and
@@ -179,6 +191,16 @@ means not before Phase 3's metrics.
 ---
 
 ## Known-minor, deliberately deferred
+
+- **`astro dev` shadows `/data/programs.json`.** Vite serves the project-root
+  crawler record (~332 kB) in place of `src/pages/data/programs.json.ts`
+  (~28 kB of tuples), so the programme typeahead throws
+  `programOptions.filter is not a function` and finds nothing under
+  `npm run dev`. The built site is correct, so `mise run e2e` is green and only
+  hand-iteration is affected — but the first-run screen IS that typeahead now,
+  so fix this before the next person iterates there.
+
+- **The typeahead's meta line prints `trondheim` lowercase.**
 
 - **`removeProgram()` prunes only the active semester's `np:plans` entry**, so
   a programme course can be orphaned in a *different* semester's stored plan.
