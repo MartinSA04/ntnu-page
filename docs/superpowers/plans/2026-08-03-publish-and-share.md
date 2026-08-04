@@ -1,6 +1,6 @@
 # Publish, View, and Delete the Hash — Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Depends on:** `docs/superpowers/plans/2026-08-03-sync-accounts.md` must land first. Publishing needs the account, so nothing here can ship on its own.
 
@@ -88,7 +88,7 @@ work, check out the session's true starting commit in a worktree.
   - `handleUnpublish(name: string, authKey: string | null, deps: SyncDeps): Promise<Response>`
   - `handlePublicRead(name: string, deps: SyncDeps): Promise<Response>`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```ts
 // append to tests/worker/sync.test.ts
@@ -149,12 +149,12 @@ describe("publishing", () => {
 });
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `npx vitest run tests/worker/sync.test.ts`
 Expected: FAIL — `handlePublish is not a function`.
 
-- [ ] **Step 3: Write minimal implementation**
+- [x] **Step 3: Write minimal implementation**
 
 ```ts
 // append to worker/src/sync.ts
@@ -219,12 +219,12 @@ export async function handlePublicRead(rawName: string, deps: SyncDeps): Promise
 }
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `npx vitest run tests/worker/sync.test.ts`
 Expected: PASS (20 tests).
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add worker/src/sync.ts tests/worker/sync.test.ts
@@ -243,7 +243,7 @@ git commit -m "feat(publish): publish, unpublish and public read"
 - Consumes: Task 1's three handlers.
 - Produces: `PUT|DELETE /api/sync/:navn/public`, `GET /api/plan/:navn`, and a `/user/:navn` → `/user/index.html` rewrite carrying `X-Robots-Tag: noindex, nofollow`.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```ts
 // append to tests/worker/sync.test.ts
@@ -288,12 +288,12 @@ describe("public routing", () => {
 });
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `npx vitest run tests/worker/sync.test.ts`
 Expected: FAIL — `/user/martin` falls through to `ASSETS` with no `x-robots-tag`.
 
-- [ ] **Step 3: Write minimal implementation**
+- [x] **Step 3: Write minimal implementation**
 
 In `worker/src/server.ts`, before the asset fallthrough:
 
@@ -366,12 +366,12 @@ Extract the `503` body from the sync plan's `handleSync` into a shared `syncUnav
 
 Confirm `public/robots.txt` exists and contains no `/user` rule; if the file does not exist, create it with `User-agent: *` and `Allow: /` plus the sitemap line the site already advertises. Exclude `/user/*` from the sitemap generator.
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `npx vitest run tests/worker/sync.test.ts && npm run typecheck`
 Expected: PASS (23 tests), both typecheck passes clean.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add worker/src/server.ts public/robots.txt tests/worker/sync.test.ts
@@ -395,7 +395,7 @@ git commit -m "feat(publish): route /user/:navn and refuse indexing by header"
 
 **This module must never import `PlanStore` and never write to `localStorage`.** That is the whole point of the change: a shared link shows you someone else's plan and leaves yours alone. Add the assertion as a test, not just as a comment.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```ts
 // tests/planner/publicPlan.test.ts
@@ -438,12 +438,12 @@ describe("the viewer never writes", () => {
 });
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `npx vitest run tests/planner/publicPlan.test.ts`
 Expected: FAIL — cannot resolve the module.
 
-- [ ] **Step 3: Write minimal implementation**
+- [x] **Step 3: Write minimal implementation**
 
 Create `src/components/planner/publicPlan.ts`:
 
@@ -502,12 +502,12 @@ Create `src/pages/user/index.astro` as the shell: the standard `Layout`, an empt
 
 Reserve the week's height on the frame exactly as `/emne/[code]/` does, or this page ships the CLS regression the planner was fixed for. The viewer has no plan probe value to work from (`--plan-courses` reflects *their* plan, not the one being viewed), so reserve from the fetched course count with a `data-reserve` lease released on first draw.
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `npx vitest run tests/planner/publicPlan.test.ts && npm run lint`
 Expected: PASS (5 tests), lint clean.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/components/planner/publicPlan.ts src/pages/user/index.astro tests/planner/publicPlan.test.ts
@@ -528,7 +528,7 @@ git commit -m "feat(publish): read-only view for a shared plan"
 
 Del on an account-less plan offers signup rather than failing. That does not violate "never a prerequisite" — the rule is about using the planner, and the planner is untouched.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```ts
 // append to tests/planner/plannerApp.test.ts
@@ -554,12 +554,12 @@ describe("shareTarget", () => {
 });
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `npx vitest run tests/planner/plannerApp.test.ts`
 Expected: FAIL — `shareTarget is not exported`.
 
-- [ ] **Step 3: Write minimal implementation**
+- [x] **Step 3: Write minimal implementation**
 
 ```ts
 // src/components/planner/plannerApp.ts
@@ -580,12 +580,12 @@ Rework the existing Del handler (the `navigator.share`/clipboard block, currentl
 
 Add `publish`/`unpublish` to `SyncClient` in `src/lib/planner/syncClient.ts`, calling `PUT`/`DELETE` on `/api/sync/<navn>/public`, and surface an `Ikke delt lenger` action in the profile panel.
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `npx vitest run && npm run typecheck`
 Expected: PASS, both typecheck passes clean.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/components/planner/plannerApp.ts src/lib/planner/syncClient.ts tests/planner/plannerApp.test.ts
@@ -616,7 +616,7 @@ Delete:
 
 Keep: `linkNote` itself if the C4 "we substituted a semester" message still has a source. After the hash goes, the only writer was `planFromHash`, so it very likely becomes dead — verify by grep before removing, and remove the element and its CSS with it.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```ts
 // append to tests/planner/store.test.ts
@@ -639,23 +639,23 @@ describe("the plan hash is gone", () => {
 });
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `npx vitest run tests/planner/store.test.ts`
 Expected: FAIL — all four symbols are still present.
 
-- [ ] **Step 3: Perform the deletions**
+- [x] **Step 3: Perform the deletions**
 
 Work top-down, running `npm run typecheck` after each file so the compiler finds every call site. Expect `plannerApp.ts` to shed roughly 120 lines and `store.ts` roughly 190.
 
 Then re-point the comment at `plannerApp.ts:704`: it justifies keeping `weekView` out of *the hash*, and the rule now applies to sync. Rewrite it to say the week view is not carried between devices because it is how you are looking at the plan, not what you are looking at.
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `npx vitest run && npm run typecheck && npm run lint && mise run e2e`
 Expected: all green. If an e2e spec drove a plan through the URL hash, rewrite it to seed `localStorage` instead — `e2e/flows.pw.ts` is the likely site.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add -A
@@ -681,7 +681,7 @@ git commit -m "refactor: delete the plan hash, superseded by published plans"
 
 **No per-plan `og:image`.** Rendering a week to PNG on a Worker is not worth it; use one static card at `/og-card.png`. Say so rather than leaving a reader to wonder why it isn't dynamic.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```ts
 // tests/worker/unfurl.test.ts
@@ -732,12 +732,12 @@ describe("unfurlMeta", () => {
 });
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `npx vitest run tests/worker/unfurl.test.ts`
 Expected: FAIL — cannot resolve the module.
 
-- [ ] **Step 3: Write minimal implementation**
+- [x] **Step 3: Write minimal implementation**
 
 ```ts
 // worker/src/unfurl.ts
@@ -819,12 +819,12 @@ return withNoIndex(withSecurityHeaders(withMeta));
 
 Add a static `public/og-card.png` (1200×630, the site name on the calendar ground from DESIGN.md).
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `npx vitest run tests/worker/unfurl.test.ts && npm run typecheck`
 Expected: PASS (4 tests). If the Node pass complains about `HTMLRewriter`, the reference has leaked out of `server.ts` — move it back.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add worker/src/unfurl.ts worker/src/server.ts src/pages/user/index.astro public/og-card.png tests/worker/unfurl.test.ts
@@ -842,7 +842,7 @@ git commit -m "feat(publish): rich link previews for shared plans"
 - Consumes: everything above.
 - Produces: no exports.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```ts
 // e2e/publish.pw.ts
@@ -932,21 +932,21 @@ test("…and still unfurls richly, because those are different crawlers", async 
 });
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `npx playwright test e2e/publish.pw.ts`
 Expected: FAIL — no Del publish flow yet if Task 4 is incomplete; otherwise passes.
 
-- [ ] **Step 3: Fix what the test finds**
+- [x] **Step 3: Fix what the test finds**
 
 No new production code should be needed. If the viewer's `localStorage` assertion fails, something in the view is still writing — find it and remove it rather than adjusting the assertion.
 
-- [ ] **Step 4: Run the full suite**
+- [x] **Step 4: Run the full suite**
 
 Run: `mise run check && mise run e2e`
 Expected: all green, no fixture misses in teardown.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add e2e/publish.pw.ts
@@ -957,9 +957,9 @@ git commit -m "test(publish): a shared link views and never writes"
 
 ## Documentation follow-up (do this before opening a PR)
 
-- [ ] **`docs/PRODUCT.md` §4 flow 5** — rewrite. The three actions (bruk denne / slå sammen / behold min egen) are gone; a link views. "Re-editable canonical plan" is now delivered by `/user/<navn>`.
-- [ ] **`docs/PRODUCT.md` §6** — delete the hash-grammar section entirely and describe the published plan instead.
-- [ ] **`docs/PRODUCT.md` D1** — amend: the shared plan stays co-primary, but as an artefact to view, not to adopt.
-- [ ] **`docs/PRODUCT.md` §8** — **D13's "breaks shared-URL parity" veto no longer applies.** The week-scrubber and personal fixed blocks were killed partly on that ground. Do not revive them here; record that the argument is gone and would have to be remade on its own merits.
-- [ ] **`docs/SPEC.md`** — remove the hash grammar from the data contracts; add `/api/sync/:navn/public`, `/api/plan/:navn` and the `/user/:navn` rewrite.
-- [ ] **`CLAUDE.md`** — delete the hash references, and add the `robots.txt` trap: never `Disallow: /user/`, because a blocked crawl hides the noindex.
+- [x] **`docs/PRODUCT.md` §4 flow 5** — rewrite. The three actions (bruk denne / slå sammen / behold min egen) are gone; a link views. "Re-editable canonical plan" is now delivered by `/user/<navn>`.
+- [x] **`docs/PRODUCT.md` §6** — delete the hash-grammar section entirely and describe the published plan instead.
+- [x] **`docs/PRODUCT.md` D1** — amend: the shared plan stays co-primary, but as an artefact to view, not to adopt.
+- [x] **`docs/PRODUCT.md` §8** — **D13's "breaks shared-URL parity" veto no longer applies.** The week-scrubber and personal fixed blocks were killed partly on that ground. Do not revive them here; record that the argument is gone and would have to be remade on its own merits.
+- [x] **`docs/SPEC.md`** — remove the hash grammar from the data contracts; add `/api/sync/:navn/public`, `/api/plan/:navn` and the `/user/:navn` rewrite.
+- [x] **`CLAUDE.md`** — delete the hash references, and add the `robots.txt` trap: never `Disallow: /user/`, because a blocked crawl hides the noindex.
