@@ -18,8 +18,11 @@
  * plan, which is why it alone kept a door on every page.
  *
  * Three states, switched on `sync.session()` and a pending collision:
- *  - signed out — Navn/PIN/Gjenta PIN, the two terms lines, Opprett konto /
- *    Logg inn.
+ *  - signed out — ONE form in one of two MODES. Login asks Navn and PIN;
+ *    signup asks Navn, PIN and Gjenta PIN and carries the two terms lines.
+ *    Each has a single submit and a link to the other. It was one form with
+ *    three fields and two co-equal buttons, which made Enter a coin flip and
+ *    left "Gjenta PIN" sitting in the login path with nothing to check.
  *  - a login collision (§6 step 5) — the one prompt this design keeps: two
  *    independent histories met, and the student picks which one wins. Shown
  *    ONLY when `describeCollision` says so; an ordinary "add my second
@@ -102,14 +105,16 @@ export type SyncUiState = "ok" | "failed" | "syncing" | "unauthorised";
 const REAUTH_COPY = "PIN-en er endret. Logg inn på nytt.";
 
 /**
- * Where focus lands when something else on the page sent the student here.
- * `"program"` is the first-run path (the planner's empty state) and
- * `"direction"` is the week's studieretning question — both are asked
- * elsewhere and answered here, so the answer's own control is what has to be
- * under the caret when the panel opens.
+ * Which of the two signed-out forms the panel shows. Login is the default,
+ * because the callers that KNOW the student has no account pass `"signup"`
+ * explicitly (Del on an account-less plan), while the ones that know they do
+ * pass `"login"` (the first-run screen's own line). A door opened with no
+ * opinion is more often a returning student than a new one.
  */
+export type AuthMode = "login" | "signup";
+
 export interface ProfilePanelHandle {
-  show(): void;
+  show(mode?: AuthMode): void;
   setSyncState(state: SyncUiState): void;
 }
 
@@ -159,14 +164,14 @@ export function deviceLabel(ua: string): string {
  * in the type — falls back to the generic retry sentence rather than leaking
  * a code the student cannot act on.
  *
- * `taken` and `no_account` name the OTHER action rather than stopping at the
- * fact, e.g. "Det navnet er tatt. Har du kontoen alt? Logg inn i stedet."
- * (the brief's original "Velg et annet." is gone). Both fields feed both
- * `signup` and `login` (see `signupBtn.type = "submit"`'s comment below) and
- * the same pair of buttons sits under either message, so a returning
- * student who lands on `taken` by pressing Enter, or by clicking Opprett
- * konto on a name they already own, is one sentence away from the control
- * that actually works — not just told what went wrong.
+ * `taken` and `no_account` NAME THE OTHER FORM, and the panel has one: the
+ * switch link under the button is the control each sentence is pointing at, so
+ * "Logg inn i stedet" is an instruction the student can follow in one press
+ * without retyping their name (the switch carries it across).
+ *
+ * They are not auto-switches. Flipping the form under someone would discard
+ * the PIN they just typed, and a silent mode change after a failed submit is
+ * worse than a sentence telling them which press fixes it.
  */
 function reasonCopy(reason: string): string {
   switch (reason) {
@@ -444,6 +449,9 @@ export function mountProfilePanel(deps: ProfilePanelDeps): ProfilePanelHandle {
    *  and open; otherwise it just waits for the next `show()`/`render()`. */
   let syncState: SyncUiState = "ok";
 
+  /** Which signed-out form is on screen. See `AuthMode`. */
+  let authMode: AuthMode = "login";
+
   function close(): void {
     if (dialog.open) dialog.close();
   }
@@ -478,26 +486,49 @@ export function mountProfilePanel(deps: ProfilePanelDeps): ProfilePanelHandle {
     // than a search box. It is a SIBLING of studieinfo rather than a wrapper
     // around it: studieinfo carries its own <form> for the typeahead, and
     // nested forms are not a thing HTML has.
+    const signup = authMode === "signup";
+
     const account = el("form", "profile-panel-account") as HTMLFormElement;
     account.autocomplete = "off";
-    account.append(el("h3", "profile-panel-heading", "Konto"));
-    account.append(el("p", "np-hint", "Da følger planen med på telefon, PC og nettbrett."));
+    account.append(el("h3", "profile-panel-heading", signup ? "Opprett konto" : "Logg inn"));
+    account.append(
+      el(
+        "p",
+        "np-hint",
+        signup
+          ? "Da følger planen med på telefon, PC og nettbrett."
+          : "Hent planen din på denne enheten.",
+      ),
+    );
 
     const navn = buildField("Navn", "profile-panel-navn");
     const pin = buildField("PIN (6 siffer)", "profile-panel-pin", {
       inputmode: "numeric",
       maxlength: "6",
     });
-    const repeat = buildField("Gjenta PIN", "profile-panel-repeat-pin", {
-      inputmode: "numeric",
-      maxlength: "6",
-    });
-    account.append(navn.wrapper, pin.wrapper, repeat.wrapper);
+    account.append(navn.wrapper, pin.wrapper);
 
-    account.append(el("p", "np-hint", "Planen lagres kryptert. Vi kan ikke lese den."));
-    account.append(
-      el("p", "np-hint", "Husk PIN-en. Du trenger den for å logge inn på en ny enhet."),
-    );
+    // Gjenta PIN catches a typo before it round-trips to the server as the
+    // encryption key's own input — `syncClient` never sees the second value, so
+    // the check happens here or not at all. On LOGIN it has nothing to catch:
+    // the PIN either matches the account or it does not, and the server says
+    // which. So it is not rendered there.
+    const repeat = signup
+      ? buildField("Gjenta PIN", "profile-panel-repeat-pin", {
+          inputmode: "numeric",
+          maxlength: "6",
+        })
+      : null;
+    if (repeat) account.append(repeat.wrapper);
+
+    // Both of these are about CREATING the credential, so neither belongs on
+    // the login form: nothing is being chosen there to remember.
+    if (signup) {
+      account.append(el("p", "np-hint", "Planen lagres kryptert. Vi kan ikke lese den."));
+      account.append(
+        el("p", "np-hint", "Husk PIN-en. Du trenger den for å logge inn på en ny enhet."),
+      );
+    }
 
     // Permanently mounted, never `hidden` — mirrors studieinfo's own hint, so
     // a refused submit is described from the button that caused it (below).
@@ -517,45 +548,66 @@ export function mountProfilePanel(deps: ProfilePanelDeps): ProfilePanelHandle {
     account.append(hint);
 
     const actions = el("div", "profile-panel-actions");
-    // The form's one `type="submit"` control, so Enter in any field and a
-    // click land on the same listener below (native submit dispatch) rather
-    // than needing a second, separately-bound click handler.
+    // ONE SUBMIT, AND IT MEANS ONE THING. The form used to carry two co-equal
+    // buttons over one set of three fields, which made Enter a coin flip: the
+    // same fields fed both actions, so whichever button carried `type="submit"`
+    // mis-routed one of the two populations, and the mitigation was `reasonCopy`
+    // naming the other action after the fact. That is a mitigation for a defect,
+    // and the defect is gone — the panel has a MODE now, so Enter and a click
+    // land on the same unambiguous action.
     //
-    // It is PAPER, not `.np-btn--primary`, and that changed when studieinfo
-    // moved into this panel: `.np-btn--primary` is at most one per surface
-    // (DESIGN §5) and the accent's one job is THE primary action (§2's
-    // One-Job-Accent). On this surface that is Lagre — mandate 1's own path,
-    // and what a first-run student opened the panel to do. An account is
-    // strictly opt-in (mandate 8), so it may not be the loudest thing here.
-    //
-    // Which action Enter picks is ARBITRARY: the same three fields feed both
-    // signup and login, and a returning student setting up a second device —
-    // the single most likely keyboard flow in a sync feature — is exactly as
-    // probable as a first-time student, so there is no "more correct" default
-    // to route Enter to. Swapping which button carries `type="submit"` only
-    // moves the mis-route from one population to the other; it does not
-    // remove it. What actually makes either landing survivable is
-    // `reasonCopy`'s `taken`/`no_account` cases naming the OTHER action —
-    // whichever button Enter (or a mismatched mouse click) reaches, a wrong
-    // guess names its way out rather than dead-ending. Do not "fix" this by
-    // moving `type="submit"` to `loginBtn` without also reverting that copy;
-    // the two changes are one decision.
-    const signupBtn = el("button", "np-btn", "Opprett konto") as HTMLButtonElement;
-    signupBtn.type = "submit";
-    signupBtn.setAttribute("aria-describedby", "profile-panel-hint");
-    // Deliberately NOT `type="submit"`: two submit controls in one form make
-    // the "default button" Enter activates engine-dependent. Logg inn stays
-    // reachable by its own click handler, exactly as before.
-    const loginBtn = el("button", "np-btn", "Logg inn") as HTMLButtonElement;
-    loginBtn.type = "button";
-    loginBtn.setAttribute("aria-describedby", "profile-panel-hint");
-    actions.append(signupBtn, loginBtn);
+    // It wears the accent. It could not while studieinfo shared this surface
+    // (DESIGN §5 allows one `.np-btn--primary` per surface, and Lagre had it),
+    // but the picker left for the planner's own dialog on 2026-08-03 and this
+    // is the only action in the room now.
+    const submitBtn = el(
+      "button",
+      "np-btn np-btn--primary",
+      signup ? "Opprett konto" : "Logg inn",
+    ) as HTMLButtonElement;
+    submitBtn.id = "profile-panel-submit";
+    submitBtn.type = "submit";
+    submitBtn.setAttribute("aria-describedby", "profile-panel-hint");
+    actions.append(submitBtn);
     account.append(actions);
+
+    // The other path is a LINK BELOW THE FORM, not a second button beside it.
+    // Two co-equal buttons is what made the two paths confusable in the first
+    // place; a link states which form you are on and offers the other one
+    // without competing with the action.
+    const switchLine = el("p", "np-hint profile-panel-switch-line");
+    switchLine.append(
+      document.createTextNode(signup ? "Har du konto fra før? " : "Har du ikke konto? "),
+    );
+    const switchBtn = el(
+      "button",
+      "np-navlink profile-panel-switch",
+      signup ? "Logg inn" : "Opprett konto",
+    ) as HTMLButtonElement;
+    switchBtn.id = "profile-panel-switch";
+    switchBtn.type = "button";
+    switchBtn.addEventListener("click", () => {
+      // The NAME survives the switch and the PIN does not. A student who typed
+      // the wrong form's name typed the right name; the PIN means a different
+      // thing on the other side (one to prove versus one to set), and carrying
+      // it would silently make an unconfirmed value the encryption key's input.
+      const carried = navn.input.value;
+      authMode = signup ? "login" : "signup";
+      renderSignedOut();
+      const nextNavn = dialog.querySelector<HTMLInputElement>("#profile-panel-navn");
+      if (nextNavn) {
+        nextNavn.value = carried;
+        nextNavn.focus();
+      }
+    });
+    switchLine.append(switchBtn);
+    account.append(switchLine);
 
     body.append(account);
     dialog.append(body);
 
-    async function submit(kind: "signup" | "login"): Promise<void> {
+    async function submit(): Promise<void> {
+      const kind = authMode;
       const navnValue = navn.input.value.trim();
       const pinValue = pin.input.value.trim();
       if (navnValue === "") {
@@ -568,24 +620,21 @@ export function mountProfilePanel(deps: ProfilePanelDeps): ProfilePanelHandle {
         pin.input.focus();
         return;
       }
-      // Gjenta PIN exists to catch a typo before it round-trips to the
-      // server as the encryption key's own input — syncClient never sees the
-      // second value, so the check has to happen here or not at all.
-      if (kind === "signup" && pinValue !== repeat.input.value.trim()) {
+      if (repeat && pinValue !== repeat.input.value.trim()) {
         hint.textContent = "PIN-ene er ikke like.";
         repeat.input.focus();
         return;
       }
       hint.textContent = "";
-      signupBtn.disabled = true;
-      loginBtn.disabled = true;
+      submitBtn.disabled = true;
+      switchBtn.disabled = true;
       const label = deviceLabel(navigator.userAgent);
       // `attemptAuth` never rejects — see its own doc comment — so these two
       // lines are unconditional, unlike the bare `await deps.sync.signup(…)`
       // this replaced.
       const outcome = await attemptAuth(deps.sync, kind, navnValue, pinValue, label);
-      signupBtn.disabled = false;
-      loginBtn.disabled = false;
+      submitBtn.disabled = false;
+      switchBtn.disabled = false;
       if (!outcome.ok) {
         // §6 step 5: not a failure — this device and the account it just
         // authenticated against each hold a plan, and the student has to
@@ -605,16 +654,12 @@ export function mountProfilePanel(deps: ProfilePanelDeps): ProfilePanelHandle {
       deps.onAuthenticated();
     }
 
-    // Enter in Navn/PIN/Gjenta PIN triggers native form submission, which
-    // fires this once — including when it was `signupBtn` (type="submit")
-    // that was clicked directly, so no separate click listener is needed
-    // for it.
+    // Enter in any field triggers native form submission, which fires this
+    // once — including when `submitBtn` was clicked directly, so there is no
+    // separate click listener to bind.
     account.addEventListener("submit", (event) => {
       event.preventDefault();
-      void submit("signup");
-    });
-    loginBtn.addEventListener("click", () => {
-      void submit("login");
+      void submit();
     });
   }
 
@@ -920,7 +965,10 @@ export function mountProfilePanel(deps: ProfilePanelDeps): ProfilePanelHandle {
   deps.signal.addEventListener("abort", () => dialog.remove());
 
   return {
-    show(): void {
+    show(mode?: AuthMode): void {
+      // Only when the caller has an opinion: a bare `show()` from the topbar
+      // keeps whichever form was last on screen within this page-load.
+      if (mode) authMode = mode;
       render();
       dialog.scrollTop = 0;
       if (!dialog.open) dialog.showModal();

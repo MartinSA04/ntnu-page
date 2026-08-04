@@ -29,6 +29,8 @@ test("a shared plan is viewable by a stranger and changes nothing for them", asy
   await gotoPlanner(ownerPage, { courses: ["TDT4120"] });
 
   await ownerPage.getByRole("button", { name: "Profil" }).click();
+  // The panel opens on login; creating the account is the other form.
+  await ownerPage.locator("#profile-panel-switch").click();
   await ownerPage.getByLabel("Navn").fill(navn);
   await ownerPage.getByLabel("PIN (6 siffer)").fill(PIN);
   await ownerPage.getByLabel("Gjenta PIN").fill(PIN);
@@ -79,6 +81,8 @@ test("the shared page is live: an edit by the owner reaches it", async ({ browse
   await gotoPlanner(ownerPage, { courses: ["TDT4120"] });
 
   await ownerPage.getByRole("button", { name: "Profil" }).click();
+  // The panel opens on login; creating the account is the other form.
+  await ownerPage.locator("#profile-panel-switch").click();
   await ownerPage.getByLabel("Navn").fill(navn);
   await ownerPage.getByLabel("PIN (6 siffer)").fill(PIN);
   await ownerPage.getByLabel("Gjenta PIN").fill(PIN);
@@ -124,6 +128,8 @@ test("turning sharing off takes the page down", async ({ browser }) => {
   await gotoPlanner(page, { courses: ["TDT4120"] });
 
   await page.getByRole("button", { name: "Profil" }).click();
+  // The panel opens on login; creating the account is the other form.
+  await page.locator("#profile-panel-switch").click();
   await page.getByLabel("Navn").fill(navn);
   await page.getByLabel("PIN (6 siffer)").fill(PIN);
   await page.getByLabel("Gjenta PIN").fill(PIN);
@@ -166,6 +172,8 @@ test("…and still unfurls richly, because those are different crawlers", async 
   await gotoPlanner(page, { courses: ["TDT4120"] });
 
   await page.getByRole("button", { name: "Profil" }).click();
+  // The panel opens on login; creating the account is the other form.
+  await page.locator("#profile-panel-switch").click();
   await page.getByLabel("Navn").fill(navn);
   await page.getByLabel("PIN (6 siffer)").fill(PIN);
   await page.getByLabel("Gjenta PIN").fill(PIN);

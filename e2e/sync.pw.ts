@@ -29,14 +29,16 @@ test("a plan reaches a second browser context through an account", async ({ brow
   await phone.reload();
 
   await phone.getByRole("button", { name: "Profil" }).click();
+  // The panel opens on LOGIN. Creating an account is the other form, one link
+  // below the button — so a new student takes that link, and this is the press
+  // that gets them there.
+  await phone.locator("#profile-panel-switch").click();
   await phone.getByLabel("Navn").fill(navn);
   await phone.getByLabel("PIN (6 siffer)").fill(pin);
-  // Enter, not a click on "Opprett konto": that button is the form's one
-  // `type="submit"` control (profilePanel.ts's own comment on `signupBtn`),
-  // so this is the real Enter-to-submit path, previously exercised only by
-  // unit tests and code inspection — never a running browser. The sibling
-  // test below covers a plain button click (Logg inn), so both dispatch
-  // paths are driven for real across this file.
+  // Enter, not a click on the submit: it is the form's one `type="submit"`
+  // control, so this is the real Enter-to-submit path, and with a mode it now
+  // lands somewhere unambiguous rather than on whichever of two co-equal
+  // buttons the engine picked. The sibling test below covers a plain click.
   await phone.getByLabel("Gjenta PIN").fill(pin);
   await phone.getByLabel("Gjenta PIN").press("Enter");
   await expect(phone.getByText("Sist synkronisert")).toBeVisible();
@@ -78,4 +80,39 @@ test("a wrong PIN is refused and changes nothing locally", async ({ page }) => {
 
   await expect(page.getByText("Fant ingen konto med det navnet.")).toBeVisible();
   expect(await page.evaluate(() => localStorage.getItem("np:sync"))).toBeFalsy();
+});
+
+/**
+ * Login and register are two paths, not two buttons over one set of fields.
+ * The mechanism, not the look: which action a submit means, what each form
+ * asks for, and whether a wrong guess strands the student.
+ */
+test("login and register are separate forms, and the switch keeps the name", async ({ page }) => {
+  await page.goto("/planlegger/");
+  await page.getByRole("button", { name: "Profil" }).click();
+
+  // Login: one submit, and no PIN confirmation, because there is nothing to
+  // confirm against — the server says whether the PIN is right.
+  const submit = page.locator("#profile-panel-submit");
+  await expect(submit).toHaveText("Logg inn");
+  await expect(page.getByLabel("Gjenta PIN")).toHaveCount(0);
+
+  await page.getByLabel("Navn").fill("kari");
+  await page.getByLabel("PIN (6 siffer)").fill("123456");
+  await page.locator("#profile-panel-switch").click();
+
+  // Register asks for the PIN twice, and the switch carried the name across
+  // but NOT the PIN: it means a different thing on this side.
+  await expect(submit).toHaveText("Opprett konto");
+  await expect(page.getByLabel("Gjenta PIN")).toBeVisible();
+  await expect(page.getByLabel("Navn")).toHaveValue("kari");
+  await expect(page.getByLabel("PIN (6 siffer)")).toHaveValue("");
+
+  // A wrong guess is never a dead end: the refusal names the other form, and
+  // that form is one press away.
+  await page.getByLabel("PIN (6 siffer)").fill("123456");
+  await page.getByLabel("Gjenta PIN").fill("654321");
+  await submit.click();
+  await expect(page.getByText("PIN-ene er ikke like.")).toBeVisible();
+  await expect(page.locator("#profile-panel-switch")).toHaveText("Logg inn");
 });
