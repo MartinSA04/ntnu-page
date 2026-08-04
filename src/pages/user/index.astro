@@ -58,8 +58,19 @@ const description = "En delt semesterplan fra Semesterplan.";
      `publicPlan.ts` at runtime, and Astro's scoping stamps an attribute only on
      elements that exist in this template. The container itself is in the
      template, so its reservation is scoped normally. */
+  /* PER VIEW, because the two have unrelated geometries and one number cannot
+     serve both. Measured in Chromium on the real stylesheets, a one-course
+     shared plan: Uke 537 (390px) / 484 (1280px), Liste 880 / 866. The flat
+     30rem under-held Liste by ~390px.
+
+     Each is set a little under the narrower measurement, so the residual is a
+     small downward nudge. `html[data-view]` is written before first paint by
+     Layout.astro's probe. */
   .public-plan[data-reserve] {
     min-height: 30rem;
+  }
+  :global(html[data-view="tavle"]) .public-plan[data-reserve] {
+    min-height: 53rem;
   }
 
   .public-plan :global(.public-plan-head) {

@@ -536,6 +536,18 @@ export function mountWeekView(options: WeekViewOptions): WeekViewHandle {
     // as tall as the reservation except in the cases this releases ON PURPOSE,
     // and those should collapse now rather than a paint later.
     delete frame.dataset.reserve;
+    // Only a frame the SERVER rendered can be handed a remembered height before
+    // paint, and the planner's is the only one: `/emne/[code]/` and
+    // `/user/<navn>` build theirs after a fetch, so what holds their space is a
+    // placeholder standing in for the whole section — a different box, with its
+    // own measured per-view numbers in those pages. Filing a number here for
+    // them would be filing one nothing reads.
+    //
+    // The stored key keeps its surface anyway. It is what makes the answer to
+    // "whose height is this" unambiguous the moment a second surface starts
+    // reserving from its frame, and a five-course planner's Liste number
+    // reaching a one-course page is exactly the failure this replaced.
+    if (surface !== "planner") return;
     // The measurement waits for layout, and only counts if this is still the
     // element that was drawn.
     requestAnimationFrame(() => {

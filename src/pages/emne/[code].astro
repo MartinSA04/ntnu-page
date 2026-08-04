@@ -303,8 +303,25 @@ const description = `${course.code} ${course.name}: timeplan, eksamen og nøkkel
      moment it reaches a terminal state that keeps the status line on screen, so
      a failure never sits at the top of 24rem of empty page. The success path
      hides the line, which releases it too. */
+  /* THE WEEK'S HEIGHT, PER VIEW. This page's frame is built after the fetch, so
+     what holds the space from first paint is the placeholder above it — which
+     means the number here stands in for the whole `[data-role="body"]`: the
+     provenance line, the two switches, the scope line and the week.
+
+     The two views have unrelated geometries and one number cannot serve both.
+     Measured in Chromium on the real stylesheets, one-course plan, TDT4120:
+     Uke 377 (390px) / 357 (1280px), Liste 720 (390px) / 739 (1280px). A single
+     24rem reservation therefore over-held Uke slightly and under-held Liste by
+     ~340px, which is the shift a student in Liste actually saw.
+
+     Each is set a little UNDER the narrower measurement, so the residual is a
+     small downward nudge rather than the page snatching upward under a thumb.
+     `html[data-view]` is written before first paint by Layout.astro's probe. */
   #timetable-section [data-role="status"][data-reserve] {
-    min-height: 24rem;
+    min-height: 21.5rem;
+  }
+  :global(html[data-view="tavle"]) #timetable-section [data-role="status"][data-reserve] {
+    min-height: 44rem;
   }
   #details-section [data-role="status"][data-reserve] {
     min-height: 8rem;

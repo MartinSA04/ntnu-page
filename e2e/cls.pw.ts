@@ -307,6 +307,67 @@ test.describe("layout stability", () => {
     const cls = await clsOf(page, "/emne/TDT4120/");
     expect(cls, `/emne/ CLS ${cls.toFixed(4)}`).toBeLessThan(BUDGETS.course);
   });
+
+  /**
+   * The course page draws the same two views the planner does, so it needs the
+   * same thing the planner needed: a reservation PER VIEW.
+   *
+   * One number cannot serve both. Measured with a one-course plan, the section
+   * settles at 357–377 px in Uke and 720–739 px in Liste, so the single 24rem
+   * this replaced over-held Uke and under-held Liste by ~340 px — the shift a
+   * student who had chosen a list actually saw, on the page that takes the most
+   * cold traffic.
+   *
+   * The view is set with no matching `np:weekBox`, and there could not be one:
+   * this page's frame is built after the fetch, so what holds its space is a
+   * placeholder standing in for the whole section. The numbers are measured
+   * constants, and this is what notices when they rot.
+   *
+   * MEASURED AGAINST WHAT LANDS, not through CLS. The section sits low enough
+   * on a desktop page that everything it displaces is below the fold, and the
+   * Layout Instability API only counts what was on screen — so a CLS budget
+   * here passes with the reservation deleted, which is no test at all. What
+   * this asserts is the reservation's own contract: a little UNDER what the
+   * section settles at, so the residual is a downward nudge, and never so far
+   * under that the page drops a screenful.
+   *
+   * The response is held so the placeholder can be caught still standing.
+   * Against a warm local worker the timetable answers before first paint.
+   */
+  for (const [view, label, floor] of [
+    ["kolonner", "Uke", 300],
+    ["tavle", "Liste", 640],
+  ] as const) {
+    test(`the course page reserves what ${label} actually needs`, async ({ page }) => {
+      await page.addInitScript((v) => localStorage.setItem("np:weekView", v), view);
+      await page.route("**/api/course/**/timetable*", async (route) => {
+        await new Promise((resolve) => setTimeout(resolve, 1_500));
+        await route.fallback();
+      });
+      await page.goto("/emne/TDT4120/");
+
+      // The placeholder, while it is still the only thing there.
+      const status = page.locator('#timetable-section [data-role="status"]');
+      await expect(status).toBeVisible();
+      const reserved = (await status.boundingBox())?.height ?? 0;
+      // A floor, so a rule deleted outright fails here rather than passing on a
+      // one-line placeholder that happens to be "under" the settled height.
+      expect(reserved, `${label} reserves ${reserved}px`).toBeGreaterThan(floor);
+
+      const body = page.locator('#timetable-section [data-role="body"]');
+      await expect(page.locator("#timetable-section .planner-cols, #timetable-section .planner-board")).toBeVisible({
+        timeout: 45_000,
+      });
+      await page.waitForTimeout(400);
+      const settled = (await body.boundingBox())?.height ?? 0;
+
+      // Under, and by less than a phone screen's worth.
+      expect(reserved, `${label}: reserved ${reserved} vs settled ${settled}`).toBeLessThanOrEqual(
+        settled,
+      );
+      expect(settled - reserved, `${label}: ${settled - reserved}px of residual`).toBeLessThan(120);
+    });
+  }
 });
 
 /**
