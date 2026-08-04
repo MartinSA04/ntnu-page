@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, test } from "vitest";
 import { collectSessions, isRoomCode, renderBoard } from "../../src/components/planner/board.js";
 import type { PlanCourseState } from "../../src/components/planner/types.js";
+import { visibleLayer } from "../../src/components/planner/weekNotes.js";
 import { bundleFromEntries, type TimetableEntry } from "../../src/lib/planner/data.js";
 
 /**
@@ -171,6 +172,38 @@ describe("collectSessions: what the two views are allowed to draw", () => {
 
   test("showAllGroups draws every parallel", () => {
     expect(collectSessions(twoParallels, [34, 35], { showAllGroups: true })).toHaveLength(2);
+  });
+
+  /**
+   * Selecting the entries is only half of it. `visibleLayer` keeps
+   * `isLecture || groupPicked` when the layer is revealed — the EXPH0300 flood
+   * guard, which stops nine unpicked seminar groups landing in one week — so an
+   * øving marked unpicked is dropped again the instant it is shown.
+   *
+   * On `/emne/[code]/` there are no picks by construction, which made
+   * «Vis øvinger og labber» a control that visibly did nothing: every group was
+   * selected and every group was then filtered back out.
+   */
+  const twoGroups = [
+    state({
+      code: "TMA4400",
+      bundle: bundleFromEntries([
+        entry("Forelesning"),
+        entry("Øving gruppe 1", { dayNumber: 2, startTime: "14:15", endTime: "16:00" }),
+        entry("Øving gruppe 2", { dayNumber: 3, startTime: "14:15", endTime: "16:00" }),
+      ]),
+    }),
+  ];
+
+  test("a plan hides øving groups the student has not picked", () => {
+    const shown = visibleLayer(collectSessions(twoGroups, [34, 35]), true).shown;
+    expect(shown.filter((s) => !s.isLecture)).toHaveLength(0);
+  });
+
+  test("showAllGroups reveals them, or the layer toggle is a control that does nothing", () => {
+    const sessions = collectSessions(twoGroups, [34, 35], { showAllGroups: true });
+    const shown = visibleLayer(sessions, true).shown;
+    expect(shown.filter((s) => !s.isLecture)).toHaveLength(2);
   });
 });
 

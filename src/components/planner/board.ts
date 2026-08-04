@@ -150,7 +150,11 @@ export function collectSessions(
         // Same classifier as the grid's, not a second guess at what counts as
         // a lecture — the two views must agree about which sessions can clash.
         isLecture: classifyActivity(raw) === "lecture",
-        groupPicked: key === null || soleGroup || picked.has(key),
+        // `showAllGroups` is the course page: every group counts as shown, or
+        // `visibleLayer`'s `isLecture || groupPicked` drops each one again the
+        // moment the layer is revealed — which is the same as the toggle doing
+        // nothing, on a surface with no picks to make.
+        groupPicked: options.showAllGroups || key === null || soleGroup || picked.has(key),
         clash: null,
       });
     }

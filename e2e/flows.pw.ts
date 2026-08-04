@@ -2353,6 +2353,32 @@ test.describe("the course page draws the week the planner draws", () => {
     await expect(page.locator(".timetable-term")).toContainText("Ikke undervist i Høst 2026");
   });
 
+  test("«Vis øvinger og labber» actually adds øvinger", async ({ page }) => {
+    // A control that visibly does nothing is the failure this page has been
+    // fixed for twice. Here it was two filters meeting: `showAllGroups` selected
+    // every group, and `visibleLayer` then dropped each one again on
+    // `isLecture || groupPicked` — right for a plan, where it stops nine
+    // unpicked seminar groups flooding one week, and wrong for a surface that
+    // has no picks to make.
+    await page.goto("/emne/TDT4120/");
+    const sessions = page.locator(
+      "#timetable-section .planner-cols-block, #timetable-section .planner-cols-band",
+    );
+    await expect(sessions.first()).toBeVisible({ timeout: 45_000 });
+    const lecturesOnly = await sessions.count();
+
+    const toggle = page.locator(".timetable-others");
+    await expect(toggle).toHaveAttribute("aria-pressed", "false");
+    await toggle.click();
+    await expect(toggle).toHaveAttribute("aria-pressed", "true");
+    await expect.poll(() => sessions.count()).toBeGreaterThan(lecturesOnly);
+
+    // And back: the layer leaves as visibly as it arrived.
+    await toggle.click();
+    await expect(toggle).toHaveAttribute("aria-pressed", "false");
+    await expect.poll(() => sessions.count()).toBe(lecturesOnly);
+  });
+
   test("a block opens the session, and offers no editor this page does not have", async ({
     page,
   }) => {
