@@ -34,9 +34,26 @@ import { createPlanStore, type PlanStore } from "../lib/planner/store.js";
 import { createSyncClient, type SyncClient } from "../lib/planner/syncClient.js";
 import {
   ACCOUNT_CHANGE_EVENT,
+  type AuthMode,
   mountProfilePanel,
   type ProfilePanelHandle,
 } from "./planner/profilePanel.js";
+
+/**
+ * Opens the account panel from anywhere on the page, in a named mode.
+ *
+ * A CustomEvent rather than an exported function because the panel is per
+ * page-load while the callers are static markup on three different pages — the
+ * same shape `store.ts` uses for `PLAN_CHANGE_EVENT`. It also works below
+ * 480px, where the topbar button is folded into the menu and cannot simply be
+ * clicked by proxy.
+ */
+export const ACCOUNT_OPEN_EVENT = "np:account-open";
+
+export interface AccountOpenDetail {
+  /** Omitted leaves whichever form was last on screen this page-load. */
+  mode?: AuthMode;
+}
 
 export interface SharedAccount {
   store: PlanStore;
@@ -129,4 +146,13 @@ export function mountAccount(signal: AbortSignal, defaultSemesterId: string): vo
   // between — the same shape the theme toggle uses for `data-theme`.
   document.addEventListener(ACCOUNT_CHANGE_EVENT, renderName, { signal });
   button.addEventListener("click", () => panel?.show(), { signal });
+
+  document.addEventListener(
+    ACCOUNT_OPEN_EVENT,
+    (event) => {
+      const detail = (event as CustomEvent<AccountOpenDetail>).detail;
+      panel?.show(detail?.mode);
+    },
+    { signal },
+  );
 }

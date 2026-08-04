@@ -56,6 +56,22 @@ const description =
         id="planner-firstrun-add">Legg dem til direkte.</button
       >
     </p>
+    {/* SOME FRESH VISITORS ARE RETURNING ONES: a plan on their account and no
+        local trace of it, because this is a new browser. Without this the only
+        way back is the topbar's "Profil", which is not where a first-run
+        student is looking.
+
+        A text link, not a button, so the screen keeps one accent and the
+        account stays strictly opt-in (mandate 8). Nothing here gates the
+        planner: dismissing the panel leaves the screen exactly as it was.
+        `plannerApp.ts` drops the line when there is already a session. */}
+    <p class="np-hint planner-firstrun-login-line" id="planner-firstrun-login-line">
+      Har du plan fra før? <button
+        type="button"
+        class="np-navlink planner-firstrun-link"
+        id="planner-firstrun-login">Logg inn.</button
+      >
+    </p>
   </section>
 
   <div class="planner-banner">

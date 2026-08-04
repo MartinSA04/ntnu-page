@@ -53,7 +53,7 @@ import {
 import type { SyncResult, SyncSession } from "../../lib/planner/syncClient.js";
 import { isoWeekNumber, weekdayDates } from "../../lib/planner/weekDates.js";
 import { syncPlanProbe } from "../../lib/planProbe.js";
-import { account, accountPanel, setAccountRepaint } from "../account.js";
+import { ACCOUNT_OPEN_EVENT, account, accountPanel, setAccountRepaint } from "../account.js";
 import { type AddCourseDeps, type AddCourseHandle, mountAddCourse } from "./addCourse.js";
 import { mountBlockPopover, type SessionChoice } from "./blockPopover.js";
 import { renderBoard, syncBoardNow } from "./board.js";
@@ -584,6 +584,25 @@ export async function mountPlannerApp(
   document
     .getElementById("planner-firstrun-add")
     ?.addEventListener("click", () => openAddFromQuestion(), { signal: lifeSignal });
+
+  const firstRunLoginLine = document.getElementById("planner-firstrun-login-line");
+  if (firstRunLoginLine) {
+    // "Har du plan fra før?" is the wrong question for someone already signed
+    // in, so the line is not there for them. Read once per page-load: a session
+    // that begins mid-visit does so THROUGH this line, and by then the screen
+    // it stands on is on its way out anyway.
+    if (sync.session() !== null) firstRunLoginLine.remove();
+    else
+      document.getElementById("planner-firstrun-login")?.addEventListener(
+        "click",
+        () => {
+          document.dispatchEvent(
+            new CustomEvent(ACCOUNT_OPEN_EVENT, { detail: { mode: "login" } }),
+          );
+        },
+        { signal: lifeSignal },
+      );
+  }
 
   const courseSettings = mountCourseSettings(store, lifeSignal);
   // A click in the week asks "what is this session", not "let me edit this

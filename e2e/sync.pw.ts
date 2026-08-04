@@ -60,7 +60,7 @@ test("a plan reaches a second browser context through an account", async ({ brow
   await laptop.getByRole("button", { name: "Profil" }).click();
   await laptop.getByLabel("Navn").fill(navn);
   await laptop.getByLabel("PIN (6 siffer)").fill(pin);
-  await laptop.getByRole("button", { name: "Logg inn" }).click();
+  await laptop.locator("#profile-panel-submit").click();
 
   // `.first()`: a landed plan prints TDT4120 three times over (the week grid,
   // the exam list, the course rail) — once the pulled plan actually repaints,
@@ -76,10 +76,34 @@ test("a wrong PIN is refused and changes nothing locally", async ({ page }) => {
   await page.getByRole("button", { name: "Profil" }).click();
   await page.getByLabel("Navn").fill("finnes-ikke-heller");
   await page.getByLabel("PIN (6 siffer)").fill("000000");
-  await page.getByRole("button", { name: "Logg inn" }).click();
+  await page.locator("#profile-panel-submit").click();
 
   await expect(page.getByText("Fant ingen konto med det navnet.")).toBeVisible();
   expect(await page.evaluate(() => localStorage.getItem("np:sync"))).toBeFalsy();
+});
+
+/**
+ * Some fresh visitors are returning ones. The mechanism: the two cold surfaces
+ * offer a way into the account in LOGIN mode, and neither of them gates the
+ * thing the student came for.
+ */
+test("a returning student can log in from first run and from the landing page", async ({
+  page,
+}) => {
+  await page.goto("/planlegger/");
+  await expect(page.locator("#planner-firstrun")).toBeVisible({ timeout: 15_000 });
+  await page.locator("#planner-firstrun-login").click();
+  await expect(page.locator("#profile-panel-submit")).toHaveText("Logg inn");
+
+  // Nothing was gated: dismissing leaves the screen exactly where it was, with
+  // its own path still the loudest thing on it.
+  await page.keyboard.press("Escape");
+  await expect(page.locator("#planner-firstrun")).toBeVisible();
+  await expect(page.locator("#studieinfo-program-input")).toBeVisible();
+
+  await page.goto("/");
+  await page.locator("#home-login").click();
+  await expect(page.locator("#profile-panel-submit")).toHaveText("Logg inn");
 });
 
 /**
