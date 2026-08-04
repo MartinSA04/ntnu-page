@@ -214,6 +214,44 @@ describe("weekNotes: what the verdict is allowed to claim", () => {
   });
 });
 
+describe("weekNotes: a note is only a control where there is something to control", () => {
+  /**
+   * The "velg din gruppe" line opens that course's picker. `/user/<navn>` has
+   * no picker — the groups are somebody else's to pick — and `/emne/[code]/`
+   * has no plan entry to hold one, so on both it was an underlined, focusable
+   * button that did nothing when pressed.
+   *
+   * Without a handler it becomes a SENTENCE, and drops the imperative with the
+   * affordance: "velg din" is an instruction, and there is nothing to obey it
+   * with.
+   */
+  const unpicked = [
+    state({
+      code: "TMA4400",
+      bundle: bundleFromEntries([
+        entry("Forelesning"),
+        entry("Øving gruppe 1", { dayNumber: 2, startTime: "14:15", endTime: "16:00" }),
+        entry("Øving gruppe 2", { dayNumber: 3, startTime: "14:15", endTime: "16:00" }),
+      ]),
+    }),
+  ];
+
+  test("a surface with a picker gets a button that asks for the pick", () => {
+    const { host } = notesFor(unpicked, true, { onChoiceClick: () => {} });
+    const note = host.find("planner-note-groups")[0];
+    expect(note?.tagName).toBe("BUTTON");
+    expect(note?.textContent).toContain("velg din");
+  });
+
+  test("a surface without one gets a sentence, and no instruction it cannot obey", () => {
+    const { host } = notesFor(unpicked, true);
+    const note = host.find("planner-note-groups")[0];
+    expect(note?.tagName).toBe("P");
+    expect(note?.textContent).toContain("har 2 grupper");
+    expect(note?.textContent).not.toContain("velg din");
+  });
+});
+
 describe("weekNotes: a collision note is a control, and the caller owns its target", () => {
   /**
    * The note cannot flash the sessions itself: the nodes belong to whichever

@@ -771,18 +771,28 @@ export function weekNotes(
   }
 
   // Nothing a narrowing withheld is hidden silently: one line per course we
-  // narrowed on a guess, and clicking it opens that course's picker.
+  // narrowed on a guess, and on a surface that can act it opens that course's
+  // picker.
+  //
+  // WITHOUT a picker to open it is a SENTENCE, not a control, and it drops the
+  // imperative with the affordance: "velg din" is an instruction, and on
+  // `/user/<navn>` the groups are somebody else's to pick. Left as a button it
+  // was underlined, focusable and inert — the same nothing-happens a pressed
+  // control is never allowed to be.
   //
   // Lecture lines come first and are NOT gated on the øving toggle: an
   // unresolved parallel is drawn provisionally, and a provisional pick nobody
   // is told about is a wrong week under a green verdict.
+  const pickable = options.onChoiceClick !== undefined;
   const choiceNotes = [
     ...lectureChoices.map((choice) => ({
       code: choice.code,
       name: choice.name,
       hueVar: choice.hueVar,
-      text: ` har ${choice.count} alternative forelesninger, velg din`,
-      aria: `${choice.code} har ${choice.count} alternative forelesninger. Vi viser én av dem, velg din`,
+      text: ` har ${choice.count} alternative forelesninger${pickable ? ", velg din" : ""}`,
+      aria: pickable
+        ? `${choice.code} har ${choice.count} alternative forelesninger. Vi viser én av dem, velg din`
+        : `${choice.code} har ${choice.count} alternative forelesninger. Vi viser én av dem`,
     })),
     ...[...unpickedGroups].map(([code, row]) => {
       const count = row.keys.size;
@@ -791,8 +801,10 @@ export function weekNotes(
         code,
         name: row.name,
         hueVar: row.hueVar,
-        text: ` har ${count} ${noun}, velg din`,
-        aria: `${code} har ${count} ${noun} du ikke har valgt. Velg din`,
+        text: ` har ${count} ${noun}${pickable ? ", velg din" : ""}`,
+        aria: pickable
+          ? `${code} har ${count} ${noun} du ikke har valgt. Velg din`
+          : `${code} har ${count} ${noun}`,
       };
     }),
   ];
@@ -800,8 +812,14 @@ export function weekNotes(
     const list = el("ul", "planner-notes-list");
     for (const note of choiceNotes) {
       const item = el("li");
-      const link = el("button", "np-hint planner-note-link planner-note-groups");
-      link.type = "button";
+      let link: HTMLElement;
+      if (pickable) {
+        const button = el("button", "np-hint planner-note-link planner-note-groups");
+        button.type = "button";
+        link = button;
+      } else {
+        link = el("p", "np-hint planner-note-groups planner-grid-note");
+      }
       link.append(dot(note.hueVar));
       link.append(el("span", "np-data", note.code));
       link.append(note.text);
