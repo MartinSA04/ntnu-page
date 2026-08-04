@@ -26,6 +26,8 @@ export interface BoardRenderOptions {
   todayNumber?: number | null;
   /** Stagger the rows in on this render — set by a view switch only. */
   animate?: boolean;
+  /** Every parallel and every group — see `CollectOptions`. */
+  showAllGroups?: boolean;
 }
 
 export interface BoardRenderResult {
@@ -86,21 +88,41 @@ export function isRoomCode(room: string): boolean {
   return t.length <= 8 && !/\s/.test(t) && /\d/.test(t);
 }
 
+export interface CollectOptions {
+  /**
+   * Draw every parallel and every group, bypassing `applyGroupSelection`.
+   *
+   * That call is NOT a no-op with no picks and no programme — it still applies
+   * `resolveLectureDefaults`, which keeps one lecture parallel and drops the
+   * rest. Right for a plan; wrong for `/emne/[code]/`, which is the course's
+   * own reference page rather than one student's plan, and whose visitor is
+   * deciding which parallel to register for. Both views read their entries
+   * through this one function, so without the bypass neither can say it.
+   *
+   * `/planlegger/` and `/user/<navn>` never set it: one is the student's own
+   * plan and the other is somebody else's, and both are picks already made.
+   */
+  showAllGroups?: boolean;
+}
+
 /**
  * The sessions this semester's week contains, per course, after the student's
- * group selection — the identical narrowing `renderGrid` does, so the views can
- * never disagree. Exported for `columnGrid.ts`, which must not grow a third
- * copy of this pipeline.
+ * group selection. Exported for `columnGrid.ts`, which must not grow a second
+ * copy of this pipeline — the two views can never disagree about what is in a
+ * week.
  */
 export function collectSessions(
   courses: PlanCourseState[],
   teachingWeeks: number[],
+  options: CollectOptions = {},
 ): SessionEntry[] {
   const out: SessionEntry[] = [];
   for (const state of courses) {
     const timetable = state.bundle?.timetable;
     if (!timetable) continue;
-    const selected = applyGroupSelection(timetable, state.course.groups, state.programCode);
+    const selected = options.showAllGroups
+      ? timetable
+      : applyGroupSelection(timetable, state.course.groups, state.programCode);
     const picked = new Set(state.course.groups ?? []);
     // A course offering exactly ONE øving/lab group offers no choice, so it
     // counts as picked — the same rule the grid and the group picker follow.
@@ -193,7 +215,10 @@ export function renderBoard(
   // The øving/lab layer obeys the SAME toggle as the grid, through the same
   // function. Listing every published lab group because this view has room for
   // them would make the two views disagree about what the week is.
-  const entries = visibleLayer(collectSessions(courses, teachingWeeks), showOthers).shown;
+  const entries = visibleLayer(
+    collectSessions(courses, teachingWeeks, { showAllGroups: options.showAllGroups ?? false }),
+    showOthers,
+  ).shown;
 
   // Collision marking runs through the SAME engine as the grid's — lecture ×
   // lecture only, touching boundaries excluded. A second implementation is how

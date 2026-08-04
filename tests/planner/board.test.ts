@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test } from "vitest";
-import { isRoomCode, renderBoard } from "../../src/components/planner/board.js";
+import { collectSessions, isRoomCode, renderBoard } from "../../src/components/planner/board.js";
 import type { PlanCourseState } from "../../src/components/planner/types.js";
 import { bundleFromEntries, type TimetableEntry } from "../../src/lib/planner/data.js";
 
@@ -143,6 +143,34 @@ describe("isRoomCode", () => {
     // Still not a code: no digit, or long enough to be prose.
     expect(isRoomCode("Auditorium")).toBe(false);
     expect(isRoomCode("Gløshaugen/12")).toBe(false);
+  });
+});
+
+describe("collectSessions: what the two views are allowed to draw", () => {
+  /**
+   * `applyGroupSelection` is not a no-op with no picks and no programme — it
+   * still applies `resolveLectureDefaults`, which keeps ONE lecture parallel.
+   * That is right for a plan and wrong for `/emne/[code]/`, which is the
+   * course's own reference page and must show a visitor every parallel they
+   * could register for. Both surviving views read their entries through this
+   * one function, so without the bypass neither can express it.
+   */
+  const twoParallels = [
+    state({
+      code: "TMA4400",
+      bundle: bundleFromEntries([
+        entry("Forelesningsparallell 1"),
+        entry("Forelesningsparallell 2", { dayNumber: 2 }),
+      ]),
+    }),
+  ];
+
+  test("a plan draws the default parallel, not both", () => {
+    expect(collectSessions(twoParallels, [34, 35])).toHaveLength(1);
+  });
+
+  test("showAllGroups draws every parallel", () => {
+    expect(collectSessions(twoParallels, [34, 35], { showAllGroups: true })).toHaveLength(2);
   });
 });
 

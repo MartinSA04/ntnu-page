@@ -68,6 +68,8 @@ export interface ColumnRenderOptions {
    * that drew today's wash.
    */
   dates?: Map<number, number>;
+  /** Every parallel and every group — see `CollectOptions` in board.ts. */
+  showAllGroups?: boolean;
 }
 
 export interface ColumnRenderResult {
@@ -376,7 +378,10 @@ export function renderColumnGrid(
   options: ColumnRenderOptions = {},
 ): ColumnRenderResult {
   const entries = mergeSessions(
-    visibleLayer(collectSessions(courses, teachingWeeks), showOthers).shown,
+    visibleLayer(
+      collectSessions(courses, teachingWeeks, { showAllGroups: options.showAllGroups ?? false }),
+      showOthers,
+    ).shown,
   );
   frame.replaceChildren();
   if (entries.length === 0) return { blockCount: 0 };
