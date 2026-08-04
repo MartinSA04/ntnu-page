@@ -189,7 +189,7 @@
   2026-08-03 three design changes broke ~10 of ~94 browser tests and 0 of 987
   unit tests, and every broken one was of this kind — they were cut rather than
   re-pinned. **Test mechanism instead**: does it survive a ClientRouter swap,
-  does the plan round-trip through the hash, does CLS stay in budget, do
+  does a shared plan round-trip through the account, does CLS stay in budget, do
   targets clear 24 px, did a fixture go missing. Those caught four real defects
   in the same run. Before adding a browser test, ask what its failure would
   mean; if the answer is not "something is broken in a way you cannot see by
@@ -223,6 +223,20 @@
   provisions a namespace from the `SYNC` binding with no Cloudflare account
   needed, so `mise run e2e` round-trips real accounts through the real
   handler and stays offline.
+- **`/user/<navn>` — three things a reasonable person would undo.** (a) The
+  page is kept out of search by the `X-Robots-Tag` header, and **`robots.txt`
+  must never carry `Disallow: /user/`**: a blocked crawl means Google never
+  reads the noindex directive and can still list the bare URL, which is the
+  exact failure the header avoids. (b) It **still unfurls richly**, because
+  indexers and unfurlers are different crawlers — Slack, iMessage and Discord
+  read the `og:` tags the worker rewrites in and do not consult
+  `X-Robots-Tag`. Both hold on the same response, on purpose. (c) The worker
+  asks the asset server for the DIRECTORY (`/user/`), never for
+  `/user/index.html`: the asset server answers the explicit file with a 307 to
+  the directory, and handing that redirect on lands the browser at `/user/` —
+  a path the route does not match — so the page arrives with no noindex
+  header, no unfurl rewrite and no name to look up. A unit test pins what it
+  asks for rather than what came back.
 - `wrangler.jsonc` binds `SYNC` to the placeholder id `local-sync-dev` for
   local dev only — `wrangler dev` (no `--remote`) accepts a placeholder with
   no Cloudflare account, which is what the previous bullet's local-KV e2e run

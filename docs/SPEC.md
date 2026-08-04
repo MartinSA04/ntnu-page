@@ -44,6 +44,7 @@ Astro static site (dist/)  ──served by──▶  Cloudflare Worker (Workers 
 | `src/layouts/Layout.astro`, `src/components/{ThemeToggle,Icon}.astro`, `src/lib/{favicon,pageLifecycle,planProbe,sitemap}.ts` | page shell: persistent nav, footer, theme, lifecycle, the plan probe |
 | `src/pages/planlegger/index.astro`, `src/components/planner/*`, `src/lib/planner/*` | **the app** — see below |
 | `src/pages/{index,404}.astro`, `src/pages/emner/index.astro`, `src/pages/emne/[code].astro`, `src/pages/sitemap.xml.ts`, `src/components/site/*` | landing, catalog pages and their islands |
+| `src/pages/user/index.astro` | the one shell every `/user/<navn>` is rewritten to — a shared plan, read-only |
 | `crawler/*.mjs`, `data/*.json`, `public/data/search-index.json`, `.github/workflows/crawl.yml` | crawler |
 | `worker/src/*.ts`, `worker/tsconfig.json` | API worker |
 | `e2e/*.pw.ts`, `playwright.config.ts` | browser suite |
@@ -57,7 +58,7 @@ Astro static site (dist/)  ──served by──▶  Cloudflare Worker (Workers 
 Reading order for a change:
 
 ```
-store.ts        the plan's shape + persistence + the hash grammar
+store.ts        the plan's shape + persistence
    │
 data.ts         fetch + shape: search-index rows, per-course bundles,
    │             indexForSemester() (the exam-window filter)
@@ -103,10 +104,10 @@ plannerApp.ts    orchestration: owns the DOM ids in planlegger/index.astro,
   the *active* semester while keeping manual adds. `onPlanChange(cb)` fires on
   storage events, on the custom `ntnu:plan-change` event and on the page's own
   writes, so every surface reading the plan stays live without polling.
-  `parsePlanHash`/`formatPlanHash` live here, and `hashchange` is listened for
-  so a pasted link updates an already-open tab. **No legacy or versioned hash
-  is read** — an old `#v2;…` link fails to parse `semesterId` and is treated
-  as absent, by design (PRODUCT.md §6 has the grammar).
+  **There is no hash grammar here any more** — it was deleted with the shared
+  URL it encoded (PRODUCT.md §6). Storage is the only source of a plan; what
+  gets handed to someone else is `/user/<navn>`, built by
+  `publicPlan.ts` from the same state.
 
 - **`data.ts`** — `PlannerIndex` / `PlannerIndexCourse` (the typed shape of
   `search-index.json`), `fetchCourseBundle`, and
@@ -159,8 +160,7 @@ plannerApp.ts    orchestration: owns the DOM ids in planlegger/index.astro,
   line. `LayoutSlot.cluster` is also the renderer's partition, so "what
   overlaps what" has exactly one implementation.
 
-- **`groups.ts`** — `groupKey(name)` (a slug that never contains `~` —
-  load-bearing for the hash grammar), `groupOptions`, `defaultLectureKeys`,
+- **`groups.ts`** — `groupKey(name)`, `groupOptions`, `defaultLectureKeys`,
   `applyGroupSelection`. **Lecture entries are not all alternatives**:
   "Forelesning 1" Tuesday and "Forelesning 2" Monday are complementary
   sessions, while four "Forelesning 1 <programmes>" are one session offered
@@ -505,9 +505,12 @@ is writing and cannot read what is written.
 | Route | Behaviour |
 | --- | --- |
 | `POST /api/sync/:navn` | Claim. `201 {version:1}`; `409` if the name is taken; `413` if `blob` exceeds the bound. |
-| `GET /api/sync/:navn` | Requires `x-np-auth`. `200 {blob, version, updatedAt}` (`Vary: x-np-auth`); `401` on mismatch; `404` if unclaimed. |
-| `PUT /api/sync/:navn` | Write. `200 {version}`; `409 {error:"stale", blob, version}` if the caller's `version` is behind the server's — the stale-tab guard, not an offline merge. An optional `authKey` field re-credentials the record (a PIN change): the version check runs first, so a stale write leaves the old credential untouched. |
+| `GET /api/sync/:navn` | Requires `x-np-auth`. `200 {blob, version, updatedAt, public}` (`Vary: x-np-auth`); `401` on mismatch; `404` if unclaimed. `public` rides along because the flag is per ACCOUNT and the client's copy of it is per device. |
+| `PUT /api/sync/:navn` | Write. `200 {version}`; `409 {error:"stale", blob, version}` if the caller's `version` is behind the server's — the stale-tab guard, not an offline merge. An optional `authKey` field re-credentials the record (a PIN change): the version check runs first, so a stale write leaves the old credential untouched. An optional `plain` field carries the readable copy, stored **only** if the record is already `public`. |
 | `DELETE /api/sync/:navn` | Delete everything. `204`, no confirmation. |
+| `PUT /api/sync/:navn/public` | Turn sharing on, with `{plain}` to serve immediately. `200 {published:true}`. Requires `x-np-auth`. |
+| `DELETE /api/sync/:navn/public` | Turn sharing off: clears `plain` and the flag, leaves `blob` alone. `204`. Requires `x-np-auth`. |
+| `GET /api/plan/:navn` | **No credential** — that is what being public means. `200 {plain, updatedAt}`, or `404` for unclaimed, unshared and malformed alike. |
 
 The credential travels in the `x-np-auth` header on `GET`/`PUT`/`DELETE`;
 `POST` carries the initial `authKey` in its JSON body instead, since
@@ -530,10 +533,37 @@ KV key: `user:<navn>`. Record shape:
   "version": 7,           // monotonic, bumped by the writer
   "updatedAt": "2026-08-02T09:14:00Z",
   "blob": "…",            // AES-GCM ciphertext of the synced payload
-  "public": false,         // always false today — read only by the unbuilt publishing plan
-  "plain": null             // always null today — ditto
+  "public": false,         // the share switch — a standing state on the account
+  "plain": null             // the readable copy, set ONLY while public (see below)
 }
 ```
+
+**Sharing: `/user/<navn>`.** `public` is a standing flag, and while it is set
+every ordinary `PUT` refreshes `plain` — so the page is a **live mirror** of
+the plan the owner is working on, not a snapshot of the moment they turned it
+on. It shows the semester they are planning (`np:lastSemester`). `plain` is
+plaintext because the page is read by someone who has no key, and `blob`
+remains the private source of truth and never reaches `/api/plan/:navn`. The
+gate is the *record's* own `public`, never the caller's word for it: a private
+account gets no readable copy in KV whatever a client sends, and a stale tab
+still sending `plain` after sharing was turned off cannot put it back. `plain`
+is bounded like `blob`.
+
+The copy is its own narrow shape (`src/lib/planner/publicPlan.ts`) rather than
+the stored plan: semester + label, optional programme, and per course
+`code`/`name`/`credits`/`version`/`groups`. **Dropped courses are excluded.**
+
+`/user/<navn>` is a **worker rewrite** to one static shell (`/user/index.html`)
+— there is no per-account page to build. The worker asks the asset server for
+the DIRECTORY, not for `index.html`, which it answers with a 307 to the
+directory; handing that redirect on lands the browser at `/user/`, a path the
+route does not match, and the page arrives with no header, no rewrite and no
+name. The response carries `X-Robots-Tag: noindex, nofollow` and an
+`HTMLRewriter` pass fills the shell's `og:` tags per name (`worker/src/unfurl.ts`).
+Those coexist because **indexers and unfurlers are different crawlers**: Slack,
+iMessage and Discord read `og:` tags and do not consult `X-Robots-Tag`. Never
+add `Disallow: /user/` to `robots.txt` — a blocked crawl means the noindex is
+never read and the bare URL can still be listed.
 
 `blob` is bounded at **512 KB** (`MAX_BLOB_CHARS`), checked before the KV
 read on every claim and write, so an oversized body costs nothing but the
@@ -617,6 +647,18 @@ Islands are **vanilla `<script>` modules** (no framework) fetching relative
   the sentence "Kan ikke legges til i planen …". **No year tabs** — upstream
   has one timetable snapshot per course, and three tabs implying a choice that
   isn't there was worse than one honest view.
+- **`/user/<navn>`** — a shared plan, read-only. ONE static shell
+  (`src/pages/user/index.astro`) that the worker rewrites every `/user/*`
+  request to, so the name comes from `location.pathname` rather than an Astro
+  param — there is no param and no per-account page to build. It fetches
+  `/api/plan/<navn>`, draws the week through the planner's own `renderGrid`
+  (`data-static`, as the course page's week is), lists the courses, and ends in
+  "Lag din egen plan". `src/components/planner/publicPlan.ts` **must never
+  import `PlanStore` or touch `localStorage`** — a shared link shows you
+  someone else's plan and leaves yours alone — and `tests/planner/publicPlan.test.ts`
+  asserts that against the module's source rather than trusting the comment.
+  The height reservation is a `data-reserve` lease released on every terminal
+  state, including the empty and failed ones.
 - **`/404`** — states the reason, states the crawl date (DR-8), and offers
   exactly two honest ways back. It has no search form.
 - **`/sitemap.xml`** — the only route into the 5 470 course pages: nothing

@@ -8,12 +8,12 @@ order. Do not re-litigate what PRODUCT.md §10 already decided against.
 trivially editable, shareable — works end to end against live data, with the
 collision engine, exam list, credit line and provenance all correct. The
 design direction is settled (`docs/DESIGN.md`), the week has two views, and
-the registration deadline is on screen. Accounts and sync have landed too,
-opt-in and never a prerequisite. What has *not* been started is the growth
-loop past a share button, the whole decide-loop, and publishing
-(`/user/<navn>`) — specified in
-`docs/superpowers/specs/2026-08-02-accountless-sync-design.md` §5, the next
-plan now that accounts exist, but not yet built.
+the registration deadline is on screen. Accounts and sync have landed, opt-in
+and never a prerequisite, and so has sharing: `/user/<navn>` is a live
+read-only mirror of a shared plan, the `#v2;…` hash is deleted, and a received
+link is something you look at rather than something that overwrites your plan.
+What has *not* been started is the rest of the growth loop — the return
+trigger and any instrumentation at all — and the whole decide-loop.
 
 ---
 
@@ -25,7 +25,7 @@ Grouped by what it does, not by when it landed.
 asymmetry, plus the two measured classifier fixes that took zero-lecture
 course-terms from 35 % to 20 % (bucket-as-title via a closed list; a *samling*
 read as the teaching it is). Version threading through state, every API call
-and the hash. Exam dates from the catalog, kont filtered by the client-side
+and the shared copy. Exam dates from the catalog, kont filtered by the client-side
 ISO-date join against the scraped occasion. The exam window narrowed to the
 planned semester. The null-aware credit total with off-semester exclusions and
 a non-green overload. The two-year catalog union, so a course taught last year
@@ -60,11 +60,15 @@ carrying course and room only, a tinted øving layer, an all-day row for
 drop-in windows, ISO week dating with a mønsteruke outside the teaching
 period, and a whole-days width law expressed in CSS.
 
-**Sharing, as far as it goes.** The hash round-trips including non-ASCII
-direction codes; `hashchange` applies a pasted link live; a "Del lenke" button
-copies the link or invokes the native share sheet; and the plan an incoming link
-overwrote is offered back, because the destructive half of §3 flow 5 was live
-while the merge half was not.
+**Sharing, as one mechanism.** A standing `public` flag on the account, turned
+on in the profile panel or by pressing Del, makes `/user/<navn>` a live
+read-only mirror: every sync push refreshes the readable copy, turning it off
+clears it, and the page draws the owner's week through the planner's own
+renderer. A recipient **views** it — nothing of theirs is written, which is why
+"Behold min egen" and the whole three-action interstitial are gone. The link
+carries a real unfurl (`kari deler en plan · 5 emner · 28,5 sp · Høst 2026`)
+while `X-Robots-Tag: noindex` keeps it out of search. The `#v2;…` hash grammar
+is deleted outright: the URL is no longer the plan.
 
 **Accounts and sync.** An opt-in account — name plus a 6-digit PIN — carries
 a student's plan between phone, PC and iPad; nothing nags until the topbar's
@@ -102,8 +106,9 @@ Called out here so the next session doesn't re-derive them from a diff.
   unpublished term carries its own note — rather than the dedicated layout
   DR-2 describes, where the grid degrades to exam-clash and campus-spread.
 - **Provenance** covers `/planlegger/`; `/emne/[code]/` has none.
-- **Shared-plan handoff** has no unfurl title and no merge action; see
-  Phase 3.
+- **Shared-plan handoff**: the artifact has no return trigger; see Phase 3.
+  The merge action is *killed*, not pending — a link that writes nothing to
+  the recipient needs no merge (PRODUCT §4 flow 5, D1).
 - **Code-first entry** exists inside the planner, not on the landing page.
 - **Filters**: campus ships; language and assessment do not.
 
@@ -112,18 +117,19 @@ Called out here so the next session doesn't re-derive them from a diff.
 ## Phase 3 — the growth loop (not started)
 
 The shared plan is PRODUCT's north-star metric and the only path for an
-arrival that didn't google a course code. The share button made it *possible*
-to send a plan; this phase makes a received one worth opening.
+arrival that didn't google a course code. Publishing landed 2026-08-04, so a
+sent plan is now a page worth opening; what is left is what brings someone
+back to it, and knowing whether any of it works.
 
-1. **A real unfurl title**, computed from the hash plus the search index with
-   no fetch: *"Kari deler en plan: 5 emner · 28,5 sp · Høst 2026"*. Cheapest
-   item here and the one that decides whether a pasted link gets clicked.
-2. **The merge action.** Today an incoming link replaces, with an undo. The
-   third action — union of `courses[]`, deduped, with a preview of incoming
-   codes — is what PRODUCT §4 flow 5 actually specifies.
+1. ~~A real unfurl title~~ — **done** with publishing: the worker rewrites the
+   `og:` tags per name and the page stays out of search at the same time.
+2. ~~The merge action~~ — **killed**, not deferred. It existed because an
+   incoming link overwrote the recipient's plan; a link that writes nothing
+   needs no merge (PRODUCT §4 flow 5, D1).
 3. **The return trigger in the shared artifact**, fired when
    `timetablePublished` or the exam window is about to flip. This is the only
-   thing that pulls a handed-off user back.
+   thing that pulls a handed-off user back, and `/user/<navn>` is now a real
+   surface to put it on.
 4. **Metrics wiring.** Nothing is instrumented today. Pick the mechanism —
    edge-worker aggregate counters is the leading candidate — and cover shares
    created and opened, the fork funnel, deadline-window return rate, and
@@ -132,11 +138,12 @@ to send a plan; this phase makes a received one worth opening.
 
 ## Phase 4 — the decide-loop (not started)
 
-Everything here depends on the shortlist tier landing in the hash first. It is
-additive to `courses[]` and needs no hash version (PRODUCT §6).
+Everything here depends on the shortlist tier landing in the stored plan
+first. It is additive to `courses[]` — in storage and in the shared copy —
+and needs no version token anywhere (PRODUCT §6).
 
-1. **Shortlist tier**: committed vs. considering, in localStorage and the
-   hash, with ghost blocks on the week, promote/demote, and a header reading
+1. **Shortlist tier**: committed vs. considering, in localStorage and in the
+   shared copy, with ghost blocks on the week, promote/demote, and a header reading
    "X av 30 sp · +Y sp under vurdering".
 2. **Inline decision facts** in choice-group rows: clash-against-committed,
    assessment form, and the grade shape. The season-split figure already

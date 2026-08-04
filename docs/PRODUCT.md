@@ -194,20 +194,34 @@ handoff (5)**. The second is the growth loop, not plumbing.
    context, and all prose is demoted into one disclosure. We stop competing
    with ntnu.no on encyclopedic depth we would lose on.
 
-5. **Shared-plan handoff (CO-PRIMARY, growth loop).** A received plan URL is
-   a first-class object:
-   - **Static-tier first paint** — codes, names and credits render from the
-     hash plus the search index *before any API fetch*.
-   - **Real unfurl** — the link preview reads *"Kari deler en plan: 5 emner ·
-     28,5 sp · Høst 2026"*, derived from the hash with no fetch. *(Not
-     built — Phase 3.)*
-   - **Three actions:** **"Bruk denne"** (replace) · **"Slå sammen"** (union,
-     deduped, with a preview of incoming codes) · **"Behold min egen"**.
-     Binary destroy-or-ignore is not acceptable. *(Today: an incoming link
-     replaces, and the plan it overwrote is offered back as an undo. The
-     merge action is Phase 3.)*
-   - The URL is a group's **re-editable canonical plan** — the same link,
-     re-opened after edits, is the current plan.
+5. **Shared-plan handoff (CO-PRIMARY, growth loop).** There is **one sharing
+   mechanism**: the student turns sharing on for their account, and the link
+   they send is `/user/<navn>`. A recipient **views** it.
+   - **A link is read, never adopted.** The page shows someone else's week and
+     touches nothing of the viewer's — no storage write, no prompt about
+     replacing their plan, no undo to offer because nothing was taken. If they
+     want that plan they build their own, which is five clicks, and the CTA at
+     the foot of the page is where that starts. The three actions this flow
+     used to specify (*"Bruk denne"* / *"Slå sammen"* / *"Behold min egen"*)
+     are **gone with the `#v2;…` hash**, along with the silent replace that
+     made them necessary.
+   - **The page is live.** `public` is a standing flag on the account, every
+     sync push refreshes the readable copy, and turning it off takes the page
+     down and clears the copy. This is what "a group's **re-editable canonical
+     plan**" finally means: the same link, re-opened after the owner edits, is
+     the current plan. It shows the semester the owner is planning.
+   - **Real unfurl.** The link preview reads *"kari deler en plan · 5 emner ·
+     28,5 sp · Høst 2026"*, rewritten into the page by the worker.
+     `X-Robots-Tag: noindex` keeps it out of search at the same time —
+     unfurlers and indexers are different crawlers, which is what lets both
+     hold at once.
+   - **Sharing needs the account**, and Del on an account-less plan offers
+     signup rather than failing. That does not violate §1's "never a
+     prerequisite": the rule is about *using the planner*, and the planner is
+     untouched.
+   - **Honest limit, on screen rather than buried:** noindex stops Google and
+     Bing. It does not stop a link forwarded into a group chat. The toggle
+     says so, and the display name need not be the student's real one.
 
 6. **Livability check.** Day-load strip and free-day sentence;
    semester-edge sentence; **whole-semester conflict notes always shown**
@@ -228,8 +242,8 @@ handoff (5)**. The second is the growth loop, not plumbing.
 
 ## 5. IA
 
-**Four pages, plus a sitemap. Persistent nav. Search is a mode, not a
-destination.**
+**Four pages, plus a shared-plan page and a sitemap. Persistent nav. Search is
+a mode, not a destination.**
 
 - `/` — **landing.** The student's own next session and room when a plan
   exists (this is the proof: the real thing, not a drawing of it), a
@@ -239,6 +253,10 @@ destination.**
 - `/emner/` — **find courses.** Real deep search and a search-engine landing.
 - `/emne/[code]/` — **the fork point.** Plan-aware, with a clash sentence
   under the CTA.
+- `/user/<navn>` — **a shared plan, read-only.** Not in the nav and not in the
+  sitemap: it is reached by being sent one. It shows a week and nothing else —
+  no device list, no write access, and no prompt about the viewer's own plan,
+  because their plan was never touched.
 - `/sitemap.xml` — the only route into the ~5 470 built course pages;
   nothing server-rendered links to them.
 
@@ -283,7 +301,7 @@ page-local only: `?q=` on `/emner/` (search prefill, round-tripped through
 
 ---
 
-## 6. State and hash grammar
+## 6. State, storage, and the shared copy
 
 ```ts
 interface PlanState {
@@ -301,44 +319,30 @@ interface PlanState {
 }
 ```
 
-**Hash grammar — unversioned, no compat parse** (mandate 10):
+**THE URL IS NOT THE PLAN.** The `#v2;…` hash grammar that used to live here
+is **deleted** (§4 flow 5) — `/planlegger/` is one address whatever is in the
+plan, and the thing a student hands over is `/user/<navn>`. Nothing had ever
+been sent through the hash (the project was not connected to Cloudflare), so
+there is no back-compat shim and none may be added. Two consequences worth
+stating rather than rediscovering: bookmarking and browser tab-sync stop
+carrying the plan, which is acceptable *only* because the account does that job
+properly now; and D13's "breaks shared-URL parity" veto (§10) is void.
 
-```
-#<semesterId>;<programme>;<courses>
-```
+**Storage** is the source of truth, split three ways so semesters stay
+independent: `np:profile` (the programme choice, global), `np:plans` (the
+course list, keyed per `semesterId`), `np:lastSemester` (session restore). The
+account mirrors those three, encrypted (`docs/SPEC.md`).
 
-- `semesterId` — `/^\d{2}[hv]$/i`, e.g. `26h`. Whether the *site* can plan
-  that id is the caller's problem, not the grammar's: an id we have no
-  plannable data for falls back to the current semester with a visible note.
-  It never fails to parse.
-- `programme` — `-` (none) or `code[.cohort[.direction]]`. `cohort` must be a
-  plausible 4-digit year or the **whole** programme segment is rejected while
-  the rest of the hash still parses. That gate is what stops a bare course
-  list being misread as a programme with a one-digit cohort.
-- `courses` — comma-separated `[-|+]code[.version][~groupKey…]`. No prefix =
-  active programme course; `-` = dropped programme course; `+` = manual add.
-  `.version` is omitted when it equals the default `"1"`. Each trailing
-  `~groupKey` is a selected parallel or øving group, repeatable. Malformed
-  course tokens are dropped rather than failing the whole parse.
-- **Encoding is load-bearing.** Every field is `encodeURIComponent`-escaped
-  on write and decoded on read. That leaves the grammar's own punctuation
-  untouched while escaping `; , / %` and every non-ASCII byte, so `Ø`/`Å`/`Æ`
-  in a direction code (`BSPL26-V-GJØVIK`) round-trips exactly. A malformed
-  escape is returned verbatim rather than failing the whole parse.
-- `hashchange` is listened for, so pasting a shared link into an already-open
-  tab applies it — ignoring the hash the page just wrote itself.
-- **The hash wins over storage** when it carries a real plan. That is right —
-  a link that did not show its own plan would be pointless — but it is
-  destructive, so the overwritten plan is kept in memory and offered back.
-
-**Storage** is split three ways so semesters stay independent:
-`np:profile` (the programme choice, global), `np:plans` (the course list,
-keyed per `semesterId`), `np:lastSemester` (session restore).
+**The shared copy** is a separate, narrower shape — semester, programme, and
+per course `code`/`name`/`credits`/`version`/`groups`. Dropped courses are
+excluded: a course the owner said no to is not part of the plan they are
+sharing. It is plaintext (the page is read by someone with no key), it is
+refreshed by every push while sharing is on, and a private account never has
+one stored at all.
 
 **Adding a field is additive.** Phase 4's shortlist `tier` is a new
-`courses[]` property and needs no version token. A change that is *not*
-additive — restructuring the courses segment's grammar itself — would need
-one, and mandate 10 would have to be lifted first.
+`courses[]` property, in storage and in the shared copy, and needs no version
+token anywhere.
 
 ---
 
@@ -405,7 +409,7 @@ Each names the data reality that forces it.
 - **DR-4 — Version threading is first-class and correctness-critical.**
   Course timetables and schedules default to `version: "1"`; a re-versioned
   course otherwise shows the **wrong grid and exam data**. `version` is in
-  `PlanState`, in every API call, and in the hash. 293 of 5 470 courses are
+  `PlanState`, in every API call, and in the shared copy. 293 of 5 470 courses are
   not version `"1"`. The grade join is bare-prefix aggregation, because
   `GradeRow.courseCode` lives in a suffixed string space.
 
@@ -490,18 +494,18 @@ admit-gaps — and they outrank the nouns when something has to give.
 | Live, null-aware credit total (DR-6), off-semester excluded, overload not green | **Shipped** |
 | Plan-aware clash preview **before** add — **on `/emne/[code]/` only** | **Shipped, deliberately narrowed** |
 | Provenance / staleness line on every composed verdict (DR-8), recomposed after fetches land | **Shipped on `/planlegger/`**; absent on `/emne/[code]/` |
-| Version threading (DR-4) through state, every API call and the hash | **Shipped** |
+| Version threading (DR-4) through state, every API call and the shared copy | **Shipped** |
 | Dateless-exam state ("dato ikke satt") | **Shipped** |
 | Off-semester add handling and notices (DR-10) | **Shipped** |
 | Season-split grade trend, rendered *in a decision context* | **Shipped on `/emne/[code]/`** — see the constraints below |
 | Registration deadline on screen | **Shipped** — `deadline.ts`; a passed deadline says nothing at all |
 | Two-year catalog union so a course taught last year still gets a page | **Shipped** |
-| Shared plan as a first-class object | **Partial** — the hash round-trips including non-ASCII, `hashchange` applies a pasted link live, a "Del lenke" button copies or invokes the native share sheet, and an overwritten plan is offered back. No unfurl title and no merge action yet |
+| Shared plan as a first-class object | **Shipped** — `/user/<navn>` is a live read-only mirror behind a standing account flag, Del copies it or invokes the native share sheet, and the link unfurls richly while staying out of search. The return trigger is Phase 3; the merge action is killed (D1) |
 | Code↔name pairing and code-first entry | **Partial** — the planner's add modal is code-first; the landing page does not offer a paste entry |
 | Pre-publish as a *primary* mode (DR-2) | **Partial** — an unpublished semester is an informed choice, but there is no dedicated pre-publish layout |
 | Decide-loop inline facts in choice-group rows | **Not built** — Phase 4 |
 | Plain-language swap delta sentence on promotion. *This is the product.* | **Not built** — Phase 4 |
-| Shortlist tier (committed vs. considering), candidates in the hash from day one | **Not built** — Phase 4 |
+| Shortlist tier (committed vs. considering), candidates in the shared copy from day one | **Not built** — Phase 4 |
 | Commit summary: copyable code list + "bekreft i Studentweb" | **Not built** |
 | Language / campus / assessment filters | **Partial** — campus ships as ~4 city facets on `/emner/`; language and assessment are not built |
 | Mobile day-agenda restructure | **Not built** — the Liste view and the week's width law cover much of the need; the agenda itself is still open |
@@ -552,21 +556,21 @@ Do not re-litigate or silently re-add these.
 
 | # | Decision | What was rejected, and why |
 | --- | --- | --- |
-| D1 | **The shared plan is a co-primary, first-class object** — static first paint, real unfurl, merge/replace/keep. | Filing "URL is the state" under plumbing, and a binary replace-or-ignore interstitial. It is the only growth path for a non-search arrival, and binary destroy-or-ignore nukes an hour of work. |
+| D1 | **The shared plan is a co-primary, first-class object** — a live page at `/user/<navn>` with a real unfurl. It is an artefact to VIEW, not to adopt. | Filing "URL is the state" under plumbing. **Amended 2026-08-04:** the "merge/replace/keep" half is retired with the hash — a link that writes to the recipient's storage is what made three actions necessary, and a link that only shows you a week needs none of them. The growth argument is unchanged: this is the only path for a non-search arrival. |
 | D2 | **No compare matrix, no `?mot=` compare page, no substitution engine.** Keep the shortlist tier and one plain-language swap-delta sentence. | A four-axis compare table with ghost blocks and swap logic. Electives are decided on one or two facts by a twice-a-year user; the *sentence* carries the value, not the table. |
 | D3 | **"Left sure" is a design principle; instrument shares, funnel and return rate.** | "Did the student leave sure?" as the success metric — unobservable on an account-less static site, and self-flattering. |
 | D4 | **The conflict engine is lecture-only** (DR-1). | Øving-group clustering with alternative-avoidance. Unbuildable on our data; ships confidently-wrong answers. |
 | D5 | **The moat is "the join that admits its gaps"; provenance is a MUST surface.** | "We own the row" as self-sufficient. A wrong composite from a stale scrape is *worse* than four correct single-column tools. |
 | D6 | **Exam dates from catalog `ExamDate`, not scraped exam text** (DR-3). | Driving the list from the scrape. Its date is null for hjemmeeksamen, `dateText` is prose, `occasion` is free text. |
-| D7 | **Version is first-class in state, every API call and the hash; the grade join is bare-prefix aggregation** (DR-4). | A `{code, name}` plan state and a bare-code hash. Re-versioned courses would show the wrong grid and exam. |
+| D7 | **Version is first-class in state, every API call and the shared copy; the grade join is bare-prefix aggregation** (DR-4). | A `{code, name}` plan state that drops the version on the way out. Re-versioned courses would show the wrong grid and exam — to their owner, and to whoever they share the plan with. |
 | D8 | **The study plan never asserts "group satisfied"; show the credit total plus verbatim prose** (DR-5). | "Commit at 30 sp" / "survivors satisfy the group". There is no choose-N field; the count is free text only. |
 | D9 | **Pre-publish is a value-carrying primary mode** (DR-2). | Treating pre-publish as a fallback. `timetablePublished` is false through most of the elective window. |
 | D10 | **Persistent nav: Planlegger + Emner, on every page. `/emne/[code]` is a fork point, not an encyclopedia.** | A single layout-dependent nav pill, and a course page built as research/encyclopedia. The loudest surfaces were the least differentiated; the IA must obey the positioning. |
 | D11 | **Grade stats only in a decision context.** The fork point *is* one, so the season-split figure ships there under §9's constraints. | Browsable grade trivia: a sortable column, a cross-course leaderboard, hue-tinted bars, a derived difficulty score, or any figure divorced from the fork CTA. That is DBH-mirror parasitism. |
 | D12 | **The deadline and "next plannable term" are MUST** (DR-9). | Leaving the deadline off-screen — it was in zero of six flows — and "next term" as an invisible default. |
-| D13 | **No week-scrubber, no personal fixed blocks, no assessment-mix workload count.** | All three were SHOULD/COULD in an early draft. A during-semester concern in a before-semester tool; breaks shared-URL parity; wrong side of no-fabricated-scores. **A block-level popover is explicitly in scope** and is not covered by this row. |
+| D13 | **No week-scrubber, no personal fixed blocks, no assessment-mix workload count.** | All three were SHOULD/COULD in an early draft. A during-semester concern in a before-semester tool; ~~breaks shared-URL parity~~; wrong side of no-fabricated-scores. **The parity argument is void as of 2026-08-04** — no shared URL carries state any more (§6). The row STANDS on its remaining grounds; reviving either feature means making that case on its own merits, not citing this note. **A block-level popover is explicitly in scope** and is not covered by this row. |
 | D14 | **`/studier/` and `/studier/[code]/` are deleted outright, no redirects.** | Migrating them, or sequencing entrances before deletion. Pre-launch breakage is acceptable (mandate 10); the surviving logic moved into the planner's studieinfo dialog and its study-plan panel. |
-| D15 | **The hash grammar is unversioned, with no compat parse** (mandate 10). | A frozen `#v2;…` grammar with a v1-compat branch. Suspended, not abandoned: it resumes when there are external links worth not breaking. |
+| D15 | **There is no hash grammar** — it is deleted, not versioned (mandate 10). | Retired 2026-08-04, having previously read "unversioned, with no compat parse". The `#v2;…` grammar is gone outright (§6), so there is nothing left to version or to write a compat branch for. The mandate-10 reasoning it rested on — nothing has ever been sent, so nothing can break — is exactly what licensed deleting it. |
 
 ---
 
