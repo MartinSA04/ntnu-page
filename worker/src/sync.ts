@@ -242,9 +242,20 @@ export async function handleSyncGet(
   if (name === null) return json({ error: "bad_name" }, 400);
   const found = await authorise(name, authKey, deps);
   if (found instanceof Response) return found;
-  return json({ blob: found.blob, version: found.version, updatedAt: found.updatedAt }, 200, {
-    Vary: "x-np-auth",
-  });
+  // `public` rides along because the toggle is per ACCOUNT and the client's copy
+  // of it is per device: without this, a laptop that logged in after the phone
+  // turned sharing on would never refresh the readable copy, and one that
+  // turned it off would leave the other believing it was still on.
+  return json(
+    {
+      blob: found.blob,
+      version: found.version,
+      updatedAt: found.updatedAt,
+      public: found.public === true,
+    },
+    200,
+    { Vary: "x-np-auth" },
+  );
 }
 
 export async function handleSyncPut(

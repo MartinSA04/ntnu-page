@@ -13,9 +13,13 @@
  * Anything visual, focus-related or CSS-dependent belongs in `e2e/*.pw.ts`.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { shouldPullOnVisible } from "../../src/components/planner/plannerApp.js";
+import { shareTarget, shouldPullOnVisible } from "../../src/components/planner/plannerApp.js";
 import { PLAN_CHANGE_EVENT, type StorageLike } from "../../src/lib/planner/store.js";
-import { createSyncClient, type SyncClient } from "../../src/lib/planner/syncClient.js";
+import {
+  createSyncClient,
+  type SyncClient,
+  type SyncSession,
+} from "../../src/lib/planner/syncClient.js";
 
 class FakeClassList {
   private set = new Set<string>();
@@ -2726,6 +2730,7 @@ describe("shouldPullOnVisible", () => {
     version: 1,
     deviceId: "d",
     label: "Mac · Safari",
+    public: false,
     devices: [],
   };
 
@@ -2739,5 +2744,43 @@ describe("shouldPullOnVisible", () => {
 
   it("does nothing at all when signed out", () => {
     expect(shouldPullOnVisible(null, false)).toBe(false);
+  });
+});
+
+/**
+ * Del, and what it does about the two things `/user/<navn>` needs. Both gaps
+ * are closed by the button rather than refused by it — the plan is shareable
+ * or it is one press away from being so.
+ */
+describe("shareTarget", () => {
+  const session: SyncSession = {
+    navn: "martin",
+    authKey: "a",
+    encKeyRaw: "b",
+    version: 3,
+    deviceId: "d",
+    label: "Mac · Safari",
+    public: false,
+    devices: [],
+  };
+
+  it("sends a signed-out student to signup rather than failing", () => {
+    expect(shareTarget(null)).toEqual({ kind: "signup" });
+  });
+
+  it("turns sharing on for an account that has not shared before", () => {
+    expect(shareTarget(session)).toEqual({
+      kind: "share",
+      path: "/user/martin",
+      needsSharing: true,
+    });
+  });
+
+  it("is a plain copy once the account is already shared", () => {
+    expect(shareTarget({ ...session, public: true })).toEqual({
+      kind: "share",
+      path: "/user/martin",
+      needsSharing: false,
+    });
   });
 });

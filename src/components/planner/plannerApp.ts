@@ -349,6 +349,26 @@ function semesterLabel(semester: SemesterSummary | undefined): string {
   return year !== null ? `${season} ${year}` : semester.name;
 }
 
+/**
+ * What Del does, given the session it finds.
+ *
+ * There is ONE sharing mechanism: `/user/<navn>`, which needs an account and
+ * needs sharing turned on. Both gaps are things the button closes rather than
+ * refuses — a disabled control that will not say why is the failure this
+ * replaces. `needsSharing` is what tells the handler to flip the account's own
+ * switch on the way past; when it is already on, Del is a pure copy.
+ */
+export function shareTarget(
+  session: SyncSession | null,
+): { kind: "signup" } | { kind: "share"; path: string; needsSharing: boolean } {
+  if (session === null) return { kind: "signup" };
+  return {
+    kind: "share",
+    path: `/user/${encodeURIComponent(session.navn)}`,
+    needsSharing: session.public !== true,
+  };
+}
+
 /* `semesterShort` — the `H26` / `V27` form — is DELETED with its one caller.
    It existed for the plan title's third part, and the title stopped carrying a
    semester when the bar grew a `<select>` for it (DESIGN §9). Everything that
@@ -1376,10 +1396,14 @@ export async function mountPlannerApp(
   }
 
   /**
-   * Hand the plan over. `syncHash` has kept `location` current all along, so
-   * this is only the missing verb — the Web Share sheet where the platform has
-   * one (a phone, which is where a plan actually gets sent), the clipboard
-   * everywhere else.
+   * Hand the plan over — the Web Share sheet where the platform has one (a
+   * phone, which is where a plan actually gets sent), the clipboard everywhere
+   * else.
+   *
+   * What travels is `/user/<navn>`, which needs an account and needs sharing to
+   * be on. Del on an account-less plan therefore offers SIGNUP rather than
+   * failing, and that does not violate "never a prerequisite" (PRODUCT §1): the
+   * rule is about using the planner, and the planner is untouched.
    *
    * The button reports what happened and then goes back to what it does, which
    * is the whole of the feedback: a copy has no other visible consequence, and
@@ -1413,7 +1437,25 @@ export async function mountPlannerApp(
   }
 
   async function sharePlan(): Promise<void> {
-    const url = location.href;
+    const target = shareTarget(sync.session());
+    if (target.kind === "signup") {
+      // The one thing sharing does need. Said by opening the door rather than
+      // by disabling the button and leaving the student to guess why.
+      accountPanel()?.show();
+      return;
+    }
+    if (target.needsSharing) {
+      const turnedOn = await sync.setPublic(true);
+      if (!turnedOn.ok) {
+        linkNote =
+          turnedOn.reason === "no_plan"
+            ? "Legg til minst ett emne før du deler planen."
+            : "Kunne ikke dele planen. Prøv igjen.";
+        renderLinkNote();
+        return;
+      }
+    }
+    const url = new URL(target.path, location.origin).href;
     // The plan's own name plus the term it is for. The title element stopped
     // carrying the semester when the bar grew a control for it, and the share
     // sheet is the one place that reads this string with no such control beside
@@ -1438,7 +1480,9 @@ export async function mountPlannerApp(
       // the button: it needs a sentence, and a sentence in a toolbar button is
       // what made this control resize its neighbours in the first place.
       // States what failed and what to do next, in ink, without apology (§7).
-      linkNote = "Kunne ikke kopiere lenken. Den står i adressefeltet.";
+      // The URL is no longer in the address bar (that was the hash's doing), so
+      // the sentence has to carry it.
+      linkNote = `Kunne ikke kopiere lenken. Den er ${url}`;
       renderLinkNote();
       return;
     }

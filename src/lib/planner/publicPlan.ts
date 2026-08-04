@@ -11,7 +11,16 @@
  * `parsePublicPlan` runs in the viewer's on load, and neither touches storage.
  */
 
+import { semesterYear } from "./schedule.js";
 import { activeCourses, DEFAULT_VERSION, type PlanState } from "./store.js";
+
+/** `"26h"` → `"Høst 2026"`. Derived, not looked up: every reader of a shared
+ *  plan has the id and none of them has `semesters.json`. */
+export function semesterLabelFor(semesterId: string): string {
+  const year = semesterYear(semesterId);
+  if (year === null) return "";
+  return `${/h$/i.test(semesterId.trim()) ? "Høst" : "Vår"} ${year}`;
+}
 
 /** One course of a shared plan. `name` is always set — the code is the fallback. */
 export interface PublicCourse {
@@ -46,12 +55,9 @@ export interface PublicPlan {
  * use. A course the owner said no to is not part of the plan they are sharing,
  * and shipping it would put a ghost in someone else's copy of their week.
  */
-export function buildPublicPlan(
-  plan: PlanState,
-  options: { semesterLabel?: string; credits?: (code: string) => number | null } = {},
-): PublicPlan {
+export function buildPublicPlan(plan: PlanState): PublicPlan {
   const courses: PublicCourse[] = activeCourses(plan).map((course) => {
-    const credits = options.credits?.(course.code) ?? course.credits ?? null;
+    const credits = course.credits ?? null;
     return {
       code: course.code,
       name: course.name === "" ? course.code : course.name,
@@ -60,9 +66,10 @@ export function buildPublicPlan(
       ...(course.groups && course.groups.length > 0 ? { groups: [...course.groups] } : {}),
     };
   });
+  const semesterLabel = semesterLabelFor(plan.semesterId);
   return {
     semesterId: plan.semesterId,
-    ...(options.semesterLabel ? { semesterLabel: options.semesterLabel } : {}),
+    ...(semesterLabel === "" ? {} : { semesterLabel }),
     ...(plan.program
       ? {
           program: {

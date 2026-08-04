@@ -26,8 +26,10 @@ const PLAN: PlanState = {
 
 describe("buildPublicPlan", () => {
   it("carries what the week needs to draw", () => {
-    const published = buildPublicPlan(PLAN, { semesterLabel: "Høst 2026" });
+    const published = buildPublicPlan(PLAN);
     expect(published.semesterId).toBe("26h");
+    // Derived from the id, not looked up: no reader of a shared plan — not the
+    // page, not the unfurler — has `semesters.json` to hand.
     expect(published.semesterLabel).toBe("Høst 2026");
     expect(published.program).toEqual({ code: "MTDT", name: "Datateknologi", cohort: 2026 });
     // The version threads through (DR-4) and so do the owner's group picks —
@@ -43,18 +45,22 @@ describe("buildPublicPlan", () => {
     expect(buildPublicPlan(PLAN).courses.map((c) => c.code)).not.toContain("IT2805");
   });
 
-  it("prefers live catalog credits over the study plan's own figure", () => {
-    const published = buildPublicPlan(PLAN, {
-      credits: (code) => (code === "TDT4120" ? 10 : null),
+  it("carries the credits the plan actually holds, and omits the ones it does not", () => {
+    const published = buildPublicPlan({
+      semesterId: "26h",
+      courses: [
+        { code: "A", name: "A", version: "1", source: "manual", credits: 7.5 },
+        { code: "B", name: "B", version: "1", source: "manual" },
+      ],
     });
-    expect(published.courses[0]?.credits).toBe(10);
-    expect(published.courses[1]?.credits).toBe(7.5);
+    expect(published.courses[0]?.credits).toBe(7.5);
+    expect(published.courses[1]).not.toHaveProperty("credits");
   });
 });
 
 describe("parsePublicPlan", () => {
   it("round-trips a built plan", () => {
-    const published = buildPublicPlan(PLAN, { semesterLabel: "Høst 2026" });
+    const published = buildPublicPlan(PLAN);
     expect(parsePublicPlan(JSON.stringify(published))).toEqual(published);
   });
 

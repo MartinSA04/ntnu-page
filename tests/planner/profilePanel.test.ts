@@ -190,6 +190,7 @@ function fakeSyncClient(overrides: Partial<SyncClient> = {}): SyncClient {
     push: async () => ({ ok: true }),
     fetchRemote: async () => ({ ok: false, reason: "no_session" }),
     applyRemote: () => {},
+    setPublic: async () => ({ ok: true }),
     logout: () => {},
     ...overrides,
   };

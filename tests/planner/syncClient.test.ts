@@ -594,3 +594,145 @@ describe("resolveLogin", () => {
     expect(devices.filter((d) => d.label === "iPhone")).toHaveLength(1);
   }, 60_000);
 });
+
+/**
+ * The share toggle (§5). `/user/<navn>` is a LIVE mirror, so the two facts
+ * worth pinning are that a private account never puts a readable copy on the
+ * wire, and that a public one refreshes it with every ordinary push.
+ */
+describe("sharing", () => {
+  const SEEDED = {
+    "np:profile": '{"program":{"code":"MTDT","name":"Datateknologi","cohort":2026}}',
+    "np:plans": '{"26h":[{"code":"TDT4120","name":"Algoritmer","version":"1","source":"manual"}]}',
+    "np:lastSemester": "26h",
+  };
+
+  /** Signs up against a fake server, returning the client and the call log. */
+  async function signedIn(seed: Record<string, string> = SEEDED): Promise<{
+    client: SyncClient;
+    calls: Array<{ url: string; init?: RequestInit }>;
+    storage: ReturnType<typeof fakeStorage>;
+    setRemotePublic: (value: boolean) => void;
+  }> {
+    const storage = fakeStorage(seed);
+    const calls: Array<{ url: string; init?: RequestInit }> = [];
+    let version = 1;
+    let stored = "";
+    let remotePublic = false;
+    const fetchMock = vi.fn(async (url: string, init?: RequestInit) => {
+      calls.push({ url, init });
+      const method = init?.method ?? "GET";
+      if (method === "POST") {
+        stored = JSON.parse(String(init?.body)).blob as string;
+        return new Response(JSON.stringify({ version }), { status: 201 });
+      }
+      if (method === "PUT" && url.endsWith("/public")) {
+        remotePublic = true;
+        return new Response(JSON.stringify({ published: true }), { status: 200 });
+      }
+      if (method === "DELETE") {
+        remotePublic = false;
+        return new Response(null, { status: 204 });
+      }
+      if (method === "PUT") {
+        stored = JSON.parse(String(init?.body)).blob as string;
+        version += 1;
+        return new Response(JSON.stringify({ version }), { status: 200 });
+      }
+      return new Response(JSON.stringify({ blob: stored, version, public: remotePublic }), {
+        status: 200,
+      });
+    }) as unknown as typeof fetch;
+
+    const client = createSyncClient({ storage, fetch: fetchMock });
+    await client.signup("martin", "482913", "Mac · Safari");
+    return {
+      client,
+      calls,
+      storage,
+      setRemotePublic: (value) => {
+        remotePublic = value;
+      },
+    };
+  }
+
+  it("starts private — signing up shares nothing", async () => {
+    const { client } = await signedIn();
+    expect(client.session()?.public).toBe(false);
+  });
+
+  it("uploads the readable copy with the switch, so the link works immediately", async () => {
+    const { client, calls } = await signedIn();
+    expect(await client.setPublic(true)).toEqual({ ok: true });
+    expect(client.session()?.public).toBe(true);
+
+    const toggle = calls.at(-1);
+    expect(toggle?.url).toBe("/api/sync/martin/public");
+    expect(toggle?.init?.method).toBe("PUT");
+    const sent = JSON.parse(JSON.parse(String(toggle?.init?.body)).plain as string) as {
+      semesterId: string;
+      semesterLabel: string;
+      program: { code: string };
+      courses: Array<{ code: string }>;
+    };
+    expect(sent.semesterId).toBe("26h");
+    expect(sent.semesterLabel).toBe("Høst 2026");
+    expect(sent.program.code).toBe("MTDT");
+    expect(sent.courses.map((c) => c.code)).toEqual(["TDT4120"]);
+  }, 30_000);
+
+  it("keeps the copy live: every push carries the current plan while sharing is on", async () => {
+    const { client, calls, storage } = await signedIn();
+    await client.setPublic(true);
+
+    // An ordinary edit, pushed the ordinary way — no second round trip and no
+    // separate republish step. This is what makes `/user/<navn>` a mirror.
+    storage.map.set(
+      "np:plans",
+      '{"26h":[{"code":"TMA4100","name":"Matematikk 1","version":"3","source":"manual"}]}',
+    );
+    await client.push();
+    const push = calls.at(-1);
+    expect(push?.init?.method).toBe("PUT");
+    expect(push?.url).toBe("/api/sync/martin");
+    const plain = JSON.parse(String(push?.init?.body)).plain as string;
+    expect(JSON.parse(plain).courses).toEqual([
+      { code: "TMA4100", name: "Matematikk 1", version: "3" },
+    ]);
+  }, 30_000);
+
+  it("a private account's push is ciphertext only — no readable copy on the wire", async () => {
+    const { client, calls } = await signedIn();
+    await client.push();
+    const body = String(calls.at(-1)?.init?.body);
+    expect(body).not.toContain("TDT4120");
+    expect(body).not.toContain("plain");
+  }, 30_000);
+
+  it("stops sharing, and the next push carries nothing readable again", async () => {
+    const { client, calls } = await signedIn();
+    await client.setPublic(true);
+    expect(await client.setPublic(false)).toEqual({ ok: true });
+    expect(calls.at(-1)?.init?.method).toBe("DELETE");
+    expect(client.session()?.public).toBe(false);
+
+    await client.push();
+    expect(String(calls.at(-1)?.init?.body)).not.toContain("TDT4120");
+  }, 30_000);
+
+  it("learns from the account when another device turns sharing off", async () => {
+    const { client, setRemotePublic } = await signedIn();
+    await client.setPublic(true);
+    // The phone turned it off. This tab is told by the next authorised read,
+    // which is the only channel there is.
+    setRemotePublic(false);
+    await pullNow(client);
+    expect(client.session()?.public).toBe(false);
+  }, 30_000);
+
+  it("refuses to share a device with no plan rather than serving an empty page", async () => {
+    const { client } = await signedIn({ "np:plans": "{}" });
+    expect(await client.setPublic(true)).toEqual({ ok: false, reason: "no_plan" });
+    expect(client.session()?.public).toBe(false);
+  }, 30_000);
+});

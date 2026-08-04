@@ -759,6 +759,28 @@
   font-size: var(--text-sm);
 }
 
+/* The share switch (§5). A standing state on the account, so it reads as a
+   section with its own heading rather than as one more button in the action
+   run beside "Bytt PIN" — those act once, this one is either on or off and the
+   panel is where you find out which. */
+.profile-panel-sharing {
+  display: flex;
+  flex-direction: column;
+  align-items: start;
+  gap: var(--space-2);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--border);
+}
+
+/* The link itself, above the button that produced it: it is the thing being
+   handed over, so it gets the data face and breaks rather than overflowing a
+   390 px panel. */
+.profile-panel-share-url {
+  margin: 0;
+  overflow-wrap: anywhere;
+  color: var(--muted);
+}
+
 /* §6 step 5's collision question. The facts sit above the buttons, one block
    per semester the two sides disagree about — the choice replaces the whole
    plan map, so a single line about one semester described less than the button

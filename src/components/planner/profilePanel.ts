@@ -646,6 +646,8 @@ export function mountProfilePanel(deps: ProfilePanelDeps): ProfilePanelHandle {
     }
     account.append(list);
 
+    account.append(renderSharing(session));
+
     const actions = el("div", "profile-panel-actions");
     // §4 / §6 step 8: the only way to drop a device — no per-device control
     // exists in the list above, on purpose. There is no per-device
@@ -665,6 +667,59 @@ export function mountProfilePanel(deps: ProfilePanelDeps): ProfilePanelHandle {
 
     body.append(account);
     dialog.append(body);
+  }
+
+  /**
+   * The share switch (§5) — a standing state on the ACCOUNT, not a per-send
+   * action, which is why it lives here beside the device list rather than
+   * behind the planner's Del button. Del uses it; this is where it is turned
+   * off again, and the only place that says what it means.
+   *
+   * The honest limit is on screen rather than buried: `noindex` stops Google
+   * and Bing, and stops nothing else. A link forwarded into a group chat is a
+   * link that works.
+   */
+  function renderSharing(session: SyncSession): HTMLElement {
+    const box = el("div", "profile-panel-sharing");
+    box.append(el("h3", "profile-panel-heading", "Delt lenke"));
+
+    const hint = el("p", "np-hint profile-panel-hint", "");
+    const button = el("button", "np-btn profile-panel-share-toggle") as HTMLButtonElement;
+    button.type = "button";
+
+    const link = el("p", "np-data profile-panel-share-url");
+
+    function paint(): void {
+      const on = deps.sync.session()?.public === true;
+      button.textContent = on ? "Ikke del lenger" : "Del planen min";
+      link.textContent = on ? `${location.origin}/user/${session.navn}` : "";
+      link.hidden = !on;
+      hint.textContent = on
+        ? "Alle med lenken kan se studieprogram, emner, timeplan og rom. Siden viser planen slik den er nå, og oppdaterer seg når du endrer den. Den er skjult for Google, men en lenke som er delt videre virker fortsatt."
+        : "Da får du en lenke andre kan åpne. Alle med lenken kan se studieprogram, emner, timeplan og rom.";
+    }
+    paint();
+
+    button.addEventListener("click", () => {
+      const on = deps.sync.session()?.public === true;
+      button.disabled = true;
+      void deps.sync.setPublic(!on).then((result) => {
+        button.disabled = false;
+        if (result.ok) {
+          paint();
+          return;
+        }
+        // `no_plan` is not a failure of the feature — there is nothing to share
+        // yet — so it gets its own sentence rather than the generic retry.
+        hint.textContent =
+          result.reason === "no_plan"
+            ? "Legg til minst ett emne før du deler planen."
+            : reasonCopy(result.reason);
+      });
+    });
+
+    box.append(link, button, hint);
+    return box;
   }
 
   /**

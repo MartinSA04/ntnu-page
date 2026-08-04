@@ -10,12 +10,15 @@
  * editing session to reconcile. A push either lands or reports that it didn't.
  */
 
+import { buildPublicPlan, type PublicPlan } from "./publicPlan.js";
 import { semesterYear } from "./schedule.js";
 import {
   activeCourses,
   LAST_SEMESTER_KEY,
   PLANS_STORAGE_KEY,
   type PlanCourse,
+  type PlanProgram,
+  type PlanState,
   PROFILE_STORAGE_KEY,
   type StorageLike,
 } from "./store.js";
@@ -52,6 +55,17 @@ export interface SyncSession {
   version: number;
   deviceId: string;
   label: string;
+  /**
+   * Sharing is on: `/user/<navn>` serves a readable copy of this plan, and
+   * every push has to refresh it (see `pushInternal`) — that is what makes the
+   * page a live mirror rather than a snapshot of the moment it was turned on.
+   *
+   * Mirrored from the server on every authorised read, not just written here,
+   * because the toggle is per ACCOUNT and this field is per device: turning
+   * sharing off on a phone must not leave a laptop believing it is still on
+   * and quietly re-publishing every edit.
+   */
+  public: boolean;
   /**
    * The last-known registry, cached here so the profile panel can render it
    * without a round trip and so a push between pulls still has "the list it
@@ -121,6 +135,50 @@ function plansOf(payload: SyncPayload): Record<string, PlanCourse[]> {
     return parsed as Record<string, PlanCourse[]>;
   } catch {
     return {};
+  }
+}
+
+/**
+ * The readable copy that goes out beside the ciphertext while sharing is on —
+ * built from THE SAME payload the push is about, so the two cannot describe
+ * different plans.
+ *
+ * It shows the semester the owner is planning (`lastSemester`), which is the
+ * only honest reading of "a live copy of my plan": a stored per-semester choice
+ * would be a second thing to keep in sync and a second thing to get wrong.
+ * Returns `null` when the payload holds no usable plan at all, and the caller
+ * then sends no `plain` rather than an empty one.
+ */
+export function publicPlanOf(payload: SyncPayload): PublicPlan | null {
+  const semesterId = payload.lastSemester.trim();
+  if (semesterId === "") return null;
+  const courses = plansOf(payload)[semesterId];
+  const plan: PlanState = {
+    semesterId,
+    courses: Array.isArray(courses) ? courses : [],
+    ...(programOf(payload) ?? {}),
+  };
+  return buildPublicPlan(plan);
+}
+
+/** The programme out of the payload's own `np:profile` string, or nothing. */
+function programOf(payload: SyncPayload): { program: PlanProgram } | null {
+  try {
+    const parsed: unknown = JSON.parse(payload.profile);
+    if (typeof parsed !== "object" || parsed === null) return null;
+    const program = (parsed as { program?: unknown }).program;
+    if (typeof program !== "object" || program === null) return null;
+    const row = program as Record<string, unknown>;
+    if (typeof row.code !== "string" || typeof row.name !== "string") return null;
+    return {
+      program: {
+        code: row.code,
+        name: row.name,
+        cohort: typeof row.cohort === "number" ? row.cohort : 0,
+      },
+    };
+  } catch {
+    return null;
   }
 }
 
@@ -269,6 +327,7 @@ function isValidSession(value: unknown): value is SyncSession {
   if (typeof value !== "object" || value === null) return false;
   const s = value as Record<string, unknown>;
   return (
+    typeof s.public === "boolean" &&
     typeof s.navn === "string" &&
     typeof s.authKey === "string" &&
     typeof s.encKeyRaw === "string" &&
@@ -298,6 +357,8 @@ function isValidSession(value: unknown): value is SyncSession {
 export interface RemoteSnapshot {
   payload: SyncPayload;
   version: number;
+  /** The account's share flag as the server holds it — see `SyncSession.public`. */
+  public: boolean;
 }
 
 export type FetchResult = { ok: true; snapshot: RemoteSnapshot } | { ok: false; reason: string };
@@ -338,6 +399,18 @@ export interface SyncClient {
    * accident from the app.
    */
   applyRemote(snapshot: RemoteSnapshot): void;
+  /**
+   * Turns sharing on or off for the whole account (§5).
+   *
+   * On: uploads the readable copy with the same call, so `/user/<navn>` is
+   * serving something the moment the switch flips rather than at the next
+   * push. Off: the server clears `plain` outright — nobody may read it, so it
+   * has no business staying in the record.
+   *
+   * The state lives on the ACCOUNT, so this is not a per-device preference:
+   * every other device learns about it on its next authorised read.
+   */
+  setPublic(next: boolean): Promise<SyncResult>;
   logout(): void;
 }
 
@@ -355,6 +428,8 @@ interface PendingLogin {
   label: string;
   version: number;
   remote: SyncPayload;
+  /** The account's share flag, read with the blob and carried onto the session. */
+  public: boolean;
   /**
    * Minted here rather than in `resolveLogin`, so this device keeps ONE
    * identity across a retried resolve: the id is what `mergeDevice` matches on
@@ -379,7 +454,13 @@ export function createSyncClient(deps: { storage: StorageLike; fetch: typeof fet
     if (raw === null) return null;
     try {
       const parsed: unknown = JSON.parse(raw);
-      return isValidSession(parsed) ? parsed : null;
+      // `public` arrived after the first sessions were written. Defaulting it
+      // rather than failing validation means a session that predates sharing
+      // stays signed in, private — which is both the safe answer and the true
+      // one, since its account has never been made public either.
+      const filled =
+        typeof parsed === "object" && parsed !== null ? { public: false, ...parsed } : parsed;
+      return isValidSession(filled) ? filled : null;
     } catch {
       return null;
     }
@@ -456,10 +537,19 @@ export function createSyncClient(deps: { storage: StorageLike; fetch: typeof fet
     };
     const payload = collectSyncable(deps.storage, self, session.devices);
     const blob = await seal(session.encKeyRaw, JSON.stringify(payload));
+    // The readable copy rides along ONLY while sharing is on. A private
+    // account's push carries ciphertext and nothing else — the server refuses
+    // to store a `plain` for one either (`handleSyncPut`), so this is the near
+    // half of a rule enforced at both ends.
+    const publicPlan = session.public ? publicPlanOf(payload) : null;
     const res = await safeFetch(`/api/sync/${encodeURIComponent(session.navn)}`, {
       method: "PUT",
       headers: { "content-type": "application/json", "x-np-auth": session.authKey },
-      body: JSON.stringify({ blob, version: session.version }),
+      body: JSON.stringify({
+        blob,
+        version: session.version,
+        ...(publicPlan ? { plain: JSON.stringify(publicPlan) } : {}),
+      }),
     });
     if (res === null) return { ok: false, reason: "failed" };
     if (res.status === 409) {
@@ -482,7 +572,7 @@ export function createSyncClient(deps: { storage: StorageLike; fetch: typeof fet
     });
     if (res === null) return { ok: false, reason: "failed" };
     if (!res.ok) return authFailure(res.status);
-    const body = (await res.json()) as { blob: string; version: number };
+    const body = (await res.json()) as { blob: string; version: number; public?: boolean };
     // Re-checked AFTER the round trip, exactly as `applyRemoteInternal` does
     // and for the same reason: 401-as-revocation calls `writeSession(null)`,
     // so a concurrent push's 401 can empty `session` while this GET is on the
@@ -495,7 +585,11 @@ export function createSyncClient(deps: { storage: StorageLike; fetch: typeof fet
     if (plain === null) return { ok: false, reason: "undecryptable" };
     return {
       ok: true,
-      snapshot: { payload: JSON.parse(plain) as SyncPayload, version: body.version },
+      snapshot: {
+        payload: JSON.parse(plain) as SyncPayload,
+        version: body.version,
+        public: body.public === true,
+      },
     };
   }
 
@@ -515,6 +609,10 @@ export function createSyncClient(deps: { storage: StorageLike; fetch: typeof fet
     writeSession({
       ...session,
       version: snapshot.version,
+      // The server's answer about sharing wins over this device's memory of
+      // it: the toggle is per account, and a phone that turned it off is not
+      // going to tell this tab any other way.
+      public: snapshot.public,
       devices: mergeDevice(snapshot.payload.devices, self),
     });
   }
@@ -548,6 +646,9 @@ export function createSyncClient(deps: { storage: StorageLike; fetch: typeof fet
         version,
         deviceId: id,
         label,
+        // A new account is PRIVATE. Sharing is something the student turns on,
+        // never something signing up did for them.
+        public: false,
         devices: payload.devices,
       });
       return { ok: true };
@@ -564,7 +665,7 @@ export function createSyncClient(deps: { storage: StorageLike; fetch: typeof fet
       if (res.status === 429) return { ok: false, reason: "too_many_attempts" };
       if (!res.ok) return { ok: false, reason: "failed" };
 
-      const body = (await res.json()) as { blob: string; version: number };
+      const body = (await res.json()) as { blob: string; version: number; public?: boolean };
       const plain = await open(keys.encKeyRaw, body.blob);
       // Decryption failing with a server-accepted authKey means the record was
       // written under a different encKey — not reachable today, but better a
@@ -586,6 +687,7 @@ export function createSyncClient(deps: { storage: StorageLike; fetch: typeof fet
           label,
           version: body.version,
           remote,
+          public: body.public === true,
           deviceId: crypto.randomUUID(),
         };
         return { ok: false, reason: "collision", local, remote };
@@ -600,6 +702,10 @@ export function createSyncClient(deps: { storage: StorageLike; fetch: typeof fet
         version: body.version,
         deviceId: id,
         label,
+        // Adopted from the account, not assumed: this device may be the second
+        // one on an account that is already shared, and its pushes have to keep
+        // the readable copy current from the first edit.
+        public: body.public === true,
         devices: mergeDevice(remote.devices, { id, label, lastSeen: new Date().toISOString() }),
       });
       return { ok: true };
@@ -636,6 +742,7 @@ export function createSyncClient(deps: { storage: StorageLike; fetch: typeof fet
         version: p.version,
         deviceId: p.deviceId,
         label: p.label,
+        public: p.public,
         devices: mergeDevice(p.remote.devices, self),
       });
       if (choice === "local") {
@@ -705,6 +812,39 @@ export function createSyncClient(deps: { storage: StorageLike; fetch: typeof fet
     fetchRemote: fetchRemoteInternal,
 
     applyRemote: applyRemoteInternal,
+
+    async setPublic(next) {
+      if (!session) return { ok: false, reason: "no_session" };
+      const url = `/api/sync/${encodeURIComponent(session.navn)}/public`;
+      const headers = { "content-type": "application/json", "x-np-auth": session.authKey };
+
+      if (!next) {
+        const res = await safeFetch(url, { method: "DELETE", headers });
+        if (res === null) return { ok: false, reason: "failed" };
+        if (!res.ok) return authFailure(res.status);
+        writeSession({ ...session, public: false });
+        return { ok: true };
+      }
+
+      // The copy goes up WITH the switch, not on the next push: a link handed
+      // over in the same gesture has to lead somewhere immediately, and an
+      // account that is public with nothing to serve answers 404 — the same
+      // thing a wrong name answers.
+      const plan = publicPlanOf(collectSyncable(deps.storage));
+      if (plan === null) return { ok: false, reason: "no_plan" };
+      const res = await safeFetch(url, {
+        method: "PUT",
+        headers,
+        body: JSON.stringify({ plain: JSON.stringify(plan) }),
+      });
+      if (res === null) return { ok: false, reason: "failed" };
+      if (!res.ok) return authFailure(res.status);
+      // Re-read: `authFailure`'s 401 branch can have emptied the session while
+      // this request was on the wire (same rule as `fetchRemoteInternal`).
+      if (!session) return { ok: false, reason: "no_session" };
+      writeSession({ ...session, public: true });
+      return { ok: true };
+    },
 
     logout() {
       writeSession(null);
