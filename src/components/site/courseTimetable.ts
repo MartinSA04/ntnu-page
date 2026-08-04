@@ -1,9 +1,9 @@
 /**
  * Timetable island for `/emne/[code]/`.
  *
- * It renders the *same* ruled week the planner renders, by handing the fetched
- * entries to `components/planner/grid.ts` as a one-course plan — one renderer,
- * not two.
+ * It renders the *same* week the planner renders, by handing the fetched
+ * entries to `components/planner/weekView.ts` as a one-course plan — one
+ * controller, one pair of views, not a second of either.
  *
  * Three honesty rules ride along:
  *   - upstream has exactly one timetable snapshot per course, so there is one
@@ -106,7 +106,7 @@ function termRank(term: string): number {
  * The entries the week may draw — one semester's, not the fetched year's.
  *
  * `?year=YYYY` answers with the WHOLE catalog year: EXPH0300 returns 84
- * entries, 51 spring and 33 autumn. Handing all of them to `renderGrid` drew a
+ * entries, 51 spring and 33 autumn. Handing all of them to the week drew a
  * Trondheim autumn lecture beside an Ålesund spring lecture as a simultaneous
  * pair, because `layout.ts` clusters on time alone and is week-blind.
  * `/planlegger/` has always narrowed the same way before drawing.

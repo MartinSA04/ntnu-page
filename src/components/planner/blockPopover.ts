@@ -26,7 +26,7 @@
  * to leave off.
  */
 import { dayName, el, icon } from "./dom.js";
-import { type BlockClash, type BlockDetail, isDropIn } from "./grid.js";
+import { type BlockClash, type BlockDetail, isDropIn } from "./weekNotes.js";
 
 /** Desktop breakpoint — matches the stylesheet's own bottom-sheet cutoff. */
 const DESKTOP_QUERY = "(min-width: 60rem)";

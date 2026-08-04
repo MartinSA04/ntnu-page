@@ -123,7 +123,7 @@ function renderEmpty(listHost: HTMLElement, message: string | null): ExamRenderR
 
 /**
  * Renders a message where the list would be — the exam half of
- * `renderGridMessage`. For what the CALLER knows and the list cannot work out:
+ * `renderWeekMessage`. For what the CALLER knows and the list cannot work out:
  * a semester the shipped index does not cover at all, where "Ingen
  * eksamensdatoer funnet ennå" would be a finding reported by something that
  * never looked. Pass no message to just empty the host.

@@ -1,22 +1,27 @@
-/* UKEPLAN — geometry and ink for the weekly spread rendered by
-   `src/components/planner/grid.ts`.
+/* UKEPLAN — geometry and ink for the two week views, KOLONNER
+   (`columnGrid.ts`) and LISTE (`board.ts`), and for the frame all three
+   surfaces mount them into through `weekView.ts`.
 
-   A stylesheet rather than a page's scoped block because TWO surfaces render
-   the same week with the same renderer: `/planlegger/` and `/emne/[code]/`. An
-   Astro page's `:global()` rules ship only with that page, so a second copy is
-   how the two drift apart.
+   A stylesheet rather than a page's scoped block because THREE surfaces draw
+   the same week: `/planlegger/`, `/emne/[code]/` and `/user/<navn>`. An Astro
+   page's `:global()` rules ship only with that page, so a second copy is how
+   they drift apart.
 
-   Geometry contract with grid.ts: `.planner-grid` is a stack of day ROWS, each
-   `[spine | field]`, with an hour ruler above. Time runs horizontally, so a
-   bar's `left`/`width` are percentages of the day's visible span and its `top`
-   is its lane. The ruler's ticks use the same percentages — there is no second
-   place where a time becomes a position.
+   Geometry contract with columnGrid.ts: `.planner-cols` is a grid of
+   `[rail | one track per weekday]`. Time runs DOWN, so a block's `top`/`height`
+   are percentages of the drawn span and its `left`/`width` are its lane's share
+   of the day. The rail's hour figures use the same percentages — there is no
+   second place where a time becomes a position. The width law those tracks obey
+   is expressed in CSS, further down, and nowhere else.
+
+   A THIRD, TRANSPOSED geometry (RADER — days as rows, time across) used to live
+   here. It was removed as a view first and deleted outright once the two
+   surfaces still drawing it moved onto these; do not reintroduce it.
 
    What is NOT here: the exam list, which belongs to /planlegger/ alone. The
-   scroll-edge mask IS here, so the two surfaces cannot disagree about it, and
-   both halves are live: the planner sets [data-scroll] from `syncGridScroll`
-   and the course page from `syncScroll`, each also writing the fade depths the
-   mask reads (`setScrollFade`). */
+   scroll-edge mask IS here, so the three surfaces cannot disagree about it, and
+   every half is live — `weekView`'s `syncScroll` sets [data-scroll] and writes
+   the fade depths the mask reads (`setScrollFade`). */
 
 /* No .np-frame, and no .np-ruled: the week is not a spreadsheet. The hour is
    what a student reads a time off, so the hour is the only line, drawn on this
@@ -36,20 +41,8 @@
      Wide enough for "08:00" plus its tick: the rail prints whole times, not
      bare hours, so it is an axis rather than a column of numbers. */
   --planner-rail: 3.6rem;
-  /* RADER's day spine, on the frame for the same reason: the mask below has to
-     know how wide the column that stays put is. */
-  --planner-spine: clamp(5.5rem, 11vw, 9.5rem);
-  /* RADER's row metrics, here for that reason a third time: the reservation
-     below computes the height of a week that does not exist yet. */
-  --planner-lane-h: 34px;
-  --planner-bar-h: 28px;
-  --planner-band-h: 18px;
-  /* The space above the first bar and below the last thing in the row. A token
-     because the row's height and every child's offset are computed from it, and
-     they have to agree or the row is not centred. */
-  --planner-row-pad: 8px;
-  /* KOLONNER's two, here for the same reason: the frame reserves that view's
-     height before that view exists.
+  /* KOLONNER's two, on the frame because it reserves that view's height before
+     that view exists.
 
      52px an hour, not 72. A student reads a timetable to see the SHAPE of the
      week, and at 72 an eight-hour day was 576px of column — taller than the
@@ -66,50 +59,43 @@
   margin-bottom: var(--space-2);
   overflow-x: auto;
   overflow-y: hidden;
-  /* THE WEEK'S PLACE, HELD FROM FIRST PAINT.
-     `renderSkeleton` (grid.ts) stops the loading→data reflow; it cannot hold
-     the space between FIRST PAINT and its own mount, and that step alone was
-     0.52 of /planlegger/'s 0.61 CLS on a phone.
-
-     So the frame reserves what the skeleton resolves to, in the tokens the
-     skeleton is built from. `SKELETON_DAYS` (5) and the ruler's 22px are
-     duplicated from grid.ts — this is the other end of that contract.
-
-     Deliberately a few px UNDER the measured settle: the residual should be a
-     small DOWNWARD nudge rather than the week snapping upward from under a
-     thumb. Re-measure before changing any number here.
-
-     This is RADER's height and RADER's only — right for every frame that can
-     only draw RADER, which outside /planlegger/ means /emne/[code]/. The
-     planner's own frame overrides it per view below. */
-  --planner-box-rader: calc(22px + 5 * (var(--planner-bar-h) + 2 * var(--planner-row-pad)));
-  min-height: calc(2 * var(--planner-frame-pad-block) + var(--planner-box-rader));
 }
 
-/* --- The planner's two views' heights -------------------------------------
+/* --- THE WEEK'S PLACE, HELD FROM FIRST PAINT ------------------------------
  *
- * The reservation above models RADER only, and RADER is not one of the
- * planner's views — reserving it for UKE and LISTE cost 0.08 and 0.14 CLS on a
- * first load. Measured, five-course plan (mobile/desktop): rader 233/295, uke
+ * Every page here paints a static shell and grows its week a second later,
+ * which is the shape that produces CLS by default — /planlegger/ scored 0.61 on
+ * a phone. `renderWeekSkeleton` stops the loading→data reflow; it cannot hold
+ * the space between FIRST PAINT and its own mount, and that step alone was 0.52
+ * of the 0.61.
+ *
+ * The two views have unrelated geometries — Uke is drawn hours × an hour's
+ * height, Liste is a session count — so one reservation cannot serve both, and
+ * reserving the other view's is worse than reserving nothing (0.08 and 0.14 CLS
+ * when that was measured). Measured, five-course plan (mobile/desktop): uke
  * 487/651, liste 907/877.
  *
- * Only the planner's own frame gets these — by id — because /emne/[code]/
- * builds its own `.planner-grid-frame` and always renders RADER into it.
- *
  * The height comes from `--planner-box` (what this browser last measured for
- * THIS view at THIS width, handed back before first paint by Layout.astro's
- * probe) and falls back to the formulas below. Uke's is exact arithmetic;
- * Liste's cannot be — its height is a session count — so it is a line fitted
- * through five plans of 1–5 courses (±100px).
+ * THIS SURFACE in THIS view at THIS width, handed back before first paint by
+ * Layout.astro's probe) and falls back to the formulas below. Uke's is exact
+ * arithmetic; Liste's cannot be — nothing before the fetch knows the session
+ * count — so it is a line fitted through five plans of 1–5 courses (±100px).
+ *
+ * The SURFACE is in the key, not in the selector. It used to be an id, because
+ * one `--planner-box` held one height per view and the planner's remembered
+ * Liste height must never reach a one-course page's frame; with three surfaces
+ * sharing two views that guard belongs where the number is filed.
  *
  * The unqualified rule is UKE's, because Uke is the default view and so what a
  * missing `data-view` is about to draw.
  *
- * ALL OF IT IS A LEASE (`data-reserve`). `--planner-box` is ONE variable
- * holding the height of the view the page LOADED in, so pressing Uke after
- * loading in Liste left 600px of white paper above the exam list for the rest
- * of the visit. `renderGridAndExams` releases it on the first drawn week and
- * `setWeekView` on the way out of a view.
+ * ALL OF IT IS A LEASE (`data-reserve`). Every reserved number is an estimate of
+ * a week that has not been drawn: `weekView`'s `settle` releases it on the first
+ * drawn week and `setWeekView` on the way out of a view, or loading in Liste and
+ * then pressing the other tab leaves 600px of white paper for the rest of the
+ * visit. Deliberately a few px UNDER the measured settle, so the residual is a
+ * small DOWNWARD nudge rather than the week snapping up from under a thumb.
+ * Re-measure before changing any number here.
  */
 [data-surface="planner"] .planner-grid-frame[data-reserve] {
   min-height: calc(
@@ -124,7 +110,7 @@
 
 /* Released: the frame is exactly what it holds, in whichever view. Stated
    rather than merely absent, because the unqualified `.planner-grid-frame` rule
-   above would otherwise keep RADER's floor under a view that drew less. */
+   above would otherwise keep the reservation under a view that drew less. */
 [data-surface="planner"] .planner-grid-frame:not([data-reserve]) {
   min-height: 0;
 }
@@ -214,12 +200,8 @@ html[data-view="tavle"] [data-surface="planner"] .planner-grid-frame[data-reserv
   align-content: center;
 }
 
-/* How far into the frame the column that does NOT scroll reaches — the day
-   spine in RADER, the hour rail in KOLONNER. The fade starts after it. */
-.planner-grid-frame:has(.planner-grid) {
-  --planner-pin: var(--planner-spine);
-}
-
+/* How far into the frame the column that does NOT scroll reaches — the hour
+   rail. The fade starts after it. */
 .planner-grid-frame:has(.planner-cols) {
   --planner-pin: var(--planner-rail);
 }
@@ -232,7 +214,7 @@ html[data-view="tavle"] [data-surface="planner"] .planner-grid-frame[data-reserv
    EVERY cut edge fades, in both grid views. Three things make that survivable:
 
    1. The fade begins AFTER the column that stays put (`--planner-pin`) — the
-      day spine in RADER, the hour rail in KOLONNER. A ramp from x=0 washed out
+      hour rail. A ramp from x=0 washed out
       the one column deliberately still on screen.
    2. Each end's depth GROWS with the drag (`setScrollFade` writes them from the
       real scroll offset), so an edge fades in over 16 px of movement rather
@@ -265,448 +247,9 @@ html[data-view="tavle"] [data-surface="planner"] .planner-grid-frame[data-reserv
   margin: 0;
 }
 
-/* --- The week: days as rows, time as the axis ----- */
-
-/* `--planner-span` is the visible day's length in minutes, written by
-   `buildGridShell`. Every bar's `left`/`width` and every hour tick is a
-   percentage of it, so a time becomes a position in exactly one place. */
-.planner-grid {
-  /* `--planner-spine` and the row metrics are inherited from the frame, which
-     needs them to reserve this week's height before this week exists. */
-  position: relative;
-  /* Eight hours across needs room to stay legible: below this the frame
-     scrolls sideways rather than squeezing a lecture into 40 px. */
-  min-width: 40rem;
-  padding-inline-end: 16px;
-}
-
-/* Below 40rem the axis simply scrolls, and course codes stay whole — the trade
-   the transposition buys. Five days and eight hours do not fit a phone at a
-   legible hour; 40 px an hour fits and then has to print half the labels
-   outside their own bars, which is not a week any more. What the phone gets
-   instead is a spine that stays put while it scrolls and a frame that spends
-   nothing on inline padding — the page's gutter keeps the week off the glass. */
-@media (max-width: 40rem) {
-  .planner-grid {
-    min-width: 32rem;
-  }
-
-  /* 48 px of a 358 px screen went on the frame's inline padding, inside a
-     column that already has the page's gutter on both sides. The vertical pad
-     stays: it is the space between the week and the controls above it.
-
-     The spine/rail live on the FRAME, not on the week inside it: the scroll
-     mask reads them (`--planner-pin`) and a parent cannot read a child's custom
-     property. The row metrics move with the frame's padding, because the
-     reservation is computed from both. */
-  .planner-grid-frame {
-    --planner-frame-pad-block: var(--space-2);
-    padding: var(--planner-frame-pad-block) 0;
-    --planner-spine: 3rem;
-    --planner-rail: 2.9rem;
-    --planner-lane-h: 30px;
-    --planner-bar-h: 26px;
-    --planner-band-h: 17px;
-    --planner-row-pad: 6px;
-    --planner-hour-h: 2.6rem;
-  }
-
-  /* TAVLE's rows wrap harder in a narrow column, so a different slope here. */
-  html[data-view="tavle"] [data-surface="planner"] .planner-grid-frame[data-reserve] {
-    min-height: calc(
-      2 *
-      var(--planner-frame-pad-block) +
-      var(--planner-box, calc(26.5rem + var(--plan-courses) * 5.5rem))
-    );
-  }
-
-  .planner-grid-spine-long {
-    /* Visually hidden, NOT removed — the full weekday stays in the
-       accessibility tree, only the ink is three letters. */
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    overflow: hidden;
-    clip-path: inset(50%);
-  }
-}
-
-@media (min-width: 40.0625rem) {
-  .planner-grid-spine-short {
-    display: none;
-  }
-}
-
-.planner-grid.is-skeleton {
-  opacity: 0.5;
-}
-
-/* --- The ruler ----------------------------------------------------------- */
-
-.planner-grid-ruler {
-  display: grid;
-  grid-template-columns: var(--planner-spine) minmax(0, 1fr);
-}
-
-/* The ruler's own spine cell. It holds nothing, but it has to be sticky like
-   the rows' spines, or the hour figures slide out from under the day names. */
-.planner-grid-ruler::before {
-  content: "";
-  grid-column: 1;
-  position: sticky;
-  inset-inline-start: 0;
-  z-index: 3;
-  background: var(--bg);
-}
-
-.planner-grid-ruler-track {
-  grid-column: 2;
-  position: relative;
-  height: 22px;
-}
-
-/* The figure sits ON its tick — the tick is what ties a number to a position.
-   Zero-width on purpose: with a box of its own the last tick, at 100 % of the
-   axis, added its own width to the week's scrollable extent. */
-.planner-grid-tick {
-  position: absolute;
-  left: var(--planner-x);
-  top: 0;
-  bottom: 0;
-  width: 0;
-  font-size: var(--text-xs);
-  color: var(--muted);
-}
-
-/* The mark, at the minute itself — never nudged, whatever the figure does. */
-.planner-grid-tick::after {
-  content: "";
-  position: absolute;
-  inset-inline-start: 0;
-  bottom: 0;
-  width: 1px;
-  height: 6px;
-  background: var(--ruling-line);
-}
-
-/* Centred on its mark, clamped at the two ends: the first figure would put
-   half of "08" under the sticky spine, the last would hang past the frame. */
-.planner-grid-tick-figure {
-  display: block;
-  width: max-content;
-  transform: translateX(-50%);
-}
-
-.planner-grid-tick:first-child .planner-grid-tick-figure {
-  transform: none;
-}
-
-.planner-grid-tick:last-child .planner-grid-tick-figure {
-  transform: translateX(-100%);
-}
-
-/* --- A day --------------------------------------------------------------- */
-
-.planner-grid-row {
-  display: grid;
-  grid-template-columns: var(--planner-spine) minmax(0, 1fr);
-  border-top: 1px solid var(--border);
-}
-
-.planner-grid-row:last-child {
-  border-bottom: 1px solid var(--border);
-}
-
-/* The spine — load-bearing: with today at full ink and the rest receding, it is
-   how a student finds their row without reading it. A weekday is a word, so it
-   is the grotesk; Data-Is-Mono governs times and codes, not names.
-
-   Sticky, because the week is the one surface that scrolls sideways and the
-   spine says which row you are reading. It rides above the bars and below the
-   pointer readout, and needs the paper under it or they show through. */
-.planner-grid-spine {
-  position: sticky;
-  inset-inline-start: 0;
-  z-index: 3;
-  background: var(--bg);
-  display: flex;
-  align-items: center;
-  /* Same pad as the field's, so a one-lane row is as tall as its content. */
-  padding: var(--planner-row-pad) var(--gap-4) var(--planner-row-pad) 0;
-  font-size: clamp(1.05rem, 2.6vw, 1.7rem);
-  font-weight: var(--weight-bold);
-  line-height: 1;
-  letter-spacing: -0.03em;
-  color: color-mix(in srgb, var(--fg) 34%, transparent);
-}
-
-.planner-grid-row[data-today] .planner-grid-spine {
-  color: var(--fg);
-}
-
-/* The hour ruling, turned 90° with the axis. Still the only ruling the week
-   has (DESIGN §4). */
-.planner-grid-field {
-  position: relative;
-  /* Lanes stack from the top; a drop-in band gets its own strip under them
-     (`--planner-bands`, written by `renderGrid`) so the two can never overlap.
-
-     What the row contains, top of the first bar to bottom of the last thing.
-     `--planner-lane-h` is a STRIDE (bar + gap), so N lanes occupy N strides
-     less one trailing gap — without that subtraction every row was off-centre.
-
-     The children centre against this rather than being offset from the top,
-     because the row's real height is `max(spine, field)` and the spine wins on
-     a one-lane row. Padding cannot fix that; only measuring from the middle
-     can — which is also why the pad lives in this arithmetic and not in
-     `padding`: every child is absolutely positioned and reads the same token. */
-  --planner-content-h: calc(
-    var(--planner-lanes, 1) *
-    var(--planner-lane-h) -
-    (var(--planner-lane-h) - var(--planner-bar-h)) +
-    var(--planner-bands, 0) *
-    (var(--planner-band-h) + var(--planner-row-pad))
-  );
-  min-height: calc(var(--planner-content-h) + 2 * var(--planner-row-pad));
-  background-image: linear-gradient(to right, var(--ruling-hour) 1px, transparent 1px);
-  background-size: calc(100% / var(--planner-hours, 8)) 100%;
-}
-
-.planner-grid.is-skeleton .planner-grid-field {
-  background-image: none;
-}
-
-.planner-grid-row[data-today] .planner-grid-field {
-  background-color: color-mix(in srgb, var(--fg) 4%, transparent);
-}
-
-/* --- A bar --------------------------------------------------------------- */
-
-/* Printed colour with the code knocked out of it. The 18 % wash this replaces
-   gave mid-tones that neither identified a course nor receded behind red. */
-.planner-block {
-  position: absolute;
-  left: var(--planner-x);
-  width: var(--planner-w);
-  top: calc(50% - var(--planner-content-h) / 2 + var(--planner-lane, 0) * var(--planner-lane-h));
-  height: var(--planner-bar-h);
-  display: flex;
-  align-items: center;
-  gap: var(--gap-2);
-  min-width: 0;
-  padding: 0 var(--space-2);
-  overflow: hidden;
-  white-space: nowrap;
-  text-align: left;
-  /* The same 4px corner the column week's blocks take. Two geometries drawing
-     the same session must not disagree about what shape a session is — and at
-     0 two touching bars fuse into one run of ink. */
-  border-radius: 4px;
-  background: color-mix(in srgb, var(--dot) var(--block-mix), var(--block-base));
-  color: var(--on-block);
-  cursor: pointer;
-  transition: filter var(--dur-fast) var(--ease);
-}
-
-.planner-grid-frame[data-static] .planner-block {
-  cursor: default;
-}
-
-.planner-grid-frame:not([data-static]) .planner-block:hover {
-  filter: brightness(1.12);
-}
-
-/* DR-1's display layer reads quieter with less ink, never with red: an
-   øving/lab is its hue TINTED rather than printed, with the label in that hue
-   pulled toward ink. One treatment for the øving layer in both geometries —
-   two would be the drift that makes the two weeks look like two products. */
-.planner-block.is-muted {
-  background: color-mix(in srgb, var(--dot) var(--block-muted), var(--card));
-  color: color-mix(in srgb, var(--dot) var(--block-ink-mix), var(--block-ink-base));
-}
-
-/* A drop-in window is not a session you attend at a time — 08:15–14:00 every
-   weekday — so it may not take a lane and push every real session down a row.
-   As a full-height backdrop behind the bars its own label sat under whatever
-   lecture shared those hours and could not be read at all.
-
-   So it is a strip along the bottom of the row, in its own reserved band, at
-   full opacity because nothing is drawn on top of it.
-
-   Strips stack from the bottom of the content block upward, in the height the
-   row reserved (`--planner-bands` is their count): sharing one offset drew a
-   day's two open windows on top of each other and the week lost a course. */
-.planner-block.is-band {
-  z-index: 0;
-  top: calc(
-    50% +
-    var(--planner-content-h) /
-    2 -
-    (var(--planner-bands, 1) - var(--planner-band, 0)) *
-    (var(--planner-band-h) + var(--planner-row-pad)) +
-    var(--planner-row-pad)
-  );
-  bottom: auto;
-  height: var(--planner-band-h);
-}
-
-.planner-block-code {
-  flex: none;
-  font-weight: var(--weight-medium);
-  font-size: var(--text-xs);
-}
-
-/* Where to go. Never shrinks, never ellipsizes: `fitBlockLabels` either leaves
-   it whole or takes it off the bar — `KJL2` cut to `KJL…` says less for the
-   same ink. */
-.planner-block-room {
-  flex: none;
-  font-size: var(--text-xs);
-  color: color-mix(in srgb, var(--on-block) 82%, transparent);
-}
-
-/* The one fact on a bar that may be cut — and only when the cut still leaves
-   something to read (`MIN_TYPE`). */
-.planner-block-what {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  font-size: var(--text-xs);
-  color: color-mix(in srgb, var(--on-block) 72%, transparent);
-}
-
-/* No separator: the two facts are in different inks, and the gap between them
-   is the separation. */
-
-.planner-block.is-muted .planner-block-room,
-.planner-block.is-muted .planner-block-what {
-  color: var(--muted);
-}
-
-/* Not enough bar for the room (and so not for anything after it either). */
-.planner-block.is-roomless .planner-block-room,
-.planner-block.is-roomless .planner-block-what {
-  display: none;
-}
-
-/* Room enough for where to go, none for what it is called. */
-.planner-block.is-typeless .planner-block-what {
-  display: none;
-}
-
-/* --- The collision ------------------------------------------------------- */
-
-/* One zone per day, cut through every lane across exactly the overlapping
-   minutes — the only element that crosses lanes, which is what a collision is.
-   Red-Is-Collision: a different KIND of mark from a hue fill, so it wins on
-   sight without competing with five saturated bars. */
-.planner-clash-zone {
-  position: absolute;
-  left: var(--planner-x);
-  width: var(--planner-w);
-  top: 2px;
-  bottom: 2px;
-  background: color-mix(in srgb, var(--clash) 14%, transparent);
-  border-inline: 2px solid var(--clash);
-  pointer-events: none;
-  z-index: 0;
-}
-
-/* --- The time readout -------------------------------- */
-
-/* The ruler labels whole hours and a bar prints no start time — that trade is
-   what bought the bar its width — so the axis needs somewhere to be read to the
-   minute. Mouse only (see `wirePointer`). */
-.planner-grid-pointer {
-  position: absolute;
-  top: 22px;
-  bottom: 0;
-  width: 1px;
-  background: color-mix(in srgb, var(--fg) 42%, transparent);
-  pointer-events: none;
-  z-index: 4;
-}
-
-.planner-grid-pointer[hidden] {
-  display: none;
-}
-
-/* On the ruler's own line, so the readout replaces the hour figures rather
-   than floating over the week. */
-.planner-grid-pointer-time {
-  position: absolute;
-  bottom: 100%;
-  left: 50%;
-  transform: translateX(-50%);
-  padding: 0 var(--space-1);
-  font-size: var(--text-xs);
-  font-variant-numeric: tabular-nums;
-  color: var(--bg);
-  background: var(--fg);
-  border-radius: var(--radius-xs);
-  white-space: nowrap;
-}
-
-/* NÅLEN — the moment.
- *
- * A 2 px ink line across today's row with a solid head on the row's top border.
- * The head is the load-bearing half: 2 px of ink over a saturated printed fill
- * reads as a scratch. Nothing else sits on that border, so the head cannot be
- * mistaken for something drawn on a course.
- *
- *  - **Not on the other days.** A 32 % hairline down the whole week is the same
- *    KIND of mark as the 1 px hour rules it crosses, so off today it was simply
- *    invisible. The ruler already labels the hours.
- *  - **Not a clock.** No time rides on it, and outside the drawn hours it hides
- *    rather than pinning to an edge: a week clamped to its own sessions has no
- *    honest place to put 21:10.
- */
-.planner-grid-now {
-  position: absolute;
-  top: var(--planner-now-top);
-  height: var(--planner-now-height);
-  /* --planner-x is a unitless 0–100, so this stays length arithmetic: a
-     percentage divided by a percentage is not something to rely on. */
-  left: calc(var(--planner-spine) + (100% - var(--planner-spine) - 16px) * var(--planner-x) / 100);
-  width: 2px;
-  margin-left: -1px;
-  background: var(--ui);
-  pointer-events: none;
-  /* Above the bars, BELOW the pinned spine (z-index 3): the marker travels with
-     the axis, so once the week is dragged past it, it must disappear behind the
-     day names like everything else. */
-  z-index: 2;
-}
-
-.planner-grid-now[hidden] {
-  display: none;
-}
-
-/* The head sits ON the row's top border rather than straddling it: 1 px above
-   the row is 1 px outside the spine's own box, which left a sliver of the head
-   drawn over the border while the rest went behind the spine. */
-.planner-grid-now::before {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 0;
-  height: 0;
-  border-inline: 6px solid transparent;
-  border-top: 8px solid var(--ui);
-}
-
-@media (max-width: 40rem) {
-  .planner-grid-now::before {
-    border-inline-width: 5px;
-    border-top-width: 7px;
-  }
-}
-
 /* --- The strike-in (D4) --------------------------------------------------- */
 
-/* Plays once, on a view switch only — `renderGrid` adds `is-striking` when the
+/* Plays once, on a view switch only — the view adds `is-striking` when the
    caller passes `animate`. Reduced motion zeroes --dur globally and the fill
    mode is `backwards`, so at 0 s the bars are simply present. */
 @keyframes planner-strike {
@@ -716,12 +259,6 @@ html[data-view="tavle"] [data-surface="planner"] .planner-grid-frame[data-reserv
   to {
     clip-path: inset(0 0 0 0);
   }
-}
-
-.planner-grid.is-striking .planner-block,
-.planner-grid.is-striking .planner-clash-zone {
-  animation: planner-strike calc(var(--dur) * 1.8) var(--ease) backwards;
-  animation-delay: calc(var(--planner-strike, 0) * var(--planner-step, 55ms));
 }
 
 /* --- The layer change -------------------------------- */
@@ -735,67 +272,6 @@ html[data-view="tavle"] [data-surface="planner"] .planner-grid-frame[data-reserv
    squashing the course code for the length of the move. It is bounded to one
    week's ~50 elements, on an explicit toggle, and `layerMotion.ts` skips the
    choreography under `prefers-reduced-motion`. */
-.planner-grid.is-settling .planner-block,
-.planner-grid.is-settling .planner-clash-zone,
-.planner-grid.is-settling .planner-grid-tick,
-.planner-grid.is-settling .planner-grid-now {
-  transition:
-    left var(--dur) var(--ease),
-    width var(--dur) var(--ease),
-    top var(--dur) var(--ease),
-    filter var(--dur-fast) var(--ease);
-}
-
-.planner-grid.is-settling .planner-grid-now::after {
-  transition:
-    top var(--dur) var(--ease),
-    height var(--dur) var(--ease);
-}
-
-.planner-grid.is-settling .planner-grid-field {
-  transition:
-    min-height var(--dur) var(--ease),
-    background-size var(--dur) var(--ease);
-}
-
-/* Closing up waits for what is leaving to be GONE — all of it, not just the
-   first (`--planner-departs` is the last departure's stagger index). Opening
-   waits for nothing: the space has to exist before a bar can land in it. */
-.planner-grid.is-settling.is-closing .planner-block,
-.planner-grid.is-settling.is-closing .planner-clash-zone,
-.planner-grid.is-settling.is-closing .planner-grid-tick,
-.planner-grid.is-settling.is-closing .planner-grid-now,
-.planner-grid.is-settling.is-closing .planner-grid-field {
-  transition-delay: calc(
-    var(--planner-departs, 0) *
-    var(--planner-motion-step, 32ms) +
-    var(--dur-fast)
-  );
-}
-
-/* The arriving layer, struck in after the room for it has been made. A ruler
-   tick or a newly needed Saturday row is not a session and gets a fade. */
-@keyframes planner-arrive {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
-}
-
-.planner-grid .is-arriving,
-.planner-cols .is-arriving,
-.planner-board .is-arriving {
-  animation: planner-arrive var(--dur) var(--ease) backwards;
-  animation-delay: calc(
-    var(--dur) *
-    0.8 +
-    var(--planner-arrive, 0) *
-    var(--planner-motion-step, 32ms)
-  );
-}
-
 /* A column's session strikes in DOWNWARD, the way its own axis runs — the
    sideways wipe would cut across the time axis rather than along it. */
 .planner-cols .planner-cols-block.is-arriving,
@@ -804,7 +280,6 @@ html[data-view="tavle"] [data-surface="planner"] .planner-grid-frame[data-reserv
   animation-duration: calc(var(--dur) * 1.6);
 }
 
-.planner-grid .planner-block.is-arriving,
 .planner-board .planner-board-row.is-arriving {
   animation-name: planner-strike;
   animation-duration: calc(var(--dur) * 1.6);
@@ -832,7 +307,6 @@ html[data-view="tavle"] [data-surface="planner"] .planner-grid-frame[data-reserv
   animation-delay: calc(var(--planner-depart, 0) * var(--planner-motion-step, 32ms));
 }
 
-.planner-grid .planner-motion-ghost,
 .planner-board .planner-motion-ghost {
   position: absolute;
   margin: 0;
@@ -1117,7 +591,7 @@ html[data-view="tavle"] [data-surface="planner"] .planner-grid-frame[data-reserv
 
 /* The full word, kept for the accessibility tree and taken off the page —
    "man" is not a thing a screen reader can expand. Same trade, same reason, as
-   `.planner-grid-spine-long` in the transposed grid. */
+   the accessibility tree. */
 .planner-cols-dow-long {
   position: absolute;
   width: 1px;

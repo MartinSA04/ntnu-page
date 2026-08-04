@@ -15,9 +15,9 @@ import { findConflicts, groupConflicts, mergeParallelSlots } from "../../lib/pla
 import { applyGroupSelection, entryGroupKey } from "../../lib/planner/groups.js";
 import { entriesInSemester, parseWeeks, type ScheduleEntry } from "../../lib/planner/schedule.js";
 import { dayName, dot, el, weekLabel } from "./dom.js";
-import { type BlockDetail, blockDetailFor, buildingLabel, visibleLayer } from "./grid.js";
 import { staggerStep } from "./layerMotion.js";
 import type { PlanCourseState } from "./types.js";
+import { type BlockDetail, blockDetailFor, buildingLabel, visibleLayer } from "./weekNotes.js";
 
 export interface BoardRenderOptions {
   /** Same contract as the grid's: a click opens that course's settings. */
@@ -402,7 +402,7 @@ export function syncBoardNow(
  * session that MOVED from one that arrived.
  *
  * Exported for `columnGrid.ts`, whose blocks cannot use the transposed grid's
- * `GridEntry.ordinal` — one definition of "the same session", or the two views
+ * a positional index — one definition of "the same session", or the two views
  * disagree about what travelled.
  *
  * Built from the session itself rather than its position: revealing the øving
@@ -480,10 +480,7 @@ function buildRow(
     // literal: the card a row opens IS the card a bar opens.
     row.addEventListener("click", () =>
       onBlockClick(
-        blockDetailFor(
-          { ...entry, name: entry.label, weeksNumbers: [], groupCount: 1, ordinal: 0 },
-          entry.clash,
-        ),
+        blockDetailFor({ ...entry, name: entry.label, groupCount: 1 }, entry.clash),
         row,
       ),
     );

@@ -2215,7 +2215,7 @@ export async function mountPlannerApp(
    */
   function jumpToFirstClash(): void {
     const mark = elements.gridFrame.querySelector(
-      ".planner-cols-clash, .planner-clash-zone, .planner-board-row.is-clashing",
+      ".planner-cols-clash, .planner-board-row.is-clashing",
     );
     mark?.scrollIntoView({ behavior: "smooth", block: "center", inline: "center" });
   }

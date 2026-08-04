@@ -169,7 +169,7 @@ function release(
   host.classList.add("is-settling");
   if (change === "hide") host.classList.add("is-closing");
   requestAnimationFrame(to);
-  // The ghosts go on their own, much shorter clock. They are `.planner-block`
+  // The ghosts go on their own, much shorter clock. They are session blocks
   // elements inside the week, so anything counting bars — the e2e suite does —
   // counts them too for as long as they are there.
   if (ghosts) setTimeout(() => ghosts.remove(), GHOST_MS);
@@ -184,73 +184,13 @@ function release(
   }, CLEANUP_MS);
 }
 
-// --- The week ------------------------------------------------------------
-
-/**
- * The custom properties each kind of element keeps its geometry in — the same
- * names `buildGridShell`, `positionBlock` and `syncNowMarker` write. The
- * stylesheet turns them into `left`/`width`/`top`/`min-height`, which is why
- * rewinding one animates real layout and never scales the type in a bar.
- */
-const BLOCK_PROPS = ["--planner-x", "--planner-w", "--planner-lane"];
-const ZONE_PROPS = ["--planner-x", "--planner-w"];
-const TICK_PROPS = ["--planner-x"];
-/**
- * BOTH of the properties the row's height is computed from.
- *
- * `--planner-bands` arrived with the drop-in strip and was not listed here, so
- * a row whose height changed only because a strip appeared had nothing rewound
- * and snapped on the first frame while the bars animated around it.
- *
- * Anything else the field's `min-height` learns to read has to be listed here
- * too, or it snaps the same way.
- */
-const FIELD_PROPS = ["--planner-lanes", "--planner-bands"];
-const NOW_PROPS = ["--planner-x", "--planner-now-top", "--planner-now-height"];
-const GRID_PROPS = ["--planner-hours"];
+// --- What travels --------------------------------------------------------
 
 interface Keyed {
   node: HTMLElement;
   props: string[];
-  /** Worth re-inserting as a ghost when it leaves. Bars are; ticks are not. */
+  /** Worth re-inserting as a ghost when it leaves. Sessions are; hours are not. */
   ghost: boolean;
-}
-
-/**
- * Every element in the week whose place can change, under a key that survives
- * the re-render.
- *
- * A bar's key is its DOM id, built from `GridEntry.ordinal`, which is assigned
- * in `collectEntries` BEFORE the øving/lab filter runs — so hiding the layer
- * does not renumber the lectures. Merged parallels do not disturb it either.
- */
-function keyWeek(grid: HTMLElement): Map<string, Keyed> {
-  const out = new Map<string, Keyed>();
-  out.set("grid", { node: grid, props: GRID_PROPS, ghost: false });
-
-  const now = grid.querySelector<HTMLElement>(".planner-grid-now");
-  if (now) out.set("now", { node: now, props: NOW_PROPS, ghost: false });
-
-  for (const tick of Array.from(grid.querySelectorAll<HTMLElement>(".planner-grid-tick")))
-    out.set(`tick-${tick.getAttribute("data-hour")}`, {
-      node: tick,
-      props: TICK_PROPS,
-      ghost: false,
-    });
-
-  for (const row of Array.from(grid.querySelectorAll<HTMLElement>(".planner-grid-row"))) {
-    const day = row.getAttribute("data-day");
-    out.set(`row-${day}`, { node: row, props: [], ghost: false });
-    const field = row.querySelector<HTMLElement>(".planner-grid-field");
-    if (field) out.set(`field-${day}`, { node: field, props: FIELD_PROPS, ghost: false });
-    const zone = row.querySelector<HTMLElement>(".planner-clash-zone");
-    if (zone) out.set(`zone-${day}`, { node: zone, props: ZONE_PROPS, ghost: false });
-  }
-
-  for (const block of Array.from(grid.querySelectorAll<HTMLElement>(".planner-block")))
-    out.set(block.id, { node: block, props: BLOCK_PROPS, ghost: true });
-
-  return out;
 }
 
 function readProps(node: HTMLElement, props: string[]): Map<string, string> {
@@ -263,59 +203,13 @@ function writeProps(node: HTMLElement, values: Map<string, string>): void {
   for (const [prop, value] of values) node.style.setProperty(prop, value);
 }
 
-function beginWeekChange(frame: HTMLElement, grid: HTMLElement, change: LayerChange): SettleLayer {
-  const origin = grid.getBoundingClientRect();
-  const before = new Map<
-    string,
-    { node: HTMLElement; values: Map<string, string>; box: Box | null }
-  >();
-  for (const [key, { node, props, ghost }] of keyWeek(grid)) {
-    before.set(key, {
-      node,
-      values: readProps(node, props),
-      box: ghost ? boxIn(node, origin) : null,
-    });
-  }
-
-  return () => {
-    const next = frame.querySelector<HTMLElement>(".planner-grid");
-    // The re-render can put a message or a card in the frame instead of a
-    // week. There is then nothing to travel to and nowhere to hang a ghost.
-    if (!next) return;
-    const after = keyWeek(next);
-
-    const restore: { node: HTMLElement; values: Map<string, string> }[] = [];
-    let arriving = 0;
-    for (const [key, { node, props }] of after) {
-      const old = before.get(key);
-      if (!old) {
-        markArrival(node, node.classList.contains("planner-block") ? arriving++ : 0);
-        continue;
-      }
-      // Read the rendered values FIRST — writing the old ones over them is
-      // what would otherwise destroy the target.
-      restore.push({ node, values: readProps(node, props) });
-      writeProps(node, old.values);
-    }
-
-    const departing = [...before]
-      .filter(([key, entry]) => entry.box !== null && !after.has(key))
-      .map(([, entry]) => ({ node: entry.node, box: entry.box as Box }));
-    const ghosts = layGhosts(next, departing);
-    setMotionStep(next, arriving, departing.length);
-
-    release(next, change, ghosts, () => {
-      for (const { node, values } of restore) writeProps(node, values);
-    });
-  };
-}
-
-// --- The columns ---------------------------------------------------------
+// --- KOLONNER ------------------------------------------------------------
 
 /**
- * The column grid's geometry properties. Time is the vertical axis here, so a
- * session's place is `--planner-y`/`--planner-h` and its share of the column is
- * `--planner-lane`/`--planner-lanes`.
+ * The custom properties each kind of element keeps its geometry in — the same
+ * names `renderColumnGrid` and `syncColumnNow` write. The stylesheet turns
+ * them into `top`/`height`/`left`/`width`, which is why rewinding one animates
+ * real layout and never scales the type in a block.
  */
 const COL_BLOCK_PROPS = ["--planner-y", "--planner-h", "--planner-lane", "--planner-lanes"];
 /* A drop-in window is a chip in the all-day row now, laid out in normal flow —
@@ -336,7 +230,6 @@ const COL_GRID_PROPS = ["--planner-hours", "--planner-lanes-max", "--planner-all
  * Every element in the column grid whose place can change, under a key that
  * survives the re-render. A session's key is `data-motion-key` — `board.ts`'s
  * `motionKey`, shared so the two views cannot disagree about what "the same
- * session" is. The transposed week keys on `GridEntry.ordinal` instead.
  */
 function keyColumns(grid: HTMLElement): Map<string, Keyed> {
   const out = new Map<string, Keyed>();
@@ -510,13 +403,11 @@ function beginListChange(frame: HTMLElement, board: HTMLElement, change: LayerCh
  */
 export function beginLayerChange(frame: HTMLElement, change: LayerChange): SettleLayer {
   if (!motionAllowed()) return NOTHING;
-  // A ghost is a `.planner-block` inside the week, so one left over from a
-  // previous toggle would be snapshotted as a real bar. The newer change
-  // supersedes whatever the older had not finished sweeping up.
+  // A ghost is a block inside the week, so one left over from a previous
+  // toggle would be snapshotted as a real session. The newer change supersedes
+  // whatever the older had not finished sweeping up.
   for (const stale of Array.from(frame.querySelectorAll<HTMLElement>(".planner-motion-ghosts")))
     stale.remove();
-  const grid = frame.querySelector<HTMLElement>(".planner-grid");
-  if (grid) return beginWeekChange(frame, grid, change);
   const columns = frame.querySelector<HTMLElement>(".planner-cols");
   if (columns) return beginColumnChange(frame, columns, change);
   const board = frame.querySelector<HTMLElement>(".planner-board");

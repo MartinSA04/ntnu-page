@@ -1,7 +1,8 @@
 /**
- * KOLONNER — the week as a timetable: days across, time down. The third view of
- * one plan, beside `grid.ts` and `board.ts`, from the same states through the
- * same narrowing, engine and popover.
+ * KOLONNER — the week as a timetable: days across, time down. One of the two
+ * views of one plan, beside `board.ts`, from the same states through the same
+ * narrowing, engine and popover. Every surface that draws a week draws this one
+ * or that one; there is no third.
  *
  * ## The law: the day grows, the code never shrinks, whole days only
  *
@@ -17,7 +18,7 @@
  * (`--planner-lanes-max`), how many drop-in strips to reserve
  * (`--planner-allday-h`), and each session's place on the time axis.
  *
- * ## Kept from the transposed week, deliberately
+ * ## Kept from the transposed week that this replaced, deliberately
  *
  *  - **Lanes are per CLUSTER, not per day** — dividing by the day's worst
  *    moment makes unrelated sessions half-width for nothing.
@@ -37,9 +38,9 @@ import type { LayoutInput } from "../../lib/planner/layout.js";
 import { layoutDay } from "../../lib/planner/layout.js";
 import { collectSessions, motionKey, type SessionEntry } from "./board.js";
 import { dayName, el } from "./dom.js";
-import { type BlockDetail, blockDetailFor, isDropIn, visibleLayer } from "./grid.js";
 import { staggerStep } from "./layerMotion.js";
 import type { PlanCourseState } from "./types.js";
+import { type BlockDetail, blockDetailFor, isDropIn, visibleLayer } from "./weekNotes.js";
 
 /** Whole hours the axis falls back to when there is nothing to clamp it to. */
 const DEFAULT_START_HOUR = 8;
@@ -301,10 +302,7 @@ function sessionButton(
   if (onBlockClick) {
     node.addEventListener("click", () =>
       onBlockClick(
-        blockDetailFor(
-          { ...entry, name: entry.label, weeksNumbers: [], groupCount: 1, ordinal: 0 },
-          entry.clash,
-        ),
+        blockDetailFor({ ...entry, name: entry.label, groupCount: 1 }, entry.clash),
         node,
       ),
     );

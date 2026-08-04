@@ -20,13 +20,15 @@
  * collision note in the planner has been flashing detached nodes — a click that
  * scrolled nothing and focused nothing, on both views.
  *
- * ## Known duplication, deliberately left standing here
+ * ## Known duplication, and why it is still here
  *
  * `collectEntries` below and `collectSessions` in board.ts are the same
- * pipeline over the same fields, differing in that the latter also filters to
- * the semester's teaching weeks. Merging them changes which entries the
- * conflict count is computed over, which is a behaviour change and does not
- * belong in a move.
+ * pipeline over the same fields, with one difference: the latter also filters
+ * to the semester's teaching weeks, because it feeds a view and this feeds a
+ * count. Merging them would change which entries the conflict count is computed
+ * over — a course taught only outside the semester currently contributes to the
+ * count and not to the drawn week — so it is a decision about what a collision
+ * MEANS, not a tidy-up. Make it deliberately, with a test, or leave it.
  */
 import { classifyActivity } from "../../lib/planner/activity.js";
 import {
@@ -51,7 +53,7 @@ const ALL_DAY_MINUTES = 5 * 60;
 
 /**
  * One course's session, with the course context the margin and the popover
- * need. Was `GridEntry`, and is still the shape `collectEntries` produces.
+ * need. The shape `collectEntries` produces.
  */
 export interface WeekEntry extends ScheduleEntry {
   hueVar: string;
@@ -357,7 +359,7 @@ function groupLabel(entry: { name: string; groupCount: number }): string {
 
 /**
  * The block's second line: `start · room`. The start comes FIRST because
- * `.planner-block-meta` is nowrap + ellipsis and a narrow block clips whatever
+ * a block's meta line is nowrap + ellipsis and a narrow block clips whatever
  * is last — the time is the fact the whole-hour rail cannot give back. The
  * room survives in the block's `title`, aria-label and popover.
  */
