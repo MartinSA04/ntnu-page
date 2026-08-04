@@ -51,13 +51,11 @@ import {
   type PlanState,
 } from "../../lib/planner/store.js";
 import type { SyncResult, SyncSession } from "../../lib/planner/syncClient.js";
-import { isoWeekNumber, weekdayDates } from "../../lib/planner/weekDates.js";
+import { isoWeekNumber } from "../../lib/planner/weekDates.js";
 import { syncPlanProbe } from "../../lib/planProbe.js";
 import { ACCOUNT_OPEN_EVENT, account, accountPanel, setAccountRepaint } from "../account.js";
 import { type AddCourseDeps, type AddCourseHandle, mountAddCourse } from "./addCourse.js";
-import { mountBlockPopover, type SessionChoice } from "./blockPopover.js";
-import { renderBoard, syncBoardNow } from "./board.js";
-import { renderColumnGrid, syncColumnNow } from "./columnGrid.js";
+import type { SessionChoice } from "./blockPopover.js";
 import { type CourseSettingsContext, mountCourseSettings } from "./courseSettings.js";
 import {
   el,
@@ -73,16 +71,6 @@ import {
   renderExamList,
   renderExamMessage,
 } from "./examList.js";
-import {
-  type BlockDetail,
-  fitBlockLabels,
-  type GridRenderResult,
-  renderGrid,
-  renderGridMessage,
-  setScrollFade,
-  syncNowMarker,
-  unresolvedLectureChoices,
-} from "./grid.js";
 import { beginLayerChange } from "./layerMotion.js";
 import {
   type ClassifiedCourse,
@@ -103,6 +91,8 @@ import {
   type StudieinfoFocus,
 } from "./studieinfoDialog.js";
 import type { PlanCourseState } from "./types.js";
+import { type BlockDetail, unresolvedLectureChoices } from "./weekNotes.js";
+import { mountWeekView, type WeekRenderResult, type WeekViewHandle } from "./weekView.js";
 
 export interface SemesterSummary {
   id: string;
@@ -144,97 +134,10 @@ interface PickerRow {
 /** Full credit load for one semester — the denominator in "X av 30 sp". */
 const FULL_LOAD_CREDITS = 30;
 
-/** The grid's hour rail, in px (`3rem` in the page's `.planner-grid`). Kept in view when scrolling to today. */
-const RAIL_WIDTH_PX = 48;
-
-/**
- * The two week views: the column grid (days as columns — the timetable shape)
- * and Tavla (no geometry). Views of one plan, never two plans.
- *
- * The value stays `"kolonner"` rather than becoming `"uke"` alongside its
- * label: it is a localStorage key's value, and a student who last picked the
- * column grid would otherwise come back to an unrecognised string. `"uke"` is
- * also still spelled by the transposed grid on `/emne/[code]/`, which is the
- * one place that geometry survives.
- */
-export type WeekView = "kolonner" | "tavle";
-
-const WEEK_VIEWS: readonly WeekView[] = ["kolonner", "tavle"];
-
-const WEEK_VIEW_KEY = "np:weekView";
-
-/**
- * The remembered view. A preference, not plan state: localStorage rather than
- * the hash, so it follows the student without riding along on a shared link.
- *
- * Storage can throw (Safari private mode) and can hold anything, so both
- * directions are total: an unrecognised value reads as the grid.
- */
-function loadWeekView(): WeekView {
-  try {
-    const stored = localStorage.getItem(WEEK_VIEW_KEY);
-    return WEEK_VIEWS.find((view) => view === stored) ?? "kolonner";
-  } catch {
-    return "kolonner";
-  }
-}
-
-function saveWeekView(view: WeekView): void {
-  try {
-    localStorage.setItem(WEEK_VIEW_KEY, view);
-  } catch {
-    // A student who cannot persist the choice still gets to make it.
-  }
-  // The reservation for the NEXT load reads this off `<html>`; a soft
-  // navigation away and back would otherwise arrive holding the old view's
-  // height (planner-week.css, `#planner-grid-frame`).
-  const root = document.documentElement;
-  root.setAttribute("data-view", view);
-  // `--planner-box` is the height of the view we are LEAVING. Belt to
-  // `settleWeekBox`'s braces: that releases on the first drawn week, but a
-  // view switch while bundles are in flight would otherwise reserve the old
-  // view's height around the new one until they land.
-}
-
-const WEEK_BOX_KEY = "np:weekBox";
-
-/**
- * How tall this browser's week actually came out, per view, with the width it
- * was measured at: `{ "tavle": [390, 891] }`.
- *
- * The views have unrelated geometries — Uke is drawn hours × 4.5rem, Liste is
- * a session count — so the frame cannot reserve one height for both, and
- * reserving the other view's is worse than reserving nothing (0.14 CLS when
- * that was measured). Uke can be computed; Liste cannot, because nothing
- * before the fetch knows the session count.
- *
- * So the page measures itself and Layout.astro's pre-paint probe hands the
- * number back as `--planner-box` before the next first frame. Sound because a
- * load in Liste is by construction a return visit — the only way into it is
- * the tab that put you there.
- *
- * The width rides along because it is what makes the height meaningful (a list
- * measured in 390px wraps differently at 1440); the probe discards the entry
- * outside a small tolerance.
- */
-function saveWeekBox(view: WeekView, width: number, height: number): void {
-  if (!(height > 0)) return;
-  try {
-    const raw: unknown = JSON.parse(localStorage.getItem(WEEK_BOX_KEY) ?? "{}");
-    const boxes: Record<string, [number, number]> =
-      raw !== null && typeof raw === "object" ? (raw as Record<string, [number, number]>) : {};
-    const previous = boxes[view];
-    const next: [number, number] = [Math.round(width), Math.round(height)];
-    // Nothing to write on most renders — the week is re-rendered on every plan
-    // edit, group pick and layer toggle.
-    if (previous && previous[0] === next[0] && previous[1] === next[1]) return;
-    boxes[view] = next;
-    localStorage.setItem(WEEK_BOX_KEY, JSON.stringify(boxes));
-  } catch {
-    // A student who cannot persist it still gets the page, just without the
-    // reservation on the next load.
-  }
-}
+/* The two week views, the view state, the tab pair and the frame's reservation
+   all live in `weekView.ts` now: three surfaces draw a week and they must draw
+   the same one. This page keeps only what is its own — the exam list, the
+   verdict, the credit line and the course rows. */
 
 interface PlannerElements {
   title: HTMLElement;
@@ -604,7 +507,33 @@ export async function mountPlannerApp(
   // A click in the week asks "what is this session", not "let me edit this
   // course" — so it opens a read popover anchored to the bar, carrying a way
   // through to the editor rather than being it.
-  const blockPopover = mountBlockPopover(openCourseSettings, lifeSignal);
+  /**
+   * The week itself: both views, the tab pair, the scroll edge, the now marker
+   * and the session popover. This page supplies what only it knows — the way
+   * out to the editor, what that verb may promise, and what to redraw when
+   * something outside the week changes.
+   */
+  const week: WeekViewHandle = mountWeekView({
+    frame: elements.gridFrame,
+    notes: elements.gridNotes,
+    tabs: { kolonner: elements.viewKolonner, tavle: elements.viewTavle },
+    surface: "planner",
+    onOpenSettings: openCourseSettings,
+    popoverContext,
+    onChoiceClick: openCourseSettings,
+    onRerender: (reason) => {
+      renderGridAndExams();
+      // The countdown is a number of days, so the day rolling is exactly when
+      // it is wrong. A page left open over midnight said "45 dager igjen".
+      if (reason === "day") renderDeadline();
+    },
+    // BOTH dates are in the stamp: the week's column comes from the local
+    // weekday and the exam countdowns from the calendar date in Oslo. In Norway
+    // they roll together; elsewhere they do not, and this fires on whichever
+    // moves first.
+    dayStamp: () => todayStamp(),
+    signal: lifeSignal,
+  });
 
   /**
    * The one fact everything below is built on: has the plan changed since
@@ -889,14 +818,19 @@ export async function mountPlannerApp(
   // why there is no separate check here.
   if (sync.session() !== null) void pullAndRefresh();
 
-  /** Opens the session popover for a clicked bar or board row. */
-  function openBlockPopover(detail: BlockDetail, anchor: HTMLElement): void {
+  /**
+   * What the popover's verb may promise, for a clicked bar or board row.
+   *
+   * `weekView` mounts and positions the card; only this half is the planner's,
+   * because it comes from the editor's OWN material — a layer with one option
+   * (or none) cannot offer a choice the modal would not show. The two surfaces
+   * with no editor supply nothing and get no verb.
+   */
+  function popoverContext(detail: BlockDetail): {
+    choice: SessionChoice;
+    lectureAlternatives: number;
+  } {
     const state = courseStates.get(detail.code);
-    const course = plan.courses.find((c) => c.code === detail.code);
-
-    // What the card's verb may promise comes from the editor's OWN material,
-    // so a layer with one option (or none) cannot offer a choice the modal
-    // would not show.
     const layerOptions = (buildCourseSettingsContext(detail.code)?.groups ?? []).filter(
       (option) => (option.kind === "lecture") === detail.isLecture,
     );
@@ -906,17 +840,7 @@ export async function mountPlannerApp(
     // note answers, so it is the same function — a second rule here is how the
     // note and the card start disagreeing.
     const guess = state ? unresolvedLectureChoices([state], false)[0] : undefined;
-
-    blockPopover.showFor(
-      {
-        detail,
-        hueVar: state?.hueVar ?? "--muted",
-        courseName: state?.bundle?.details?.courseName ?? course?.name ?? detail.name,
-        choice,
-        lectureAlternatives: guess?.count ?? 0,
-      },
-      anchor,
-    );
+    return { choice, lectureAlternatives: guess?.count ?? 0 };
   }
 
   /**
@@ -1064,27 +988,9 @@ export async function mountPlannerApp(
   /** Lazy by-code lookup over the raw index (`offeredYears` etc.). Reset with the index. */
   let indexByCodeMemo: Map<string, PlannerIndexCourse> | null = null;
   let showOthers = false;
-  /**
-   * Which week view is on screen. Deliberately NOT in the hash: it is how you
-   * are looking at the plan, not what you are looking at, and a link that
-   * forced the recipient into a list because the sender was on a phone is a
-   * worse answer to "here is my week" than the week. It IS remembered in
-   * localStorage.
-   */
-  let weekView: WeekView = loadWeekView();
-  /**
-   * Set by a view switch and consumed by the next render, the only one allowed
-   * to play the strike-in. A plan edit re-renders the week too, and replaying
-   * the animation there would be entrance choreography.
-   */
-  let pendingViewAnimation = false;
-  /**
-   * Where `renderGrid` builds a grid nobody will see, while another view is on
-   * screen. The grid is still the single owner of the margin notes, the
-   * conflict count and the honest-verdict logic; only its geometry is
-   * redundant, and eight detached bars is cheaper than a second implementation.
-   */
-  const discardHost = document.createElement("div");
+  /* Which view is on screen, and whether the next render may play the
+     strike-in, both belong to `week` — it is how you are looking at the plan
+     rather than what you are looking at, and all three surfaces share it. */
   let periodCourses: PeriodCourses | null = null;
   let studyPlanFetchToken = 0;
   /** `true` once a study plan is loaded but has no period for this semester (B4). */
@@ -1660,100 +1566,12 @@ export async function mountPlannerApp(
     elements.gapText.textContent = `Mangler ${formatCreditNumber(gap)} sp`;
   }
 
-  // --- The clock ----------------------------------------------------------
-  //
-  // A planner is a page people leave open. The now marker was nudged every
-  // minute, but WHICH DAY IT IS was read once, at render — so a page left open
-  // overnight kept yesterday's spine bold and its row tinted while the marker
-  // had stepped into today, and every "om N dager" was a day long.
-  //
-  // The tick therefore has two jobs, and the expensive one only runs when the
-  // date has actually rolled.
-  let dayStamp = todayStamp();
-
-  function tickNow(): void {
-    const stamp = todayStamp();
-    if (stamp === dayStamp) {
-      // The ordinary minute: one element moves, nothing re-renders. All three
-      // views are asked; each no-ops when it is not the one on screen.
-      syncNowMarker(elements.gridFrame);
-      syncColumnNow(elements.gridFrame);
-      syncBoardNow(elements.gridFrame, todayWeekday());
-      return;
-    }
-    dayStamp = stamp;
-    // Both dates are read again inside, and this places the marker itself.
-    renderGridAndExams();
-    // The countdown is a number of days, so the day rolling is exactly when it
-    // is wrong. A page left open over midnight said "45 dager igjen" forever.
-    renderDeadline();
-  }
-
-  const nowTimer = setInterval(tickNow, 60_000);
-  lifeSignal.addEventListener("abort", () => clearInterval(nowTimer));
-  // A sleeping laptop runs no timers, and returning to the tab is exactly when
-  // a stale day gets looked at.
-  document.addEventListener(
-    "visibilitychange",
-    () => {
-      if (document.visibilityState === "visible") tickNow();
-    },
-    { signal: lifeSignal },
-  );
-
-  elements.viewKolonner.addEventListener("click", () => setWeekView("kolonner"));
-  elements.viewTavle.addEventListener("click", () => setWeekView("tavle"));
-  // The travelling rule is measured, so re-measure whenever the measurement
-  // could change: a resize, and the frame after font loading settles (there is
-  // no webfont to swap any more, but the promise is still the cheapest hook
-  // onto "layout has run once").
-  window.addEventListener("resize", renderViewTabs, { passive: true, signal });
-  document.fonts?.ready.then(() => renderViewTabs());
-
-  // --- Uke ⇄ Liste ----------
-
-  /**
-   * Switches which of the two views draws the week. Only the week re-renders:
-   * the exam list, credit line and course rows say the same thing in either
-   * view, and rebuilding them would throw away the student's scroll position
-   * for a change they did not ask those surfaces to make.
-   */
-  function setWeekView(view: WeekView): void {
-    if (weekView === view) return;
-    weekView = view;
-    saveWeekView(view);
-    pendingViewAnimation = true;
-    renderGridAndExams();
-  }
-
-  /**
-   * The pressed state, and the rule that travels to it.
-   *
-   * Offsets are measured rather than declared because the labels are
-   * different widths in every face and at every zoom step. `offsetLeft` is
-   * relative to the tabs container, which is the rule's positioned ancestor.
-   *
-   * Guarded on `offsetWidth` because the unit suite renders into a DOM with no
-   * layout: there the tabs still get `aria-pressed` and the decoration with
-   * nothing to measure is skipped.
-   */
-  function renderViewTabs(): void {
-    let active: HTMLElement | null = null;
-    for (const [button, view] of [
-      [elements.viewKolonner, "kolonner"],
-      [elements.viewTavle, "tavle"],
-    ] as const) {
-      const on = weekView === view;
-      button.setAttribute("aria-pressed", String(on));
-      if (on) active = button;
-    }
-    const tabs = elements.viewKolonner.parentElement;
-    if (!tabs || !active || typeof active.offsetWidth !== "number" || active.offsetWidth === 0) {
-      return;
-    }
-    tabs.style.setProperty("--view-w", `${active.offsetWidth}px`);
-    tabs.style.setProperty("--view-x", `${active.offsetLeft}px`);
-  }
+  /* --- The clock ---------------------------------------------------------
+     The minute tick, the now marker and the Uke/Liste pair all belong to
+     `week` now. What stays here is the STAMP it watches: both dates are in it,
+     because the week's column comes from the local weekday and the exam
+     countdowns from the calendar date in Oslo. In Norway they roll together;
+     elsewhere they do not, and the tick fires on whichever moves first. */
 
   /** Today as a weekday number (1 = mandag), or `null` at the weekend. */
   function todayWeekday(): number | null {
@@ -2278,108 +2096,10 @@ export async function mountPlannerApp(
     return { year: catalogYear, lastYear };
   }
 
-  // --- The week's horizontal scroll (A4) -----------------------------------
-
-  function prefersReducedMotion(): boolean {
-    return window.matchMedia?.("(prefers-reduced-motion: reduce)").matches === true;
-  }
-
-  /**
-   * Below ~370 px the week frame is narrower than the grid and its rounded
-   * border closes mid-column — no fade, no arrow, no visible scrollbar — so the
-   * clip reads as an edge and a student can conclude they have no Friday
-   * lecture. `data-scroll` drives the edge mask.
-   *
-   * What is hidden is measured from the GRID's own box, not the frame's
-   * `scrollWidth`: the frame's 24 px padding counts as scrollable content, so
-   * both edges faded on a week the student could already see in full.
-   */
-  function syncGridScroll(): void {
-    const frame = elements.gridFrame;
-    // Whichever week is mounted: the transposed grid or the column grid.
-    // Asking for `.planner-grid` alone left the view that scrolls sideways by
-    // design with no edge mask and no `data-scroll`.
-    const week =
-      frame.querySelector<HTMLElement>(".planner-grid") ??
-      frame.querySelector<HTMLElement>(".planner-cols");
-    const maxScroll = frame.scrollWidth - frame.clientWidth;
-    // No week mounted (a message or fallback card) — nothing to scroll to.
-    const hidden = week ? week.getBoundingClientRect().width - frame.clientWidth : 0;
-    if (hidden <= 1) {
-      delete frame.dataset.scroll;
-      return;
-    }
-    const left = frame.scrollLeft;
-    frame.dataset.scroll = left <= 1 ? "start" : left >= maxScroll - 1 ? "end" : "middle";
-    setScrollFade(frame, left, maxScroll);
-  }
-
-  /**
-   * Once per mount: put something WORTH SEEING in view rather than always
-   * Monday's column. Only the column view has columns to scroll to; it no-ops
-   * in the other two, which have no day headers to find.
-   *
-   * It scrolled to today, and had two holes that met on a phone. At 390 px the
-   * frame is 343 px over a 1529 px week — 4.4 screens — so whatever this lands
-   * on is the whole of what the student sees. (a) It returned early on a
-   * weekend, and (b) it scrolled to today's column whether or not that column
-   * held anything. Through the entire pre-semester planning window — which is
-   * when this tool is used at all — today is not in the drawn week in the first
-   * place, so it did nothing and the week opened parked on Monday. A plan whose
-   * only two sessions are on Friday therefore opened as an EMPTY GRID.
-   *
-   * So: today when today has sessions (a student mid-semester is asking about
-   * today), otherwise the first day that has any, otherwise leave it alone —
-   * there is nothing to prefer in a week with nothing in it.
-   */
-  let didScrollWeek = false;
-
-  function scrollWeekIntoView(): void {
-    if (didScrollWeek) return;
-    const frame = elements.gridFrame;
-    if (frame.scrollWidth - frame.clientWidth <= 1) return;
-    // `Array.from`, not a spread: this module is reachable from the Node
-    // typecheck pass (tsconfig.test.json), whose `lib` has no `DOM.Iterable`.
-    const columns = Array.from(frame.querySelectorAll<HTMLElement>(".planner-cols-day[data-day]"));
-    const withSessions = columns
-      .filter((column) => column.querySelector(".planner-cols-block") !== null)
-      .map((column) => Number(column.dataset.day))
-      .filter((day) => Number.isFinite(day))
-      .sort((a, b) => a - b);
-    if (withSessions.length === 0) return;
-    const weekday = new Date().getDay(); // 0 = Sunday
-    const today = weekday === 0 ? 7 : weekday;
-    const target = withSessions.includes(today) ? today : (withSessions[0] as number);
-    const header = frame.querySelector<HTMLElement>(
-      `.planner-cols-day-header[data-day="${target}"]`,
-    );
-    if (!header) return;
-    didScrollWeek = true;
-    const offset = header.getBoundingClientRect().left - frame.getBoundingClientRect().left;
-    frame.scrollTo({
-      left: Math.max(0, frame.scrollLeft + offset - RAIL_WIDTH_PX),
-      behavior: prefersReducedMotion() ? "auto" : "smooth",
-    });
-  }
-
-  elements.gridFrame.addEventListener("scroll", syncGridScroll, { passive: true, signal });
-  // A resize changes what an hour is worth in pixels, so it changes both
-  // whether the week is off-frame and what each bar has room to say.
-  window.addEventListener(
-    "resize",
-    () => {
-      syncGridScroll();
-      fitBlockLabels(elements.gridFrame);
-    },
-    { passive: true, signal },
-  );
-
-  // The week's column cap is viewport-dependent, and crossing that boundary — a
-  // rotation, a window drag — changes no plan state, so nothing else would
-  // redraw the grid. Only the boundary fires, not every resize frame.
-  globalThis
-    .matchMedia?.("(max-width: 40rem)")
-    .addEventListener("change", () => renderGridAndExams(), { signal });
+  /* --- The week's horizontal scroll (A4) ----------------------------------
+     The edge mask, the resize pair and the once-per-mount scroll to the first
+     day that HAS something all belong to `week`. They are properties of a
+     drawn week rather than of a plan, and three surfaces draw one. */
 
   /**
    * The verdict beside the Ukeplan kicker — PRODUCT §2's primary job, *kan jeg
@@ -2393,7 +2113,7 @@ export async function mountPlannerApp(
    * neither Green-Means-Fits nor Red-Is-Collision may be spent on "we do not
    * know".
    */
-  function renderVerdict(grid: GridRenderResult | null, loading: boolean): void {
+  function renderVerdict(grid: WeekRenderResult | null, loading: boolean): void {
     const host = elements.gridStatus;
     host.replaceChildren();
     // `planner-verdict` is the layout class and must survive: this used to
@@ -2622,18 +2342,6 @@ export async function mountPlannerApp(
     void loadBundles();
   }
 
-  /**
-   * A centered card where the week would be, for the empty/fallback states that
-   * carry an action button rather than a sentence. Resets the frame the way
-   * `renderGridMessage` does, then mounts the card `build` fills.
-   */
-  function renderWeekCard(build: (card: HTMLElement) => void): void {
-    renderGridMessage(elements.gridFrame, elements.gridNotes, null);
-    const card = el("div", "planner-week-card");
-    build(card);
-    elements.gridFrame.append(card);
-  }
-
   function renderGridAndExams(): void {
     const semester = currentSemester();
     const states = orderedActiveStates();
@@ -2671,7 +2379,7 @@ export async function mountPlannerApp(
     // the same question, drawn under a bar the gate has already hidden.
     const showFallback = states.length > 0 && !anyLoading && (!published || empty);
 
-    let gridResult: GridRenderResult | null = null;
+    let gridResult: WeekRenderResult | null = null;
     if (showFallback && semester) {
       // Ordered by severity, not by narrative. A question used to win over both
       // branches below, so a student who lost connectivity was told to pick a
@@ -2680,7 +2388,7 @@ export async function mountPlannerApp(
       // in its own panel directly above this frame.
       if (failed) {
         // State 3: a fetch failed. NEVER the "publiseres" copy — offer a retry.
-        renderWeekCard((card) => {
+        week.card((card) => {
           // `.np-hint`, like the card's other branches: DESIGN §3 gives
           // sentences to `.np-hint` and mono fragments to `.np-note`.
           card.append(el("p", "np-hint planner-week-card-hint", "Fikk ikke hentet timeplanen."));
@@ -2691,18 +2399,16 @@ export async function mountPlannerApp(
         });
       } else if (!published) {
         // State 2: timetable not published yet (unchanged copy).
-        renderGridMessage(
-          elements.gridFrame,
-          elements.gridNotes,
+        week.message(
           `Timeplan for ${semesterLabel(semester)} publiseres vanligvis i ${publishMonthFor(semester.id)}. Kom tilbake da.`,
         );
       } else if (question) {
         // A studieretning/elective/period question owns the empty week — its
         // sentence, not a fallback card, is what the student acts on.
-        renderGridMessage(elements.gridFrame, elements.gridNotes, question.weekMessage);
+        week.message(question.weekMessage);
       } else {
         // State 4: published, courses exist, none taught this term.
-        renderWeekCard((card) => {
+        week.card((card) => {
           card.append(
             el(
               "p",
@@ -2723,79 +2429,23 @@ export async function mountPlannerApp(
           card.append(change);
         });
       }
-    } else if (weekView === "kolonner") {
-      // The column grid draws into the same frame from the same states, on the
-      // same terms as Tavla below: `renderGrid` still owns the margin notes and
-      // the conflict count, because which courses we could not draw is a fact
-      // about the WEEK, not about which way round it is drawn.
-      //
-      // `onChoiceClick` rides along with the notes, NOT with the week: a note
-      // that says "EXPH0300 har 14 grupper" is a link into the picker, and it
-      // is inert without this. It used to be passed only by the branch that
-      // drew Rader into the real frame, so deleting that view took the notes'
-      // click with it.
-      gridResult = renderGrid(discardHost, elements.gridNotes, filteredStates, showOthers, {
-        loading: anyLoading,
-        pendingChoiceMessage: question?.weekMessage ?? null,
-        onChoiceClick: openCourseSettings,
-      });
-      const columns = renderColumnGrid(
-        elements.gridFrame,
-        filteredStates,
-        currentSemester()?.teachingWeeks ?? [],
-        showOthers,
-        {
-          todayNumber: todayWeekday(),
-          animate: pendingViewAnimation,
-          onBlockClick: openBlockPopover,
-          // Only inside the teaching period — see `inTeachingWeek`. Undefined
-          // leaves `columnGrid` drawing bare weekday names, which is what a
-          // pattern week is.
-          dates: inTeachingWeek() ? weekdayDates(new Date()) : undefined,
-        },
-      );
-      // Nothing to draw is a message branch, not an empty frame. The messages
-      // live in `renderGrid` and only there, so the fallback is to let it draw
-      // them into the real frame.
-      if (columns.blockCount === 0 && gridResult.state !== "grid") {
-        gridResult = renderGrid(
-          elements.gridFrame,
-          elements.gridNotes,
-          filteredStates,
-          showOthers,
-          {
-            loading: anyLoading,
-            pendingChoiceMessage: question?.weekMessage ?? null,
-            onChoiceClick: openCourseSettings,
-          },
-        );
-      }
     } else {
-      // Tavla renders into the same frame from the same states — a view of the
-      // plan, not a second plan. `renderGrid` still owns the margin notes —
-      // and their click into the picker — for the same reason as the column
-      // branch above.
-      gridResult = renderGrid(discardHost, elements.gridNotes, filteredStates, showOthers, {
+      // ONE call, whichever view is on screen. Which courses could not be drawn
+      // and why, the conflict count and the "velg din gruppe" links are facts
+      // about the WEEK rather than about which way round it is drawn, so
+      // `weekView` collects them through `weekNotes` and hands them back with
+      // the block count.
+      //
+      // `onChoiceClick` is wired at the mount, not here: a note saying
+      // "EXPH0300 har 14 grupper" is a link into the picker, and it used to be
+      // passed by one branch only.
+      gridResult = week.render(filteredStates, {
+        teachingWeeks: currentSemester()?.teachingWeeks ?? [],
+        showOthers,
         loading: anyLoading,
         pendingChoiceMessage: question?.weekMessage ?? null,
-        onChoiceClick: openCourseSettings,
       });
-      renderBoard(
-        elements.gridFrame,
-        filteredStates,
-        currentSemester()?.teachingWeeks ?? [],
-        showOthers,
-        {
-          todayNumber: todayWeekday(),
-          animate: pendingViewAnimation,
-          onBlockClick: openBlockPopover,
-        },
-      );
     }
-    // The strike-in plays once, on the render a view switch caused — never on
-    // the re-render a group pick or a plan edit causes.
-    pendingViewAnimation = false;
-    renderViewTabs();
 
     // B7a: the grid can reveal the muted øving layer on its own when nothing
     // classifies as a lecture, and the toggle has to say so. This is not the
@@ -2854,52 +2504,12 @@ export async function mountPlannerApp(
     // whichever branch answered, including the two that answer with one
     // sentence. Held longer, an apology sits atop five courses of reserved air.
     if (!examLoading) delete elements.examList.dataset.reserve;
-    syncGridScroll();
-    // Only once the bundles are in. A week drawn while a fetch is still in
-    // flight is drawn on PROVISIONAL geometry — and worse, the re-render when
-    // the rest lands replaces the grid's DOM, which resets `scrollLeft` and
-    // strands a smooth scroll part-way. Measured: it left the phone at 198 px
-    // of a 1529 px week whose only sessions start at 1035.
-    if (gridResult?.state === "grid" && !anyLoading) scrollWeekIntoView();
-    if (!anyLoading) settleWeekBox();
-  }
-
-  /**
-   * Ends the frame's reservation, and files what the week actually measured for
-   * the next load to reserve from (`saveWeekBox`).
-   *
-   * The lease is the important half: every reserved number is an estimate of a
-   * week that has not been drawn, and leaving it standing is how loading in
-   * Liste and then pressing the other tab left 600px of white paper for the
-   * rest of the visit.
-   *
-   * Three states are deliberately neither released nor remembered: a skeleton,
-   * an apology and an onboarding card are all shorter than the week they stand
-   * in for, so releasing collapses the frame just before the real week fills it
-   * and remembering under-reserves the next load. A week mid-`is-settling` is
-   * not evidence either — measuring it files a frame of an animation.
-   */
-  function settleWeekBox(): void {
-    const inner = elements.gridFrame.firstElementChild as HTMLElement | null;
-    if (!inner) return;
-    if (
-      inner.classList.contains("is-skeleton") ||
-      inner.classList.contains("is-settling") ||
-      inner.classList.contains("planner-grid-empty") ||
-      inner.classList.contains("planner-week-card")
-    ) {
-      return;
-    }
-    // Synchronously, in the frame the week landed in: the content is at least
-    // as tall as the reservation except in the cases this releases ON PURPOSE,
-    // and those should collapse now rather than a paint later.
-    delete elements.gridFrame.dataset.reserve;
-    // The measurement waits for layout, and only counts if this is still the
-    // element that was drawn.
-    requestAnimationFrame(() => {
-      if (!inner.isConnected) return;
-      saveWeekBox(weekView, window.innerWidth, inner.getBoundingClientRect().height);
-    });
+    // The week's own edge fade, once-per-mount scroll and reservation lease are
+    // released by `week.render`. The three message branches above draw no week,
+    // so they release the lease here instead — a card or a sentence is shorter
+    // than the week it stands in for, and a reservation left over one is a
+    // permanent hole.
+    if (gridResult === null && !anyLoading) week.settle();
   }
 
   // --- Provenance line -----------------------------------------------------

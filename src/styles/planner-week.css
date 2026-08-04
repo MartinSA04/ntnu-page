@@ -111,7 +111,7 @@
  * of the visit. `renderGridAndExams` releases it on the first drawn week and
  * `setWeekView` on the way out of a view.
  */
-#planner-grid-frame[data-reserve] {
+[data-surface="planner"] .planner-grid-frame[data-reserve] {
   min-height: calc(
     2 *
     var(--planner-frame-pad-block) +
@@ -125,16 +125,84 @@
 /* Released: the frame is exactly what it holds, in whichever view. Stated
    rather than merely absent, because the unqualified `.planner-grid-frame` rule
    above would otherwise keep RADER's floor under a view that drew less. */
-#planner-grid-frame:not([data-reserve]) {
+[data-surface="planner"] .planner-grid-frame:not([data-reserve]) {
   min-height: 0;
 }
 
-html[data-view="tavle"] #planner-grid-frame[data-reserve] {
+html[data-view="tavle"] [data-surface="planner"] .planner-grid-frame[data-reserve] {
   min-height: calc(
     2 *
     var(--planner-frame-pad-block) +
     var(--planner-box, calc(30.5rem + var(--plan-courses) * 4rem))
   );
+}
+
+/* --- Uke ⇄ Liste ---------------------------------------------------------
+   A segmented control: a recessed track with the live view raised out of it.
+   One of the two is always true, which is what the form has to say — a pair of
+   buttons would ask to be pressed, and a pair of bare words in a page's bar
+   would read as links among the chrome around them.
+
+   Here rather than in a page's scoped block because THREE surfaces carry the
+   pair, and a scoped rule ships only with its own page — which is how two
+   copies of a control start drifting apart.
+
+   The BUTTONS carry the height, not the container — a target is only a target
+   where the pointer lands, and each is a full `--control-h` minus the track's
+   2px lip (WCAG 2.5.8 asks 24). */
+.planner-view-tabs {
+  position: relative;
+  display: flex;
+  flex: none;
+  padding: 2px;
+  background: var(--wash);
+  border-radius: var(--radius-sm);
+}
+
+/* THE THUMB. A rule under a word was right when the switch lived in the week's
+   own section head, where a hairline was the local idiom. In a page's bar it
+   sits beside other controls, and a segmented control is what every calendar
+   puts there: a recessed track with the live view raised out of it on paper.
+
+   `--view-x` / `--view-w` are written by `weekView`'s `renderTabs` from the
+   live button boxes, because the labels are different widths in every font and
+   at every zoom level. */
+.planner-view-thumb {
+  position: absolute;
+  top: 2px;
+  bottom: 2px;
+  inset-inline-start: 0;
+  width: var(--view-w, 0);
+  background: var(--card);
+  border-radius: calc(var(--radius-sm) - 1px);
+  box-shadow: var(--shadow-sm);
+  transform: translateX(var(--view-x, 0));
+  transition:
+    transform var(--dur) var(--ease),
+    width var(--dur) var(--ease);
+}
+
+.planner-view-tab {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  min-height: calc(var(--control-h) - 4px);
+  padding-inline: var(--space-3);
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  color: var(--muted);
+  border-radius: calc(var(--radius-sm) - 1px);
+  transition: color var(--dur-fast) var(--ease);
+}
+
+.planner-view-tab:hover {
+  color: var(--ui);
+}
+
+.planner-view-tab[aria-pressed="true"] {
+  color: var(--fg);
 }
 
 /* An apology is not a week, but it stands where one would: with the frame
@@ -244,7 +312,7 @@ html[data-view="tavle"] #planner-grid-frame[data-reserve] {
   }
 
   /* TAVLE's rows wrap harder in a narrow column, so a different slope here. */
-  html[data-view="tavle"] #planner-grid-frame[data-reserve] {
+  html[data-view="tavle"] [data-surface="planner"] .planner-grid-frame[data-reserve] {
     min-height: calc(
       2 *
       var(--planner-frame-pad-block) +

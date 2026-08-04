@@ -39,15 +39,22 @@ interface Props {
   title: string;
   description: string;
   wide?: boolean;
+  /**
+   * Which week-drawing surface this page is, when it is one. Server-rendered
+   * onto `<html>` because it is the first half of the frame reservation's key
+   * (surface, view, width) — the pre-paint probe below and the CSS in
+   * planner-week.css both read it, and neither can wait for a module to mount.
+   */
+  surface?: "planner" | "emne" | "user";
 }
-const { title, description, wide = false } = Astro.props;
+const { title, description, wide = false, surface } = Astro.props;
 
 const THEME_KEY = "np:theme";
 const PLANS_KEY = "np:plans";
 const PROFILE_KEY = "np:profile";
 const LAST_SEMESTER_KEY = "np:lastSemester";
-// The planner's remembered view and the height its frame last measured in it —
-// see `WEEK_VIEW_KEY`/`WEEK_BOX_KEY` in components/planner/plannerApp.ts.
+// The remembered view and the height each surface's frame last measured in it —
+// see `WEEK_VIEW_KEY`/`WEEK_BOX_KEY` in components/planner/weekView.ts.
 const WEEK_VIEW_KEY = "np:weekView";
 const WEEK_BOX_KEY = "np:weekBox";
 /** Widths further apart than this discard the remembered box (see below). */
@@ -98,7 +105,7 @@ const crawlDate = formatCrawlDate(semestersData.crawledAt);
 ---
 
 <!doctype html>
-<html lang="nb">
+<html lang="nb" data-surface={surface}>
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -214,8 +221,15 @@ const crawlDate = formatCrawlDate(semestersData.crawledAt);
           try {
             var stored = localStorage.getItem(WEEK_VIEW_KEY);
             if (stored === "kolonner" || stored === "tavle") view = stored;
+            // Keyed by SURFACE first: three pages draw a week, and a height
+            // measured on a five-course planner is not evidence about a
+            // one-course course page. A page that is not one of them has no
+            // frame to reserve, so it looks nothing up.
+            var surface = root.getAttribute("data-surface");
             var saved = JSON.parse(localStorage.getItem(WEEK_BOX_KEY) || "{}");
-            var entry = saved && typeof saved === "object" ? saved[view] : null;
+            var forSurface =
+              surface && saved && typeof saved === "object" ? saved[surface] : null;
+            var entry = forSurface && typeof forSurface === "object" ? forSurface[view] : null;
             if (
               Array.isArray(entry) &&
               entry[1] > 0 &&

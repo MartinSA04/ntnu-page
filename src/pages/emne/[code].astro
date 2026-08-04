@@ -87,7 +87,7 @@ function formatDate(date: string | null): string | null {
 const description = `${course.code} ${course.name}: timeplan, eksamen og nøkkeltall fra NTNU.`;
 ---
 
-<Layout title={`${course.code} ${course.name}`} description={description} wide>
+<Layout title={`${course.code} ${course.name}`} description={description} wide surface="emne">
   <p class="np-data emne-code">{course.code}</p>
   <h1 class="emne-title">{course.name}</h1>
   <p class="emne-meta np-note">

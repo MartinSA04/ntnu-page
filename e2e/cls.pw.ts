@@ -198,11 +198,13 @@ test.describe("layout stability", () => {
       document.documentElement.style.getPropertyValue("--planner-box"),
     );
     expect(box, "the remembered box never reached <html>").toMatch(/^\d+px$/);
-    // And the height is filed under the width it was measured at, so a rotated
-    // phone or a dragged window falls back to the formula instead of reserving
-    // for a layout that no longer exists.
+    // And the height is filed under the SURFACE and the width it was measured
+    // at. The width keeps a rotated phone or a dragged window falling back to
+    // the formula instead of reserving for a layout that no longer exists; the
+    // surface keeps a five-course planner's number away from the one-course
+    // frames on /emne/[code]/ and /user/<navn>, which draw the same two views.
     const stored = await page.evaluate(() => JSON.parse(localStorage.getItem("np:weekBox") ?? "{}"));
-    expect(stored.tavle?.[0]).toBe(width);
+    expect(stored.planner?.tavle?.[0]).toBe(width);
   });
 
   /**

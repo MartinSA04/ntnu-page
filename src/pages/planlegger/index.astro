@@ -1,8 +1,9 @@
 ---
 import Icon from "../../components/Icon.astro";
+import WeekTabs from "../../components/WeekTabs.astro";
 import Layout from "../../layouts/Layout.astro";
-// The week's geometry and ink live in one stylesheet because two surfaces
-// render it through the same `renderGrid`. Only this page's exam list stays
+// The week's geometry and ink live in one stylesheet because every surface that
+// draws a week mounts the same `weekView`. Only this page's exam list stays
 // scoped below.
 import "../../styles/planner-week.css";
 
@@ -17,7 +18,7 @@ const description =
 // `studieinfo.ts` fetches the first time a student opens the panel.
 ---
 
-<Layout title="Planlegger" description={description} wide>
+<Layout title="Planlegger" description={description} wide surface="planner">
   {/* FIRST RUN. The predicate is `html:not([data-plan])`, and it is not a new
       mechanism: Layout's pre-paint probe sets `data-plan` when a programme is
       stored or ANY semester holds a course, and removes it otherwise — so its
@@ -225,34 +226,7 @@ const description =
         </div>
       </div>
 
-      {/* "Uke" is the timetable shape a student already knows from every other
-          calendar: days as columns, time down. The id keeps saying `kolonner`
-          because that is the value in localStorage and the name of the module
-          that draws it — the transposed week it used to be named against now
-          lives only on /emne/[code]/.
-
-          THE ONE CONTROL THAT DOES NOT FOLD. It is what a student throws while
-          reading the week, so putting it a tap deep would charge the most
-          frequent gesture on the page for the benefit of the least frequent. */}
-      <div class="planner-view-tabs" role="group" aria-label="Velg hvordan uka vises">
-        <span class="planner-view-thumb" aria-hidden="true"></span>
-        <button
-          type="button"
-          class="planner-view-tab"
-          id="planner-view-kolonner"
-          aria-pressed="true"
-        >
-          Uke
-        </button>
-        <button
-          type="button"
-          class="planner-view-tab"
-          id="planner-view-tavle"
-          aria-pressed="false"
-        >
-          Liste
-        </button>
-      </div>
+      <WeekTabs idPrefix="planner" />
 
       <button
         type="button"
@@ -1020,71 +994,8 @@ const description =
     display: none;
   }
 
-  /* --- Uke ⇄ Liste ------------------------------ */
-
-  /* A segmented control: a recessed track with the live view raised out of it.
-     One of the two is always true, which is what the form has to say — a pair
-     of buttons would ask to be pressed, and a pair of bare words in the page's
-     bar would read as links among the chrome around them.
-
-     The BUTTONS carry the height, not the container — a target is only a target
-     where the pointer lands, and each is a full `--control-h` minus the track's
-     2px lip (WCAG 2.5.8 asks 24). */
-  .planner-view-tabs {
-    position: relative;
-    display: flex;
-    flex: none;
-    padding: 2px;
-    background: var(--wash);
-    border-radius: var(--radius-sm);
-  }
-
-  /* THE THUMB. A rule under a word was right when the switch lived in the
-     week's own section head, where a hairline was the local idiom. In the
-     page's bar it sits beside two buttons and a checkbox, and a segmented
-     control is what every calendar puts there: a recessed track with the live
-     view raised out of it on paper.
-
-     `--view-x` / `--view-w` are still written by `renderViewTabs` from the live
-     button boxes, because the labels are different widths in every font and at
-     every zoom level. */
-  .planner-view-thumb {
-    position: absolute;
-    top: 2px;
-    bottom: 2px;
-    inset-inline-start: 0;
-    width: var(--view-w, 0);
-    background: var(--card);
-    border-radius: calc(var(--radius-sm) - 1px);
-    box-shadow: var(--shadow-sm);
-    transform: translateX(var(--view-x, 0));
-    transition:
-      transform var(--dur) var(--ease),
-      width var(--dur) var(--ease);
-  }
-
-  :global(.planner-view-tab) {
-    position: relative;
-    z-index: 1;
-    display: inline-flex;
-    align-items: center;
-    min-height: calc(var(--control-h) - 4px);
-    padding-inline: var(--space-3);
-    font-family: var(--font-sans);
-    font-size: var(--text-sm);
-    font-weight: var(--weight-medium);
-    color: var(--muted);
-    border-radius: calc(var(--radius-sm) - 1px);
-    transition: color var(--dur-fast) var(--ease);
-  }
-
-  :global(.planner-view-tab:hover) {
-    color: var(--ui);
-  }
-
-  :global(.planner-view-tab[aria-pressed="true"]) {
-    color: var(--fg);
-  }
+  /* The Uke ⇄ Liste pair's own styles live in planner-week.css: three surfaces
+     carry it now, and a page-scoped rule ships only with its page. */
 
   /* The layer, not a view: a box you tick. Nothing about it is shaped like the
      pair beside it — it ADDS øvinger and labber; it does not choose how the

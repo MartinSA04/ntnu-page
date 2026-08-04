@@ -111,10 +111,11 @@ function codeList(codes: string[]): (HTMLElement | string)[] {
 /**
  * Mounts the popover once. Idempotent against a stale dialog and self-removes
  * on `signal` abort. `onOpenSettings` is the way out to the editor: the popover
- * answers "what is this", the modal answers "change it".
+ * answers "what is this", the modal answers "change it". `null` where there is
+ * no editor to open, which omits the verb rather than pointing it at nothing.
  */
 export function mountBlockPopover(
-  onOpenSettings: (code: string) => void,
+  onOpenSettings: ((code: string) => void) | null,
   signal: AbortSignal,
 ): BlockPopoverHandle {
   document.getElementById("planner-block-popover")?.remove();
@@ -269,14 +270,21 @@ export function mountBlockPopover(
     }
 
     const actions = el("div", "np-actions np-actions--split block-popover-actions");
-    const edit = el("button", "np-btn block-popover-edit", editVerb(ctx.choice));
-    edit.type = "button";
-    edit.setAttribute("aria-label", `${editVerb(ctx.choice)} for ${detail.code}`);
-    edit.addEventListener("click", () => {
-      close();
-      onOpenSettings(detail.code);
-    });
-    actions.append(edit);
+    // Two of the three surfaces that draw a week have no editor to open —
+    // `/emne/[code]/` is one course's reference page and `/user/<navn>` is
+    // somebody else's plan — so the verb is omitted rather than pointed at
+    // nothing. The card is then what it mostly already was: the facts of the
+    // session you pointed at, and a way through to the course.
+    if (onOpenSettings) {
+      const edit = el("button", "np-btn block-popover-edit", editVerb(ctx.choice));
+      edit.type = "button";
+      edit.setAttribute("aria-label", `${editVerb(ctx.choice)} for ${detail.code}`);
+      edit.addEventListener("click", () => {
+        close();
+        onOpenSettings(detail.code);
+      });
+      actions.append(edit);
+    }
 
     const link = el("a", "np-link-out", "Gå til emnesiden");
     link.append(icon("arrowRight"));
