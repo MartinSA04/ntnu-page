@@ -239,6 +239,13 @@
   --measure: 38rem;
   --topbar-h: 64px;
   --gutter: clamp(16px, 4vw, 32px);
+  /* ONE CONTROL HEIGHT, AT EVERY POINTER TYPE. This used to step to 44px under
+     `@media (pointer: coarse)`, which bought hit area by making every phone
+     layout taller: the planner's bar, the topbar's menu rows and the settings
+     dialog's group list each grew 8px per control, in the one dimension a phone
+     has least of. 36px clears WCAG 2.5.8 AA (24px) on its own, and the extra
+     reach a thumb wants is bought where it costs nothing — see the hit-target
+     rule in primitives.css, which grows the target without growing the box. */
   --control-h: 36px;
 
   /* THE PLAN PROBE — how many courses the stored plan holds, written onto
@@ -359,12 +366,5 @@
     --dur-fast: 0ms;
     --dur: 0ms;
     --dur-flash: 0ms;
-  }
-}
-
-/* Touch devices: every control scales through the one height token. */
-@media (pointer: coarse) {
-  :root {
-    --control-h: 44px;
   }
 }

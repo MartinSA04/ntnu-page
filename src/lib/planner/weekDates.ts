@@ -41,6 +41,22 @@ export function isoWeekNumber(date: Date): number {
 }
 
 /**
+ * The Monday of ISO week `week` in `year`, at local midnight.
+ *
+ * The anchor is 4 January, which is in ISO week 1 by definition — the same
+ * Thursday rule `isoWeekNumber` runs forwards, run backwards. Stepping with
+ * `setDate` rather than constructing a date from a day-of-month is what makes
+ * a week 1 that starts in December of the previous year land correctly.
+ */
+export function isoWeekStart(year: number, week: number): Date {
+  const jan4 = new Date(year, 0, 4);
+  const isoDay = jan4.getDay() === 0 ? 7 : jan4.getDay();
+  const monday = midnight(jan4);
+  monday.setDate(monday.getDate() - (isoDay - 1) + (week - 1) * 7);
+  return monday;
+}
+
+/**
  * The day-of-month for each weekday of `date`'s own week, keyed the way the
  * grid keys its columns: 1 = Monday … 6 = Saturday.
  */

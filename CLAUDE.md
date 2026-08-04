@@ -131,12 +131,23 @@
   than one surface reserves. The width is in it because a list measured at
   390px wraps differently at 1440, and it is discarded outside a 32px
   tolerance.
-  `/emne/[code]/` and `/user/<navn>` build their frames AFTER a fetch, so what
-  holds their space is a placeholder standing in for a whole section — a
-  different box, with its own per-view numbers measured in those pages, and
-  `weekView` deliberately files nothing for them.
+  `/user/<navn>` reserves the same way now that its shell is static, with its
+  own per-view fallbacks (`--plan-courses` is the VIEWER's plan, not the one
+  being shown, so the planner's formulas would size that frame from a plan it is
+  not drawing). `/emne/[code]/` builds its frame AFTER a fetch, so what holds
+  its space is a placeholder standing in for a whole section — a different box,
+  with its own per-view numbers measured in that page, and `weekView`
+  deliberately files nothing for it.
   **The probe's default view must match `loadWeekView`'s** (`kolonner`), or a
-  cold load reserves for a view it is not about to draw. All of it is a
+  cold load reserves for a view it is not about to draw. And **the per-view
+  rules are COMPOUND selectors, not descendant ones**: `data-view` and
+  `data-surface` are both written on `<html>`, so
+  `html[data-view="tavle"] [data-surface="planner"]` asked for an element
+  carrying the surface *inside* an html carrying the view, which does not exist.
+  That typo meant Liste's reservation never applied at all — it fell through to
+  Uke's and held 486px for a week that settles at 812 (three courses, 1280px,
+  measured 2026-08-04). Neither the CLS budget nor the lease tests caught it,
+  because both measure the RELEASE. All of it is a
   **lease**: `--planner-box` holds the height of the view the page LOADED in,
   so a reservation that never ends kept Liste's 829px around the other view's
   much shorter week the moment the student pressed the other tab (600px of
@@ -158,25 +169,70 @@
   gates all of it with per-surface budgets — verified to fail when (b) is
   removed. Re-measure before changing any number; do not "tidy" a
   `min-height` you cannot see doing anything.
-- **The two chrome bars fold into menus on a phone, and the WRAPPER is what
-  folds** (`src/lib/menuPanel.ts`, one controller, two bars: the shell topbar
-  at 480px and `.planner-head` at 46rem — each folds where *it* runs out of
-  room, so a 700px tablet gets `⋯` with the topbar still expanded). Above its
-  breakpoint the wrapper is `display: contents`, so its children are the bar's
-  own flex children and the wide layout is untouched; below it the wrapper is a
-  positioned panel drawn only while the bar carries `data-menu="open"`. Three
-  things a reasonable person would undo: it is deliberately **not** a
-  `<dialog>` or `[popover]` (neither can be switched back to inline layout by
-  CSS, which is the whole mechanism); the open state is `data-menu` **on the
-  bar**, never `[hidden]` on the wrapper (see the bullet above — that rule
-  beats `display: contents` too and would delete the controls at every width);
-  and there is **one DOM**, because every folded control is bound by id
-  elsewhere, so a duplicated phone copy collides and a `matchMedia` node-move
-  would relocate a live `<select>` mid-interaction. The planner's menu closes
-  on the layer box and the semester but **not** on "Del lenke" — the first two
-  redraw the week and you cannot follow an animation under a scrim, the third
-  holds "Kopiert" in place. `e2e/flows.pw.ts` covers both, including that the
-  menu survives a ClientRouter navigation.
+- **One chrome bar folds into a menu, and the WRAPPER is what folds**
+  (`src/lib/menuPanel.ts`, one controller, one bar: the shell topbar at 480px).
+  Above its breakpoint the wrapper is `display: contents`, so its children are
+  the bar's own flex children and the wide layout is untouched; below it the
+  wrapper is a positioned panel drawn only while the bar carries
+  `data-menu="open"`. Three things a reasonable person would undo: it is
+  deliberately **not** a `<dialog>` or `[popover]` (neither can be switched back
+  to inline layout by CSS, which is the whole mechanism); the open state is
+  `data-menu` **on the bar**, never `[hidden]` on the wrapper (see the bullet
+  above — that rule beats `display: contents` too and would delete the controls
+  at every width); and there is **one DOM**, because every folded control is
+  bound by id elsewhere, so a duplicated phone copy collides and a `matchMedia`
+  node-move would relocate a live `<select>` mid-interaction.
+  **`.planner-head` no longer folds** and no longer mounts this: it carried
+  five controls and two of them were about the WEEK, not the plan. Those went
+  down to the week's own section, which left a name, a semester select and a
+  36px share mark — about 250px of the 358px a 390px phone has. Do not re-add a
+  fold there without first asking what the bar has picked up that belongs
+  somewhere else.
+- **The week's three controls are ONE server-rendered component, and
+  `mountWeekView` owns everything in it** (`src/components/WeekControls.astro`).
+  Two rows: the week picker, then the layer box hard left and the Uke/Liste
+  switch hard right with **nothing ever between them**. Three things here are
+  load-bearing. (a) **No ids** — every control is found by `data-role` inside
+  the block the page hands over, which is what lets three surfaces carry three
+  copies; the old `idPrefix` scheme and the runtime twins `buildWeekTabs` /
+  `buildLayerToggle` are **deleted**, because `/user/<navn>` has a static shell
+  now. (b) It stays **server-rendered on all three surfaces**: building a
+  control at mount pops it in a frame late, on top of a frame already reserving
+  its own height. (c) The picker sits **above** the other two rather than beside
+  them because three controls come to ~400px against 358px of content at 390px,
+  so sharing a row would silently give the phone a different arrangement.
+  The picker narrows through `entriesInWeek` inside `collectSessions` — one
+  option on one function, so the two views cannot disagree — and it is a
+  **lease** like the view switch: changing weeks releases the frame's
+  reservation. It is **not persisted and not in the URL** (one link shows two
+  people the same week); its default is `inTeachingWeek`, the same predicate
+  that decides whether the drawn week carries dates, so the picker and the
+  column headers cannot disagree about whether this is a real Monday. The
+  margin notes and the verdict are **not** narrowed with the grid: a clash in
+  week 40 is a fact about the plan, and the note names its own weeks.
+
+- **`/planlegger/` and `/user/<navn>` are the same page**, and their sections'
+  look lives in `src/styles/plan-surface.css` rather than in either page's
+  scoped block — the same rule `planner-week.css` already exists for. The shared
+  plan renders the planner's shell with the verbs removed and calls the same
+  three renderers (`mountWeekView`, `renderExamList`, `renderCourseRows` +
+  `renderLoadTrack`); `publicPlan.ts` is a fetch and those calls, with no DOM
+  construction of its own. Two traps: a course row's link must **not** be
+  `.np-navlink` (it is `inline-flex`, which drops the text node holding the
+  space between the code and the name), and the shared payload's `credits` must
+  be carried into `PlanCourseState.course` or the list draws no figures and the
+  load track draws nothing — no bundle has landed when those rows are written.
+
+- **There is ONE control height, at every pointer type.** `--control-h` is 36px
+  and the `@media (pointer: coarse)` step to 44px is **deleted**: it bought hit
+  area by making every phone layout taller, which is paying in the dimension a
+  phone has least of. 36 clears WCAG 2.5.8 AA (24px) unaided and
+  `e2e/flows.pw.ts` measures it. The thumb's reach is bought by a transparent
+  pseudo-element that grows the hit rectangle past the painted box
+  (`primitives.css`) — do not reintroduce the media query, and do not add a
+  target to a control closer to its neighbour than the shortfall, because
+  overlapping targets steal each other's taps.
+
 - **ClientRouter rule (load-bearing):** hoisted page/component scripts run
   ONCE per module — they do NOT re-execute after a view-transition swap. Every
   page's setup must go through `onPage(setup)` (`src/lib/pageLifecycle.ts`),

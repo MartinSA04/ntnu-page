@@ -626,11 +626,33 @@ Settled, with the reasoning, so they are not re-opened by the next reviewer.
   it is a verdict and must read as one.
 
 - **One bar at the top of the page, and it carries the PLAN.** The plan's name
-  and the controls that act on *it* share a row: the layer checkbox, the
-  Uke/Liste switch, "Del lenke", and the semester select. They came up out of
-  the week's own section head — a second bar 200 px lower saying the same kind
-  of thing — and that head is gone with them. **The title is a name, not a
+  and the controls that act on *it* share a row. **The title is a name, not a
   headline** (1.25 rem / 600).
+
+  **On 2026-08-04 that row was cut down to what the sentence above actually
+  licenses.** It had grown to five controls, and two of them were not about the
+  plan at all: the layer checkbox and the Uke/Liste switch are questions about
+  the WEEK — *which sessions are drawn, and in what shape* — and a plan does not
+  change when either is thrown. They went down to the week's own section, where
+  a third week control joined them (see *The week is something you pick*). The
+  argument that brought them up here in 2026-08-03 — "a second bar 200 px lower
+  saying the same kind of thing" — was the right diagnosis of the wrong thing:
+  the two bars did not say the same kind of thing, and merging them is what
+  forced a fold.
+
+  What is left is **the name, the semester and the hand-over**, and the row
+  therefore fits 390 px on its own: a title that ellipsises, a select that sizes
+  to "Høst 2026", and a 36 px mark. **So the `⋯` menu is gone from this page**
+  (the shell topbar keeps its own — that bar genuinely does run out of room),
+  and with it the rule about which controls close it. Nothing folds, so nothing
+  has to decide.
+
+  **"Del lenke" is a mark, not a labelled button.** It is the last thing in the
+  row at every width and it never moves. The label was 84 px of the one row the
+  plan's name has to fit in, and losing it retires the whole pinned-width
+  apparatus below: an icon square cannot change size, so there is nothing to
+  reserve. The name lives on `aria-label`; the confirmation is `share` → `check`
+  plus an `aria-label` that says what happened.
 
   Two of the bar's original five left on 2026-08-03, and the line they were
   sorted along is *what the control is about*. **"Legg til emne"** went back to
@@ -763,29 +785,37 @@ Settled, with the reasoning, so they are not re-opened by the next reviewer.
   duplicated phone copy would collide and a `matchMedia` node-move would
   relocate a live `<select>` across resizes and ClientRouter swaps.
 
-  **Each bar folds at its own width** — 480 px for the shell, 46 rem for the
-  plan bar, which is where each actually runs out of room. A 700 px tablet
-  therefore shows ⋯ with the topbar still expanded; that is correct, not
-  inconsistent.
+  **ONE BAR USES THIS NOW, and that is the correction.** The plan bar folded at
+  46 rem because it carried five controls, two of which were about the week
+  rather than the plan. Moving those two down to the week's own section left
+  three things on the row, which fit 390 px, so the fold went and the rules it
+  needed went with it — the per-bar breakpoint, and *a control that redraws the
+  week closes the menu, a control that only confirms itself stays open*. Both
+  are recorded here because they were right about the mechanism; neither has a
+  bar left to govern. **A fold is a symptom.** Reach for one only after asking
+  whether the bar is carrying something that belongs somewhere else.
 
-  **What stays out of the menu is what you throw while reading.** The plan
-  bar keeps Uke/Liste; everything else folds. And one rule decides dismissal:
-  **a control that redraws the week closes the menu, a control that only
-  confirms itself stays open.** The layer box and the semester are animated on
-  purpose (§7) so a student can follow the change, which is impossible under a
-  scrim; "Del lenke" holds "Kopiert" in place, and closing would throw away the
-  confirmation the pinned width exists to protect.
+  The shell topbar still folds, at 480 px, and genuinely does run out of room:
+  a wordmark, two nav links, an account and a theme toggle have nowhere else to
+  be.
 
-- **The hand-over is "Del lenke" → "Kopiert", and the resting state is the
-  wider one.** That ordering is the whole decision. The pair was "Del" →
-  "Lenke kopiert", which grew the button and shoved the Uke/Liste switch
-  ~22 px sideways at the moment it was pressed; pinning the button to the
-  *wider* of the two stopped the jump and bought a permanent slab of dead space
-  after the short word for the rest of the visit. Naming the object in the
-  resting label makes the rest state the widest, so the pin costs nothing at
-  rest and only stops the button shrinking while it holds the confirmation.
-  The mark swaps with the word — `share` → `check` — because a check is the
-  half of "it worked" that is read before any word.
+- **The hand-over is a MARK, and the confirmation is the mark swapping.**
+  `share` → `check`, with `aria-label` carrying both the name and the
+  confirmation. A check is the half of "it worked" that is read before any word,
+  and with no word there is nothing else to read.
+
+  **The three labelled versions before it are why.** "Del" → "Lenke kopiert"
+  grew the button and shoved the Uke/Liste switch ~22 px sideways at the moment
+  it was pressed. Pinning to the *wider* label stopped the jump and bought a
+  permanent slab of dead space after the short word. "Del lenke" → "Kopiert"
+  made the RESTING state the widest, so the pin cost nothing at rest — a good
+  fix, and still a pin, a measurement and a reserved width for a control that
+  only ever needed not to change size. **An icon square cannot change size.**
+  The apparatus is deleted, not improved: `reserveShareWidth` and its measured
+  `minWidth` are gone.
+
+  The label was also 84 px of the one row the plan's name has to fit in at
+  390 px, which is what made this the change that let the `⋯` menu go.
 
   Its icon is drawn from `Icon.astro` like every other mark, and that is not
   bookkeeping: as a hand-inlined `<svg>` with no width, no height and no CSS it
@@ -794,6 +824,102 @@ Settled, with the reasoning, so they are not re-opened by the next reviewer.
   mark appeared — oversized — only in the state where the label wrapped the box
   open. **A mark in this system carries its own size**; do not inline one that
   leaves sizing to the layout it lands in.
+
+- **THE WEEK IS SOMETHING YOU PICK, and the week's controls are the week's.**
+  Three controls decide what the grid draws — *which weeks*, *which layers*,
+  *in what shape* — and all three now live in the week's own section, in two
+  rows, on all three surfaces that draw a week
+  (`src/components/WeekControls.astro`):
+
+  ```
+  Uke 34  ⌄
+  ☐ Øvinger og labber                            [ Uke | Liste ]
+  ```
+
+  **The second row's geometry is a rule, not a layout.** The layer box is hard
+  left, the view switch hard right, and **nothing may ever come between them**.
+  They are the two things a student throws while reading the week, and a third
+  control landing in that gap is what the split into two rows exists to prevent.
+
+  **The picker is above them rather than beside them, and the reason is 390 px.**
+  Three controls come to about 400 px against 358 px of content width, so
+  sharing a row means the phone silently gets a different arrangement from the
+  desktop. Above, the same two rows hold at every width and on every surface —
+  which is what lets this be a component instead of three similar bars.
+
+  **`mountWeekView` owns the block, and nothing in it has an id.** Every control
+  is found by `data-role` inside the element the page hands over. Three surfaces
+  can therefore carry three copies with no prefix bookkeeping and nothing to
+  collide, and the runtime twins that existed for `/user/<navn>`
+  (`buildWeekTabs`, `buildLayerToggle`) are deleted — that page has a static
+  shell now.
+
+  **What the picker offers, and what decides its default.** «Alle uker» is the
+  mønsteruke, «Denne uka» follows the calendar rather than pinning a number, and
+  every teaching week is listed by number and Monday ("Uke 36, 31. aug"). The
+  default is **the same predicate that already decides whether the drawn week
+  carries dates**: inside the teaching period the page is open in a particular
+  week and shows it; outside there is no such week, so the pattern is the only
+  honest answer and «Denne uka» is not in the list at all. Deriving both from
+  one predicate is what stops the picker and the column headers disagreeing
+  about whether this is a real Monday.
+
+  **A chosen week is always a real one**, so it carries its Monday's numerals
+  whether or not today falls inside the teaching period. The disc still marks
+  *today*, so it appears only in the week today is in.
+
+  **Not persisted, and not in the URL** — unlike the view, which is a preference
+  about shape. One link has to show two people the same week, and a remembered
+  scope would need a fourth fact in the pre-paint probe to avoid drawing the
+  wrong height for a frame. It is a lease like the view is: changing weeks
+  releases the frame's reservation, because a week with three sessions is not
+  the height being held for a week with eleven.
+
+  **The verdict is not narrowed with the grid.** A collision in week 40 is a
+  fact about the plan, and the margin note names the weeks it happens in, so it
+  stays on screen beside a week that does not show it. What changed is the
+  wording and the shortcut: "2 kollisjoner denne uka" became **"2 kollisjoner"**
+  (with a picker on the page the old phrase reads as a claim about the drawn
+  week), and pressing it moves the picker to the week the clash is actually in
+  before flashing anything — `ConflictGroup` already carries that list.
+
+- **A pass says nothing.** "Ingen forelesninger kolliderer" was removed on
+  2026-08-04. It answered a question a student only asks when something might be
+  wrong and spent a line of the first screen on every load reporting that
+  nothing is — which a phone rule already half-admitted by hiding it there. What
+  survives is the **admission** it used to carry: some courses publish sessions
+  but nothing the classifier calls a lecture, so the DR-1 check went over them
+  rather than on them, and that is a caveat with no claim left to qualify. It
+  stands alone now as an "unknown" chip, the same shape as the other two
+  branches about a check that could not be completed.
+
+  **So the verdict line holds no space.** Its only tenants are exceptions — a
+  collision, a check that could not run, a load over 30 sp — so `:empty` takes
+  it out of flow the rest of the time, and it carries no reservation. The
+  loading chip went with the reservation: the week's own skeleton is directly
+  below and already says a timetable is being fetched. Reserving 22 px for a
+  line that is usually silent costs the week that space on every load; the shift
+  when an exception does arrive is one row, on the minority of plans that have
+  one.
+
+  **DR-9's deadline left with it**, to the foot of the Emner list. It is a fact
+  about the calendar rather than about the plan, it was the one permanent tenant
+  of a row otherwise reserved for exceptions, and what a student does about it
+  is register those courses.
+
+- **ONE CONTROL HEIGHT, at every pointer type, and the target is bigger than the
+  box.** `--control-h` used to step 36 px → 44 px under `@media (pointer:
+  coarse)`. That bought hit area by making every phone layout taller — the plan
+  bar, the topbar's menu rows and the settings dialog's group list each grew
+  8 px per control — which is paying in the dimension a phone has least of.
+
+  36 px clears **WCAG 2.5.8 (AA), 24 × 24**, unaided; `e2e/flows.pw.ts` measures
+  every control on the planner against that floor. The reach a thumb wants is
+  bought where it costs nothing instead: a transparent pseudo-element grows the
+  hit rectangle past the painted box (`primitives.css`), so a 36 px control
+  answers a 44 px tap while occupying 36 px. **Overlapping targets steal each
+  other's taps**, so a control closer to its neighbour than the shortfall does
+  not get one.
 
 - **The view switch is a segmented control**, a recessed track with the live
   view raised out of it. A travelling underline was right when it lived in a

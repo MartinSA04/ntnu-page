@@ -147,7 +147,9 @@ moments; **C** is a lens on both, not a separate build.
   where the semester's edges are. This lens is what forces the mobile
   treatment and justifies the day-load and free-day work. It does **not**
   justify a week-scrubber — that is a during-semester concern in a
-  before-semester tool.
+  before-semester tool. The week SCOPE picker that shipped 2026-08-04 is not
+  it, and is not justified by this persona either: it exists because the
+  pattern week draws sessions together that never occur together (D13).
 
 **Not personas:** the grade-aware strategist and the exchange student both
 reduce to filters and honest signals we already commit to (season-split grade
@@ -492,7 +494,8 @@ No cross-course grade leaderboard. **No compare matrix** — facts inline, not
 a spreadsheet. No multi-year planning in the planner. No ICS, push, maps or
 solver. No bilingual UI chrome. No wizard, glossary or FAQ. No
 building-level campus filter (the data is city-level only). No drag as a
-primary gesture. No hue-tinted grade bars. **No week-scrubber.** **No
+primary gesture. **No week-scrubber** — the week scope picker (D13) is a
+selector, not a scrubber. No hue-tinted grade bars. **No
 assessment-mix workload count** — it sits on the wrong side of the
 no-fabricated-scores line. **No personal fixed blocks** — localStorage-only
 state breaks shared-URL parity, which is the growth object.
@@ -590,7 +593,7 @@ Do not re-litigate or silently re-add these.
 | D10 | **Persistent nav: Planlegger + Emner, on every page. `/emne/[code]` is a fork point, not an encyclopedia.** | A single layout-dependent nav pill, and a course page built as research/encyclopedia. The loudest surfaces were the least differentiated; the IA must obey the positioning. |
 | D11 | **Grade stats only in a decision context.** The fork point *is* one, so the season-split figure ships there under §9's constraints. | Browsable grade trivia: a sortable column, a cross-course leaderboard, hue-tinted bars, a derived difficulty score, or any figure divorced from the fork CTA. That is DBH-mirror parasitism. |
 | D12 | **The deadline and "next plannable term" are MUST** (DR-9). | Leaving the deadline off-screen — it was in zero of six flows — and "next term" as an invisible default. |
-| D13 | **No week-scrubber, no personal fixed blocks, no assessment-mix workload count.** | All three were SHOULD/COULD in an early draft. A during-semester concern in a before-semester tool; ~~breaks shared-URL parity~~; wrong side of no-fabricated-scores. **The parity argument is void as of 2026-08-04** — no shared URL carries state any more (§6). The row STANDS on its remaining grounds; reviving either feature means making that case on its own merits, not citing this note. **A block-level popover is explicitly in scope** and is not covered by this row. |
+| D13 | **A week SCOPE picker ships; no week-scrubber, no personal fixed blocks, no assessment-mix workload count.** | All were SHOULD/COULD in an early draft. **The scrubber stays killed** — stepping through the semester as a browsing gesture is a during-semester concern in a before-semester tool. **The picker is not that**, and it shipped 2026-08-04 on the merits this row demands: the mønsteruke draws two sessions that never co-occur in the same slot (a course taught weeks 34–40 and one taught 41–48 stack, with no red mark, because `findConflicts` correctly refuses to call it a collision), so the DRAWING contradicts the verdict and the only way to settle it by eye was to open each block's session card and read its weeks. It is a scope selector in the same family as the layer box and the view switch, «Alle uker» remains the default outside the teaching period, and there is no timeline to drag. Personal fixed blocks and the workload count stand: ~~breaks shared-URL parity~~ (void as of 2026-08-04, §6), wrong side of no-fabricated-scores. **A block-level popover is explicitly in scope.** |
 | D14 | **`/studier/` and `/studier/[code]/` are deleted outright, no redirects.** | Migrating them, or sequencing entrances before deletion. Pre-launch breakage is acceptable (mandate 10); the surviving logic moved into the planner's studieinfo dialog and its study-plan panel. |
 | D15 | **There is no hash grammar** — it is deleted, not versioned (mandate 10). | Retired 2026-08-04, having previously read "unversioned, with no compat parse". The `#v2;…` grammar is gone outright (§6), so there is nothing left to version or to write a compat branch for. The mandate-10 reasoning it rested on — nothing has ever been sent, so nothing can break — is exactly what licensed deleting it. |
 
@@ -599,7 +602,9 @@ Do not re-litigate or silently re-add these.
 ## 11. Killed and demoted
 
 **Killed:** øving-group clustering with alternative-avoidance; the compare
-matrix and both substitution engines; the week-scrubber; personal fixed
+matrix and both substitution engines; the week-*scrubber* (a browsing gesture
+through the term — **not** the week scope picker that shipped 2026-08-04, see
+D13); personal fixed
 blocks; assessment-mix workload counts; the `/studier/` index and
 `/studier/[code]/`; the homepage triptych; the homepage programme picker;
 the homepage proof fragment (a drawing of two invented courses colliding is

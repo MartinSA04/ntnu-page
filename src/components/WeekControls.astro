@@ -1,0 +1,96 @@
+---
+/**
+ * THE WEEK'S OWN CONTROLS, for every surface that draws a week.
+ *
+ * Two rows, and the order is scope: **which weeks**, then **which layers, and
+ * in which shape**.
+ *
+ *     Uke 34  ⌄
+ *     ☐ Øvinger og labber                            [ Uke | Liste ]
+ *
+ * The second row is the load-bearing one. The layer box is hard left, the view
+ * switch hard right, and **nothing is ever allowed between them** — they are the
+ * two questions asked while reading the week, and a third control landing in
+ * that gap is what the split into two rows exists to prevent. The picker sits
+ * above rather than to the left of the layer box for the same reason: three
+ * controls do not fit one row at 390 px (about 400 px of control against 358 px
+ * of content), so sharing a row means the phone silently gets a different
+ * arrangement from the desktop.
+ *
+ * SERVER-RENDERED, not built by `weekView.ts`. Building a control at mount pops
+ * it into a page a frame late, on top of a frame that is already reserving its
+ * own height — and `/planlegger/`'s CLS is what half of `weekView` exists to
+ * defend. `mountWeekView` finds this block and binds what is inside it.
+ *
+ * **No ids.** Every control here is found by `data-role` within the block the
+ * page hands `mountWeekView`, so three surfaces can carry three copies with no
+ * prefix bookkeeping and nothing to collide. The runtime twins this replaced
+ * (`buildWeekTabs`, `buildLayerToggle`) are deleted: one DOM, written once.
+ */
+interface Props {
+  /**
+   * Held back until there is a week to show. `/emne/[code]/` builds its frame
+   * after a fetch and reveals the block with it; the two plan surfaces paint it
+   * with the document.
+   */
+  hidden?: boolean;
+}
+const { hidden = false } = Astro.props;
+---
+
+<div class="week-controls" data-role="week-controls" hidden={hidden}>
+  {/* WHICH WEEKS. Filled by `weekView` from the semester's teaching weeks:
+      «Alle uker», «Denne uka» while there is one, then every teaching week by
+      number and Monday. A native <select> because the list runs to fifteen-odd
+      rows and a phone should get its own wheel. */}
+  <div class="np-select-shell week-scope">
+    <select class="np-select" data-role="week-select" aria-label="Vis uke"></select>
+    <svg
+      class="np-select-icon"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="2"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      aria-hidden="true"
+      focusable="false"
+    >
+      <path d="m6 9 6 6 6-6"></path>
+    </svg>
+  </div>
+
+  <div class="week-bar">
+    {/* A BOX YOU TICK, not a pill you press. It ADDS a layer to the week; it
+        does not choose how the week is drawn, and the pair beside it does — so
+        the two read as different kinds of control because they are. */}
+    <button type="button" class="planner-others-toggle" data-role="layer-toggle" aria-pressed="false">
+      <span class="planner-check" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5">
+          <path d="m4 12 6 6L20 6"></path>
+        </svg>
+      </span>
+      Øvinger og labber
+      {/* What the layer is still waiting on. The narrowing that makes this
+          necessary is deliberate (drawing every group put 41 blocks in one
+          week) — what was not deliberate is that the control said nothing about
+          it, so ticking the box on a five-course plan appeared to do nothing at
+          all. Filled by `weekView`. */}
+      <span class="planner-others-pending" data-role="layer-pending" hidden></span>
+    </button>
+
+    {/* "Uke" is the timetable shape a student already knows from every other
+        calendar: days as columns, time down. The stored values stay `kolonner`
+        and `tavle` — that is what localStorage holds and what the pre-paint
+        probe must agree with. */}
+    <div class="planner-view-tabs" role="group" aria-label="Velg hvordan uka vises" data-role="view-tabs">
+      <span class="planner-view-thumb" aria-hidden="true"></span>
+      <button type="button" class="planner-view-tab" data-view="kolonner" aria-pressed="true">
+        Uke
+      </button>
+      <button type="button" class="planner-view-tab" data-view="tavle" aria-pressed="false">
+        Liste
+      </button>
+    </div>
+  </div>
+</div>

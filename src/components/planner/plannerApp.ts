@@ -21,7 +21,6 @@
  * Render work is delegated to grid.ts/examList.ts.
  */
 
-import { mountMenuPanel } from "../../lib/menuPanel.js";
 import {
   type CourseBundle,
   clearCourseBundleMemo,
@@ -56,15 +55,9 @@ import { syncPlanProbe } from "../../lib/planProbe.js";
 import { ACCOUNT_OPEN_EVENT, account, accountPanel, setAccountRepaint } from "../account.js";
 import { type AddCourseDeps, type AddCourseHandle, mountAddCourse } from "./addCourse.js";
 import type { SessionChoice } from "./blockPopover.js";
+import { renderLoadTrack, renderCourseRows as sharedCourseRows } from "./courseRows.js";
 import { type CourseSettingsContext, mountCourseSettings } from "./courseSettings.js";
-import {
-  el,
-  formatCreditNumber,
-  formatCredits,
-  formatShortDate,
-  icon,
-  settingsIcon,
-} from "./dom.js";
+import { el, formatCreditNumber, formatCredits, formatShortDate, icon } from "./dom.js";
 import {
   collectExamInputs,
   type ExamRenderResult,
@@ -157,11 +150,8 @@ interface PlannerElements {
   directionNote: HTMLElement;
   directionActions: HTMLElement;
   directionButton: HTMLButtonElement;
-  othersToggle: HTMLButtonElement;
+  weekControls: HTMLElement;
   share: HTMLButtonElement;
-  shareLabel: HTMLElement;
-  viewKolonner: HTMLButtonElement;
-  viewTavle: HTMLButtonElement;
   gridFrame: HTMLElement;
   gridNotes: HTMLElement;
   gridStatus: HTMLElement;
@@ -198,11 +188,10 @@ function getElements(): PlannerElements | null {
     directionNote: byId<HTMLElement>("planner-direction-note"),
     directionActions: byId<HTMLElement>("planner-direction-actions"),
     directionButton: byId<HTMLButtonElement>("planner-direction-btn"),
-    othersToggle: byId<HTMLButtonElement>("planner-others-toggle"),
+    weekControls: document.querySelector<HTMLElement>(
+      '#planner-region-week [data-role="week-controls"]',
+    ),
     share: byId<HTMLButtonElement>("planner-share"),
-    shareLabel: byId<HTMLElement>("planner-share-label"),
-    viewKolonner: byId<HTMLButtonElement>("planner-view-kolonner"),
-    viewTavle: byId<HTMLButtonElement>("planner-view-tavle"),
     gridFrame: byId<HTMLElement>("planner-grid-frame"),
     gridNotes: byId<HTMLElement>("planner-grid-notes"),
     gridStatus: byId<HTMLElement>("planner-grid-status"),
@@ -513,8 +502,7 @@ export async function mountPlannerApp(
   const week: WeekViewHandle = mountWeekView({
     frame: elements.gridFrame,
     notes: elements.gridNotes,
-    tabs: { kolonner: elements.viewKolonner, tavle: elements.viewTavle },
-    layerToggle: elements.othersToggle,
+    controls: elements.weekControls,
     surface: "planner",
     onOpenSettings: openCourseSettings,
     popoverContext,
@@ -1093,34 +1081,6 @@ export async function mountPlannerApp(
     signal: lifeSignal,
   });
 
-  // THE ⋯ MENU'S ONE RULE: a control that redraws the week CLOSES it; a control
-  // that only confirms itself stays open.
-  //
-  // The layer and the semester are deliberately animated (DESIGN §7 — "a
-  // student who pressed one of them is asking to see the same plan differently
-  // and needs to be able to follow it there"), and you cannot follow anything
-  // under a scrim. "Del lenke" swaps mark and word to "Kopiert" in place, and
-  // closing on press would throw away the confirmation the button's pinned
-  // width exists to protect.
-  const toolsBar = document.querySelector<HTMLElement>(".planner-head");
-  const toolsTrigger = document.getElementById("planner-tools-btn");
-  const toolsPanel = document.getElementById("planner-tools");
-  if (toolsBar && toolsTrigger && toolsPanel) {
-    const tools = mountMenuPanel({
-      bar: toolsBar,
-      trigger: toolsTrigger,
-      panel: toolsPanel,
-      query: "(max-width: 46rem)",
-      signal: lifeSignal,
-    });
-    elements.othersToggle.addEventListener("click", () => tools.close(), {
-      signal: lifeSignal,
-    });
-    elements.semesterSelect.addEventListener("change", () => tools.close(), {
-      signal: lifeSignal,
-    });
-  }
-
   // --- Banner ------------------------------------------------------------
 
   /**
@@ -1214,30 +1174,12 @@ export async function mountPlannerApp(
       field.append(node);
       line.append(field);
     };
-    // WHICH WEEK the grid's dates belong to, FIRST in the line. The week is a
-    // pattern, but the page is open in one of them and the day headers carry
-    // its dates, so the number that names it has to be visible — and on a phone
-    // this line is clamped to one, so anything at its end is the thing that
-    // gets cut. A 42-character programme name is the right thing to lose there.
-    // Inside the teaching period this names the week the day headers are dated
-    // to. Outside it there are no dates to name, so it names what the week IS
-    // instead — and says when the dates start meaning something.
-    if (inTeachingWeek()) {
-      append(el("span", "np-data", `Uke ${isoWeekNumber(new Date())}`));
-    } else {
-      const first = currentSemester()?.teachingWeeks?.[0];
-      append(
-        first === undefined
-          ? "Mønsteruke"
-          : (() => {
-              // "Mønsteruke" and "Undervisning fra uke 34" are two fields, so they
-              // are appended as two rather than joined into one.
-              const span = el("span", undefined, "Undervisning fra ");
-              span.append(el("span", "np-data", `uke ${first}`));
-              return span;
-            })(),
-      );
-    }
+    // WHICH WEEK IS NOT ON THIS LINE ANY MORE. It used to lead it — "Uke 34" or
+    // "Undervisning fra uke 34" — because the grid's day headers carried dates
+    // and nothing else said which Monday they were. The week's own picker says
+    // it now, in the section it is about, and as something the student chooses
+    // rather than something the title's caption tells them. A fact that has
+    // become a control does not also stay a caption.
     if (program) {
       const named = program.name !== "" && program.name !== program.code;
       if (named) append(program.name);
@@ -1281,31 +1223,6 @@ export async function mountPlannerApp(
    * a student who does not see one presses again.
    */
   let shareResetTimer: ReturnType<typeof setTimeout> | undefined;
-  let shareWidthReserved = false;
-
-  /**
-   * Pins the button at its RESTING width, once, before the label ever changes.
-   *
-   * A label swap that changes the box shoves the controls beside it at the exact
-   * moment the student presses one — `Del` → `Lenke kopiert` moved the Uke/Liste
-   * switch ~22px sideways. The old fix measured both labels and pinned the
-   * wider, which stopped the jump and bought a permanent slab of dead space
-   * after the short one.
-   *
-   * The pair is `Del lenke` → `Kopiert` now, so the RESTING state is the widest
-   * and the pin costs nothing at rest: the button never grows, and it is only
-   * stopped from shrinking while it holds the shorter word. Measured on the real
-   * element rather than guessed, because the label is set in whatever UI face
-   * this device has and the measurement includes the mark and the padding.
-   */
-  function reserveShareWidth(): void {
-    if (shareWidthReserved) return;
-    // The measured width verbatim, not rounded up: `Math.ceil` on 104.03 pins
-    // 105 and the button grows a pixel on the first press — small, but it is
-    // the exact class of movement this function exists to stop.
-    elements.share.style.minWidth = `${elements.share.getBoundingClientRect().width}px`;
-    shareWidthReserved = true;
-  }
 
   async function sharePlan(): Promise<void> {
     const target = shareTarget(sync.session());
@@ -1357,18 +1274,17 @@ export async function mountPlannerApp(
       renderLinkNote();
       return;
     }
-    // The mark answers before the word does, and the word says what happened to
-    // the thing the resting label already named. "Kopiert" under a button that
-    // reads "Del lenke" the rest of the time is not ambiguous about what went to
-    // the clipboard — which is the whole objection "Lenke kopiert" was answering
-    // when it was the label that could not name its own object.
-    reserveShareWidth();
+    // THE MARK IS THE WHOLE CONFIRMATION. The control is an icon square now, so
+    // there is no label to swap and nothing to pin: the width cannot change,
+    // which is what the measured `minWidth` used to buy. `share` becomes
+    // `check` and the accessible name says what happened, because a screen
+    // reader has no mark to read.
     elements.share.classList.add("is-copied");
-    elements.shareLabel.textContent = "Kopiert";
+    elements.share.setAttribute("aria-label", "Lenken er kopiert");
     clearTimeout(shareResetTimer);
     shareResetTimer = setTimeout(() => {
       elements.share.classList.remove("is-copied");
-      elements.shareLabel.textContent = "Del lenke";
+      elements.share.setAttribute("aria-label", "Del lenke");
     }, 2400);
   }
 
@@ -1433,43 +1349,20 @@ export async function mountPlannerApp(
    * strip about credits — it is real and it is in the list, it is not a load.
    */
   function renderCreditStrip(): void {
-    const counted = orderedActiveStates().filter(
-      (state) => !isOffSemester(state) && (creditsOf(state) ?? 0) > 0,
+    // WHAT COUNTS is decided here, not in the track: DR-10's off-semester
+    // exclusion is a fact about this plan and its programme, and the track only
+    // draws what it is handed.
+    renderLoadTrack(
+      elements.creditStrip,
+      orderedActiveStates()
+        .filter((state) => !isOffSemester(state) && (creditsOf(state) ?? 0) > 0)
+        .map((state) => ({
+          code: state.course.code,
+          hueVar: state.hueVar,
+          credits: creditsOf(state) ?? 0,
+        })),
+      FULL_LOAD_CREDITS,
     );
-    // Emptied, never hidden: `[hidden]` takes the track's 15px out of the flow
-    // and every row under it moves when the first segment is drawn.
-    elements.creditStrip.replaceChildren();
-    if (counted.length === 0) return;
-
-    const track = el("div", "planner-load-track");
-    let total = 0;
-    for (const state of counted) {
-      const credits = creditsOf(state) ?? 0;
-      total += credits;
-      const seg = el("span", "planner-load-seg");
-      seg.style.flexGrow = String(credits);
-      seg.style.setProperty("--dot", `var(${state.hueVar})`);
-      seg.title = `${state.course.code}, ${formatCreditNumber(credits)} sp`;
-      track.append(seg);
-    }
-    // The gap to a full load is empty track, not a segment: it is the absence
-    // of a course and must not read as one.
-    if (total < FULL_LOAD_CREDITS) {
-      const rest = el("span", "planner-load-rest");
-      rest.style.flexGrow = String(FULL_LOAD_CREDITS - total);
-      track.append(rest);
-    }
-    // Over a full load, the track no longer says where full IS: the segments
-    // fill it edge to edge whether the plan is 30 sp or 45. The mark is where
-    // 30 lands, so the overload is a length you can see rather than a number
-    // you have to subtract.
-    if (total > FULL_LOAD_CREDITS) {
-      const mark = el("span", "planner-load-mark");
-      mark.style.insetInlineStart = `${(FULL_LOAD_CREDITS / total) * 100}%`;
-      mark.title = `${FULL_LOAD_CREDITS} sp`;
-      track.append(mark);
-    }
-    elements.creditStrip.append(track);
   }
 
   function renderCreditLine(): void {
@@ -1871,87 +1764,31 @@ export async function mountPlannerApp(
    * Dropp/Fjern button live in the settings modal the row opens.
    */
   function renderCourseRows(): void {
-    // The rows come straight out of the store, so this pass ends the gap the
-    // reservation was bridging (paint → mount).
-    delete elements.courseRows.dataset.reserve;
-    elements.courseRows.replaceChildren();
-    // No "Ingen emner i planen ennå." A heading over a sentence restating the
-    // heading is not information; the section is its name and its "Legg til
-    // emne" button, and the absence of rows says the rest.
-    if (plan.courses.length === 0) return;
-
     const ordered = [...plan.courses].sort((a, b) => {
       if (a.source !== b.source) return a.source === "program" ? -1 : 1;
       return 0;
     });
 
-    for (const course of ordered) {
-      const state = courseStates.get(course.code);
-      const isDropped = course.source === "program" && course.dropped === true;
-      // A row is not a control: as a full-width `<button>` it had a pointer
-      // cursor and a hover wash while showing nothing pressable. It is inert
-      // now and carries ONE explicit target: a settings button at its end.
-      const row = el("div", `planner-course-row${isDropped ? " is-dropped" : ""}`);
-      row.dataset.code = course.code;
-      const details = state?.bundle?.details;
-      const name = details?.courseName ?? course.name;
-
-      // A SWATCH AND THE CODE, not the code printed inside the hue. The dot is
-      // already what carries a course's identity in the exam list, in Liste's
-      // rows and in the session card — this rail was the one place that fused
-      // the two, which made the same course two different shapes on one page.
-      // A dropped course keeps the swatch and loses its fill, so the row reads
-      // as switched off rather than as missing.
-      const chip = el("span", "planner-course-chip");
-      if (state) chip.style.setProperty("--dot", `var(${state.hueVar})`);
-      row.append(chip);
-
-      const nameCell = el("span", "planner-course-name");
-      const title = el("span", "planner-course-title");
-      title.append(el("b", "planner-course-code np-data", course.code));
-      title.append(` ${name}`);
-      nameCell.append(title);
-      row.append(nameCell);
-
-      // Right-aligned in its own column so the figures stack into something a
-      // student can add up by eye.
-      if (isDropped) {
-        // The one status a row still says for itself: a dropped course is out
-        // of the week, the credits and the exams, so a grayed row with no
-        // explanation looks broken (PRODUCT §1.3).
-        row.append(el("span", "planner-course-sp np-data", "droppet"));
-      } else {
-        // A course the week cannot draw gets ONE mark; the sentence is in the
-        // modal this row opens. It goes UNDER THE NAME, not in the credit
-        // column — there it ate the figure, so the one course whose credits you
-        // might question was the one that would not quote them.
-        const needsAttention =
-          notTaughtIn(course.code) !== null ||
-          (state !== undefined && isOffSemester(state)) ||
-          (state?.bundle?.errors.length ?? 0) > 0;
-        if (needsAttention) {
-          nameCell.append(el("span", "planner-course-flag np-data", "se detaljer"));
-        }
-        const credits = state ? creditsOf(state) : (course.credits ?? null);
-        if (credits != null) {
-          row.append(el("span", "planner-course-sp np-data", `${formatCreditNumber(credits)} sp`));
-        } else {
-          // The column still has to exist, or the settings button jumps left.
-          row.append(el("span", "planner-course-sp"));
-        }
-      }
-
-      // The row's ONE target.
-      const open = el("button", "np-icon-btn planner-course-open");
-      open.type = "button";
-      open.dataset.code = course.code;
-      open.setAttribute("aria-label", `Innstillinger for ${course.code} ${name}`);
-      open.append(settingsIcon());
-      open.addEventListener("click", () => openCourseSettings(course.code));
-      row.append(open);
-
-      elements.courseRows.append(row);
-    }
+    sharedCourseRows(
+      elements.courseRows,
+      ordered.map((course) => {
+        const state = courseStates.get(course.code);
+        return {
+          code: course.code,
+          name: state?.bundle?.details?.courseName ?? course.name,
+          hueVar: state?.hueVar ?? "--muted",
+          credits: state ? creditsOf(state) : (course.credits ?? null),
+          dropped: course.source === "program" && course.dropped === true,
+          // A course the week cannot draw gets ONE mark; the sentence is in the
+          // modal this row opens.
+          needsAttention:
+            notTaughtIn(course.code) !== null ||
+            (state !== undefined && isOffSemester(state)) ||
+            (state?.bundle?.errors.length ?? 0) > 0,
+        };
+      }),
+      { onOpenSettings: openCourseSettings },
+    );
   }
 
   // --- Render: "Fra studieplanen" panel (design §8) -----------------------
@@ -2117,10 +1954,12 @@ export async function mountPlannerApp(
     // assign `className` outright, which meant the page's own rule for the
     // element applied for exactly as long as it took the first render to run.
     host.className = "planner-verdict";
-    if (loading) {
-      host.append(el("span", "planner-chip", "henter timeplan …"));
-      return;
-    }
+    // NOTHING WHILE LOADING. The week's own skeleton is directly below this and
+    // already says a timetable is being fetched; a chip saying it again is a
+    // second announcement of the same wait — and it is the announcement that
+    // would make this line hold a row open on every cold load, only to collapse
+    // it when the answer turns out to be silence.
+    if (loading) return;
     if (grid?.state !== "grid") return;
     if (grid.incompleteCourses.length > 0) {
       const n = grid.incompleteCourses.length;
@@ -2153,50 +1992,46 @@ export async function mountPlannerApp(
       return;
     }
     if (grid.conflictCount === 0) {
-      const chip = el("span", "planner-chip is-clean");
-      chip.append(icon("circleCheck"));
-      // The words go in ONE box, not straight into the chip. `.planner-chip` is
-      // an `inline-flex` with a `gap`, so every direct child is a flex item
-      // with space before it — which was fine while the caveat below opened
-      // with a separator mark and is wrong now that it opens with a full stop.
-      // Appended bare, it rendered "Ingen forelesninger kolliderer . 1 emne er
-      // ikke sjekket." The gap's job is to separate the mark from the sentence,
-      // and it still does exactly that.
-      const words = el("span", "planner-chip-words");
-      words.append("Ingen forelesninger kolliderer");
-      chip.append(words);
-      // A PASS THAT SAYS WHAT IT PASSED ON. Some courses publish sessions but
-      // nothing this app can call a lecture, so the DR-1 check goes over them
-      // rather than on them — and an unqualified green then claims five
-      // courses on the strength of four. The admission existed only as a
-      // margin note 570 px below, which on a phone was collapsed behind a
-      // disclosure while a CSS rule hid the pass itself: the small screen
-      // showed the caveat and never the answer it qualifies. `.is-qualified`
-      // is what that rule now tests, so a pass carrying a caveat survives.
+      // A PASS SAYS NOTHING. "Ingen forelesninger kolliderer" answered a
+      // question a student only asks when something might be wrong, and it
+      // spent a line of the first screen on every load to report that nothing
+      // is — worst on a phone, where that line is the week's space.
+      //
+      // The one thing it carried that is worth keeping is the ADMISSION: some
+      // courses publish sessions but nothing this app can call a lecture, so
+      // the DR-1 check goes over them rather than on them, and a plan where
+      // that happened has not been fully checked. That is a caveat with no
+      // claim left to qualify, so it stands on its own as an "unknown" chip —
+      // the same shape as the two branches above it, which are also about a
+      // check that could not be completed.
       const unchecked = grid.uncheckedCourses.length;
       if (unchecked > 0) {
-        chip.classList.add("is-qualified");
-        words.append(
+        host.append(
           el(
             "span",
-            "planner-chip-caveat",
-            `. ${unchecked} ${unchecked === 1 ? "emne" : "emner"} er ikke sjekket.`,
+            "planner-chip is-unknown",
+            `${unchecked} ${unchecked === 1 ? "emne er" : "emner er"} ikke sjekket for kollisjon`,
           ),
         );
       }
-      host.append(chip);
       renderLoadChip(host);
       return;
     }
     // A VERDICT YOU CAN FOLLOW. The one thing a student does after reading
-    // "2 kollisjoner denne uka" is look for them, and the week is a scroller —
-    // so the sentence is the shortcut to the place it is about. A button rather
-    // than a link: it moves the page, it does not go anywhere.
+    // "2 kollisjoner" is look for them, and the week is a scroller — so the
+    // sentence is the shortcut to the place it is about. A button rather than a
+    // link: it moves the page, it does not go anywhere.
+    //
+    // NOT "denne uka" any more. That was true while the week was always the
+    // mønsteruke; with a week picker on the page, a student looking at week 45
+    // would read it as a claim about week 45, and the check runs over the whole
+    // semester's entries. `jumpToFirstClash` moves the picker to the week the
+    // clash is actually in before it flashes anything.
     const chip = el("button", "planner-chip np-note-clash is-jump");
     chip.type = "button";
     chip.append(icon("circleAlert"));
     chip.append(el("span", "np-data", String(grid.conflictCount)));
-    chip.append(grid.conflictCount === 1 ? " kollisjon denne uka" : " kollisjoner denne uka");
+    chip.append(grid.conflictCount === 1 ? " kollisjon" : " kollisjoner");
     chip.addEventListener("click", jumpToFirstClash);
     host.append(chip);
     renderLoadChip(host);
@@ -2209,12 +2044,15 @@ export async function mountPlannerApp(
    * shared minutes, the transposed grid the same, the list a rule in the
    * margin of the rows involved. Whichever exists is the target — no view
    * needs to be switched to, because the student chose the one they are in.
+   *
+   * THE WEEK, HOWEVER, MAY HAVE TO CHANGE. With the picker on one week, a clash
+   * in another one is not drawn at all, so the mark this looks for does not
+   * exist and the shortcut leads nowhere. `week.showWeek` moves the picker to
+   * the week the first clash is actually in first; in the mønsteruke every week
+   * is on screen already and it does nothing.
    */
   function jumpToFirstClash(): void {
-    const mark = elements.gridFrame.querySelector(
-      ".planner-cols-clash, .planner-board-row.is-clashing",
-    );
-    mark?.scrollIntoView({ behavior: "smooth", block: "center", inline: "center" });
+    week.jumpToFirstConflict();
   }
 
   /**
@@ -2411,6 +2249,11 @@ export async function mountPlannerApp(
       // passed by one branch only.
       gridResult = week.render(filteredStates, {
         teachingWeeks: currentSemester()?.teachingWeeks ?? [],
+        // Which calendar year those week numbers belong to, so the picker can
+        // name each week's Monday and a chosen week can date its own columns.
+        ...(semesterYear(plan.semesterId) !== null
+          ? { year: semesterYear(plan.semesterId) as number }
+          : {}),
         loading: anyLoading,
         pendingChoiceMessage: question?.weekMessage ?? null,
       });

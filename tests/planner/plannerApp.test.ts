@@ -52,6 +52,11 @@ class FakeClassList {
   }
 }
 
+/** `data-week-select` → `weekSelect`, the one transform `dataset` applies. */
+function camel(name: string): string {
+  return name.replace(/-([a-z])/g, (_, c: string) => c.toUpperCase());
+}
+
 class FakeEl {
   tagName: string;
   _className = "";
@@ -213,10 +218,21 @@ class FakeEl {
     }
     return out;
   }
+  /**
+   * The week's controls are found by `[data-role]` rather than by id — three
+   * surfaces carry three copies and prefixed ids were the bookkeeping that
+   * bought — so the shim has to answer an attribute selector.
+   */
   matches(sel: string): boolean {
+    const attr = /^\[data-([a-z-]+)="([^"]*)"\]$/.exec(sel);
+    if (attr) return this.dataset[camel(attr[1] ?? "")] === attr[2];
     if (sel.startsWith("#")) return this.id === sel.slice(1);
     if (sel.startsWith(".")) return this.classList.contains(sel.slice(1));
     return this.tagName === sel.toUpperCase();
+  }
+  /** A <select>'s own rows, which `weekView` reads to check a week is on offer. */
+  get options(): FakeEl[] {
+    return this.children.filter((c) => c.tagName === "OPTION");
   }
   querySelector(sel: string): FakeEl | null {
     return this.querySelectorAll(sel)[0] ?? null;
@@ -260,16 +276,13 @@ const IDS = [
   "planner-direction-note",
   "planner-direction-actions",
   "planner-direction-btn",
-  "planner-others-toggle",
-  "planner-others-pending",
+  // The week's own controls are NOT here: they are one `WeekControls.astro`
+  // block found by `[data-role]` inside the week's section, built below.
   "planner-share",
-  "planner-share-label",
-  "planner-view-kolonner",
-  "planner-view-tavle",
+  "planner-region-week",
   "planner-grid-frame",
   "planner-grid-notes",
   "planner-grid-status",
-  "planner-status",
   "planner-deadline",
   "planner-exam-list-host",
   "planner-exam-status",
@@ -324,6 +337,29 @@ function installDom(): void {
     byId.set(id, e);
     body.append(e);
   }
+  // THE WEEK'S CONTROLS, as `WeekControls.astro` renders them: one block
+  // inside the week's section, everything in it found by `data-role`.
+  const weekSection = find("planner-region-week");
+  const weekControls = new FakeEl("div");
+  weekControls.dataset.role = "week-controls";
+  const weekSelect = new FakeEl("select");
+  weekSelect.dataset.role = "week-select";
+  const layerToggle = new FakeEl("button");
+  layerToggle.dataset.role = "layer-toggle";
+  const layerPending = new FakeEl("span");
+  layerPending.dataset.role = "layer-pending";
+  layerToggle.append(layerPending);
+  const viewTabs = new FakeEl("div");
+  viewTabs.dataset.role = "view-tabs";
+  for (const view of ["kolonner", "tavle"]) {
+    const tab = new FakeEl("button");
+    tab.classList.add("planner-view-tab");
+    tab.dataset.view = view;
+    viewTabs.append(tab);
+  }
+  weekControls.append(weekSelect, layerToggle, viewTabs);
+  weekSection.append(weekControls);
+
   docListeners = new Map();
   const doc = {
     body,
@@ -673,7 +709,7 @@ describe("mountPlannerApp — audit repro", () => {
     expect(status.classList.contains("np-note-clash")).toBe(false);
   });
 
-  it("pc-3 control: an all-healthy plan still says ingen kollisjoner", async () => {
+  it("pc-3 control: an all-healthy plan says nothing at all", async () => {
     await mount(
       {
         "/data/search-index.json": () => ({ year: 2026, courses: [] }),
@@ -691,12 +727,13 @@ describe("mountPlannerApp — audit repro", () => {
       { courses: ["TDT4109", "TMA4412"] },
     );
     const status = find("planner-grid-status");
-    // DR-1: the engine only ever compares LECTURES, so the pass says which
-    // thing it checked. "ingen kollisjoner" claimed the whole week.
-    expect(status.textContent).toBe("Ingen forelesninger kolliderer");
-    // The state moved onto the chip when the verdict became a run of them; the
-    // phone rule that hides a clean pass matches it with `:has()`.
-    expect(status.querySelector(".is-clean")).not.toBeNull();
+    // THE PASS IS SILENCE. "Ingen forelesninger kolliderer" was removed for
+    // spending a line of the first screen on every load to report that nothing
+    // is wrong. What this control still guards is the other half of pc-3: a
+    // healthy plan must not fall into one of the "kan ikke sjekkes" branches,
+    // which is what an empty verdict distinguishes it from.
+    expect(status.textContent).toBe("");
+    expect(status.children.length).toBe(0);
   });
 
   /**

@@ -13,7 +13,12 @@
 import { classifyActivity } from "../../lib/planner/activity.js";
 import { findConflicts, groupConflicts, mergeParallelSlots } from "../../lib/planner/conflicts.js";
 import { applyGroupSelection, entryGroupKey } from "../../lib/planner/groups.js";
-import { entriesInSemester, parseWeeks, type ScheduleEntry } from "../../lib/planner/schedule.js";
+import {
+  entriesInSemester,
+  entriesInWeek,
+  parseWeeks,
+  type ScheduleEntry,
+} from "../../lib/planner/schedule.js";
 import { dayName, dot, el, weekLabel } from "./dom.js";
 import { staggerStep } from "./layerMotion.js";
 import type { PlanCourseState } from "./types.js";
@@ -28,6 +33,8 @@ export interface BoardRenderOptions {
   animate?: boolean;
   /** Every parallel and every group — see `CollectOptions`. */
   showAllGroups?: boolean;
+  /** One ISO week instead of the mønsteruke — see `CollectOptions`. */
+  week?: number | null;
 }
 
 export interface BoardRenderResult {
@@ -103,6 +110,17 @@ export interface CollectOptions {
    * plan and the other is somebody else's, and both are picks already made.
    */
   showAllGroups?: boolean;
+  /**
+   * Draw ONE ISO week instead of the mønsteruke.
+   *
+   * The pattern week is every session of the semester collapsed into one, which
+   * is right for choosing courses and wrong for reading a particular Monday: a
+   * course taught weeks 34 to 40 and one taught 41 to 48 land in the same slot,
+   * so the grid shows an overlap that never happens. Narrowing here rather than
+   * in each view is what stops the two disagreeing about what a week contains —
+   * the same reason `applyGroupSelection` is called here and nowhere else.
+   */
+  week?: number | null;
 }
 
 /**
@@ -133,7 +151,10 @@ export function collectSessions(
       if (key !== null) otherKeys.add(key);
     }
     const soleGroup = otherKeys.size === 1;
-    for (const raw of entriesInSemester(selected, teachingWeeks)) {
+    const inSemester = entriesInSemester(selected, teachingWeeks);
+    const drawn =
+      typeof options.week === "number" ? entriesInWeek(inSemester, options.week) : inSemester;
+    for (const raw of drawn) {
       const key = entryGroupKey(raw);
       out.push({
         courseCode: state.course.code,
@@ -220,7 +241,10 @@ export function renderBoard(
   // function. Listing every published lab group because this view has room for
   // them would make the two views disagree about what the week is.
   const entries = visibleLayer(
-    collectSessions(courses, teachingWeeks, { showAllGroups: options.showAllGroups ?? false }),
+    collectSessions(courses, teachingWeeks, {
+      showAllGroups: options.showAllGroups ?? false,
+      week: options.week ?? null,
+    }),
     showOthers,
   ).shown;
 

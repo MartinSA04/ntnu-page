@@ -28,27 +28,17 @@ import type { PlanCourseState } from "../planner/types.js";
 import { mountWeekView } from "../planner/weekView.js";
 
 /**
- * The week's two controls, `[code].astro` server-rendered, revealed now that
- * there is a week to view. Hidden until here rather than absent: a control
- * built at mount pops in a frame late, on top of a frame already holding its
- * own height.
+ * The week's controls, `[code].astro` server-rendered, revealed now that there
+ * is a week to view. Hidden until here rather than absent: a control built at
+ * mount pops in a frame late, on top of a frame already holding its own height.
+ *
+ * One block, handed straight to `mountWeekView`, which owns everything inside
+ * it. This used to reach for three ids by hand and hand back a tuple.
  */
-function controlsFor(section: HTMLElement): {
-  tabs: { kolonner: HTMLButtonElement; tavle: HTMLButtonElement } | null;
-  layerToggle: HTMLButtonElement | null;
-} {
+function controlsFor(section: HTMLElement): HTMLElement | null {
   const host = section.querySelector<HTMLElement>('[data-role="week-controls"]');
-  const kolonner = document.getElementById("emne-view-kolonner");
-  const tavle = document.getElementById("emne-view-tavle");
-  const layerToggle = document.getElementById("emne-others-toggle");
   if (host) host.hidden = false;
-  return {
-    tabs:
-      kolonner instanceof HTMLButtonElement && tavle instanceof HTMLButtonElement
-        ? { kolonner, tavle }
-        : null,
-    layerToggle: layerToggle instanceof HTMLButtonElement ? layerToggle : null,
-  };
+  return host;
 }
 
 /** The planner's entry shape plus the `term` field only this page reads. */
@@ -358,12 +348,10 @@ export async function mountCourseTimetable(
    * five parallels needs; but there is no course-settings modal on this page to
    * send them to, so the card carries facts and no verb.
    */
-  const controlHosts = controlsFor(section);
   const week = mountWeekView({
     frame,
     notes,
-    tabs: controlHosts.tabs,
-    layerToggle: controlHosts.layerToggle,
+    controls: controlsFor(section),
     surface: "emne",
     onOpenSettings: null,
     onRerender: () => draw(),
@@ -381,7 +369,11 @@ export async function mountCourseTimetable(
     state.bundle = bundleFromEntries(drawn);
     week.render([state], {
       // The entries' OWN weeks, not the planned semester's — see `weeksOf`.
+      // Which is also what fills the week picker here: "når går dette emnet" is
+      // answered by the weeks the course actually publishes, and a course
+      // taught six weeks out of fifteen offers six.
       teachingWeeks: weeksOf(drawn),
+      year: options.semester.year,
       showAllGroups: true,
     });
   }

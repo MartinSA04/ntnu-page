@@ -36,11 +36,11 @@
  * one-course page, and the selector no longer has to say so.
  */
 import type { ConflictGroup } from "../../lib/planner/conflicts.js";
-import { isoWeekNumber, weekdayDates } from "../../lib/planner/weekDates.js";
+import { isoWeekNumber, isoWeekStart, weekdayDates } from "../../lib/planner/weekDates.js";
 import { type BlockPopoverHandle, mountBlockPopover, type SessionChoice } from "./blockPopover.js";
 import { renderBoard, syncBoardNow } from "./board.js";
 import { renderColumnGrid, syncColumnNow } from "./columnGrid.js";
-import { el } from "./dom.js";
+import { el, MONTH_ABBR } from "./dom.js";
 import { beginLayerChange } from "./layerMotion.js";
 import type { PlanCourseState } from "./types.js";
 import {
@@ -166,76 +166,37 @@ export function loadWeekBox(surface: WeekSurface, view: WeekView, width: number)
 }
 
 /**
- * The Uke/Liste pair, built at runtime.
+ * WHICH WEEKS ARE DRAWN.
  *
- * The runtime twin of `components/WeekTabs.astro`, which is what the two
- * surfaces with a STATIC shell use — building a control at mount pops it into a
- * bar a frame late, and `/planlegger/` is the page whose CLS this whole file is
- * defending. `/user/<navn>` has no static shell to put it in: every element on
- * that page is built after a fetch, so its tabs arrive with its header and its
- * frame in one write and there is nothing for them to pop in against.
+ * `"alle"` is the mønsteruke — every session of the semester collapsed into one
+ * week, which is what this page has always drawn and what the before-semester
+ * job wants. `"denne"` follows the calendar rather than pinning a number, so a
+ * page left open overnight rolls with the date the way the now marker already
+ * does. A number is one ISO week, chosen.
  *
- * The two copies are four element names. Everything that could actually drift —
- * the classes, the ids' shape, the pressed state, the travelling rule — is
- * shared, because `renderTabs` below is the only thing that writes any of it.
+ * NOT PERSISTED and not in the URL, unlike the view: one link has to show two
+ * people the same week, and a remembered scope would need a fourth fact in the
+ * pre-paint probe to avoid drawing the wrong height for a frame.
  */
-export function buildWeekTabs(idPrefix: string): {
-  host: HTMLElement;
-  kolonner: HTMLButtonElement;
-  tavle: HTMLButtonElement;
-} {
-  const host = el("div", "planner-view-tabs");
-  host.setAttribute("role", "group");
-  host.setAttribute("aria-label", "Velg hvordan uka vises");
-  const thumb = el("span", "planner-view-thumb");
-  thumb.setAttribute("aria-hidden", "true");
-  const kolonner = el("button", "planner-view-tab", "Uke");
-  kolonner.type = "button";
-  kolonner.id = `${idPrefix}-view-kolonner`;
-  const tavle = el("button", "planner-view-tab", "Liste");
-  tavle.type = "button";
-  tavle.id = `${idPrefix}-view-tavle`;
-  host.append(thumb, kolonner, tavle);
-  return { host, kolonner, tavle };
-}
-
-/**
- * The øving/lab box, built at runtime. The twin of
- * `components/WeekLayerToggle.astro`, for `/user/<navn>` — see `buildWeekTabs`
- * for why that one surface builds its controls instead of rendering them.
- */
-export function buildLayerToggle(idPrefix: string): {
-  toggle: HTMLButtonElement;
-} {
-  const toggle = el("button", "planner-others-toggle");
-  toggle.type = "button";
-  toggle.id = `${idPrefix}-others-toggle`;
-  toggle.setAttribute("aria-pressed", "false");
-  const check = el("span", "planner-check");
-  check.setAttribute("aria-hidden", "true");
-  check.innerHTML =
-    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5"><path d="m4 12 6 6L20 6"/></svg>';
-  const pending = el("span", "planner-others-pending");
-  pending.id = `${idPrefix}-others-pending`;
-  pending.hidden = true;
-  toggle.append(check, "Øvinger og labber", pending);
-  return { toggle };
-}
+export type WeekScope = "alle" | "denne" | number;
 
 export interface WeekViewOptions {
   /** The scroll container the week is drawn into. */
   frame: HTMLElement;
   /** Where the margin notes go. */
   notes: HTMLElement;
-  /** The Uke/Liste pair the page server-rendered, or null where it has none. */
-  tabs: { kolonner: HTMLButtonElement; tavle: HTMLButtonElement } | null;
   /**
-   * The øving/lab box. Owned here rather than by each page: the state, the
-   * click, the layer choreography, the count and the auto-reveal mirroring were
+   * The `WeekControls.astro` block this week's controls live in, or null on a
+   * surface that draws a week with no controls at all.
+   *
+   * All three are owned here rather than by each page: the state, the clicks,
+   * the layer choreography, the count and the auto-reveal mirroring were
    * written out twice and had already diverged in look. One control, one
-   * behaviour, wherever a week is drawn.
+   * behaviour, wherever a week is drawn. The block is found by `data-role`
+   * inside it, so nothing here depends on an id and three surfaces can carry
+   * three copies.
    */
-  layerToggle: HTMLButtonElement | null;
+  controls: HTMLElement | null;
   surface: WeekSurface;
   /**
    * The popover's way out to the editor. `null` on a surface with no editor to
@@ -254,13 +215,13 @@ export interface WeekViewOptions {
   /**
    * Something changed that this module cannot redraw on its own. `"view"` is a
    * tab press, `"layer"` the øving box, `"viewport"` the column cap's boundary,
-   * `"day"` the date rolling under a page left open.
+   * `"week"` the week picker, `"day"` the date rolling under a page left open.
    *
    * The caller re-renders SYNCHRONOUSLY here — the layer change snapshots the
    * week before this call and settles it after, and a re-render that happens
    * later than that travels nothing.
    */
-  onRerender?: (reason: "view" | "layer" | "viewport" | "day") => void;
+  onRerender?: (reason: "view" | "layer" | "week" | "viewport" | "day") => void;
   /**
    * What "today" the week is drawn for. The default is the local weekday, which
    * is what the week itself depends on; `/planlegger/` overrides it because its
@@ -273,6 +234,13 @@ export interface WeekViewOptions {
 export interface WeekRenderInput {
   /** The semester's weeks. Also what decides whether the week is dated. */
   teachingWeeks: number[];
+  /**
+   * The calendar year those weeks belong to, so a chosen week can name its own
+   * Monday. Defaults to this year, which is right for every caller that has not
+   * got a semester yet — they have no teaching weeks either, so nothing is
+   * dated.
+   */
+  year?: number;
   /** Every parallel and every group — `/emne/[code]/`'s rule. */
   showAllGroups?: boolean;
   /** A bundle fetch is in flight: draw a pending week, not an empty one. */
@@ -290,6 +258,21 @@ export interface WeekViewHandle {
   render(states: PlanCourseState[], input: WeekRenderInput): WeekRenderResult;
   /** Whether the øving/lab layer is on. The page's own copy of this is gone. */
   readonly showOthers: boolean;
+  /**
+   * Show one particular week, whatever the student had chosen.
+   *
+   * The one caller is the collision verdict: "2 kollisjoner" is a shortcut to
+   * the clash, and a clash in week 40 is not on screen while the picker is
+   * showing week 36. `ConflictGroup` already carries the weeks a pair shares,
+   * so the shortcut sets the scope before it flashes anything.
+   */
+  showWeek(week: number): void;
+  /**
+   * Take me to the first collision: switch to the week it happens in, scroll to
+   * it, flash it. The margin note's own link and the verdict chip are two
+   * entrances to this one path, so they cannot behave differently.
+   */
+  jumpToFirstConflict(): void;
   /** A sentence where the week would be. `null` clears the frame entirely. */
   message(text: string | null): void;
   /** A centred card where the week would be, for the states that carry a verb. */
@@ -300,8 +283,22 @@ export interface WeekViewHandle {
 }
 
 export function mountWeekView(options: WeekViewOptions): WeekViewHandle {
-  const { frame, notes, tabs, surface, signal } = options;
+  const { frame, notes, surface, signal } = options;
   const onOpenSettings = options.onOpenSettings ?? null;
+
+  // The three controls, found once inside the block the page rendered. A
+  // surface with no controls (none today, but the week itself does not require
+  // any) simply gets nulls and every handler below no-ops.
+  const controls = options.controls;
+  const pick = <T extends HTMLElement>(role: string): T | null =>
+    controls?.querySelector<T>(`[data-role="${role}"]`) ?? null;
+
+  const weekSelect = pick<HTMLSelectElement>("week-select");
+  const layerToggle = pick<HTMLButtonElement>("layer-toggle");
+  const tabsHost = pick<HTMLElement>("view-tabs");
+  const tabButtons = tabsHost
+    ? Array.from(tabsHost.querySelectorAll<HTMLButtonElement>(".planner-view-tab[data-view]"))
+    : [];
 
   let view: WeekView = loadWeekView();
   /**
@@ -312,6 +309,8 @@ export function mountWeekView(options: WeekViewOptions): WeekViewHandle {
   let pendingViewAnimation = false;
   /** The states the last render drew, so a conflict note can find their hues. */
   let drawnStates: PlanCourseState[] = [];
+  /** The last render's collision slots, so the verdict chip can reach the first. */
+  let lastConflictGroups: ConflictGroup[] = [];
 
   // The popover is mounted on every surface: it is a READ card — the facts of
   // the session you pointed at — and a reference page owes a visitor exactly
@@ -417,6 +416,16 @@ export function mountWeekView(options: WeekViewOptions): WeekViewHandle {
    * conflict group knows the first four, so the prefix is the join.
    */
   function flashConflict(group: ConflictGroup): void {
+    // THE SHORTCUT HAS TO REACH THE THING IT IS ABOUT. With one week on screen,
+    // a clash in another one is not drawn, so scrolling to it would scroll to
+    // nothing. `ConflictGroup` carries the weeks the pair actually shares, so
+    // the picker moves first and the flash then finds live blocks. Nothing to
+    // do in the mønsteruke, where every week is already on screen.
+    const drawn = resolvedWeek();
+    if (drawn !== null && !group.weeks.includes(drawn)) {
+      const [first] = group.weeks;
+      if (first !== undefined) showWeek(first);
+    }
     const wanted = new Set(
       group.entries.map((e) => `${e.courseCode}|${e.dayNumber}|${e.startTime}|${e.endTime}|`),
     );
@@ -455,22 +464,16 @@ export function mountWeekView(options: WeekViewOptions): WeekViewHandle {
    * skipped.
    */
   function renderTabs(): void {
-    if (!tabs) return;
+    if (!tabsHost) return;
     let active: HTMLElement | null = null;
-    for (const [button, name] of [
-      [tabs.kolonner, "kolonner"],
-      [tabs.tavle, "tavle"],
-    ] as const) {
-      const on = view === name;
+    for (const button of tabButtons) {
+      const on = button.dataset.view === view;
       button.setAttribute("aria-pressed", String(on));
       if (on) active = button;
     }
-    const host = tabs.kolonner.parentElement;
-    if (!host || !active || typeof active.offsetWidth !== "number" || active.offsetWidth === 0) {
-      return;
-    }
-    host.style.setProperty("--view-w", `${active.offsetWidth}px`);
-    host.style.setProperty("--view-x", `${active.offsetLeft}px`);
+    if (!active || typeof active.offsetWidth !== "number" || active.offsetWidth === 0) return;
+    tabsHost.style.setProperty("--view-w", `${active.offsetWidth}px`);
+    tabsHost.style.setProperty("--view-x", `${active.offsetLeft}px`);
   }
 
   function setWeekView(next: WeekView): void {
@@ -486,6 +489,109 @@ export function mountWeekView(options: WeekViewOptions): WeekViewHandle {
     options.onRerender?.("view");
   }
 
+  // --- Which weeks ----------------------------------------------------------
+
+  /**
+   * The chosen scope, and whether the student chose it.
+   *
+   * The default is not a constant: it is `inTeachingWeek`, the SAME predicate
+   * that already decides whether the drawn week carries dates. Inside the
+   * teaching period the page is open in a particular week and should show it;
+   * outside there is no such week, and the pattern is the only honest answer.
+   * Deriving both from one predicate is what stops the picker and the column
+   * headers disagreeing about whether this is a real Monday.
+   */
+  let scope: WeekScope = "alle";
+  /** The option set the select currently holds, so a re-render is not a reset. */
+  let scopeKey = "";
+
+  /** The scope as a week number, or null for the mønsteruke. */
+  function resolvedWeek(): number | null {
+    if (scope === "alle") return null;
+    if (scope === "denne") return isoWeekNumber(new Date());
+    return scope;
+  }
+
+  /** "Uke 36, 31. aug" — the number a student reads and the Monday it is. */
+  function weekOptionLabel(week: number, year: number): string {
+    const monday = isoWeekStart(year, week);
+    const month = MONTH_ABBR[monday.getMonth()] ?? "";
+    return `Uke ${week}, ${monday.getDate()}. ${month}`;
+  }
+
+  /**
+   * Fills the picker from the semester on screen.
+   *
+   * Rebuilt only when the option set actually changes, because `render` runs on
+   * every plan edit and every group pick — rewriting the `<select>` there would
+   * throw away the student's choice mid-interaction. A change of option set IS
+   * a change of semester, and a week number from the term you just left is not
+   * a choice worth carrying, so that case resets the scope to the default.
+   */
+  function renderWeekOptions(teachingWeeks: number[], year: number): void {
+    if (!weekSelect) return;
+    const key = `${year}:${teachingWeeks.join(",")}`;
+    if (key === scopeKey) return;
+    scopeKey = key;
+    scope = inTeachingWeek(teachingWeeks) ? "denne" : "alle";
+
+    const options: HTMLOptionElement[] = [];
+    const add = (value: string, label: string): void => {
+      const option = document.createElement("option");
+      option.value = value;
+      option.textContent = label;
+      options.push(option);
+    };
+    // «Denne uka» first while there is one: it is the default then, and a
+    // select's first row is where a student looks for the state it is in.
+    if (inTeachingWeek(teachingWeeks)) add("denne", "Denne uka");
+    add("alle", "Alle uker");
+    for (const week of [...teachingWeeks].sort((a, b) => a - b)) {
+      add(String(week), weekOptionLabel(week, year));
+    }
+    weekSelect.replaceChildren(...options);
+    weekSelect.value = String(scope);
+  }
+
+  function setWeekScope(next: WeekScope): void {
+    if (scope === next) return;
+    scope = next;
+    if (weekSelect) weekSelect.value = String(next);
+    // The same lease rule the view switch obeys, for the same reason: a week
+    // with three sessions in it is not the height the frame is holding for a
+    // week with eleven, and in Liste the difference is hundreds of pixels.
+    delete frame.dataset.reserve;
+    options.onRerender?.("week");
+  }
+
+  /**
+   * Move the picker to one week, if that week is on offer.
+   *
+   * A conflict group can name a week the semester's teaching list does not
+   * carry — upstream publishes the odd stray — and setting a `<select>` to a
+   * value with no matching option leaves the control showing its old label over
+   * a different week, which is worse than not jumping at all.
+   */
+  function showWeek(week: number): void {
+    if (!weekSelect) return;
+    const wanted = String(week);
+    if (Array.from(weekSelect.options).some((option) => option.value === wanted)) {
+      setWeekScope(week);
+    }
+  }
+
+  if (weekSelect) {
+    weekSelect.addEventListener(
+      "change",
+      () => {
+        const raw = weekSelect.value;
+        const week = Number(raw);
+        setWeekScope(Number.isFinite(week) && raw !== "" ? week : (raw as WeekScope));
+      },
+      { signal },
+    );
+  }
+
   // --- The øving layer ------------------------------------------------------
 
   /**
@@ -494,8 +600,6 @@ export function mountWeekView(options: WeekViewOptions): WeekViewHandle {
    * open every future week already flooded.
    */
   let showOthers = false;
-
-  const layerToggle = options.layerToggle;
 
   if (layerToggle) {
     layerToggle.addEventListener(
@@ -535,7 +639,7 @@ export function mountWeekView(options: WeekViewOptions): WeekViewHandle {
     // classifies as a lecture, and the control has to describe what is on
     // screen. Not the student's `showOthers` — mirrored, never persisted.
     layerToggle.setAttribute("aria-pressed", String(showOthers || result.mutedLayerAutoRevealed));
-    const host = layerToggle.querySelector<HTMLElement>(".planner-others-pending");
+    const host = layerToggle.querySelector<HTMLElement>('[data-role="layer-pending"]');
     if (!host) return;
     const codes = result.pendingGroupCourses;
     if (!showOthers || codes.length === 0) {
@@ -547,9 +651,12 @@ export function mountWeekView(options: WeekViewOptions): WeekViewHandle {
     host.hidden = false;
   }
 
-  if (tabs) {
-    tabs.kolonner.addEventListener("click", () => setWeekView("kolonner"), { signal });
-    tabs.tavle.addEventListener("click", () => setWeekView("tavle"), { signal });
+  if (tabsHost) {
+    for (const button of tabButtons) {
+      const next = button.dataset.view;
+      if (next !== "kolonner" && next !== "tavle") continue;
+      button.addEventListener("click", () => setWeekView(next), { signal });
+    }
     // The travelling rule is measured, so re-measure whenever the measurement
     // could change.
     window.addEventListener("resize", renderTabs, { passive: true, signal });
@@ -633,17 +740,17 @@ export function mountWeekView(options: WeekViewOptions): WeekViewHandle {
     // and those should collapse now rather than a paint later.
     delete frame.dataset.reserve;
     // Only a frame the SERVER rendered can be handed a remembered height before
-    // paint, and the planner's is the only one: `/emne/[code]/` and
-    // `/user/<navn>` build theirs after a fetch, so what holds their space is a
-    // placeholder standing in for the whole section — a different box, with its
-    // own measured per-view numbers in those pages. Filing a number here for
-    // them would be filing one nothing reads.
+    // paint. `/planlegger/` and `/user/<navn>` both have one — the shared plan's
+    // shell became static when it stopped building its own page — so both file.
+    // `/emne/[code]/` builds its frame after a fetch, so what holds its space is
+    // a placeholder standing in for the whole section: a different box, with its
+    // own measured per-view numbers in that page, and filing a number here for
+    // it would be filing one nothing reads.
     //
-    // The stored key keeps its surface anyway. It is what makes the answer to
-    // "whose height is this" unambiguous the moment a second surface starts
-    // reserving from its frame, and a five-course planner's Liste number
-    // reaching a one-course page is exactly the failure this replaced.
-    if (surface !== "planner") return;
+    // The SURFACE in the key is what keeps the two honest about each other: a
+    // five-course planner's Liste height is not evidence about a shared
+    // one-course plan, and that failure is exactly what the key replaced.
+    if (surface === "emne") return;
     // The measurement waits for layout, and only counts if this is still the
     // element that was drawn.
     requestAnimationFrame(() => {
@@ -668,10 +775,32 @@ export function mountWeekView(options: WeekViewOptions): WeekViewHandle {
 
   function render(states: PlanCourseState[], input: WeekRenderInput): WeekRenderResult {
     drawnStates = states;
-    const dated = inTeachingWeek(input.teachingWeeks);
-    const weekday = new Date().getDay();
-    todayNumber = dated && weekday >= 1 && weekday <= 6 ? weekday : null;
+    const year = input.year ?? new Date().getFullYear();
+    renderWeekOptions(input.teachingWeeks, year);
 
+    const week = resolvedWeek();
+    const thisWeek = isoWeekNumber(new Date());
+    // A CHOSEN WEEK IS ALWAYS A REAL ONE, so it carries its Monday's numerals
+    // whether or not today falls inside the teaching period — that is the whole
+    // of what choosing it means. The mønsteruke keeps the old rule: dated only
+    // while the page is open inside the period it is a pattern for.
+    const dated = week !== null || inTeachingWeek(input.teachingWeeks);
+    const dates =
+      week !== null
+        ? weekdayDates(isoWeekStart(year, week))
+        : dated
+          ? weekdayDates(new Date())
+          : null;
+    // The disc marks TODAY, so it only appears in the week today is in.
+    const weekday = new Date().getDay();
+    const showsToday = week === null ? dated : week === thisWeek;
+    todayNumber = showsToday && weekday >= 1 && weekday <= 6 ? weekday : null;
+
+    // The notes read the WHOLE semester, never the drawn week. A collision in
+    // week 40 is a fact about the plan, and narrowing the notes with the grid
+    // would hide it from a student looking at week 36 — while the note itself
+    // already names the weeks it happens in, which is what makes it safe to
+    // leave standing beside a week that does not show it.
     const result = weekNotes(notes, states, showOthers, {
       loading: input.loading ?? false,
       pendingChoiceMessage: input.pendingChoiceMessage ?? null,
@@ -680,6 +809,7 @@ export function mountWeekView(options: WeekViewOptions): WeekViewHandle {
       onConflictClick: flashConflict,
     });
 
+    lastConflictGroups = result.conflictGroups;
     renderLayerState(result);
 
     if (result.state === "loading") {
@@ -701,6 +831,10 @@ export function mountWeekView(options: WeekViewOptions): WeekViewHandle {
       animate: pendingViewAnimation,
       showAllGroups: input.showAllGroups ?? false,
       onBlockClick: openBlockPopover,
+      // Both views read their entries through `collectSessions`, so the
+      // narrowing is one option on one function rather than a second filter
+      // each view could implement differently.
+      ...(week !== null ? { week } : {}),
     };
     // The layer the grid may have revealed on its own counts as shown, or the
     // week and the control disagree about what is on screen.
@@ -712,8 +846,22 @@ export function mountWeekView(options: WeekViewOptions): WeekViewHandle {
             ...shared,
             // Undefined leaves the columns drawing bare weekday names, which is
             // what a pattern week is.
-            ...(dated ? { dates: weekdayDates(new Date()) } : {}),
+            ...(dates ? { dates } : {}),
           }).blockCount;
+
+    // A CHOSEN WEEK CAN BE EMPTY, and that is an answer rather than a failure.
+    // The reservation goes with it: this is terminal, unlike the skeleton and
+    // the apologies `settle` deliberately holds the frame open under, so a
+    // one-line sentence must not sit below 500px of held paper.
+    if (blockCount === 0 && week !== null) {
+      delete frame.dataset.reserve;
+      frame.replaceChildren(
+        el("p", "planner-grid-empty np-hint", `Ingen undervisning i uke ${week}.`),
+      );
+      pendingViewAnimation = false;
+      renderTabs();
+      return { ...result, blockCount: 0 };
+    }
 
     pendingViewAnimation = false;
     renderTabs();
@@ -732,6 +880,11 @@ export function mountWeekView(options: WeekViewOptions): WeekViewHandle {
     render,
     get showOthers(): boolean {
       return showOthers;
+    },
+    showWeek,
+    jumpToFirstConflict(): void {
+      const [first] = lastConflictGroups;
+      if (first) flashConflict(first);
     },
     message(text: string | null): void {
       renderWeekMessage(frame, notes, text);

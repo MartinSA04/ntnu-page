@@ -71,6 +71,8 @@ export interface ColumnRenderOptions {
   dates?: Map<number, number>;
   /** Every parallel and every group — see `CollectOptions` in board.ts. */
   showAllGroups?: boolean;
+  /** One ISO week instead of the mønsteruke — see `CollectOptions` in board.ts. */
+  week?: number | null;
 }
 
 export interface ColumnRenderResult {
@@ -377,7 +379,10 @@ export function renderColumnGrid(
 ): ColumnRenderResult {
   const entries = mergeSessions(
     visibleLayer(
-      collectSessions(courses, teachingWeeks, { showAllGroups: options.showAllGroups ?? false }),
+      collectSessions(courses, teachingWeeks, {
+        showAllGroups: options.showAllGroups ?? false,
+        week: options.week ?? null,
+      }),
       showOthers,
     ).shown,
   );

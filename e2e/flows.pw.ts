@@ -650,7 +650,7 @@ test("week: Uke and Liste show the same week two ways", async ({ page }) => {
   // Uke is what a cold load draws, so the tab is pressed before anything is
   // clicked — the page and `loadWeekView` have to agree about that or the CLS
   // reservation is for a view the frame is not about to fill.
-  await expect(page.locator("#planner-view-kolonner")).toHaveAttribute("aria-pressed", "true");
+  await expect(page.locator('[data-role="view-tabs"] [data-view="kolonner"]')).toHaveAttribute("aria-pressed", "true");
   const columns = page.locator("#planner-grid-frame .planner-cols");
   await expect(columns).toBeVisible();
   // Blocks AND strips: a drop-in window is a session the list owes the week
@@ -696,10 +696,10 @@ test("week: Uke and Liste show the same week two ways", async ({ page }) => {
   await expect(page.locator("#planner-block-popover")).toBeVisible();
   await page.keyboard.press("Escape");
 
-  await page.click("#planner-view-tavle");
+  await page.click('[data-role="view-tabs"] [data-view="tavle"]');
   await expect(page.locator(".planner-board")).toBeVisible();
-  await expect(page.locator("#planner-view-tavle")).toHaveAttribute("aria-pressed", "true");
-  await expect(page.locator("#planner-view-kolonner")).toHaveAttribute("aria-pressed", "false");
+  await expect(page.locator('[data-role="view-tabs"] [data-view="tavle"]')).toHaveAttribute("aria-pressed", "true");
+  await expect(page.locator('[data-role="view-tabs"] [data-view="kolonner"]')).toHaveAttribute("aria-pressed", "false");
   // Same plan, same group narrowing, same øving toggle — so the same session
   // count. 57 rows against 7 blocks is what shipped when the list ignored the
   // toggle and listed every published lab group.
@@ -717,7 +717,7 @@ test("week: Uke and Liste show the same week two ways", async ({ page }) => {
   await page.reload();
   await expect(page.locator(".planner-board")).toBeVisible({ timeout: 45_000 });
 
-  await page.click("#planner-view-kolonner");
+  await page.click('[data-role="view-tabs"] [data-view="kolonner"]');
   await expect(columns).toBeVisible();
   await expect(page.locator(".planner-board")).toHaveCount(0);
 });
@@ -729,7 +729,7 @@ test("kolonner: the week is dealt out in whole days at every width", async ({ pa
   // of days is floored now, so the scroll only ever hides whole ones.
   await gotoPlanner(page, { program: { code: "MTDT", name: "MTDT", cohort: 2026 } });
   await expect(gridBlocks(page).first()).toBeVisible({ timeout: 45_000 });
-  await page.click("#planner-view-kolonner");
+  await page.click('[data-role="view-tabs"] [data-view="kolonner"]');
   await expect(page.locator("#planner-grid-frame .planner-cols")).toBeVisible();
 
   /**
@@ -820,7 +820,7 @@ test("uke: an open øvingsvindu names itself, opens, and stacks", async ({ page 
     ],
   });
   await expect(gridBlocks(page).first()).toBeVisible({ timeout: 45_000 });
-  await page.click("#planner-others-toggle");
+  await page.click('[data-role="layer-toggle"]');
 
   const strips = page.locator(".planner-cols-band");
   await expect(strips.first()).toBeVisible();
@@ -862,9 +862,9 @@ test("uke: an open øvingsvindu names itself, opens, and stacks", async ({ page 
   // first frame and the sessions trickled in behind them. Out to Liste and
   // back is what re-runs the strike — `setWeekView` ignores a click on the
   // view already showing.
-  await page.click("#planner-view-tavle");
+  await page.click('[data-role="view-tabs"] [data-view="tavle"]');
   await expect(page.locator(".planner-board")).toBeVisible();
-  await page.click("#planner-view-kolonner");
+  await page.click('[data-role="view-tabs"] [data-view="kolonner"]');
   await expect(strips.first()).toBeVisible();
   const steps = await page
     .locator(".planner-cols-block, .planner-cols-band")
@@ -901,7 +901,7 @@ test("liste: the collision marks the two sessions, not the day around them", asy
   await expect(gridBlocks(page).first()).toBeVisible({ timeout: 45_000 });
   expect(await settledVerdict(page)).toMatch(/1 kollisjon/);
 
-  await page.click("#planner-view-tavle");
+  await page.click('[data-role="view-tabs"] [data-view="tavle"]');
   const board = page.locator(".planner-board");
   await expect(board).toBeVisible();
 
@@ -1011,7 +1011,7 @@ test("week: the øving layer shows picked groups, not the whole cohort's", async
   await expect(gridBlocks(page).first()).toBeVisible({ timeout: 45_000 });
   const before = await gridBlocks(page).count();
 
-  await page.click("#planner-others-toggle");
+  await page.click('[data-role="layer-toggle"]');
   await expect(page.locator(".planner-note-groups").first()).toBeVisible({ timeout: 15_000 });
 
   const after = await gridBlocks(page).count();
@@ -1053,16 +1053,16 @@ test("week: the øving toggle moves the layer and leaves nothing behind", async 
     tavle: page.locator(".planner-board"),
   };
   for (const view of ["kolonner", "tavle"] as const) {
-    await page.click(`#planner-view-${view}`);
+    await page.click(`[data-role="view-tabs"] [data-view="${view}"]`);
     const host = hosts[view];
     await expect(host).toBeVisible();
     const lectures = await gridBlocks(page).count();
 
-    await page.click("#planner-others-toggle");
+    await page.click('[data-role="layer-toggle"]');
     await expect(host).not.toHaveClass(/is-settling/, { timeout: 5_000 });
     await expect(page.locator(".planner-motion-ghost")).toHaveCount(0);
 
-    await page.click("#planner-others-toggle");
+    await page.click('[data-role="layer-toggle"]');
     // Back to exactly the lectures we started from — the ghosts of the layer
     // that just left are gone, not merely invisible.
     await expect(host).not.toHaveClass(/is-settling|is-closing/, { timeout: 5_000 });
@@ -1535,7 +1535,7 @@ test("ett navn: the plan is named once, and the switch is not a third toggle", a
   // At the first tab, so within the track's own 2px lip.
   expect(Number.parseFloat(atWeek.x)).toBeLessThanOrEqual(2);
 
-  await page.click("#planner-view-tavle");
+  await page.click('[data-role="view-tabs"] [data-view="tavle"]');
   await expect(page.locator(".planner-board").first()).toBeVisible();
   const atList = await ruleAt();
   // The rule TRAVELS to the second word rather than appearing under it.
@@ -1544,13 +1544,13 @@ test("ett navn: the plan is named once, and the switch is not a third toggle", a
   expect(Number.parseFloat(atList.w)).toBeGreaterThan(Number.parseFloat(atWeek.w));
 
   // …and back, so the travel is not one-way.
-  await page.click("#planner-view-kolonner");
+  await page.click('[data-role="view-tabs"] [data-view="kolonner"]');
   await expect(page.locator(".planner-cols").first()).toBeVisible();
   expect(Number.parseFloat((await ruleAt()).x)).toBe(Number.parseFloat(atWeek.x));
 
   // And the layer control is a box you tick, not a fourth view: it has a
   // check mark of its own and never takes the pressed FILL the old toggle did.
-  const others = page.locator("#planner-others-toggle");
+  const others = page.locator('[data-role="layer-toggle"]');
   await expect(others.locator(".planner-check")).toHaveCount(1);
   await expect(others).toHaveAttribute("aria-pressed", "false");
   await others.click();
@@ -1630,19 +1630,14 @@ test.describe("target sizes", () => {
       // The øving layer brings the margin notes with it, and the list view
       // swaps the whole week for rows — both add targets the grid has not.
       //
-      // Below 46rem the layer box is a row of the ⋯ menu, so it has to be
-      // opened first — and the open panel's own rows are then swept by the
-      // same pass, which is the point rather than a workaround.
-      const tools = page.locator("#planner-tools-btn");
-      if (await tools.isVisible()) {
-        await tools.click();
-        expect(await undersized(page)).toEqual([]);
-      }
-      await page.locator("#planner-others-toggle").click();
+      // Nothing on this bar folds any more: the week's controls went down to
+      // the week's own section, where they fit 390px on one row, so the sweep
+      // sees every control at every width with nothing to open first.
+      await page.locator('[data-role="layer-toggle"]').click();
       await expect(page.locator(".planner-note-groups").first()).toBeVisible();
       expect(await undersized(page)).toEqual([]);
 
-      await page.locator("#planner-view-tavle").click();
+      await page.locator('[data-role="view-tabs"] [data-view="tavle"]').click();
       await expect(page.locator(".planner-board").first()).toBeVisible();
       expect(await undersized(page)).toEqual([]);
     });
@@ -1731,14 +1726,14 @@ test("the layer leaves in the reverse of the order it arrived in", async ({ page
       [selector, prop] as const,
     );
 
-  await page.locator("#planner-others-toggle").click();
+  await page.locator('[data-role="layer-toggle"]').click();
   const arrive = await indices(".planner-cols-block.is-arriving, .planner-cols-band.is-arriving", "--planner-arrive");
   expect(arrive.length).toBeGreaterThan(1);
   // Reading order, ascending: 0, 1, 2 …
   expect(arrive).toEqual([...arrive].sort((a, b) => a - b));
   await page.waitForTimeout(1400);
 
-  await page.locator("#planner-others-toggle").click();
+  await page.locator('[data-role="layer-toggle"]').click();
   const depart = await indices(".planner-motion-ghost", "--planner-depart");
   expect(depart.length).toBe(arrive.length);
   // The same reading order, DESCENDING: the last block to land is the first to go.
@@ -1756,7 +1751,7 @@ test("the all-day row opens with the layer instead of snapping", async ({ page }
   // TDT4120's weekday-long Øvingsveiledning is exactly this case.
   await gotoPlanner(page, { courses: ["TDT4120", "TMA4412"] });
   await expect(gridBlocks(page).first()).toBeVisible({ timeout: 45_000 });
-  await page.locator("#planner-others-toggle").click();
+  await page.locator('[data-role="layer-toggle"]').click();
   await expect(page.locator(".planner-note-groups").first()).toBeVisible({ timeout: 20_000 });
   await page.locator(".planner-note-groups").first().click();
   const groups = page.locator("#planner-course-settings .course-settings-group-row");
@@ -1776,7 +1771,7 @@ test("the all-day row opens with the layer instead of snapping", async ({ page }
 
   // Hiding: the row must still be open while the chips are wiping out, and
   // closed once everything has settled.
-  await page.locator("#planner-others-toggle").click();
+  await page.locator('[data-role="layer-toggle"]').click();
   await page.waitForTimeout(120);
   expect(await band()).toBe(open);
   await page.waitForTimeout(1200);
@@ -1786,7 +1781,7 @@ test("the all-day row opens with the layer instead of snapping", async ({ page }
   // Revealing: the space opens FIRST, so the row is already growing at 60 ms —
   // but it has not arrived, which is what proves it is a transition and not a
   // snap.
-  await page.locator("#planner-others-toggle").click();
+  await page.locator('[data-role="layer-toggle"]').click();
   await page.waitForTimeout(60);
   const midway = await band();
   expect(midway).toBeGreaterThan(shut);
@@ -1800,7 +1795,7 @@ test("the list's own height animates too, so nothing under it jumps", async ({ p
   // carry it — a translated row still occupies its original box.
   await gotoPlanner(page, { program: { code: "MTDT", name: "MTDT", cohort: 2026 } });
   await expect(gridBlocks(page).first()).toBeVisible({ timeout: 45_000 });
-  await page.locator("#planner-view-tavle").click();
+  await page.locator('[data-role="view-tabs"] [data-view="tavle"]').click();
   const board = page.locator("#planner-grid-frame .planner-board");
   await expect(board).toBeVisible();
   await page.waitForTimeout(900);
@@ -1811,7 +1806,7 @@ test("the list's own height animates too, so nothing under it jumps", async ({ p
   // Revealing: the space opens first, so the box is already growing but has
   // not arrived. Both halves matter — "already growing" rules out a stall,
   // "not arrived" rules out the snap.
-  await page.locator("#planner-others-toggle").click();
+  await page.locator('[data-role="layer-toggle"]').click();
   await page.waitForTimeout(70);
   const growing = await h();
   expect(growing).toBeGreaterThan(short);
@@ -1820,7 +1815,7 @@ test("the list's own height animates too, so nothing under it jumps", async ({ p
   expect(growing).toBeLessThan(tall);
 
   // Hiding: the box holds while the rows wipe out, then closes behind them.
-  await page.locator("#planner-others-toggle").click();
+  await page.locator('[data-role="layer-toggle"]').click();
   await page.waitForTimeout(70);
   expect(await h()).toBe(tall);
   await page.waitForTimeout(1200);
@@ -1915,19 +1910,21 @@ test.describe("the banner's pair", () => {
     await expect(verdict).toContainText("kollisjon");
   });
 
-  test("an unqualified clean verdict is still not printed on a phone", async ({ page }) => {
-    // The other half of the narrowed rule, and the half that was there first.
-    // TDT4110 and TDT4120 both publish real lectures and do not collide, so
-    // the pass has nothing to qualify — "ingen forelesninger kolliderer" and
-    // nothing else, which is the line that spends a row of the first screen
-    // saying nothing is wrong.
+  test("a clean plan spends no row on saying so, at any width", async ({ page }) => {
+    // "Ingen forelesninger kolliderer" is gone: it answered a question a
+    // student only asks when something might be wrong, and it spent a line of
+    // the first screen on every load reporting that nothing is. A phone rule
+    // used to hide it there, which was half of this admission already.
+    //
+    // What is tested is the MECHANISM, not the absence of a string: the line
+    // takes no vertical space when it has nothing to say. TDT4110 and TDT4120
+    // both publish real lectures and do not collide, so there is nothing.
     await gotoPlanner(page, { courses: ["TDT4110", "TDT4120"] });
     await expect(gridBlocks(page).first()).toBeVisible({ timeout: 45_000 });
     const status = page.locator("#planner-grid-status");
     await expect
       .poll(async () => (await status.textContent())?.trim() ?? "", { timeout: 45_000 })
-      .toContain("Ingen forelesninger kolliderer");
-    await expect(status).not.toContainText("ikke sjekket");
+      .toBe("");
     const height = await status.evaluate((el: HTMLElement) => el.getBoundingClientRect().height);
     expect(height).toBe(0);
   });
@@ -1997,23 +1994,20 @@ test("the week is not labelled 'Uke', but the region still has that name", async
 });
 
 /**
- * "Del lenke" — the mark, and the width.
+ * "Del lenke" — the mark.
  *
  * The mark was an inline `<svg>` with no width, no height and no CSS of its
  * own. `base.css` gives every svg `display: block; max-width: 100%`, and as a
- * flex child of `.np-btn` that resolves to **0×0** — the button painted the word
- * with an 8 px hole where the icon should be, and the icon appeared, oversized,
- * only in the state where the label wrapped the box open. Nothing below the
- * browser could see it: the element was there, the paths were right, and the
- * layout is what was wrong.
+ * flex child that resolves to **0×0** — the button painted a hole where the
+ * icon should be. Nothing below the browser could see it: the element was
+ * there, the paths were right, and the layout is what was wrong.
  *
- * The width half is the other reported fault. `Del` → `Lenke kopiert` grew the
- * button and shoved the Uke/Liste switch sideways at the moment it was pressed;
- * pinning the wider label stopped the jump and left a permanent slab of dead
- * space after the short word. The pair is `Del lenke` → `Kopiert` now, so the
- * RESTING state is the widest and the pin costs nothing at rest.
+ * The control is an icon square now, pinned to the trailing edge of the plan's
+ * row at every width, so the width half of this test is gone with the label it
+ * was about: there is nothing left that can change size. What remains is that
+ * the mark HAS a size, and that confirming swaps it rather than adding to it.
  */
-test("del: the mark has a size, and confirming moves nothing", async ({ page, context }) => {
+test("del: the mark has a size, and confirming swaps it", async ({ page, context }) => {
   await context.grantPermissions(["clipboard-read", "clipboard-write"]);
   // Del hands over `/user/<navn>`, so it needs an account that is already
   // sharing; without one the button opens signup instead of copying, which is
@@ -2024,26 +2018,22 @@ test("del: the mark has a size, and confirming moves nothing", async ({ page, co
 
   const share = page.locator("#planner-share");
   await expect(share).toBeVisible();
+  // The failure this guards is 0×0, not a particular figure — pinning the exact
+  // px would just be transcribing whatever `size` says today.
   const mark = await share.locator(".planner-share-mark").boundingBox();
-  expect(mark?.width).toBe(16);
-  expect(mark?.height).toBe(16);
-
-  const tabs = page.locator(".planner-view-tabs");
-  const restWidth = (await share.boundingBox())?.width ?? 0;
-  const tabsBefore = (await tabs.boundingBox())?.x ?? 0;
+  expect(mark?.width ?? 0).toBeGreaterThan(8);
+  expect(mark?.height ?? 0).toBeGreaterThan(8);
+  const restBox = await share.boundingBox();
 
   await share.click();
-  await expect(page.locator("#planner-share-label")).toHaveText("Kopiert");
-  // The mark answers before the word does, and it is a swap, not an addition.
+  // The mark answers, and it is a swap, not an addition.
   await expect(share.locator(".planner-share-check")).toBeVisible();
   await expect(share.locator(".planner-share-mark")).toBeHidden();
+  expect((await share.boundingBox())?.width).toBe(restBox?.width);
 
-  expect((await share.boundingBox())?.width).toBe(restWidth);
-  expect((await tabs.boundingBox())?.x).toBe(tabsBefore);
-
-  // …and back, with the box still exactly where it was.
-  await expect(page.locator("#planner-share-label")).toHaveText("Del lenke", { timeout: 5000 });
-  expect((await share.boundingBox())?.width).toBe(restWidth);
+  // …and back.
+  await expect(share.locator(".planner-share-mark")).toBeVisible({ timeout: 5000 });
+  expect((await share.boundingBox())?.width).toBe(restBox?.width);
 });
 
 test.describe("the topbar's phone menu", () => {
@@ -2179,9 +2169,20 @@ test.describe("the programme picker lives on the planner", () => {
   });
 });
 
-test.describe("the plan bar on a phone", () => {
-  test.use({ viewport: { width: 390, height: 844 } });
-
+/**
+ * THE TWO BARS FIT, AND NOTHING GETS BETWEEN THE TWO TOGGLES.
+ *
+ * This replaces the fold tests. The planner's `⋯` menu is gone: the week's
+ * controls went down to the week's own section, which left the plan's row
+ * carrying a name, a term and a mark — about 250px of the 358px a 390px phone
+ * has. What is worth testing is no longer "does it fold" but "does it still
+ * fit", because that is the thing a future control silently breaks.
+ *
+ * The second assertion is the rule the whole arrangement rests on: the layer
+ * box is the first thing in the week's control row and the view switch is the
+ * last, with no element between them, at every width.
+ */
+test.describe("the plan's two bars", () => {
   const seedProgram = (page: Page) =>
     page.addInitScript(() => {
       localStorage.setItem(
@@ -2190,66 +2191,72 @@ test.describe("the plan bar on a phone", () => {
       );
     });
 
-  test("folds to the view switch and one menu", async ({ page }) => {
-    await seedProgram(page);
-    await page.goto("/planlegger/");
+  for (const [label, width, height] of [
+    ["390px", 390, 844],
+    ["1280px", 1280, 800],
+  ] as const) {
+    test(`the plan's row is one row and its controls are reachable — ${label}`, async ({
+      page,
+    }) => {
+      await page.setViewportSize({ width, height });
+      await seedProgram(page);
+      await page.goto("/planlegger/");
 
-    // What stays out is the control a student throws while reading the week.
-    await expect(page.locator(".planner-view-tabs")).toBeVisible();
-    await expect(page.locator("#planner-others-toggle")).toBeHidden();
-    await expect(page.locator("#planner-semester-select")).toBeHidden();
+      // ONE ROW: the head is no taller than the name block inside it, which is
+      // what wrapping would change. Everything in it is on screen, so nothing
+      // is a tap deep any more.
+      const head = await page.locator(".planner-head").boundingBox();
+      const name = await page.locator(".planner-name-text").boundingBox();
+      expect(head?.height ?? 0).toBeLessThanOrEqual((name?.height ?? 0) + 4);
+      await expect(page.locator("#planner-semester-select")).toBeVisible();
+      await expect(page.locator('[data-role="week-select"]')).toBeVisible();
+      await expect(page.locator('[data-role="layer-toggle"]')).toBeVisible();
+      await expect(page.locator(".planner-view-tabs")).toBeVisible();
+    });
 
-    const menu = page.locator("#planner-tools-btn");
-    await menu.click();
-    await expect(page.locator("#planner-others-toggle")).toBeVisible();
-    await expect(page.locator("#planner-semester-select")).toBeVisible();
-  });
+    test(`nothing comes between the layer box and the view switch — ${label}`, async ({
+      page,
+    }) => {
+      await page.setViewportSize({ width, height });
+      await seedProgram(page);
+      await page.goto("/planlegger/");
 
-  test("a control that redraws the week closes it; one that confirms itself does not", async ({
+      // The bar's own children, in DOM order: exactly two, in this order.
+      const roles = await page.$$eval(".week-bar > *", (nodes) =>
+        nodes.map((n) => n.getAttribute("data-role")),
+      );
+      expect(roles).toEqual(["layer-toggle", "view-tabs"]);
+
+      // …and they sit at opposite ends of it.
+      const bar = await page.locator(".week-bar").boundingBox();
+      const layer = await page.locator('[data-role="layer-toggle"]').boundingBox();
+      const tabs = await page.locator('[data-role="view-tabs"]').boundingBox();
+      expect(layer?.x).toBeCloseTo(bar?.x ?? -1, 0);
+      expect((tabs?.x ?? 0) + (tabs?.width ?? 0)).toBeCloseTo(
+        (bar?.x ?? 0) + (bar?.width ?? 0),
+        0,
+      );
+    });
+  }
+
+  test("the hand-over confirms in place and the plan's row does not move", async ({
     page,
     context,
   }) => {
-    // Without the grant `writeText` rejects and the label never swaps — the
-    // confirmation this test is about would be missing for the wrong reason.
     await context.grantPermissions(["clipboard-read", "clipboard-write"]);
+    await page.setViewportSize({ width: 390, height: 844 });
     await seedSharingAccount(page);
     await seedProgram(page);
     await page.goto("/planlegger/");
-    const menu = page.locator("#planner-tools-btn");
 
-    // The layer is animated ON PURPOSE (DESIGN §7) so a student who threw it
-    // can follow the change — which they cannot do under a scrim.
-    await menu.click();
-    await page.locator("#planner-others-toggle").click();
-    await expect(menu).toHaveAttribute("aria-expanded", "false");
-
-    // "Del lenke" swaps to "Kopiert" in place. Closing would throw away the
-    // confirmation the button's whole pinned width exists to protect.
-    // Visibility is asserted with the menu OPEN — inside the panel is the only
-    // place this control exists at this width.
-    await menu.click();
     const share = page.locator("#planner-share");
     await expect(share).toBeVisible({ timeout: 45_000 });
+    const before = await share.boundingBox();
     await share.click();
-    await expect(menu).toHaveAttribute("aria-expanded", "true");
-    await expect(page.locator("#planner-share-label")).toHaveText("Kopiert");
-  });
-
-  test("above the breakpoint there is no menu, and the bar reads left to right", async ({
-    page,
-  }) => {
-    await seedProgram(page);
-    await page.setViewportSize({ width: 1280, height: 800 });
-    await page.goto("/planlegger/");
-    await expect(page.locator("#planner-tools-btn")).toBeHidden();
-
-    // DOM order == visual order: the run that collapses comes first, the
-    // switch that stays comes last, so the fold needs no `order:` tricks and
-    // focus order never diverges from what the eye sees.
-    const x = async (sel: string) => (await page.locator(sel).boundingBox())?.x ?? -1;
-    expect(await x("#planner-others-toggle")).toBeLessThan(await x("#planner-share"));
-    expect(await x("#planner-share")).toBeLessThan(await x(".planner-semester"));
-    expect(await x(".planner-semester")).toBeLessThan(await x(".planner-view-tabs"));
+    await expect(share.locator(".planner-share-check")).toBeVisible();
+    // An icon square cannot change width, which is what the labelled version
+    // needed a measured `minWidth` to guarantee.
+    expect((await share.boundingBox())?.x).toBe(before?.x);
   });
 });
 
@@ -2326,11 +2333,11 @@ test.describe("the course page draws the week the planner draws", () => {
     await expect(page.locator("#timetable-section .planner-board")).toBeVisible({
       timeout: 45_000,
     });
-    await expect(page.locator("#emne-view-tavle")).toHaveAttribute("aria-pressed", "true");
+    await expect(page.locator('#timetable-section [data-view="tavle"]')).toHaveAttribute("aria-pressed", "true");
 
     // And the pair on this page really switches it, rather than being decoration
     // beside a week only the planner can change.
-    await page.click("#emne-view-kolonner");
+    await page.click('#timetable-section [data-view="kolonner"]');
     await expect(page.locator("#timetable-section .planner-cols")).toBeVisible();
     expect(await page.evaluate(() => localStorage.getItem("np:weekView"))).toBe("kolonner");
   });
@@ -2367,7 +2374,7 @@ test.describe("the course page draws the week the planner draws", () => {
     await expect(sessions.first()).toBeVisible({ timeout: 45_000 });
     const lecturesOnly = await sessions.count();
 
-    const toggle = page.locator("#emne-others-toggle");
+    const toggle = page.locator('#timetable-section [data-role="layer-toggle"]');
     await expect(toggle).toHaveAttribute("aria-pressed", "false");
     await toggle.click();
     await expect(toggle).toHaveAttribute("aria-pressed", "true");

@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { isoWeekNumber, weekdayDates } from "../../src/lib/planner/weekDates.js";
+import { isoWeekNumber, isoWeekStart, weekdayDates } from "../../src/lib/planner/weekDates.js";
 
 describe("isoWeekNumber", () => {
   test("the reference week the artifact is drawn for", () => {
@@ -49,5 +49,38 @@ describe("weekdayDates", () => {
     expect(dates.get(1)).toBe(28);
     expect(dates.get(4)).toBe(1);
     expect(dates.get(6)).toBe(3);
+  });
+});
+
+/**
+ * The inverse of `isoWeekNumber`, and the reason the week picker can date a
+ * week it is not open in: a chosen week carries its own Monday's numerals.
+ * The two must agree, which is what these check rather than any one value.
+ */
+describe("isoWeekStart", () => {
+  test("round-trips through isoWeekNumber for a whole autumn term", () => {
+    for (let week = 33; week <= 52; week++) {
+      expect(isoWeekNumber(isoWeekStart(2026, week))).toBe(week);
+    }
+  });
+
+  test("lands on a Monday", () => {
+    for (const week of [1, 14, 34, 47, 52]) {
+      // getDay(): 1 = Monday.
+      expect(isoWeekStart(2026, week).getDay()).toBe(1);
+    }
+  });
+
+  test("week 1 may start in the previous December", () => {
+    // 2026-01-01 is a Thursday, so ISO week 1 opens on 29 December 2025.
+    const monday = isoWeekStart(2026, 1);
+    expect(monday.getFullYear()).toBe(2025);
+    expect(monday.getMonth()).toBe(11);
+    expect(monday.getDate()).toBe(29);
+  });
+
+  test("dates the whole week the way the columns read it", () => {
+    // Week 36 of 2026 opens on Monday 31 August.
+    expect([...weekdayDates(isoWeekStart(2026, 36)).values()]).toEqual([31, 1, 2, 3, 4, 5]);
   });
 });

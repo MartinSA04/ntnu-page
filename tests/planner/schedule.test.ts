@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   entriesForProgram,
   entriesInSemester,
+  entriesInWeek,
   parseWeeks,
   semesterYear,
   toMinutes,
@@ -103,6 +104,46 @@ describe("entriesInSemester", () => {
     const inSem = entry("A", ["34-40"]);
     const notInSem = entry("B", ["1-13"]);
     expect(entriesInSemester([inSem, notInSem], [34, 35])).toEqual([inSem]);
+  });
+});
+
+/**
+ * The mønsteruke's defect, and the filter that answers it: two sessions in
+ * disjoint week ranges are drawn in the same slot, so the grid shows an overlap
+ * that never happens. This is what the week picker narrows through.
+ */
+describe("entriesInWeek", () => {
+  const entry = (code: string, weeks: string[]) => ({
+    courseCode: code,
+    dayNumber: 1,
+    startTime: "10:15",
+    endTime: "12:00",
+    weeks,
+  });
+
+  it("keeps only what is taught in that one week", () => {
+    const early = entry("A", ["34-40"]);
+    const late = entry("B", ["41-48"]);
+    expect(entriesInWeek([early, late], 36)).toEqual([early]);
+    expect(entriesInWeek([early, late], 45)).toEqual([late]);
+  });
+
+  it("separates two courses the pattern week draws in the same slot", () => {
+    const both = [entry("A", ["34-40"]), entry("B", ["41-48"])];
+    // The pattern week has both; no single week has more than one.
+    expect(entriesInSemester(both, [34, 40, 41, 48])).toHaveLength(2);
+    expect(entriesInWeek(both, 38)).toHaveLength(1);
+    expect(entriesInWeek(both, 44)).toHaveLength(1);
+  });
+
+  it("answers empty for a week nothing is taught in", () => {
+    expect(entriesInWeek([entry("A", ["34-40"])], 44)).toEqual([]);
+  });
+
+  it("reads a gapped range the way parseWeeks does", () => {
+    const gapped = entry("A", ["34-40", "42-47"]);
+    expect(entriesInWeek([gapped], 41)).toEqual([]);
+    expect(entriesInWeek([gapped], 42)).toEqual([gapped]);
   });
 });
 

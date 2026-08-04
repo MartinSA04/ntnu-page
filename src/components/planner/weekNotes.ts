@@ -574,6 +574,16 @@ export interface WeekNotesResult {
   /** Raw pairwise conflicts behind those slots. Diagnostics; not for display. */
   conflictPairCount: number;
   /**
+   * The collision slots themselves, in the order the margin lists them.
+   *
+   * Handed back because a caller needs the WEEKS a clash happens in, not just
+   * how many there are: with a week picker on the page, "take me to the clash"
+   * has to move the picker before it can flash anything. `weekView` keeps the
+   * last set and both entrances — the margin note and the verdict chip — go
+   * through the same one.
+   */
+  conflictGroups: ConflictGroup[];
+  /**
    * The plan's courses have entries but none classify as a lecture, so the
    * muted layer was revealed unasked. The caller must mirror this into the
    * toggle's `aria-pressed`, or the control lies about what is on screen.
@@ -629,6 +639,7 @@ export function weekNotes(
     return {
       conflictCount: 0,
       conflictPairCount: 0,
+      conflictGroups: [],
       mutedLayerAutoRevealed: false,
       pendingGroupCourses: [],
       incompleteCourses,
@@ -842,6 +853,7 @@ export function weekNotes(
   return {
     conflictCount: conflictGroups.length,
     conflictPairCount: conflicts.length,
+    conflictGroups,
     mutedLayerAutoRevealed,
     pendingGroupCourses: [...unpickedGroups.keys()],
     incompleteCourses,

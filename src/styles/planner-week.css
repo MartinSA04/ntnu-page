@@ -115,12 +115,83 @@
   min-height: 0;
 }
 
-html[data-view="tavle"] [data-surface="planner"] .planner-grid-frame[data-reserve] {
+/* COMPOUND, NOT DESCENDANT. `data-view` and `data-surface` are BOTH written on
+   `<html>`, so `html[data-view="tavle"] [data-surface="planner"]` asked for an
+   element carrying the surface INSIDE an html carrying the view — which does
+   not exist, because that element is the html. The rule never matched, so
+   Liste fell through to the Uke reservation above it and reserved 486px for a
+   week that settles at 812: a 326px shift, on the exact view whose height no
+   formula can derive and which this whole mechanism was built for. Measured
+   2026-08-04 on a three-course plan at 1280px. */
+html[data-view="tavle"][data-surface="planner"] .planner-grid-frame[data-reserve] {
   min-height: calc(
     2 *
     var(--planner-frame-pad-block) +
     var(--planner-box, calc(30.5rem + var(--plan-courses) * 4rem))
   );
+}
+
+/* /user/<navn> RESERVES THE SAME WAY, with one difference that decides the
+   fallbacks: `--plan-courses` is the VIEWER's plan, not the one being shown, so
+   the formulas above would size this frame from a plan it is not drawing. Uke's
+   arithmetic is plan-independent and carries over unchanged; Liste's is a line
+   fitted through course counts, so with no count to fit it holds a flat figure
+   for a typical shared plan and leans on `--planner-box` from the second visit
+   on. The frame is server-rendered here now, so the probe can hand it one. */
+[data-surface="user"] .planner-grid-frame[data-reserve] {
+  min-height: calc(
+    2 *
+    var(--planner-frame-pad-block) +
+    var(
+      --planner-box,
+      calc(var(--planner-cols-head-font) + var(--space-2) + 1px + 8 * var(--planner-hour-h))
+    )
+  );
+}
+
+[data-surface="user"] .planner-grid-frame:not([data-reserve]) {
+  min-height: 0;
+}
+
+html[data-view="tavle"][data-surface="user"] .planner-grid-frame[data-reserve] {
+  min-height: calc(2 * var(--planner-frame-pad-block) + var(--planner-box, 44rem));
+}
+
+/* --- THE WEEK'S CONTROLS -------------------------------------------------
+   TWO ROWS, and the order is scope: which weeks, then which layers and in
+   which shape.
+
+       Uke 34  ⌄
+       ☐ Øvinger og labber                          [ Uke | Liste ]
+
+   `space-between` on the second row is the rule, not a convenience: the layer
+   box is hard left and the view switch hard right, and NOTHING is ever allowed
+   between them. They are the two questions asked while reading the week, and a
+   third control in that gap is what the split into two rows exists to prevent.
+
+   The picker sits above rather than beside the layer box because three controls
+   do not fit one row at 390px — about 400px of control against 358px of content
+   — so sharing a row would silently give the phone a different arrangement from
+   the desktop. Above, the same two rows hold at every width and on all three
+   surfaces, which is what makes `WeekControls.astro` a component rather than
+   three similar bars. */
+.week-controls {
+  display: grid;
+  gap: var(--space-2);
+  margin-bottom: var(--space-2);
+}
+
+/* The shell is `display: grid` and would otherwise stretch the select across
+   the row. It sizes to "Alle uker" / "Uke 36, 31. aug". */
+.week-scope {
+  justify-self: start;
+}
+
+.week-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--gap-3);
 }
 
 /* --- Uke ⇄ Liste ---------------------------------------------------------
@@ -201,12 +272,15 @@ html[data-view="tavle"] [data-surface="planner"] .planner-grid-frame[data-reserv
   display: inline-flex;
   align-items: center;
   gap: var(--gap-2);
+  /* The same height as the switch beside it, so the row has one baseline and
+     one box. It used to be a text-height control pulled open with a negative
+     margin and matching padding, which bought a target without spending
+     layout — that job belongs to the hit-target rule in primitives.css now,
+     and this can simply be a control the size of every other control. */
+  min-height: var(--control-h);
   font-family: var(--font-sans);
   font-size: var(--text-sm);
   color: var(--muted);
-  /* Same trade as the tabs: a 24px target, none of it spent on layout. */
-  margin-block: -7px;
-  padding-block: 7px;
   border-radius: var(--radius-xs);
   transition: color var(--dur-fast) var(--ease);
 }

@@ -42,6 +42,22 @@ export function entriesInSemester<T extends ScheduleEntry>(
 }
 
 /**
+ * The subset of `entries` taught in ONE week.
+ *
+ * The week the planner draws is a mønsteruke: every session of the semester,
+ * collapsed into one week. That is right for choosing courses and wrong for
+ * reading a particular Monday — a course taught weeks 34 to 40 and one taught
+ * 41 to 48 are drawn in the same slot, so the grid shows an overlap that never
+ * happens. `findConflicts` already knows better (it computes the pairs' shared
+ * weeks), which is exactly why the DRAWING has to be able to say it too.
+ *
+ * A no-op away from `entriesInSemester`: same shape, one week instead of a set.
+ */
+export function entriesInWeek<T extends ScheduleEntry>(entries: T[], week: number): T[] {
+  return entries.filter((entry) => parseWeeks(entry.weeks).includes(week));
+}
+
+/**
  * Filter multi-section entries to the sections relevant for a study programme.
  * Big service courses publish parallel lecture sections per programme cluster,
  * carried in `studyProgramKeys`. When `programCode` is set and at least one

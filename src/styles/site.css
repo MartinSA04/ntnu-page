@@ -602,9 +602,8 @@
 }
 
 /* The one editing control PRODUCT names, and the only interactive rows that
-   used to ignore --control-h: 20.8 px tall with a 13x13 px native input, on a
-   touch screen where every other control is 44. The token already carries the
-   touch value, so no media query is needed. */
+   used to ignore --control-h: 20.8 px tall with a 13x13 px native input, in a
+   dialog where every other control is a full one. */
 .course-settings-group-row {
   display: flex;
   align-items: center;

@@ -147,6 +147,54 @@
   color: var(--ui);
 }
 
+/* --- THE TARGET IS BIGGER THAN THE BOX -----------------------------------
+ *
+ * `--control-h` used to step 36px → 44px on a coarse pointer. That bought hit
+ * area by making every phone layout taller, which is paying in the dimension a
+ * phone has least of: the planner's bar, the topbar's menu rows and the
+ * settings dialog's group list all grew 8px per control to satisfy a rule about
+ * fingers, and the week lost the space.
+ *
+ * One height now, and the hit rectangle grows on its own: a transparent
+ * pseudo-element reaches past the painted box, so a 36px control answers a 44px
+ * tap while occupying 36px. Hit testing includes it — it is part of the
+ * element's own rendering, and it is not `pointer-events: none` — so nothing
+ * paints and nothing reflows.
+ *
+ * WCAG 2.5.8 (AA) asks 24×24 and 36 clears that unaided; `e2e/flows.pw.ts`
+ * measures every control on the planner against it. This is for the thumb, not
+ * for the audit.
+ *
+ * THE RULE FOR ADDING ONE: overlapping targets steal each other's taps, so a
+ * control closer than the shortfall to its neighbour must not get one. These
+ * three are each either alone in a row or separated by at least `--gap-2`.
+ */
+.np-icon-btn,
+.planner-view-tab,
+.planner-others-toggle {
+  position: relative;
+}
+
+.np-icon-btn::after,
+.planner-view-tab::after,
+.planner-others-toggle::after {
+  content: "";
+  position: absolute;
+  /* Half the shortfall to 44 on each side. The tab is inset 2px inside its own
+     track, so it starts 4px shorter than the others. */
+  inset-block: calc((var(--control-h) - 44px) / 2);
+  inset-inline: 0;
+}
+
+/* Square, so it is short in BOTH axes. */
+.np-icon-btn::after {
+  inset-inline: calc((var(--control-h) - 44px) / 2);
+}
+
+.planner-view-tab::after {
+  inset-block: calc((var(--control-h) - 4px - 44px) / 2);
+}
+
 /* Bare navigational text control (topbar links, quiet actions). */
 .np-navlink {
   display: inline-flex;
@@ -288,11 +336,11 @@ button.np-tag:hover {
   outline-offset: 3px;
 }
 
-/* `align-self: stretch` is a hit-target rule, not a layout one. The field is
-   44 px tall on a coarse pointer but `align-items: center` left the input its
-   own 21 px line box in the middle, so the top and bottom 11.6 px of a control
-   that LOOKS 44 px tall did nothing on tap. The field is a bare <div> with no
-   wrapping <label>, so nothing else picked the tap up. */
+/* `align-self: stretch` is a hit-target rule, not a layout one. `align-items:
+   center` left the input its own 21 px line box in the middle of a 36 px
+   control, so the top and bottom of something that LOOKS like a field did
+   nothing on tap. The field is a bare <div> with no wrapping <label>, so
+   nothing else picked the tap up. */
 .np-field input {
   flex: 1;
   align-self: stretch;

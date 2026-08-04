@@ -1,8 +1,7 @@
 ---
 import catalogData from "../../../data/catalog.json";
 import semestersData from "../../../data/semesters.json";
-import WeekLayerToggle from "../../components/WeekLayerToggle.astro";
-import WeekTabs from "../../components/WeekTabs.astro";
+import WeekControls from "../../components/WeekControls.astro";
 import Layout from "../../layouts/Layout.astro";
 // This page mounts the same `weekView` /planlegger/ does, so it needs the same
 // geometry — one shared stylesheet, not a second copy.
@@ -162,13 +161,8 @@ const description = `${course.code} ${course.name}: timeplan, eksamen og nøkkel
 
           Same pair and same order as /planlegger/'s bar: the layer you add,
           then the view you choose, with the tabs at the far right. */}
-      <div class="emne-section-head-row">
-        <h2 class="np-kicker emne-section-head">Timeplan</h2>
-        <div class="emne-week-controls" data-role="week-controls" hidden>
-          <WeekLayerToggle idPrefix="emne" />
-          <WeekTabs idPrefix="emne" />
-        </div>
-      </div>
+      <h2 class="np-kicker emne-section-head">Timeplan</h2>
+      <WeekControls hidden />
       <p class="emne-loading np-hint" data-role="status" data-reserve aria-live="polite">
         Henter timeplanen …
       </p>

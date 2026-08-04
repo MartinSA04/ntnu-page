@@ -179,7 +179,7 @@ test.describe("layout stability", () => {
 
     // Switch the way a student does. Liste is the view whose height no formula
     // can derive, so it is the one whose memory is load-bearing.
-    await page.click("#planner-view-tavle");
+    await page.click('[data-role="view-tabs"] [data-view="tavle"]');
     await expect(page.locator("#planner-grid-frame .planner-board")).toBeVisible();
     await expect
       .poll(async () => await page.evaluate(() => localStorage.getItem("np:weekBox")), {
@@ -228,7 +228,7 @@ test.describe("layout stability", () => {
     await expect(page.locator("#planner-grid-frame .planner-cols-block").first()).toBeVisible({
       timeout: 45_000,
     });
-    await page.click("#planner-view-tavle");
+    await page.click('[data-role="view-tabs"] [data-view="tavle"]');
     await expect(page.locator("#planner-grid-frame .planner-board")).toBeVisible();
 
     // Reload IN Liste: this is the reported case, and the one where the probe
@@ -251,11 +251,11 @@ test.describe("layout stability", () => {
       });
 
     for (const [id, label] of [
-      ["#planner-view-kolonner", "Uke"],
-      ["#planner-view-tavle", "Liste"],
+      ["[data-role=\"view-tabs\"] [data-view=\"kolonner\"]", "Uke"],
+      ["[data-role=\"view-tabs\"] [data-view=\"tavle\"]", "Liste"],
       // Back to Uke: the reported case is a lease held across a switch, and one
       // switch each way is what proves it is handed back in both directions.
-      ["#planner-view-kolonner", "Uke"],
+      ["[data-role=\"view-tabs\"] [data-view=\"kolonner\"]", "Uke"],
     ] as const) {
       await page.click(id);
       // A height measured mid-transition is a frame of an animation, not the

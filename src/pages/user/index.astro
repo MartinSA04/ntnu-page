@@ -1,7 +1,11 @@
 ---
+import WeekControls from "../../components/WeekControls.astro";
 import Layout from "../../layouts/Layout.astro";
-// The week's geometry and ink, shared with /planlegger/ and /emne/[code]/.
+// The week's geometry and ink, and the plan's own sections — the same two
+// stylesheets /planlegger/ loads, because this page IS /planlegger/ with the
+// verbs taken off.
 import "../../styles/planner-week.css";
+import "../../styles/plan-surface.css";
 
 /**
  * ONE shell for every `/user/<navn>`.
@@ -10,6 +14,21 @@ import "../../styles/planner-week.css";
  * (`worker/src/server.ts`), so the name is read from `location.pathname` in the
  * browser rather than from an Astro param — there is no param, and there are no
  * 5 470 accounts to prerender.
+ *
+ * IT IS THE PLANNER, READ ONLY. The same masthead shape, the same week section
+ * with the same three controls, the same Eksamener and Emner under it, drawn by
+ * the same functions. What comes off is every verb: no studieinfo door, no
+ * semester select, no Del lenke, no settings cogs, no "Legg til emne". A course
+ * row's name becomes a link into the course instead, which is the one place
+ * this surface can honestly send a viewer.
+ *
+ * THE SHELL IS STATIC, and that is a change: this page used to build every
+ * element it has after a fetch, which is why it was the only surface with
+ * runtime copies of the week's controls and the only one whose height
+ * reservation was a flat guess. With the sections in the document,
+ * `publicPlan.ts` is a fetch and three render calls, the controls are the same
+ * component the other two surfaces render, and the frame reserves and files its
+ * height through the same `(surface, view, width)` key.
  *
  * The `og:` tags below are DEFAULTS. The worker fills them per name with an
  * `HTMLRewriter` pass so a link unfurls richly in a chat while
@@ -40,125 +59,124 @@ const description = "En delt semesterplan fra Semesterplan.";
   <meta slot="head" property="og:image" content="/og-card.png" />
   <meta slot="head" name="twitter:card" content="summary_large_image" />
 
-  {/* `data-reserve` is a lease, not a layout: `publicPlan.ts` drops the
-      attribute on reaching a terminal state — a drawn week, an empty answer or
-      a failure — because a reservation left standing over a one-line apology is
-      a permanent hole in the page.
+  <div class="planner-banner">
+    <div class="planner-head">
+      <span class="planner-name-text">
+        {/* WHOSE PLAN, in the slot the planner puts the programme code in. The
+            kicker above it is what says this is somebody else's — on the
+            planner that slot carries nothing, because you do not need to be
+            told the plan you are editing is yours. */}
+        <p class="np-kicker public-plan-kicker">Delt plan</p>
+        <h1 class="planner-title public-plan-title" id="public-plan-title">Delt plan</h1>
+        {/* Programme, kull and the plan's size. Held at one line from first
+            paint like the planner's, so filling it moves nothing. */}
+        <p class="np-hint planner-context-line" id="public-plan-context"></p>
+      </span>
+      {/* The term, as a FACT. It is a `<select>` on the planner because there it
+          is a setting; here it describes a plan the viewer cannot change, so a
+          control would be a lie about what the page can do. */}
+      <span class="np-data public-plan-term" id="public-plan-term"></span>
+    </div>
 
-      The viewer has no `--plan-courses` to work from (the probe reports THEIR
-      plan, not the one being viewed), so this reserves a fixed week-ish height
-      rather than a computed one, deliberately a little under what a real week
-      settles at so the residual nudges down rather than snatching content up. */}
-  <div class="public-plan" id="public-plan" data-reserve></div>
+    {/* The same verdict line, and the same rule: it speaks only when there is
+        something to say. A shared plan that holds together says nothing; one
+        with a clash says so, and pressing it goes to the clash exactly as it
+        does on the planner. */}
+    <p class="planner-verdict" id="public-plan-verdict" aria-live="polite"></p>
+  </div>
+
+  {/* VISIBLE FROM FIRST PAINT, and that is the whole reservation.
+      It was `hidden` until the fetch answered, which reserves exactly nothing:
+      a hidden wrapper has no layout, so the frame inside it could not hold the
+      week's height however carefully the CSS asked it to. The sections paint
+      empty for the few hundred ms the fetch takes — which is precisely what
+      `/planlegger/` does, and what its own reservations depend on.
+
+      The cost is a moment of empty shell on a link that turns out to be dead;
+      `renderMessage` hides this and releases all of it. A valid link is the
+      case worth optimising, and a dead one is the minority path. */}
+  <div id="public-plan-main">
+    <section class="planner-week" aria-labelledby="public-plan-week-heading">
+      <h2 class="planner-section-name sr-only" id="public-plan-week-heading">Uke</h2>
+      <WeekControls />
+      <div class="planner-grid-frame" id="public-plan-frame" data-reserve></div>
+      <div class="planner-grid-notes" id="public-plan-notes"></div>
+    </section>
+
+    <div class="planner-below">
+      <section class="planner-exams" aria-labelledby="public-plan-exam-heading">
+        <div class="planner-section-head">
+          <h2 class="planner-section-name" id="public-plan-exam-heading">Eksamener</h2>
+        </div>
+        <div class="planner-exam-list" id="public-plan-exams"></div>
+      </section>
+
+      <section class="planner-courses" aria-labelledby="public-plan-courses-heading">
+        <div class="planner-section-head">
+          <h2 class="planner-section-name" id="public-plan-courses-heading">Emner</h2>
+        </div>
+        <div class="planner-load" id="public-plan-load" aria-hidden="true"></div>
+        <p class="planner-load-foot">
+          <span class="np-data planner-credit-line" id="public-plan-credits"></span>
+          <span class="planner-load-legend" id="public-plan-legend" hidden>streken er 30 sp</span>
+        </p>
+        <div class="planner-course-rows" id="public-plan-rows"></div>
+      </section>
+    </div>
+
+    {/* The one call to action: this page is a week, and the way to get your own
+        is the planner. */}
+    <div class="public-plan-foot">
+      <p class="np-hint">
+        Dette er en kopi du kan se på. Den endrer ingenting i din egen plan.
+      </p>
+      <a class="np-btn np-btn--primary" href="/planlegger/">Lag din egen plan</a>
+    </div>
+  </div>
+
+  {/* Where an empty answer or a failure lands. Separate from the sections above
+      rather than replacing them, so a retry does not have to rebuild the page. */}
+  <div class="public-plan-message" id="public-plan-message" hidden></div>
 </Layout>
 
 <style>
-  /* `:global()` on everything below the container, for the same reason
-     /planlegger/'s course rows are global: the whole page is built by
-     `publicPlan.ts` at runtime, and Astro's scoping stamps an attribute only on
-     elements that exist in this template. The container itself is in the
-     template, so its reservation is scoped normally. */
-  /* PER VIEW, because the two have unrelated geometries and one number cannot
-     serve both. Measured in Chromium on the real stylesheets, a one-course
-     shared plan: Uke 537 (390px) / 484 (1280px), Liste 880 / 866. The flat
-     30rem under-held Liste by ~390px.
-
-     Each is set a little under the narrower measurement, so the residual is a
-     small downward nudge. `html[data-view]` is written before first paint by
-     Layout.astro's probe. */
-  .public-plan[data-reserve] {
-    min-height: 30rem;
-  }
-  :global(html[data-view="tavle"]) .public-plan[data-reserve] {
-    min-height: 53rem;
+  /* Says what this page is before the name says whose. `--space-1` under it, so
+     the kicker and the title read as one block rather than two lines. */
+  .public-plan-kicker {
+    margin: 0 0 var(--space-1);
   }
 
-  .public-plan :global(.public-plan-head) {
-    margin-bottom: var(--space-4);
-  }
-
-  /* The name is the plan's title here, exactly as the programme is on
-     /planlegger/: it is what the page is about, not a headline about it. */
-  .public-plan :global(.public-plan-title) {
-    margin: var(--space-1) 0 0;
-    font-size: 1.25rem;
-    font-weight: var(--weight-semibold);
-    letter-spacing: -0.015em;
-    line-height: var(--leading-snug);
-  }
-
-  .public-plan :global(.public-plan-program),
-  .public-plan :global(.public-plan-summary) {
-    margin: var(--space-1) 0 0;
-  }
-
-  /* The Uke ⇄ Liste pair, at the top right of the week it governs. */
-  .public-plan :global(.public-plan-weekhead) {
-    display: flex;
-    justify-content: flex-end;
-    margin-bottom: var(--space-2);
-  }
-
-  .public-plan :global(.public-plan-summary) {
-    color: var(--fg);
-  }
-
-  /* One row per course, the code in the margin, the name a link into the
-     course's own page — the one place this surface can honestly send a
-     viewer, since it cannot edit the plan it is showing. */
-  .public-plan :global(.public-plan-courses) {
-    margin: var(--space-4) 0 0;
-    padding: 0;
-    list-style: none;
-    display: grid;
-    gap: var(--space-2);
-  }
-
-  .public-plan :global(.public-plan-course) {
-    display: flex;
-    align-items: baseline;
-    gap: var(--gap-3);
-    padding-bottom: var(--space-2);
-    border-bottom: 1px solid var(--border);
-  }
-
-  .public-plan :global(.public-plan-code) {
+  /* The term, pinned to the trailing edge the way the planner's select is. */
+  .public-plan-term {
     flex: none;
-    min-width: 6.5rem;
+    margin-inline-start: auto;
+    font-size: var(--text-sm);
     color: var(--muted);
   }
 
-  .public-plan :global(.public-plan-name) {
-    flex: 1 1 auto;
-    min-width: 0;
-  }
-
-  .public-plan :global(.public-plan-credits) {
-    flex: none;
-    color: var(--muted);
-  }
-
-  .public-plan :global(.public-plan-foot) {
-    margin-top: var(--space-5);
+  .public-plan-foot {
+    margin-top: var(--space-6);
     display: flex;
     flex-wrap: wrap;
     align-items: center;
     gap: var(--space-3) var(--gap-4);
   }
 
-  .public-plan :global(.public-plan-foot .np-hint) {
+  .public-plan-foot .np-hint {
     margin: 0;
     flex: 1 1 16rem;
   }
 
-  .public-plan :global(.public-plan-empty) {
+  /* `:global()` because `publicPlan.ts` builds these at runtime and Astro stamps
+     its scoping attribute only on what it compiled. */
+  .public-plan-message:not([hidden]) {
     display: grid;
     justify-items: start;
     gap: var(--space-3);
     padding: var(--space-5) 0;
   }
 
-  .public-plan :global(.public-plan-empty .np-hint) {
+  .public-plan-message :global(.np-hint) {
     margin: 0;
   }
 </style>
@@ -172,11 +190,8 @@ const description = "En delt semesterplan fra Semesterplan.";
   // module and does NOT re-execute after a ClientRouter swap, so a student
   // arriving here from another page would otherwise land on a dead shell.
   onPage((signal) => {
-    const root = document.getElementById("public-plan");
-    if (!root) return;
     void mountPublicPlan({
       navn: nameFromPath(location.pathname),
-      root,
       semesters: semestersData.semesters.map((s) => ({
         id: s.id,
         name: s.name,

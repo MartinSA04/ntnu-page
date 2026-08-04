@@ -8,17 +8,27 @@
  * of the page is where that starts. `tests/planner/publicPlan.test.ts` asserts
  * the rule against this file's source rather than trusting this paragraph.
  *
- * The week is drawn by `weekView` — one controller for the three surfaces that
- * draw a week (`/planlegger/`, `/emne/[code]/`, here), in the same two views,
- * so a shared week really is the week the sharer is looking at, including their
- * parallel and øving picks. That sentence stopped being true for a while: the
- * planner moved to the column week and this page kept drawing the transposed
- * one, which had been deleted as a view but kept alive as a module.
+ * ## What this module is now
+ *
+ * A FETCH AND THREE RENDER CALLS. It used to build the whole page — header,
+ * tabs, layer box, week frame, course rows — which made it the one surface with
+ * runtime copies of the week's controls and its own idea of what a course row
+ * looks like. The shell is static now (`pages/user/index.astro`), and every
+ * section is drawn by the same function the planner calls: `mountWeekView` for
+ * the week, `renderExamList` for the exams, `renderCourseRows` and
+ * `renderLoadTrack` for the courses. A change to any of them lands on both
+ * pages or on neither.
+ *
+ * What is genuinely local is below: reading the name out of the path, the
+ * fetch's four outcomes, and the two summary lines this page words differently
+ * from the planner because it is describing somebody else's plan.
  */
 
 import {
   type CourseBundle,
   fetchCourseBundle,
+  loadPlannerIndex,
+  type PlannerIndex,
   type TimetableEntry,
 } from "../../lib/planner/data.js";
 import { assignHues } from "../../lib/planner/hues.js";
@@ -28,9 +38,14 @@ import {
   publicPlanCredits,
 } from "../../lib/planner/publicPlan.js";
 import { entriesInSemester, semesterYear } from "../../lib/planner/schedule.js";
+import { renderCourseRows, renderLoadTrack } from "./courseRows.js";
 import { el, formatCreditNumber } from "./dom.js";
+import { renderExamList } from "./examList.js";
 import type { PlanCourseState } from "./types.js";
-import { buildLayerToggle, buildWeekTabs, mountWeekView } from "./weekView.js";
+import { mountWeekView } from "./weekView.js";
+
+/** A full semester's load, the figure the planner measures against. */
+const FULL_LOAD_CREDITS = 30;
 
 /** The semester rows the page ships from `data/semesters.json` — teaching weeks and a name. */
 export interface PublicSemester {
@@ -42,7 +57,6 @@ export interface PublicSemester {
 export interface PublicPlanDeps {
   /** The account name, read from the path — the worker serves one shell for all of them. */
   navn: string;
-  root: HTMLElement;
   semesters: PublicSemester[];
   fetch: typeof fetch;
   signal: AbortSignal;
@@ -68,20 +82,66 @@ function semesterLabelOf(plan: PublicPlan, semesters: PublicSemester[]): string 
 }
 
 /**
- * One line of facts under the name, in the planner's own vocabulary: how many
- * courses, how many credits, which term. Credits are omitted rather than
- * guessed when nothing published one (DR-6).
+ * The line under the name, in the planner's own vocabulary: which programme,
+ * how many courses, how many credits. Credits are omitted rather than guessed
+ * when nothing published one (DR-6).
+ *
+ * `formatCredits`'s "X av 30 sp" is the PLANNER's line — it measures a load
+ * against a full semester, which is a judgement about the owner's plan that a
+ * page for a viewer has no business making. The bare figure states the fact.
  */
-export function planSummary(plan: PublicPlan, label: string): string {
+export function planSummary(plan: PublicPlan): string {
   const count = plan.courses.length;
   const credits = publicPlanCredits(plan);
-  const parts = [`${count} ${count === 1 ? "emne" : "emner"}`];
-  // `formatCredits`'s "X av 30 sp" is the PLANNER's line — it measures a load
-  // against a full semester, which is a judgement about the owner's plan that a
-  // page for a viewer has no business making. The bare figure states the fact.
+  const parts: string[] = [];
+  if (plan.program) parts.push(`${plan.program.name}, kull ${plan.program.cohort}`);
+  parts.push(`${count} ${count === 1 ? "emne" : "emner"}`);
   if (credits > 0) parts.push(`${formatCreditNumber(credits)} sp`);
-  if (label !== "") parts.push(label);
   return parts.join(", ");
+}
+
+interface PageElements {
+  title: HTMLElement;
+  context: HTMLElement;
+  term: HTMLElement;
+  verdict: HTMLElement;
+  main: HTMLElement;
+  controls: HTMLElement | null;
+  frame: HTMLElement;
+  notes: HTMLElement;
+  exams: HTMLElement;
+  load: HTMLElement;
+  credits: HTMLElement;
+  legend: HTMLElement;
+  rows: HTMLElement;
+  message: HTMLElement;
+}
+
+function getElements(): PageElements | null {
+  const byId = <T extends HTMLElement>(id: string): T | null =>
+    document.getElementById(id) as T | null;
+  const found = {
+    title: byId<HTMLElement>("public-plan-title"),
+    context: byId<HTMLElement>("public-plan-context"),
+    term: byId<HTMLElement>("public-plan-term"),
+    verdict: byId<HTMLElement>("public-plan-verdict"),
+    main: byId<HTMLElement>("public-plan-main"),
+    frame: byId<HTMLElement>("public-plan-frame"),
+    notes: byId<HTMLElement>("public-plan-notes"),
+    exams: byId<HTMLElement>("public-plan-exams"),
+    load: byId<HTMLElement>("public-plan-load"),
+    credits: byId<HTMLElement>("public-plan-credits"),
+    legend: byId<HTMLElement>("public-plan-legend"),
+    rows: byId<HTMLElement>("public-plan-rows"),
+    message: byId<HTMLElement>("public-plan-message"),
+  };
+  for (const value of Object.values(found)) {
+    if (!value) return null;
+  }
+  return {
+    ...(found as Omit<PageElements, "controls">),
+    controls: document.querySelector<HTMLElement>('#public-plan-main [data-role="week-controls"]'),
+  };
 }
 
 /** The one call to action: this page is a week, and the way to get your own is the planner. */
@@ -92,25 +152,25 @@ function ctaLink(): HTMLElement {
 }
 
 /**
- * Says what happened, in ink, without apology (DESIGN §7) — and RELEASES the
- * height reservation, because a sentence under 24 rem of held-open white paper
- * is worse than the shift the reservation exists to prevent (CLAUDE.md's lease
- * idiom, the same one `/emne/[code]/` documents).
+ * Says what happened, in ink, without apology (DESIGN §7), and takes the plan's
+ * own sections off the page — a sentence under an empty week frame and two
+ * empty section headings is worse than the sentence on its own.
  */
-function renderMessage(root: HTMLElement, lines: string[], extra?: HTMLElement): void {
-  root.removeAttribute("data-reserve");
-  root.replaceChildren();
-  const box = el("div", "public-plan-empty");
-  for (const line of lines) box.append(el("p", "np-hint", line));
-  if (extra) box.append(extra);
-  root.append(box);
+function renderMessage(elements: PageElements, lines: string[], extra?: HTMLElement): void {
+  elements.main.hidden = true;
+  elements.message.hidden = false;
+  elements.message.replaceChildren();
+  for (const line of lines) elements.message.append(el("p", "np-hint", line));
+  if (extra) elements.message.append(extra);
 }
 
 export async function mountPublicPlan(deps: PublicPlanDeps): Promise<void> {
-  const { root, navn } = deps;
+  const elements = getElements();
+  if (!elements) return;
+  const { navn } = deps;
 
   if (navn === "") {
-    renderMessage(root, ["Fant ingen delt plan her. Lenken kan være fjernet."], ctaLink());
+    renderMessage(elements, ["Fant ingen delt plan her. Lenken kan være fjernet."], ctaLink());
     return;
   }
 
@@ -125,11 +185,11 @@ export async function mountPublicPlan(deps: PublicPlanDeps): Promise<void> {
   // 404 is the ONE answer for "no such account" and "not shared" alike — the
   // worker refuses to tell them apart, and neither must this page.
   if (response !== null && response.status === 404) {
-    renderMessage(root, ["Fant ingen delt plan her. Lenken kan være fjernet."], ctaLink());
+    renderMessage(elements, ["Fant ingen delt plan her. Lenken kan være fjernet."], ctaLink());
     return;
   }
   if (response === null || !response.ok) {
-    renderMessage(root, ["Kunne ikke hente planen."], retryButton(deps));
+    renderMessage(elements, ["Kunne ikke hente planen."], retryButton(deps));
     return;
   }
 
@@ -142,15 +202,15 @@ export async function mountPublicPlan(deps: PublicPlanDeps): Promise<void> {
   }
   if (deps.signal.aborted) return;
   if (plan === null) {
-    renderMessage(root, ["Kunne ikke hente planen."], retryButton(deps));
+    renderMessage(elements, ["Kunne ikke hente planen."], retryButton(deps));
     return;
   }
   if (plan.courses.length === 0) {
-    renderMessage(root, [`${navn} har ingen emner i planen akkurat nå.`], ctaLink());
+    renderMessage(elements, [`${navn} har ingen emner i planen akkurat nå.`], ctaLink());
     return;
   }
 
-  renderPlan(deps, plan);
+  renderPlan(deps, elements, plan);
 }
 
 function retryButton(deps: PublicPlanDeps): HTMLElement {
@@ -159,7 +219,6 @@ function retryButton(deps: PublicPlanDeps): HTMLElement {
   button.addEventListener(
     "click",
     () => {
-      deps.root.replaceChildren();
       void mountPublicPlan(deps);
     },
     { signal: deps.signal },
@@ -167,84 +226,14 @@ function retryButton(deps: PublicPlanDeps): HTMLElement {
   return button;
 }
 
-function renderPlan(deps: PublicPlanDeps, plan: PublicPlan): void {
-  const { root, navn } = deps;
-  const label = semesterLabelOf(plan, deps.semesters);
-  root.replaceChildren();
+function renderPlan(deps: PublicPlanDeps, elements: PageElements, plan: PublicPlan): void {
+  const { navn } = deps;
+  elements.message.hidden = true;
+  elements.main.hidden = false;
+  elements.title.textContent = navn;
+  elements.context.textContent = planSummary(plan);
+  elements.term.textContent = semesterLabelOf(plan, deps.semesters);
 
-  const head = el("header", "public-plan-head");
-  head.append(el("p", "np-kicker", "Delt plan"));
-  head.append(el("h1", "public-plan-title", navn));
-  if (plan.program) {
-    head.append(
-      el("p", "np-hint public-plan-program", `${plan.program.name}, kull ${plan.program.cohort}`),
-    );
-  }
-  head.append(el("p", "np-data public-plan-summary", planSummary(plan, label)));
-  root.append(head);
-
-  // The Uke/Liste pair, in its own row above the week rather than in the head:
-  // there is no section heading here for it to share a baseline with, and a
-  // segmented control at the top right of a week is where every calendar puts
-  // one. Built rather than server-rendered because every element on this page
-  // arrives after a fetch, so the tabs land with the header and the frame in
-  // one write — `buildWeekTabs` is the runtime twin of WeekTabs.astro, which
-  // the two surfaces with a static shell use instead.
-  const tabs = buildWeekTabs("user");
-  const layer = buildLayerToggle("user");
-  const weekHead = el("div", "public-plan-weekhead");
-  // Same order as /planlegger/'s bar and /emne/[code]/'s section head: the
-  // layer you add, then the view you choose, with the pair at the far right.
-  weekHead.append(layer.toggle, tabs.host);
-  root.append(weekHead);
-
-  const frame = el("div", "planner-grid-frame");
-  const notes = el("div", "planner-grid-notes");
-  root.append(frame, notes);
-
-  const list = el("ul", "public-plan-courses");
-  for (const course of plan.courses) {
-    const row = el("li", "public-plan-course");
-    row.append(el("span", "np-data public-plan-code", course.code));
-    const link = el("a", "np-navlink public-plan-name", course.name) as HTMLAnchorElement;
-    link.href = `/emne/${encodeURIComponent(course.code)}/`;
-    row.append(link);
-    if (typeof course.credits === "number") {
-      row.append(
-        el("span", "np-data public-plan-credits", `${formatCreditNumber(course.credits)} sp`),
-      );
-    }
-    list.append(row);
-  }
-  root.append(list);
-
-  const foot = el("div", "public-plan-foot");
-  foot.append(
-    el("p", "np-hint", "Dette er en kopi du kan se på. Den endrer ingenting i din egen plan."),
-  );
-  foot.append(ctaLink());
-  root.append(foot);
-
-  drawWeek(deps, plan, frame, notes, tabs, layer.toggle);
-}
-
-/**
- * Fetches every course's timetable and draws the week.
- *
- * The states are the planner's, minus the ones this page cannot have: it draws
- * a pending week while the bundles land (`loading: true`), then the week. A
- * course whose fetch failed carries its own outcome into the margin notes
- * through `weekNotes`'s `planGaps` — the honest join (DR-8) is the shared
- * controller's, not re-implemented here.
- */
-function drawWeek(
-  deps: PublicPlanDeps,
-  plan: PublicPlan,
-  frame: HTMLElement,
-  notes: HTMLElement,
-  tabs: { kolonner: HTMLButtonElement; tavle: HTMLButtonElement },
-  layerToggle: HTMLButtonElement,
-): void {
   const year = semesterYear(plan.semesterId);
   const semester = deps.semesters.find((s) => s.id === plan.semesterId);
   const hues = assignHues(plan.courses.map((c) => c.code));
@@ -255,6 +244,11 @@ function drawWeek(
       name: course.name,
       version: course.version,
       source: "manual",
+      // The published credits, carried through. Without them the list drew no
+      // figures and the load track drew nothing at all: the shared payload is
+      // the only source here, since no bundle has landed when the rows are
+      // written and this plan is never re-rendered from one.
+      ...(typeof course.credits === "number" ? { credits: course.credits } : {}),
       ...(course.groups ? { groups: course.groups } : {}),
     },
     hueVar: hues.get(course.code) ?? "--hue-blue",
@@ -263,20 +257,48 @@ function drawWeek(
     programCode: plan.program?.code ?? null,
   }));
 
+  // The courses are known before any bundle lands, so the list and the load
+  // track are drawn once, immediately, and never re-drawn: this plan cannot be
+  // edited, and a shared payload carries its own credits.
+  renderCourseRows(
+    elements.rows,
+    states.map((state) => ({
+      code: state.course.code,
+      name: state.course.name,
+      hueVar: state.hueVar,
+      credits: state.course.credits ?? null,
+    })),
+  );
+  renderLoadTrack(
+    elements.load,
+    states
+      .filter((state) => (state.course.credits ?? 0) > 0)
+      .map((state) => ({
+        code: state.course.code,
+        hueVar: state.hueVar,
+        credits: state.course.credits ?? 0,
+      })),
+    FULL_LOAD_CREDITS,
+  );
+  const credits = publicPlanCredits(plan);
+  elements.credits.textContent = credits > 0 ? `${formatCreditNumber(credits)} sp` : "";
+  elements.legend.hidden = credits <= 0;
+
   /**
-   * The same week `/planlegger/` draws, in the same two views, from the
-   * owner's own group picks — which is what makes a shared link the week the
-   * sharer is looking at rather than a second opinion about it.
+   * The same week `/planlegger/` draws, in the same two views, from the owner's
+   * own group picks — which is what makes a shared link the week the sharer is
+   * looking at rather than a second opinion about it. The three controls stay
+   * LIVE: which week, which layers and which shape are the viewer's questions,
+   * not the sharer's, and answering them changes nothing about the plan.
    *
    * `onOpenSettings` is null: this plan is not the viewer's, and nothing on
    * this page can change it. The popover still opens, because it answers "what
    * is this session", which a viewer deciding whether to copy the plan wants.
    */
   const week = mountWeekView({
-    frame,
-    notes,
-    tabs,
-    layerToggle,
+    frame: elements.frame,
+    notes: elements.notes,
+    controls: elements.controls,
     surface: "user",
     onOpenSettings: null,
     onRerender: () => draw(states.some((s) => s.loading)),
@@ -284,30 +306,102 @@ function drawWeek(
   });
 
   const draw = (loading: boolean): void => {
-    week.render(states, { teachingWeeks: semester?.teachingWeeks ?? [], loading });
+    const result = week.render(states, {
+      teachingWeeks: semester?.teachingWeeks ?? [],
+      ...(year !== null ? { year } : {}),
+      loading,
+    });
+    renderVerdict(elements, week, result.conflictCount, loading);
   };
 
   draw(true);
   if (year === null) return;
 
-  for (const [index, course] of plan.courses.entries()) {
+  // The exam list needs our own catalog artifact, which is a static file this
+  // page can fetch exactly as the planner does. Failing to get it leaves the
+  // section empty rather than apologising: a shared plan's exam dates are a
+  // bonus, and this page has no retry to offer that is worth a button.
+  let index: PlannerIndex | null = null;
+  void loadPlannerIndex()
+    .then((loaded) => {
+      if (deps.signal.aborted) return;
+      index = loaded;
+      drawExams();
+    })
+    .catch(() => {
+      /* Section stays empty. */
+    });
+
+  const drawExams = (): void => {
+    if (!index) return;
+    renderExamList(elements.exams, states, plan.semesterId, index, null, todayIso(), {
+      loading: states.some((s) => s.loading),
+    });
+  };
+
+  for (const [index_, course] of plan.courses.entries()) {
     void fetchCourseBundle(course.code, year, course.version)
       .then((bundle) => {
         if (deps.signal.aborted) return;
-        const state = states[index];
+        const state = states[index_];
         if (!state) return;
         state.bundle = narrowToSemester(bundle, semester?.teachingWeeks);
         state.loading = false;
-        if (states.every((s) => !s.loading)) draw(false);
+        if (states.every((s) => !s.loading)) {
+          draw(false);
+          drawExams();
+        }
       })
       .catch(() => {
         if (deps.signal.aborted) return;
-        const state = states[index];
+        const state = states[index_];
         if (!state) return;
         state.loading = false;
-        if (states.every((s) => !s.loading)) draw(false);
+        if (states.every((s) => !s.loading)) {
+          draw(false);
+          drawExams();
+        }
       });
   }
+}
+
+/** Today in Oslo as "YYYY-MM-DD" — the exam list's "om N dager" is a date, not a moment. */
+function todayIso(): string {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Europe/Oslo",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(new Date());
+  const get = (type: Intl.DateTimeFormatPartTypes): string =>
+    parts.find((p) => p.type === type)?.value ?? "";
+  return `${get("year")}-${get("month")}-${get("day")}`;
+}
+
+/**
+ * The same verdict the planner shows, and the same rule: it speaks only when
+ * there is something to say.
+ *
+ * A shared plan that holds together says nothing, exactly as the planner's does
+ * — the green pass was removed there for spending a line of the first screen to
+ * report that nothing is wrong, and it would be no more useful here. A clash is
+ * worth saying, and it is worth being able to follow: this is a plan a viewer
+ * may be about to copy.
+ */
+function renderVerdict(
+  elements: PageElements,
+  week: { jumpToFirstConflict(): void },
+  conflictCount: number,
+  loading: boolean,
+): void {
+  elements.verdict.replaceChildren();
+  if (loading || conflictCount === 0) return;
+  const chip = el("button", "planner-chip np-note-clash is-jump");
+  chip.type = "button";
+  chip.append(el("span", "np-data", String(conflictCount)));
+  chip.append(conflictCount === 1 ? " kollisjon" : " kollisjoner");
+  chip.addEventListener("click", () => week.jumpToFirstConflict());
+  elements.verdict.append(chip);
 }
 
 /**

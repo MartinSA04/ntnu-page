@@ -120,6 +120,97 @@ test("the shared page is live: an edit by the owner reaches it", async ({ browse
   await owner.close();
 });
 
+/**
+ * THE SHARED PAGE HOLDS ITS WEEK'S SPACE, which it could not before.
+ *
+ * It used to build every element it has after a fetch, so the only thing it
+ * could reserve was a flat `30rem` guess standing in for the whole page. Its
+ * shell is the planner's now, so its frame reserves per view through
+ * `--planner-box` on the same `(surface, view, width)` key — which means the
+ * SECOND visit is the one that can be measured: the first files what the week
+ * came out at, the probe hands it back before the next first paint.
+ *
+ * Asserted as slack rather than as a CLS budget, for the reason `/emne/`'s test
+ * gives: what a reservation on this page displaces sits low enough that a score
+ * would pass with the mechanism removed. Slack cannot.
+ */
+test("the shared page reserves its week's height from the second visit on", async ({ browser }) => {
+  const navn = freshName("e2e-cls");
+
+  const context = await browser.newContext({ viewport: { width: 1280, height: 900 } });
+  const page = await context.newPage();
+  await gotoPlanner(page, { courses: ["TDT4120", "TDT4110"] });
+
+  await page.getByRole("button", { name: "Profil" }).click();
+  await page.locator("#profile-panel-switch").click();
+  await page.getByLabel("Navn").fill(navn);
+  await page.getByLabel("PIN (6 siffer)").fill(PIN);
+  await page.getByLabel("Gjenta PIN").fill(PIN);
+  await page.getByRole("button", { name: "Opprett konto" }).click();
+  await expect(page.getByText("Sist synkronisert")).toBeVisible({ timeout: 45_000 });
+  await page.getByRole("button", { name: "Del planen min" }).click();
+  await expect(page.getByRole("button", { name: "Ikke del lenger" })).toBeVisible({
+    timeout: 30_000,
+  });
+
+  const viewer = await browser.newContext({ viewport: { width: 1280, height: 900 } });
+  const viewerPage = await viewer.newPage();
+
+  // Visit one: the week is drawn, measured and filed.
+  await viewerPage.goto(`/user/${navn}`);
+  await expect(viewerPage.locator("#public-plan-frame .planner-cols-block").first()).toBeVisible({
+    timeout: 45_000,
+  });
+  await expect
+    .poll(async () => await viewerPage.evaluate(() => localStorage.getItem("np:weekBox")), {
+      timeout: 15_000,
+    })
+    .toContain("user");
+
+  // Visit two: the probe hands that number back before paint, so the frame is
+  // already the week's height while the fetch is still in flight.
+  //
+  // The reservation is captured at DOMContentLoaded rather than read after the
+  // navigation resolves. Against a warm local worker the skeleton is often
+  // already up by then, and a skeleton is not the reservation — measuring it
+  // races the mount and reports whichever won.
+  await viewerPage.addInitScript(() => {
+    document.addEventListener(
+      "DOMContentLoaded",
+      () => {
+        const frame = document.querySelector("#public-plan-frame");
+        (window as unknown as { __reserved: number }).__reserved = frame
+          ? frame.getBoundingClientRect().height
+          : 0;
+      },
+      { once: true },
+    );
+  });
+  await viewerPage.goto(`/user/${navn}`);
+  const reserved = await viewerPage.evaluate(
+    () => (window as unknown as { __reserved: number }).__reserved ?? 0,
+  );
+  expect(reserved, "the frame reserved nothing before the week landed").toBeGreaterThan(200);
+
+  await expect(viewerPage.locator("#public-plan-frame .planner-cols-block").first()).toBeVisible({
+    timeout: 45_000,
+  });
+  const settled = await viewerPage.evaluate(
+    () => document.querySelector("#public-plan-frame")?.getBoundingClientRect().height ?? 0,
+  );
+
+  // Deliberately a little UNDER, never over: the residual is a small downward
+  // nudge rather than the week snatching content up from under a thumb.
+  expect(
+    settled - reserved,
+    `reserved ${reserved}, settled ${settled}`,
+  ).toBeGreaterThanOrEqual(-1);
+  expect(settled - reserved, `reserved ${reserved}, settled ${settled}`).toBeLessThan(24);
+
+  await viewer.close();
+  await context.close();
+});
+
 test("turning sharing off takes the page down", async ({ browser }) => {
   const navn = freshName("e2e-off");
 
