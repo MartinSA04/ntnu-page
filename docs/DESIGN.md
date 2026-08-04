@@ -309,6 +309,28 @@ off, not a column of numbers you have to be told are hours.
 pulled toward ink — one treatment in both geometries. This is §2's one
 sanctioned exception, and it is measured.
 
+**The control that reveals it is a BOX YOU TICK**, and the same box on every
+surface that draws a week. It ADDS a layer; the pair beside it CHOOSES how the
+week is drawn, so the two read as different kinds of control because they are.
+`/planlegger/` settled that grammar and the others mirror it — one component,
+one set of styles, and `weekView` owning the state, the click, the layer
+choreography and the count, because written out per page they had already
+diverged into a tick box on one surface and a filled pill on another.
+
+**It carries what the layer is still waiting on.** The layer draws PICKED
+groups only, which is right — every group of every course put 41 blocks in one
+week — but it made the control dishonest: ticking the box on a five-course plan
+added two blocks and said nothing about the four courses that drew none. Only
+while the layer is on; beside an unticked box "3 mangler gruppe" is a fact about
+something not on screen.
+
+**A margin note is a control only where there is something to control.** The
+"velg din gruppe" line opens that course's picker on `/planlegger/`. Where there
+is no picker — `/user/<navn>` shows somebody else's plan — it is a sentence
+instead, and it drops the imperative with the affordance: an underlined,
+focusable button that does nothing when pressed is the failure this rule exists
+to prevent.
+
 **Drop-in windows live in an all-day row.** A window is 08:15–14:00 every
 weekday, not an appointment at a time, so it has no honest place on the time
 axis. The row is drawn **at zero height** when the plan has no window, because

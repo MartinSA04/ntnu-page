@@ -218,9 +218,11 @@ plannerApp.ts    orchestration: owns the DOM ids in planlegger/index.astro,
 - **`weekView.ts`** — the week as ONE thing a page mounts, and the reason
   there are three surfaces and not three weeks.
   `mountWeekView({frame, notes, tabs, surface, onOpenSettings, signal})` owns
-  the view state (`np:weekView`), the Uke/Liste pair, the scroll edge and its
-  mask, the minute tick, the session popover, the frame's reservation lease,
-  and the choice between `renderColumnGrid` and `renderBoard`.
+  the view state (`np:weekView`), the Uke/Liste pair, the øving layer box and
+  everything it does (state, click, choreography, pending count, the B7a
+  auto-reveal mirroring), the scroll edge and its mask, the minute tick, the
+  session popover, the frame's reservation lease, and the choice between
+  `renderColumnGrid` and `renderBoard`.
   `render(states, input) → WeekRenderResult` draws and reports.
   What a PAGE keeps is the CONTENT of its message branches (`message()`,
   `card()`): the planner's empty week can be a studieretning question, an
