@@ -1,21 +1,16 @@
 ---
-import semestersData from "../../data/semesters.json";
 import Layout from "../layouts/Layout.astro";
 
 const description =
-  "Planlegg semesteret ved NTNU: velg studieprogram og kull i planleggeren, se ukeplanen med en gang.";
-
-const currentSemester = semestersData.current;
-const isAutumn = currentSemester ? /h$/i.test(currentSemester.id) : true;
-const seasonWord = isAutumn ? "høsten" : "våren";
+  "Timeplan for NTNU-studenter: velg studieprogram og kull, se ukeplanen med en gang.";
 ---
 
 <Layout title="Semesterplan" description={description}>
-  {/* The returning student's answer, when there is one to give: which room,
-      right now. It renders above the pitch and replaces it — a page that
-      already knows your week should not open by explaining what it is.
-      `hidden` until the plan says otherwise, so a
-      first-time visitor never sees an empty frame. */}
+  {/* The returning student's answer, and the whole page: which room, right
+      now, then what is left after it. `hidden` until the plan says otherwise,
+      so a first-time visitor never sees an empty frame — they get the button
+      and nothing else, which is the correct amount of explanation for a page
+      whose job people already understand. */}
   {/* The card's place, held from first paint for a visitor whose stored plan
       says one is coming (Layout.astro's probe). `#home-now` itself stays
       `hidden` — it is genuinely not there yet, and a screen reader should not
@@ -24,10 +19,10 @@ const seasonWord = isAutumn ? "høsten" : "våren";
       direction.
 
       Why it is worth the machinery: the card is 253px and it is INSERTED ABOVE
-      the pitch, so a returning student's landing page used to move its own
-      first paragraph from y=96 to y=395 about a second in. That was 0.133 CLS
-      on a phone, on the page every visit starts at, and it hit exactly the
-      people who come back most. */}
+      the button, so a returning student's landing page used to move everything
+      under it about a second in. That was 0.133 CLS on a phone, on the page
+      every visit starts at, and it hit exactly the people who come back
+      most. */}
   <div class="home-now-hold" id="home-now-hold" aria-hidden="true"></div>
   <section class="home-now" id="home-now" aria-labelledby="home-now-label" hidden>
     <a class="home-now-link" href="/planlegger/" id="home-now-link">
@@ -40,39 +35,25 @@ const seasonWord = isAutumn ? "høsten" : "våren";
     <ul class="home-now-next" id="home-now-next"></ul>
   </section>
 
-  <div class="home-pitch" id="home-pitch">
-    <p class="np-kicker home-kicker">Semesterplan</p>
-    <h1 class="home-title">Se timeplanen din for {seasonWord}.</h1>
-    <p class="np-hint home-subcopy">
-      Velg studieprogram og kull i planleggeren, så vises ukeplanen med en gang. En uoffisiell
-      side, ikke laget av NTNU.
-    </p>
+  {/* NO PITCH. There was a kicker, a headline and two sentences explaining
+      what a schedule page is; people know what a schedule page is. What a
+      front door owes a returning student is their next room, and what it owes
+      a new one is the way in — so the page is those two things.
 
-    {/* THE accent's one job, spent on the one thing this page is for. It shipped
-        as a bare `.np-btn`: the same grey chip as "Fjern" and "Avbryt", holding
-        the only call to action on the front door, while the accent went unspent
-        on the page entirely. */}
-    <a class="np-btn np-btn--primary home-cta" href="/planlegger/">Åpne planleggeren</a>
+      The heading survives for the document outline only. A page with no `h1`
+      is a page a screen reader cannot summarise, and the visible answer here
+      is a card that changes every hour. */}
+  <h1 class="sr-only">Semesterplan</h1>
 
-
-  </div>
+  {/* THE accent's one job, spent on the one thing this page is for. It shipped
+      as a bare `.np-btn`: the same grey chip as "Fjern" and "Avbryt", holding
+      the only call to action on the front door, while the accent went unspent
+      on the page entirely. */}
+  <a class="np-btn np-btn--primary home-cta" href="/planlegger/">Åpne planleggeren</a>
 
 </Layout>
 
 <style>
-  .home-kicker {
-    margin-bottom: var(--space-3);
-  }
-  .home-title {
-    font-size: var(--text-2xl);
-    margin-bottom: var(--space-3);
-    max-width: var(--measure);
-  }
-  .home-subcopy {
-    margin-bottom: var(--space-5);
-  }
-
-
   /* --- Nå ---------------------------------------- */
 
   .home-now[hidden] {
@@ -207,27 +188,6 @@ const seasonWord = isAutumn ? "høsten" : "våren";
     font-size: var(--text-xs);
   }
 
-  /* Once the page has an answer it stops introducing itself: the pitch drops to
-     a footnote rather than disappearing, because the CTA is still the way to a
-     plan you want to change.
-
-     The second selector in each pair is the same demotion PREDICTED — while the
-     hold is still holding and the probe says a plan exists. Without it the
-     reservation fixes only half the shift: the card arriving moved the pitch
-     down 299px *and* shrank it from 264px to 78px in the same frame. The
-     prediction is retracted with the hold. */
-  .home-pitch.is-secondary .home-title,
-  :global(html[data-plan]) .home-now-hold:not(.is-released) ~ .home-pitch .home-title {
-    font-size: var(--text-md);
-    font-weight: var(--weight-medium);
-  }
-
-  .home-pitch.is-secondary .home-kicker,
-  .home-pitch.is-secondary .home-subcopy,
-  :global(html[data-plan]) .home-now-hold:not(.is-released) ~ .home-pitch .home-kicker,
-  :global(html[data-plan]) .home-now-hold:not(.is-released) ~ .home-pitch .home-subcopy {
-    display: none;
-  }
 
   @media (max-width: 40rem) {
     :global(.home-now-next li) {
@@ -333,7 +293,6 @@ const seasonWord = isAutumn ? "høsten" : "våren";
       nowEl.hidden = false;
       releaseHold();
 
-      const pitch = el("home-pitch");
       const label = el("home-now-label");
       const room = el("home-now-room");
       const course = el("home-now-course");
@@ -343,8 +302,6 @@ const seasonWord = isAutumn ? "høsten" : "våren";
       const link = el("home-now-link") as HTMLAnchorElement | null;
       if (!label || !room || !course || !sub || !bar || !next || !link) return;
 
-      // The page has an answer, so it stops introducing itself.
-      if (pitch) pitch.classList.add("is-secondary");
 
       if (verdict.kind === "done") {
         label.textContent = "Denne uka";

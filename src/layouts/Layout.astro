@@ -1,7 +1,6 @@
 ---
 import { ClientRouter } from "astro:transitions";
 import semestersData from "../../data/semesters.json";
-import Icon from "../components/Icon.astro";
 import ThemeToggle from "../components/ThemeToggle.astro";
 import { faviconDataUri, VERDICT } from "../lib/favicon.ts";
 import "../styles/tokens.css";
@@ -274,43 +273,25 @@ const crawlDate = formatCrawlDate(semestersData.crawledAt);
         <a class="site-brand" href="/">
           Semesterplan<span class="site-brand-suffix">NTNU</span>
         </a>
-        {/* THE RUN THAT FOLDS. Above 480px this wrapper is `display: contents`
-            and these are ordinary flex children of the bar, laid out exactly
-            as they were before the menu existed; below it, it IS the menu's
-            panel. One DOM either way — every control in here is bound by id
-            somewhere else (`#site-account-btn`, `#site-account-name`,
-            `.theme-toggle`), so a duplicated phone-only copy would collide and
-            the pre-paint name script would correct the wrong node. */}
-        <div class="site-menu-panel" id="site-menu-panel">
-          <nav class="site-nav" aria-label="Hovednavigasjon">
-            {
-              NAV.map((item) => (
-                <a
-                  class="np-navlink"
-                  href={item.href}
-                  aria-current={isCurrentSection(item.sections) ? "page" : undefined}
-                >
-                  {item.label}
-                </a>
-              ))
-            }
-          </nav>
-          {/* Links go somewhere; the toggle below changes something. Drawn only
-              inside the panel — with the wrapper at `display: contents` this
-              would otherwise rule a line across the middle of the bar. */}
-          <hr class="site-menu-sep" />
-          <ThemeToggle storageKey={THEME_KEY} />
-        </div>
-        <button
-          type="button"
-          class="np-icon-btn site-menu-btn"
-          id="site-menu-btn"
-          aria-controls="site-menu-panel"
-          aria-expanded="false"
-          aria-label="Meny"
-        >
-          <Icon name="menu" size={20} />
-        </button>
+        {/* NOTHING FOLDS ANY MORE. The bar carried two nav links, an account
+            door and a theme toggle, which came to more than a 360px phone had;
+            `menuPanel.ts` folded the run into a panel below 480px and is
+            deleted with the things it was folding. What is left is one link and
+            one icon square, and they fit every width there is. */}
+        <nav class="site-nav" aria-label="Hovednavigasjon">
+          {
+            NAV.map((item) => (
+              <a
+                class="np-navlink"
+                href={item.href}
+                aria-current={isCurrentSection(item.sections) ? "page" : undefined}
+              >
+                {item.label}
+              </a>
+            ))
+          }
+        </nav>
+        <ThemeToggle storageKey={THEME_KEY} />
       </header>
       <main id="main-content" class:list={["site-content", { wide }]}>
         <slot />
@@ -319,19 +300,5 @@ const crawlDate = formatCrawlDate(semestersData.crawledAt);
         {`Data hentet ${crawlDate} fra NTNU. Uoffisiell, med forbehold om feil`}
       </footer>
     </div>
-    <script>
-      import { mountMenuPanel } from "../lib/menuPanel.ts";
-      import { onPage } from "../lib/pageLifecycle.ts";
-      // Per page-load, never once per module: the topbar is re-rendered by the
-      // server on every ClientRouter swap, so a top-level mount would leave
-      // this button dead after any in-site navigation.
-      onPage((signal) => {
-        const bar = document.querySelector<HTMLElement>(".site-topbar");
-        const trigger = document.getElementById("site-menu-btn");
-        const panel = document.getElementById("site-menu-panel");
-        if (!bar || !trigger || !panel) return;
-        mountMenuPanel({ bar, trigger, panel, query: "(max-width: 480px)", signal });
-      });
-    </script>
   </body>
 </html>

@@ -70,15 +70,17 @@ const description =
 
   <div class="planner-banner">
     {/* ONE ROW, AND IT NEVER WRAPS: the plan's name at the leading edge, the
-        term and the hand-over pinned to the trailing one. It used to carry the
-        week's two controls as well and fold into a `⋯` menu below 46rem —
-        neither is true any more. The layer box and the view switch went down to
-        the week's own section (they are questions about the WEEK, and three
-        surfaces draw one), and what is left fits 390px on its own: a name that
-        may ellipsise, a select that sizes to "Høst 2026", and a 36px icon.
+        term pinned to the trailing one. It used to carry the week's two
+        controls as well and fold into a `⋯` menu below 46rem, and it used to
+        end in a share mark — none of that is true any more. The layer box and
+        the view switch went down to the week's own section (they are questions
+        about the WEEK), the share mark went with sharing, and what is left fits
+        390px on its own: a name that may ellipsise and a select that sizes to
+        "Høst 2026".
 
-        Nothing here folds, so `menuPanel` is gone from this page. It still runs
-        the shell topbar, which genuinely does run out of room. */}
+        Nothing here folds, and `menuPanel.ts` is deleted outright — the shell
+        topbar was its last caller, and that bar is down to one link and one
+        icon square. */}
     <div class="planner-head">
       {/* THE NAME IS THE DOOR. The title states the plan's programme and kull;
           pressing it is how you change them. That is what makes the picker's
