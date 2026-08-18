@@ -164,6 +164,27 @@
   margin: 0;
 }
 
+/* The way past the studieretning question on first run. A quiet line, not a
+   paper button: the select above it is what the screen is asking for, and two
+   chips of equal weight would make skipping look like the other half of a
+   choice rather than the exit from one. Same treatment as the first-run
+   screen's own secondary route, for the same reason. */
+.studieinfo-retning-skip {
+  align-self: start;
+  display: inline;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--muted);
+  font-size: var(--text-sm);
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+}
+
+.studieinfo-retning-skip:hover {
+  color: var(--ui);
+}
+
 /* Programme typeahead — the listbox sits in flow below the field (it pushes
    the kull area down while open, then collapses on pick). */
 .studieinfo-program-field {

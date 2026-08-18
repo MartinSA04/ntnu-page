@@ -122,14 +122,35 @@ Short, and deliberately so.
   drop; it becomes wrong the moment programme-derived state means anything
   beyond "prefilled".
 
-- **`e2e/cls.pw.ts`'s planner budget is flaky.** `#planner-grid-notes` grows
-  when the bundles land and pushes `.planner-below` down; there is nothing
-  honest to reserve for it, because how many margin notes a week grows is a
-  fact about the fetched timetables. Whether the browser scores that as one
-  shift or two decides whether the run lands at ~0.006 or ~0.10 against a 0.06
-  budget. Reserving a fixed line for the notes would only cut a third of it.
+- ~~`e2e/cls.pw.ts`'s planner budget is flaky~~ — **root-caused and fixed
+  2026-08-18, and it was never flakiness.** It was three predicates that all
+  answered "is this terminal?" with "is a fetch in flight?" when the question
+  is "has every course answered?", and the biggest of the three was also a
+  lie the student could read. CLAUDE.md's lease section carries the three
+  rules; the short version is that on a cold load in "Denne uka" the planner
+  announced the week was empty, dropped the frame's reservation and hauled
+  everything under it up ~270px, then refilled and put it back. Budgets go
+  0.21 → under 0.03. Two things learned that are worth keeping:
 
-- **Two motion specs fail** (`the layer leaves in the reverse of the order it
-  arrived in`, `the list's own height animates too`). Both predate the
-  reduction — verified at `362f92a`, the in-flight width-law and tokens pass
-  that was committed without an e2e run.
+  - **`--repeat-each` is NOT a valid way to measure this.** The worker's
+    `RateLimiter(120, 15)` buckets on `CF-Connecting-IP` and every local test
+    shares 127.0.0.1, so later repeats get throttled and fail for a reason
+    that has nothing to do with layout. Measure with repeated single passes.
+  - **The `layout-shift` entry's own `sources` is what turns "flaky" into a
+    named element**, printed as `tag#id.class y:before->after h:before->after`
+    under a `PerformanceObserver` with `buffered: true`. One trap: those rects
+    are **clipped to the viewport**, so an element below the fold reports
+    `h:0` and an element moving into view reports `h:0->116` — that is a
+    720px-tall viewport arithmetic artifact, not the element being created.
+    Reading it as creation cost an hour and a wrong hypothesis.
+  - Do not "fix" a budget regression by raising the budget. They are ~3× the
+    measured value and the shift they catch is real.
+
+- ~~Two motion specs fail~~ — **fixed 2026-08-18, and they were never broken.**
+  `the layer leaves in the reverse of the order it arrived in` and `the list's
+  own height animates too` were hostage to the calendar: the week picker
+  defaults to "denne", MTDT's øvinger start in week 38, and from week 34 the
+  layer arrives empty — so both specs asked for a stagger over zero blocks and
+  reported a working mechanism as red. Both now pin the mønsteruke through
+  `selectWeek(page, "alle")`, which draws every session together whatever the
+  date. Any future spec asserting on what is DRAWN wants the same helper.

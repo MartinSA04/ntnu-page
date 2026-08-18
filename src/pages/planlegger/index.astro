@@ -51,9 +51,15 @@ const description =
     <h1 class="planner-firstrun-title" id="planner-firstrun-title">
       Lag timeplanen for semesteret
     </h1>
+    {/* "eventuell studieretning" rather than a flat third fact: the screen only
+        grows that field for a kull whose plan has the question open, and most
+        do not before year three. Naming it as conditional is the one sentence
+        that is true both ways — the alternative, rewriting the lead when the
+        field appears, moves the text the student is reading while they read
+        it. */}
     <p class="np-hint planner-firstrun-lead">
-      Velg studieprogrammet og kullet ditt, så lages timeplanen din med forelesninger,
-      kollisjoner og eksamensdatoer.
+      Velg studieprogram, kull og eventuell studieretning, så lages timeplanen din med
+      forelesninger, kollisjoner og eksamensdatoer.
     </p>
     {/* The picker itself, mounted by `plannerApp.ts` under `commit: "on-kull"`.
         No autofocus: it is the only control on the screen, and an autofocus

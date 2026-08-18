@@ -614,11 +614,19 @@ stops the thing coming back.
 
   **One picker, two hosts, never at once.** The first-run screen and the
   studieinfo dialog mount the same `buildStudieinfoSection`, differing only in
-  a commit policy: `"on-kull"` writes as soon as programme and kull are known
-  and renders no Lagre, `"explicit"` stays the dialog's so a light dismiss
+  a commit policy: `"on-kull"` writes as soon as the screen has nothing left to
+  ask and renders no Lagre, `"explicit"` stays the dialog's so a light dismiss
   discards a half-picked programme. They must never both be live — the unit
   hard-codes its ids — so the dialog is built on its first open and the
   screen's section exists only while there is no plan.
+
+  Under `"on-kull"` the write lands on the LAST answer rather than on the kull
+  specifically: a kull whose plan leaves a studieretning open reveals that
+  field and the pick commits, and a kull with nothing left open commits on the
+  chip as before. The skip beside it (`.studieinfo-retning-skip`) is a quiet
+  underlined line rather than a second chip — the select is what the screen is
+  asking for, and two controls of equal weight would read as two halves of a
+  choice instead of the exit from one.
 
 - **Login and register are two forms, not two buttons.** One form carried Navn,
   PIN and Gjenta PIN under two co-equal buttons, which made Enter a coin flip:

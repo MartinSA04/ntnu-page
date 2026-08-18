@@ -2,9 +2,9 @@
 # the only way in while the build emitted 5470 course pages nothing
 # server-rendered linked to; those are deleted (PRODUCT D10).
 #
-# The host below MUST match `site` in astro.config.mjs — it is still the
-# placeholder ntnu.martinsundal.no and both have to be changed together before
-# the first real deploy. tests/site/discoverability.test.ts asserts they agree.
+# The host below MUST match `site` in astro.config.mjs. It is the real one as
+# of 2026-08-18, not a placeholder, and the two have to move together if it
+# ever changes. tests/site/discoverability.test.ts asserts they agree.
 User-agent: *
 Allow: /
 

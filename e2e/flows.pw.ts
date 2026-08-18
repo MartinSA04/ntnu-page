@@ -47,6 +47,21 @@ const courseSettingsBtn = (page: Page, code: string) =>
  */
 const gridBlocks = (page: Page) => page.locator("#planner-grid-frame .planner-cols-block");
 
+/**
+ * Pins the week the assertions are about. The picker defaults to "denne", so
+ * anything a spec asserts about what is DRAWN is otherwise a fact about the
+ * week the run executes in — which is how the two layer-motion specs came to
+ * fail every August: MTDT's øvinger start in week 38, so from week 34 the
+ * layer arrives empty and a stagger over zero blocks is not a stagger.
+ * `"alle"` is the mønsteruke, which draws every session together whatever the
+ * date; a numbered week works too when a spec needs a specific one.
+ */
+const selectWeek = async (page: Page, week: string): Promise<void> => {
+  await page.locator('[data-role="week-select"]').selectOption(week);
+  // The re-render is what the caller is about to measure.
+  await expect(gridBlocks(page).first()).toBeVisible({ timeout: 15_000 });
+};
+
 /** The course code printed on the first drawn session. */
 const firstBlockCode = async (page: Page): Promise<string> =>
   (await gridBlocks(page).first().locator(".planner-cols-code").textContent())?.trim() ?? "";
@@ -97,8 +112,8 @@ test("onboarding: first run → programme + kull + retning → a full week", asy
   await expect(page.locator("#planner-main")).toBeHidden();
 
   // The picker is ON THE SCREEN, not behind a press. There is no dialog in this
-  // path at all, and no Lagre in it: the sentence above promises a ready week
-  // for two facts, so a third press would make that false.
+  // path at all, and no Lagre in it: every field here commits on its own answer,
+  // so a button that means "and now do it" would be a press that says nothing.
   await expect(page.locator("#planner-studieinfo")).toHaveCount(0);
   await expect(page.locator("#studieinfo-save")).toHaveCount(0);
 
@@ -115,11 +130,22 @@ test("onboarding: first run → programme + kull + retning → a full week", asy
   await expect(kullChips.first()).toBeVisible({ timeout: 20_000 });
   expect(await kullChips.count()).toBeGreaterThanOrEqual(4);
 
-  // THE KULL PRESS IS THE COMMIT. An older kull: MTDT 2024 at 26h is a 3rd-year
-  // autumn, gated behind studieretning — which first run does NOT ask, because
-  // `#planner-direction` asks it afterwards, when the study plan has landed and
-  // it knows whether it matters.
+  // An older kull: MTDT 2024 at 26h is a 3rd-year autumn, gated behind
+  // studieretning. The kull press is NOT the commit here — the kull's own plan
+  // has a question left, so the screen grows the third field and keeps the
+  // page rather than drawing a week the answer would change.
   await page.locator("#studieinfo-kull-chips button", { hasText: "2024" }).click();
+
+  const retningSelect = page.locator("#studieinfo-retning-select");
+  await expect(retningSelect).toBeVisible({ timeout: 20_000 });
+  // Still the first-run screen, and still no dialog: the question is asked
+  // where the other two were.
+  await expect(page.locator("#planner-firstrun")).toBeVisible();
+  await expect(page.locator("#planner-studieinfo")).toHaveCount(0);
+
+  // The answer IS the save, exactly as the kull press is for a kull with
+  // nothing left to ask. Index 0 is the "Ikke valgt ennå" placeholder.
+  await retningSelect.selectOption({ index: 1 });
 
   // The screen gives way to the planner off that one write: the store change
   // repaints, and the probe puts `data-plan` back on `<html>`. No reload.
@@ -127,22 +153,46 @@ test("onboarding: first run → programme + kull + retning → a full week", asy
   await expect(page.locator(".planner-banner")).toBeVisible();
   await expect(planTitle(page)).toHaveText("MTDT Kull 24");
 
-  // …and the dialog still works after first run, which is the half of the
-  // lazy mount that could silently break: it is built on this first open,
-  // because two live studieinfo sections would collide on every id.
-  const direction = page.locator("#planner-direction");
-  await expect(direction).toBeVisible({ timeout: 30_000 });
-  await direction.locator("#planner-direction-btn").click();
-
-  const dialog = page.locator("#planner-studieinfo");
-  await expect(dialog).toBeVisible();
-  const retningSelect = page.locator("#studieinfo-retning-select");
-  await expect(retningSelect).toBeVisible({ timeout: 20_000 });
-  await retningSelect.selectOption({ index: 1 }); // index 0 is the "Ikke valgt ennå" placeholder
-  await page.click("#studieinfo-save");
-  await expect(dialog).toBeHidden();
+  // The question was answered on the way in, so the planner does not ask it
+  // again.
+  await expect(page.locator("#planner-direction")).toBeHidden();
 
   await expect(gridBlocks(page).first()).toBeVisible({ timeout: 45_000 });
+
+  // …and the dialog still works after first run, which is the half of the lazy
+  // mount that could silently break: it is built on this first open, because
+  // two live studieinfo sections would collide on every id.
+  await openStudieinfo(page);
+  await expect(page.locator("#studieinfo-save")).toBeVisible();
+});
+
+test("onboarding: the studieretning question can be left for later", async ({ page }) => {
+  // The other half of the third field. A studieretning deadline is often months
+  // out, so a screen that will not draw a week until the student has decided is
+  // a screen that answers nothing — the skip writes programme and kull alone
+  // and lets `#planner-direction` ask again over a drawn week.
+  await page.goto("/planlegger/");
+  await expect(page.locator("#planner-firstrun")).toBeVisible({ timeout: 15_000 });
+
+  await page.fill("#studieinfo-program-input", "Datateknologi");
+  const mtdt = page.locator("#studieinfo-program-listbox .studieinfo-program-option", {
+    hasText: "MTDT",
+  });
+  await expect(mtdt).toBeVisible({ timeout: 15_000 });
+  await mtdt.click();
+  await expect(page.locator("#studieinfo-kull-chips button").first()).toBeVisible({
+    timeout: 20_000,
+  });
+  await page.locator("#studieinfo-kull-chips button", { hasText: "2024" }).click();
+
+  const skip = page.locator(".studieinfo-retning-skip");
+  await expect(skip).toBeVisible({ timeout: 20_000 });
+  await skip.click();
+
+  await expect(page.locator("#planner-firstrun")).toBeHidden({ timeout: 20_000 });
+  await expect(planTitle(page)).toHaveText("MTDT Kull 24");
+  // Deferred, not discarded: the same question, over a week that now exists.
+  await expect(page.locator("#planner-direction")).toBeVisible({ timeout: 30_000 });
 });
 
 /* "share: the hash reproduces the plan in a fresh context" is DELETED with the
@@ -199,6 +249,60 @@ test("overlap: two colliding courses take a lane each, both readable", async ({ 
     ).toBeLessThanOrEqual(1);
   }
   expect(lanes.size).toBe(2);
+});
+
+test("the week never calls a chosen week empty while it is still fetching", async ({ page }) => {
+  // "Ingen undervisning i uke 34" is a claim about NTNU's data, and it was
+  // being made before NTNU had answered. The margin reads the WHOLE semester
+  // and this branch counts blocks in ONE week, so the first bundle to land with
+  // a session in any week put the drawn week at zero and tripped it: the
+  // planner threw the grid away for that sentence, dropped the frame's lease,
+  // and refilled as the other bundles arrived. It lasted about 50 ms, which is
+  // exactly why nobody saw it by looking — and it was most of the page's CLS.
+  //
+  // Recorded rather than sampled: a poll would have to be luckier than the
+  // 50 ms window. The assertion is conditional on the week ENDING UP drawn,
+  // which is what makes it date-proof — a week that is genuinely empty is
+  // entitled to the sentence, and outside the teaching period the scope
+  // defaults to the mønsteruke where the branch cannot fire at all.
+  await page.addInitScript(() => {
+    const w = window as unknown as { __emptyClaims: string[]; __observing: boolean };
+    w.__emptyClaims = [];
+    w.__observing = false;
+    // `document`, NOT `document.documentElement`: an init script runs before any
+    // page script and the root element is not reliably there yet, so observing
+    // it attached nothing, recorded nothing, and made this test pass against the
+    // very bug it exists for. `__observing` is asserted below so that can never
+    // be silent again.
+    new MutationObserver(() => {
+      const node = document.querySelector("#planner-grid-frame .planner-grid-empty");
+      const text = node?.textContent?.trim() ?? "";
+      if (/^Ingen undervisning i uke/.test(text) && !w.__emptyClaims.includes(text)) {
+        w.__emptyClaims.push(text);
+      }
+    }).observe(document, { subtree: true, childList: true });
+    w.__observing = true;
+  });
+
+  await gotoPlanner(page, { program: { code: "MTDT", name: "MTDT", cohort: 2026 } });
+  await expect(page.locator("#planner-course-rows .planner-course-row").first()).toBeVisible({
+    timeout: 45_000,
+  });
+  // Let every bundle land, so "still fetching" is genuinely over.
+  await page.waitForLoadState("networkidle");
+  await page.waitForTimeout(1_000);
+
+  const { claims, observing } = await page.evaluate(() => {
+    const w = window as unknown as { __emptyClaims: string[]; __observing: boolean };
+    return { claims: w.__emptyClaims, observing: w.__observing };
+  });
+  expect(observing, "the recorder never attached, so this test proved nothing").toBe(true);
+  if ((await gridBlocks(page).count()) > 0) {
+    expect(
+      claims,
+      `the week reported itself empty and then drew sessions anyway: ${claims.join(" / ")}`,
+    ).toEqual([]);
+  }
 });
 
 test("a failed timetable fetch says the week is missing a course", async ({
@@ -1558,6 +1662,14 @@ test("the layer leaves in the reverse of the order it arrived in", async ({ page
   // one.
   await gotoPlanner(page, { program: { code: "MTDT", name: "MTDT", cohort: 2026 } });
   await expect(gridBlocks(page).first()).toBeVisible({ timeout: 45_000 });
+  // ALLE UKER, and it is not a detail: the picker defaults to "denne", so what
+  // the layer can add is whatever happens to fall in the week the run executes
+  // in. MTDT's øvinger start in week 38, so from week 34 this test asked for a
+  // stagger over ZERO arrivals and failed against a working mechanism — a red
+  // run reported against the calendar. The mønsteruke draws every session
+  // together by definition, which is the only week that is the same in August
+  // and in November.
+  await selectWeek(page, "alle");
 
   const indices = (selector: string, prop: string) =>
     page.evaluate(
@@ -1637,6 +1749,9 @@ test("the list's own height animates too, so nothing under it jumps", async ({ p
   // carry it — a translated row still occupies its original box.
   await gotoPlanner(page, { program: { code: "MTDT", name: "MTDT", cohort: 2026 } });
   await expect(gridBlocks(page).first()).toBeVisible({ timeout: 45_000 });
+  // The mønsteruke, for the reason `selectWeek` gives: a box that grows can
+  // only be measured in a week the layer actually adds something to.
+  await selectWeek(page, "alle");
   await page.locator('[data-role="view-tabs"] [data-view="tavle"]').click();
   const board = page.locator("#planner-grid-frame .planner-board");
   await expect(board).toBeVisible();

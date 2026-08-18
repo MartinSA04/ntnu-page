@@ -41,6 +41,7 @@ import type { AddCourseInput, PlanProgram, PlanStore } from "../../lib/planner/s
 import { el, fold, formatShortDate, icon } from "./dom.js";
 import type { ProgramOption } from "./plannerApp.js";
 import {
+  type DirectionChoice,
   type DirectionOption,
   findProgramPlan,
   maxPeriodNumber,
@@ -325,6 +326,18 @@ export function buildStudieinfoSection(deps: StudieinfoSectionDeps): StudieinfoS
   retningReset.type = "button";
   retningReset.hidden = true;
   retningSection.append(retningReset);
+
+  // FIRST RUN ONLY (`renderRetning` decides when). A quiet line rather than a
+  // second paper button: it is the way past the question, not a rival to
+  // answering it, and the select beside it is what the screen is asking for.
+  const retningSkip = el(
+    "button",
+    "np-btn studieinfo-retning-skip",
+    "Jeg vet ikke ennå",
+  ) as HTMLButtonElement;
+  retningSkip.type = "button";
+  retningSkip.hidden = true;
+  retningSection.append(retningSkip);
   body.append(retningSection);
 
   // Hint + action ---------------------------------------------------------
@@ -660,30 +673,55 @@ export function buildStudieinfoSection(deps: StudieinfoSectionDeps): StudieinfoS
       chip.setAttribute("aria-label", `Kull ${year}`);
       chip.setAttribute("aria-pressed", String(year === stagedCohort));
       chip.addEventListener("click", () => {
-        // Under `"on-kull"` this press IS the save. It waits for the kull's own
-        // plan first, because `commit` classifies the period against it and
-        // would otherwise write a programme with no prefilled courses.
+        // Under `"on-kull"` this press is the save — UNLESS the kull's plan has
+        // a studieretning still to answer. It waits for that plan either way,
+        // because `commit` classifies the period against it and would otherwise
+        // write a programme with no prefilled courses; the same fetch is what
+        // says whether there is a third question on this screen at all.
+        //
+        // Most kull have none — studieretning normally opens in year three — so
+        // this stays a two-press screen for most students, and grows a third
+        // field only for the ones it is a real question for.
         void loadCohort(year, false).then(() => {
-          if (deps.commit === "on-kull") return commit();
+          if (deps.commit !== "on-kull") return;
+          if (unansweredDirection() === null) return commit();
+          // The question is on screen now, so send the caret to it rather than
+          // leaving it on a chip the student has finished with.
+          retningSelect.focus();
         });
       });
       kullChips.append(chip);
     }
   }
 
+  /**
+   * The deepest level the student has NOT answered, or null when there is
+   * nothing left to ask. Resolving *with* the staged answer is what walks past
+   * levels already answered, so a nested waypoint becomes askable here.
+   *
+   * This is the strict question, and `renderRetning`'s `pending` is not: that
+   * one falls back to the top level once everything is answered, so an existing
+   * choice stays changeable. Anything DECIDING whether to keep asking has to
+   * use this one, or a fully-answered plan looks forever unanswered.
+   */
+  function unansweredDirection(): DirectionChoice | null {
+    if (!stagedProgram || stagedCohort === null || !cohortPlan) return null;
+    return resolvePeriodFor(cohortPlan, semesterId, stagedCohort, stagedDirection?.code ?? null)
+      .pendingChoice;
+  }
+
   function renderRetning(): void {
     retningOptions = [];
     if (!stagedProgram || stagedCohort === null || !cohortPlan) {
       retningSection.hidden = true;
+      retningSkip.hidden = true;
       return;
     }
-    // Resolving *with* the staged answer walks past levels already answered, so
-    // a nested waypoint becomes askable here — otherwise the planner asks a
-    // question this section cannot answer and the student loops between the
-    // two. When every level is answered we fall back to the top-level question
-    // so an existing choice stays changeable.
+    // When every level is answered we fall back to the top-level question so an
+    // existing choice stays changeable — see `unansweredDirection` for why that
+    // fallback may never decide whether to keep asking.
     const staged = stagedDirection?.code ?? null;
-    const deepest = resolvePeriodFor(cohortPlan, semesterId, stagedCohort, staged).pendingChoice;
+    const deepest = unansweredDirection();
     const pending =
       deepest ??
       (staged === null
@@ -692,9 +730,16 @@ export function buildStudieinfoSection(deps: StudieinfoSectionDeps): StudieinfoS
     if (!pending) {
       retningSection.hidden = true;
       retningReset.hidden = true;
+      retningSkip.hidden = true;
       return;
     }
     retningSection.hidden = false;
+    // First run's way past a question the student may not be able to answer
+    // yet: the deadline is often months out, and a screen that will not build
+    // a week until a decision nobody has made is a screen that answers nothing.
+    // Only while the question is genuinely open — once it is answered this is
+    // the dialog's "change my mind" rendering, which has Lagre.
+    retningSkip.hidden = deps.commit !== "on-kull" || deepest === null;
     retningLabel.textContent = pending.name;
     retningOptions = pending.directions;
 
@@ -770,6 +815,12 @@ export function buildStudieinfoSection(deps: StudieinfoSectionDeps): StudieinfoS
     // Re-render: answering one waypoint can open the next one, and
     // answering the last one closes the section.
     renderRetning();
+    // On first run the answer IS the save, the same way the kull press is when
+    // there is no studieretning to ask about. Only once nothing is left open —
+    // a nested waypoint means the screen has another question, not a week.
+    // Clearing the select back to "Ikke valgt ennå" reopens it and writes
+    // nothing, which is what makes the choice reversible before it is stored.
+    if (deps.commit === "on-kull" && unansweredDirection() === null) void commit();
   });
 
   retningReset.addEventListener("click", () => {
@@ -777,6 +828,12 @@ export function buildStudieinfoSection(deps: StudieinfoSectionDeps): StudieinfoS
     renderRetning();
     retningSelect.focus();
   });
+
+  // Writes exactly what is staged, which is a programme and a kull and no
+  // studieretning. The planner asks the same question again from
+  // `#planner-direction` once the week is drawn, so nothing is lost by
+  // deferring it — the point is that the week comes first.
+  retningSkip.addEventListener("click", () => void commit());
 
   // --- Commit -------------------------------------------------------------
   async function commit(): Promise<void> {

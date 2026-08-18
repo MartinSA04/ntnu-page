@@ -2,13 +2,12 @@
 import { defineConfig } from "astro/config";
 
 export default defineConfig({
-  // Placeholder hostname until the site is wired to Cloudflare (the route in
-  // wrangler.jsonc is commented out the same way). MUST be set to the real
-  // hostname before the first real deploy: /sitemap.xml emits 5473 absolute
-  // URLs against it and public/robots.txt names it in its `Sitemap:` line, so
-  // a wrong value here publishes a sitemap for a host that does not exist.
-  // Change both together — tests/site/discoverability.test.ts asserts they
-  // agree.
+  // THE hostname the site publishes at, confirmed 2026-08-18 — no longer a
+  // placeholder waiting on a decision. /sitemap.xml emits absolute URLs against
+  // it and public/robots.txt names it in its `Sitemap:` line, so the two must
+  // change together if it ever moves; tests/site/discoverability.test.ts
+  // asserts they agree. The matching custom-domain route in wrangler.jsonc is
+  // the third place, and it is the one still to be turned on.
   site: "https://ntnu.martinsundal.no",
   build: {
     // Astro's default is `inlineStylesheets: "auto"`, which inlined the same

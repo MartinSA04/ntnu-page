@@ -1374,7 +1374,27 @@ export async function mountPlannerApp(
   function renderGridAndExams(): void {
     const semester = currentSemester();
     const states = orderedActiveStates();
-    const anyLoading = states.some((s) => s.loading);
+    // "NOTHING IS IN FLIGHT" IS NOT "EVERY COURSE HAS ANSWERED", and the
+    // second question is the one everything downstream is really asking: the
+    // skeleton, the exam list's provisional state, and `weekView`'s `settle`,
+    // which releases the frame's height reservation on it. This answered the
+    // first, and so missed two windows on every cold load with a programme.
+    //
+    //   - A course the study plan just added has `bundle === null` AND
+    //     `loading === false` until `loadBundles` reaches it.
+    //   - A programme's courses are not states at all until its plan resolves,
+    //     so "every course has answered" is trivially true of an empty set and
+    //     stays true of a half-derived one.
+    //
+    // Both told the week it was final while most of it had not been asked for,
+    // and the lease came off over a provisional grid. `bundle === null` is
+    // exactly "no answer yet" and cannot be wedged true by an upstream that
+    // said no: a failed fetch leaves a bundle whose `timetable` is null (see
+    // `failed` below). The programme guard on the second is what keeps a plan
+    // with no programme settling at all, since `loadPeriodCourses` leaves the
+    // outcome pending forever in that case.
+    const derivationPending = plan.program !== undefined && studyPlanOutcome.kind === "pending";
+    const anyLoading = derivationPending || states.some((s) => s.loading || s.bundle === null);
     const question = weekQuestion();
 
     // Week-only narrowing (NOT programme-narrowed): the grid's own

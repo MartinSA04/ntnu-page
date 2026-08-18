@@ -35,15 +35,26 @@ const description =
     <ul class="home-now-next" id="home-now-next"></ul>
   </section>
 
-  {/* NO PITCH. There was a kicker, a headline and two sentences explaining
-      what a schedule page is; people know what a schedule page is. What a
-      front door owes a returning student is their next room, and what it owes
-      a new one is the way in — so the page is those two things.
+  {/* STILL NO PITCH — one line, and only on the first visit. What was struck
+      here was a kicker, a headline and two sentences explaining what a
+      schedule page is; people know what a schedule page is. What they cannot
+      know from a button reading "Åpne planleggeren" is the two facts it is
+      about to ask them for, so the line names those and stops. A returning
+      student's answer is the card above, not an explanation, which is why the
+      line is gone the moment there is a plan.
 
       The heading survives for the document outline only. A page with no `h1`
       is a page a screen reader cannot summarise, and the visible answer here
       is a card that changes every hour. */}
   <h1 class="sr-only">Semesterplan</h1>
+
+  {/* Deliberately NOT the planner's first-run lead reworded. That sentence
+      stands over the programme field and says what pressing it does; this one
+      stands over a button and says what is on the other side of it, plus the
+      one fact that decides whether a first-time visitor bothers pressing. */}
+  <p class="home-intro" id="home-intro">
+    Ukeplanen for studieprogrammet og kullet ditt, uten innlogging.
+  </p>
 
   {/* THE accent's one job, spent on the one thing this page is for. It shipped
       as a bare `.np-btn`: the same grey chip as "Fjern" and "Avbryt", holding
@@ -54,6 +65,30 @@ const description =
 </Layout>
 
 <style>
+  /* --- Introen ------------------------------------ */
+
+  /* Body, not the title step: this is a sentence, and the scale gives one job
+     per step. It is the only text on a first visit, so it does not also have
+     to be large to be found. */
+  .home-intro {
+    max-width: 34ch;
+    margin: 0 0 var(--space-5);
+    color: var(--muted);
+    font-size: var(--text-base);
+    line-height: var(--leading-normal);
+    text-wrap: balance;
+  }
+
+  /* First visit only, decided by the SAME predicate the planner's first-run
+     screen uses: `data-plan` is present whenever a plan exists in ANY
+     semester, so a student who emptied this term is not walked back through
+     the introduction. Layout's probe writes it before first paint, so this is
+     a CSS gate on the document rather than a JS reveal: nothing to reserve
+     space for, and no line that flashes in and then leaves. */
+  html[data-plan] .home-intro {
+    display: none;
+  }
+
   /* --- Nå ---------------------------------------- */
 
   .home-now[hidden] {

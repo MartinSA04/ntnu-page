@@ -114,8 +114,17 @@ multi-year degree planner.
 
 1. **On-ramp.** `/` is a thin front door: the student's own next session and
    the rest of today when a plan exists, and one button into `/planlegger/`.
-   There is no pitch — no headline sentence, no explanatory subcopy. People
-   know what a schedule page is.
+   There is still no pitch — no headline, no explanatory subcopy, nothing
+   explaining what a schedule page is, because people know what a schedule
+   page is. What a first-time visitor does get is **one line, and only on the
+   first visit**: what is on the other side of the button, and that it costs
+   no account. It is gated in CSS on `html:not([data-plan])` — the same
+   predicate the planner's first-run screen uses, written by the pre-paint
+   probe — so it paints with the document rather than mounting into it, and it
+   is gone the moment a plan exists, where the card is the answer and a
+   sentence would only stand in front of it. It is deliberately not the
+   planner's first-run lead reworded: that one stands over the programme field
+   and says what pressing it does.
 
    **The planner owns onboarding, and with no plan it IS the onboarding.**
    `/planlegger/` gated on `html:not([data-plan])` is a first-run screen and
@@ -123,11 +132,20 @@ multi-year degree planner.
    the page, and a quiet line for "I already have the codes". No bar, no
    tools, no week frame, no Eksamener, no Emner — every one of those
    presupposes content that is missing, which is why the empty planner used
-   to read worse than an empty page. **Choosing a kull commits**: the
-   sentence names what those two facts produce, and a Lagre would stand
-   between the student and it, so there is none on that screen.
-   Studieretning is not asked there; `#planner-direction` asks it afterwards,
-   once the study plan has landed and it knows whether it matters.
+   to read worse than an empty page. **The last answer commits**, and there is
+   no Lagre on that screen: a button meaning "and now do it" would stand
+   between the student and the week their answer already produced.
+
+   **Studieretning is asked here too, when the kull's own plan has the
+   question open.** It is the third field on the same screen, revealed by the
+   kull press instead of committing on it, and answering it is the write. Most
+   kull never see it — studieretning normally opens in year three — so this
+   stays a two-press screen for most students and grows a third field only for
+   the ones it is a real question for. **The skip is not optional**: a
+   studieretning deadline is often months out, so "Jeg vet ikke ennå" writes
+   programme and kull alone and hands the question to `#planner-direction`,
+   which asks it again over a drawn week. A screen that refuses to draw a week
+   until a student has made a decision nobody has made yet answers nothing.
 
    Once a programme is stored, the plan's own name in the bar is the way back
    into the picker, through the studieinfo dialog — the only other place that
@@ -164,7 +182,8 @@ multi-year degree planner.
 nothing.**
 
 - `/` — the front door. The next session and the rest of today when a plan
-  exists; one button to `/planlegger/`. No pitch.
+  exists; one button to `/planlegger/`, under one line of introduction that
+  only a first-time visitor sees. Still no pitch.
 - `/planlegger/` — the app. The plan, the week, the exam list, the course
   rail. Search lives inside it as a modal.
 - `/sitemap.xml` — those two URLs.

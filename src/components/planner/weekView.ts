@@ -779,7 +779,20 @@ export function mountWeekView(options: WeekViewOptions): WeekViewHandle {
     // The reservation goes with it: this is terminal, unlike the skeleton and
     // the apologies `settle` deliberately holds the frame open under, so a
     // one-line sentence must not sit below 500px of held paper.
-    if (blockCount === 0 && week !== null) {
+    //
+    // `!input.loading` IS THE WHOLE CLAIM, and it was missing. "Ingen
+    // undervisning i uke N" is a statement about NTNU's data, so it may only be
+    // made once every course has answered — the same rule `weekNotes` already
+    // obeys before saying "Ingen timeplandata … ennå". The margin reads the
+    // WHOLE semester while this counts blocks in ONE week, so the moment the
+    // first bundle landed with a session in any week the branch went live with
+    // a block count of zero: on a cold load in "Denne uka" the planner
+    // announced the week was empty, threw the drawn grid away for a one-line
+    // sentence and dropped the lease, then refilled and regrew as the other
+    // bundles arrived. 525px to 148 to 512 — everything under the week hauled
+    // up 270px and back down, which is most of the planner's CLS and a lie in
+    // the middle of it.
+    if (blockCount === 0 && week !== null && !input.loading) {
       delete frame.dataset.reserve;
       frame.replaceChildren(
         el("p", "planner-grid-empty np-hint", `Ingen undervisning i uke ${week}.`),

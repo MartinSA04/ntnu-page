@@ -169,6 +169,29 @@
   gates all of it with per-surface budgets — verified to fail when (b) is
   removed. Re-measure before changing any number; do not "tidy" a
   `min-height` you cannot see doing anything.
+
+  **A TERMINAL STATE IS ONE EVERY COURSE HAS ANSWERED, and three predicates
+  now say so — do not weaken any of them.** All three were wrong in the same
+  direction on 2026-08-18, and together they were the whole of the planner's
+  CLS. (i) `weekView`'s empty-chosen-week branch carries `!input.loading`: the
+  margin reads the WHOLE semester while that branch counts blocks in ONE week,
+  so the first bundle to land with a session anywhere put the drawn week at
+  zero and tripped it — the planner announced "Ingen undervisning i uke 34",
+  threw the drawn grid away for that one-line sentence, dropped the lease, and
+  refilled as the rest arrived (525px → 148 → 512, everything under the week
+  hauled up 270px and back). It is a claim about NTNU's data made before NTNU
+  answered, which is DR-8's rule, not a layout preference.
+  `e2e/flows.pw.ts`'s "never calls a chosen week empty while it is still
+  fetching" records it with a `MutationObserver` — the window is ~50ms, so a
+  poll cannot see it — and that recorder attaches to `document`, **not**
+  `document.documentElement`, which does not reliably exist when an init script
+  runs; observing the root element attached nothing and made the test pass
+  against its own bug, so it asserts `__observing` before asserting anything
+  else. (ii) `plannerApp`'s `anyLoading` counts `bundle === null`, not just
+  `loading` — a course the study plan just added has neither. (iii) it also
+  counts a `studyPlanOutcome` still `"pending"`, because a programme's courses
+  do not exist as states until its plan resolves, and "every course has
+  answered" is trivially true of an empty set.
 - **The week's three controls are ONE server-rendered component, and
   `mountWeekView` owns everything in it** (`src/components/WeekControls.astro`).
   Two rows: the week picker, then the layer box hard left and the Uke/Liste
