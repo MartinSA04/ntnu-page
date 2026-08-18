@@ -78,21 +78,6 @@ test("a tap that dismisses the add-course modal does not press the page under it
   expect(await leaks(page)).toEqual([]);
 });
 
-test("a tap that dismisses the topbar menu does not press the page under it", async ({ page }) => {
-  await gotoPlanner(page, { courses: ["TDT4109"] });
-  await page.click("#site-menu-btn");
-  const bar = page.locator(".site-topbar");
-  await expect(bar).toHaveAttribute("data-menu", "open");
-
-  await watchForLeaks(page);
-  const view = page.viewportSize();
-  if (!view) throw new Error("no viewport");
-  await page.touchscreen.tap(Math.round(view.width / 2), Math.round(view.height * 0.6));
-
-  await expect(bar).not.toHaveAttribute("data-menu", "open");
-  expect(await leaks(page)).toEqual([]);
-});
-
 /**
  * The other half, and the one the guard could plausibly get wrong: a cancelled
  * click that is never spent must not sit there waiting to eat the next real

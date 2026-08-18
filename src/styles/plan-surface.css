@@ -440,9 +440,14 @@
 
 /* Rendered synchronously from the store at mount, so this bridges paint to
    mount and nothing further; `renderCourseRows` drops it on its first pass.
-   One row per stored course, dropped ones included, a little under 52px. */
+   One row per stored course, dropped ones included.
+
+   3.5rem, re-measured 2026-08-18 at 58.5px per row: the row grew a second line
+   when it took the two outbound links (PRODUCT mandate 3), and 3rem — sized for
+   the 52px single-line row — left 52px of shift on a five-course plan. Under
+   the measurement on purpose, so the residual nudges down. */
 .planner-course-rows[data-reserve] {
-  min-height: calc(var(--plan-courses) * 3rem);
+  min-height: calc(var(--plan-courses) * 3.5rem);
 }
 
 /* --- The month band ------------------------------- */
@@ -745,11 +750,26 @@
 .planner-course-links {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--space-3);
+  /* 1rem, not `--space-3`: each link grows its own hit rectangle 5px past its
+     painted box (below), and two targets closer together than the shortfall
+     steal each other's taps. */
+  gap: 1rem;
   font-size: var(--text-xs);
 }
 
+/* A 15px line of text is under WCAG 2.5.8's 24px floor, so the BOX is 24 —
+   `inline-flex` with a `min-height`, not a pseudo-element. The pseudo-element
+   idiom (`.np-icon-btn`, the view tabs) grows a hit rectangle past a painted
+   box that already clears the floor; here the box itself is the shortfall, and
+   `e2e/flows.pw.ts`'s target-size pass measures boxes.
+
+   `inline-flex` is safe on these two and not on `.planner-course-title`: a flex
+   container drops the text node holding a space, and these carry one word
+   each. */
 .planner-course-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
   color: var(--muted);
   text-decoration: none;
 }

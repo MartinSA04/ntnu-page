@@ -81,6 +81,11 @@
  * arithmetic; Liste's cannot be — nothing before the fetch knows the session
  * count — so it is a line fitted through five plans of 1–5 courses (±100px).
  *
+ * Uke's hour count is 8.75, re-measured 2026-08-18: MTDT kull 2026 settles at
+ * 512px against the 471px that 8 hours reserved, and a 41px release is a shift
+ * of the whole page under the week. It stays a couple of px under the
+ * measurement, which is the house rule for every number here.
+ *
  * The SURFACE is in the key, not in the selector. It used to be an id, because
  * one `--planner-box` held one height per view and the planner's remembered
  * Liste height must never reach a one-course page's frame; with three surfaces
@@ -103,7 +108,7 @@
     var(--planner-frame-pad-block) +
     var(
       --planner-box,
-      calc(var(--planner-cols-head-font) + var(--space-2) + 1px + 8 * var(--planner-hour-h))
+      calc(var(--planner-cols-head-font) + var(--space-2) + 1px + 8.75 * var(--planner-hour-h))
     )
   );
 }

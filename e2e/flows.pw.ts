@@ -1,5 +1,5 @@
 import type { Page } from "@playwright/test";
-import { expect, gotoPlanner, seedSharingAccount, test } from "./harness.js";
+import { expect, gotoPlanner, test } from "./harness.js";
 
 /**
  * The modal-first flow, end to end against live NTNU data. Every scenario
@@ -38,8 +38,8 @@ const courseSettingsBtn = (page: Page, code: string) =>
   page.locator(`#planner-course-rows .planner-course-open[data-code="${code}"]`);
 /**
  * A drawn session in the planner's week. Scoped to `#planner-grid-frame`,
- * /planlegger/'s own id, because /emne/[code]/ and /user/<navn> now draw the
- * same two views into frames of their own and a bare class would match theirs.
+ * /planlegger/'s own id — a habit from when three surfaces drew this week and
+ * a bare class matched all of them.
  *
  * A helper rather than a literal because ~45 call sites go through it, and
  * they did once already: as `.planner-block` alone it was 28 of the 46 e2e
@@ -51,23 +51,16 @@ const gridBlocks = (page: Page) => page.locator("#planner-grid-frame .planner-co
 const firstBlockCode = async (page: Page): Promise<string> =>
   (await gridBlocks(page).first().locator(".planner-cols-code").textContent())?.trim() ?? "";
 
-/**
- * The planner names the plan in its own title, so there is no topbar chip
- * there: `#planner-title` is where "whose plan is this" is asserted on this
- * page. The chip is still the assertion on every other page.
- */
+/** Where "whose plan is this" is asserted. The topbar carries no plan state. */
 const planTitle = (page: Page) => page.locator("#planner-title");
-/** The topbar's account door — on every page, not just this one. */
-const profileBtn = (page: Page) => page.locator("#site-account-btn");
-const profilePanel = (page: Page) => page.locator("#planner-profile-panel");
 
 /** The picker's own dialog, opened from the plan's name in the planner's bar. */
 const studieinfoDialog = (page: Page) => page.locator("#planner-studieinfo");
 
 /**
- * Opens studieinfo. Still one click, but from the PLAN'S NAME rather than the
- * topbar: programme, kull and studieretning describe the plan, so they came
- * back to the planner on 2026-08-03 and the topbar kept the account alone.
+ * Opens studieinfo, from the PLAN'S NAME. Programme, kull and studieretning
+ * describe the plan, so the plan's own title is the door — and since the
+ * account went, it is the only settings door on the site.
  *
  * With no programme stored the title is inert (there is no fact to press, and
  * the empty state's card already says "Velg studieprogram"), so that card is
@@ -79,29 +72,6 @@ async function openStudieinfo(page: Page): Promise<void> {
   else await page.getByRole("button", { name: "Velg studieprogram" }).click();
   await expect(studieinfoDialog(page)).toBeVisible();
   await expect(studieinfoDialog(page).locator("#studieinfo-dialog-title")).toBeVisible();
-}
-
-/**
- * Waits for `#planner-grid-status` to settle and returns it, failing loudly if
- * the plan's data never arrived.
- *
- * The verdict has THREE states: a clash count, the green clean state, and a
- * muted "kan ikke sjekkes" when a timetable fetch failed. That third state
- * means an upstream flake shows up as a *missing* verdict rather than a wrong
- * one — a test matching only `/\d+ kollisjon/` would time out and report the
- * clash engine as broken.
- */
-async function settledVerdict(page: Page, timeout = 45_000): Promise<string> {
-  const status = page.locator("#planner-grid-status");
-  await expect
-    .poll(async () => (await status.textContent())?.trim() ?? "", { timeout })
-    .not.toMatch(/^$|^henter timeplan/);
-  const text = (await status.textContent())?.trim() ?? "";
-  expect(
-    text,
-    "a timetable fetch never landed — upstream/CI flake, NOT a clash-engine regression",
-  ).not.toContain("kan ikke sjekkes");
-  return text;
 }
 
 /** The course code of each row, read from its printed chip — never from the
@@ -206,13 +176,10 @@ test("overlap: two colliding courses take a lane each, both readable", async ({ 
   await expect(courseRows(page)).toHaveCount(6, { timeout: 30_000 });
   await expect(gridBlocks(page).first()).toBeVisible({ timeout: 30_000 });
 
-  // `\d+ kollisjon`, never a bare /kollisjon/ which "ingen kollisjoner" also
-  // matches. `settledVerdict` separates that from "kan ikke sjekkes", which
-  // says nothing about the engine.
-  expect(await settledVerdict(page)).toMatch(/\d+ kollisjon/);
-
-  // Only the two colliding blocks carry "kolliderer med" in their aria-label.
-  const clashBlocks = page.locator('.planner-cols-block[aria-label*="kolliderer med"]');
+  // The two that overlap, found by the hour they share rather than by any mark
+  // on them: the collision VERDICT is deleted (PRODUCT D17), and what this test
+  // is about is the geometry, which is not.
+  const clashBlocks = gridBlocks(page).filter({ hasText: /TDT4109|TDT4120/ });
   await expect(clashBlocks).toHaveCount(2, { timeout: 30_000 });
 
   // A lane each, and neither is drawn on top of the other — the fault this
@@ -232,19 +199,15 @@ test("overlap: two colliding courses take a lane each, both readable", async ({ 
     ).toBeLessThanOrEqual(1);
   }
   expect(lanes.size).toBe(2);
-
-  // And exactly one mark stands over the minutes they share.
-  await expect(page.locator(".planner-cols-clash")).toHaveCount(1);
 });
 
-test("verdict: a failed timetable fetch refuses the check instead of clearing it", async ({
+test("a failed timetable fetch says the week is missing a course", async ({
   page,
 }) => {
-  // With 4 of 5 timetables fine and one 503, the week drew a normal grid and
-  // the status said "ingen kollisjoner" in Green-Means-Fits accent — a
-  // confident answer to PRODUCT §2's only question, computed over data it never
-  // had. `--verdict` green is the only thing on the page still coloured by an
-  // outcome, so a false green is the loudest lie it can tell.
+  // DR-8's floor. With 4 of 5 timetables fine and one 503 the week draws a
+  // perfectly ordinary grid — TMA4400 is simply not in it, which is
+  // pixel-identical to a course with no teaching. The line above the week is
+  // the only thing that tells those two apart.
   await page.route("**/api/course/TMA4400/timetable*", (route) =>
     route.fulfill({
       status: 503,
@@ -260,20 +223,11 @@ test("verdict: a failed timetable fetch refuses the check instead of clearing it
   await expect(gridBlocks(page).first()).toBeVisible({ timeout: 45_000 });
   await expect(gridBlocks(page).filter({ hasText: "TMA4400" })).toHaveCount(0);
 
-  // The provenance line is the other half of refusing: it names WHICH course
-  // the check could not see. It is silent on a clean plan,
-  // so its presence here is the assertion, not just its text.
-  const provenance = page.locator("#planner-provenance");
-  await expect(provenance).toBeVisible({ timeout: 45_000 });
-  await expect(provenance).toContainText("TMA4400");
-  await expect(provenance).not.toContainText("Timeplan hentet direkte fra NTNU");
-
   const status = page.locator("#planner-grid-status");
-  await expect(status).toContainText(/kan ikke sjekkes/, { timeout: 45_000 });
-  await expect(status).toContainText(/mangler timeplan for \d+ emne/);
-  // Not the clean state, and not silence either: `.is-clean` is the verdict
-  // green, and it must never sit on a verdict we could not compute.
-  await expect(status).not.toHaveClass(/is-clean/);
+  await expect(status).toContainText(/mangler timeplan for \d+ emne/, { timeout: 45_000 });
+  // The margin names the course by code, which is what makes the count
+  // actionable rather than merely honest.
+  await expect(page.locator("#planner-grid-notes")).toContainText("TMA4400");
 });
 
 test("groups: switching parallel updates the grid and survives the URL", async ({ page }) => {
@@ -539,9 +493,6 @@ test("week: three overlapping lectures stack into three lanes, no pile", async (
   const lefts = await Promise.all(bars.map(async (b) => (await b.boundingBox())?.x ?? 0));
   expect(new Set(lefts).size).toBe(3);
 
-  // A three-way collision is ONE mark across the minutes they share, not three
-  // competing ones — the mark belongs to the moment, not to any one course.
-  await expect(monday.locator(".planner-cols-clash")).toHaveCount(1);
 
   // Each block opens its own session popover, naming the slot it stands for.
   await gridBlocks(page).first().click();
@@ -549,18 +500,12 @@ test("week: three overlapping lectures stack into three lanes, no pile", async (
   await expect(popover).toBeVisible();
   await expect(popover.locator(".block-popover-clock")).toHaveText("08:15–10:00");
 
-  // And the card says what the red zone behind it means: with three courses in
-  // one slot the sentence names the OTHER two, and the shared minutes are the
-  // whole session, so it does not repeat the clock two lines above it.
-  const clash = popover.locator(".block-popover-clash");
-  await expect(clash).toContainText("Kolliderer med");
-  const clashText = (await clash.textContent()) ?? "";
-  const named = codes.filter((code) => clashText.includes(code));
-  expect(named).toHaveLength(2);
-  expect(clashText).not.toContain("08:15");
+  // The card says nothing about the other two: the collision sentence went
+  // with the verdict (PRODUCT D17). What it does carry is the way out.
+  await expect(popover.locator(".np-link-out")).toHaveCount(2);
 });
 
-test("session popover: the card names the building, the length and the collision", async ({
+test("session popover: the card names the building, the length and the way out", async ({
   page,
   context,
 }) => {
@@ -633,11 +578,13 @@ test("session popover: the card names the building, the length and the collision
   // "F1" is not a place you can walk to. The block has no width for the
   // building; the card does.
   await expect(popover).toContainText("IT-bygget, sydfløy");
-  // A partial overlap names the minutes the two really share: 15:15, not the
-  // session's own 14:15.
-  await expect(popover.locator(".block-popover-clash")).toHaveText(
-    "Kolliderer med TDT4120 15:15–16:00.",
-  );
+  // And the two ways out, which are the whole of what this site says about a
+  // course (PRODUCT mandate 3). Both leave the site, so both carry `noopener`.
+  const outs = popover.locator(".np-link-out");
+  await expect(outs).toHaveCount(2);
+  await expect(outs.first()).toHaveAttribute("href", /ntnu\.no\/studier\/emner\/TDT4110/);
+  await expect(outs.nth(1)).toHaveAttribute("href", /karakterweb\.no\/ntnu\/tdt4110/);
+  await expect(outs.first()).toHaveAttribute("rel", /noopener/);
   // One lecture, one group: there is no parallel to choose, so the verb offers
   // the course rather than promising a picker the modal would not show.
   await expect(popover.locator(".block-popover-edit")).toHaveText("Endre emnet");
@@ -907,37 +854,6 @@ test("uke: an open øvingsvindu names itself, opens, and stacks", async ({ page 
   expect(Math.max(...delays)).toBeLessThanOrEqual(0.65);
 });
 
-test("liste: the collision marks the two sessions, not the day around them", async ({ page }) => {
-  // The mark used to be a bracket on a wrapper every row of the day was
-  // appended to, so one afternoon overlap drew a rule down the side of that
-  // morning's lecture too. Friday from live 2026 data carries one clean lecture
-  // and one overlapping pair, so the week has five lecture rows and exactly one
-  // collision.
-  await gotoPlanner(page, { courses: ["TDT4110", "TDT4120", "TMA4401"] });
-  await expect(gridBlocks(page).first()).toBeVisible({ timeout: 45_000 });
-  expect(await settledVerdict(page)).toMatch(/1 kollisjon/);
-
-  await page.click('[data-role="view-tabs"] [data-view="tavle"]');
-  const board = page.locator(".planner-board");
-  await expect(board).toBeVisible();
-
-  const rows = page.locator(".planner-board-row");
-  const marked = page.locator(".planner-board-row.is-clashing");
-  await expect(rows).toHaveCount(5);
-  await expect(marked).toHaveCount(2);
-  // The clean 08:15 lecture shares Friday with the pair and stays unmarked —
-  // under the old wrapper it sat inside the bracket with them.
-  await expect(marked.first()).toContainText("12:15");
-  await expect(rows.first()).not.toHaveClass(/is-clashing/);
-
-  const note = page.locator(".planner-board-clash-note");
-  await expect(note).toHaveCount(1);
-  await expect(note).toHaveText(/TDT4120 \/ TMA4401 overlapper|TMA4401 \/ TDT4120 overlapper/);
-  // "Velg én" is gone: a student looking at two overlapping sessions does not
-  // need to be told that overlapping sessions are a choice.
-  await expect(note).not.toContainText("Velg");
-});
-
 test("modals: a click on the backdrop dismisses every one of them", async ({ page }) => {
   // The implementation is `closedby="any"` on all three, so this is really a
   // test that the attribute is set and that nothing inside the card sits in the
@@ -1013,11 +929,11 @@ test("landing page: Nå answers with the room, not a course count", async ({ pag
     await expect(rows.first()).toHaveCSS("display", "grid");
   }
 
-  // The page stops introducing itself once it has an answer.
-  await expect(page.locator("#home-pitch")).toHaveClass(/is-secondary/);
-
-  // The card is the only way back in; the old "Planen din" resume line is gone.
+  // There is nothing else on the page: no pitch to demote, no resume line, and
+  // one button under the card.
+  await expect(page.locator("#home-pitch")).toHaveCount(0);
   await expect(page.locator("#home-resume")).toHaveCount(0);
+  await expect(page.locator(".home-cta")).toHaveCount(1);
 });
 
 test("week: the øving layer shows picked groups, not the whole cohort's", async ({ page }) => {
@@ -1059,10 +975,12 @@ test("week: the øving toggle moves the layer and leaves nothing behind", async 
   await gotoPlanner(page, { program: { code: "MTDT", name: "MTDT", cohort: 2026 } });
   await expect(gridBlocks(page).first()).toBeVisible({ timeout: 45_000 });
   // Settled, not merely painted: the bundles land one by one and the block
-  // count is still climbing on the frame the first one appears. The verdict is
-  // the signal for that — it stays "henter timeplan …" until every bundle is in.
+  // count is still climbing on the frame the first one appears. MTDT's period
+  // is five courses, so the full block count is the signal the verdict used to
+  // be.
   await expect(page.locator(".planner-cols-day-header").first()).toBeVisible();
-  await settledVerdict(page);
+  await expect(courseRows(page)).toHaveCount(5, { timeout: 45_000 });
+  await expect.poll(async () => gridBlocks(page).count(), { timeout: 45_000 }).toBeGreaterThan(4);
 
   const hosts = {
     kolonner: page.locator("#planner-grid-frame .planner-cols"),
@@ -1085,79 +1003,6 @@ test("week: the øving toggle moves the layer and leaves nothing behind", async 
     await expect(page.locator(".planner-motion-ghost")).toHaveCount(0);
     if (view === "kolonner") await expect(gridBlocks(page)).toHaveCount(lectures);
   }
-});
-
-test("course page: the grade figure renders from DBH", async ({ page }) => {
-  await page.goto("/emne/TDT4100/");
-  const grid = page.locator("#grades-section .grades-grid");
-  await expect(grid).toBeVisible({ timeout: 45_000 });
-
-  // Small multiples, newest first, one bar per grade with its own label.
-  const charts = grid.locator(".grades-chart");
-  expect(await charts.count()).toBeGreaterThan(0);
-  const first = charts.first();
-  await expect(first.locator(".grades-bar-grade").first()).toHaveText("A");
-  await expect(first).toContainText("kandidater");
-  expect(await first.locator(".grades-bar").count()).toBeGreaterThan(1);
-
-  // the figure was 39 % of the mobile page. At most three charts are
-  // on screen; everything older stacks inside a collapsed disclosure, so the
-  // section stops pushing credits and vurderingsform below y=2438.
-  expect(await charts.count()).toBeLessThanOrEqual(3);
-  const older = page.locator("#grades-section .grades-older");
-  // Guarded, not asserted: whether a course has a fourth ordinary sitting in
-  // range is live DBH data. When it does, the disclosure must start closed and
-  // still open.
-  if ((await older.count()) === 1) {
-    await expect(older.locator(".grades-chart").first()).toBeHidden();
-    await older.locator("summary").click();
-    await expect(older.locator(".grades-chart").first()).toBeVisible();
-  }
-});
-
-test("catalog: a course that is not taught this year is grouped, not offered", async ({ page }) => {
-  // TMA4100 and 702 others exist only in last year's catalog. Adding one
-  // contributed nothing to the week and left the planner showing a raw English
-  // "Not found". The page still exists, so the row keeps its link and loses its
-  // verb. They fold into one labelled group instead of interleaving; the group
-  // opens itself when there is nothing else to show, which is this query's case.
-  await page.goto("/emner/?q=TMA4100");
-  const fold = page.locator(".emner-fold-btn");
-  await expect(fold).toBeVisible({ timeout: 15_000 });
-  await expect(fold).toContainText("Ikke undervist i");
-  await expect(fold).toHaveAttribute("aria-expanded", "true");
-
-  const row = page.locator("#emner-results tr.emner-row", { hasText: "TMA4100" }).first();
-  await expect(row).toBeVisible();
-  await expect(row.locator('a[href="/emne/TMA4100/"]')).toHaveCount(1);
-  await expect(row).toContainText("sist undervist");
-  await expect(row.locator(".emner-row-add")).toHaveCount(0);
-
-  // Collapsing is what the group is for: the rows go, the count stays.
-  await fold.click();
-  await expect(fold).toHaveAttribute("aria-expanded", "false");
-  await expect(row).toBeHidden();
-  await expect(fold).toContainText("Ikke undervist i");
-});
-
-test("catalog: the subject chips come from the query's own hits", async ({ page }) => {
-  // 360 code prefixes across 5 470 courses is a wall nobody reads; the handful
-  // that survive one query is a filter worth having. The counts are computed
-  // before the narrowing, so pressing a chip does not renumber the others.
-  await page.goto("/emner/?q=matematikk");
-  const chips = page.locator("#emner-subjects .np-toggle");
-  await expect(chips.first()).toBeVisible({ timeout: 15_000 });
-  await expect(chips.first()).toHaveText(/^TMA/);
-
-  const before = await chips.allTextContents();
-  await chips.first().click();
-  await expect(chips.first()).toHaveAttribute("aria-pressed", "true");
-  expect(await chips.allTextContents()).toEqual(before);
-
-  // Every remaining row is a TMA row.
-  const codes = await page.locator("#emner-results tr.emner-row .emner-code").allTextContents();
-  expect(codes.length).toBeGreaterThan(0);
-  for (const code of codes) expect(code).toMatch(/^TMA/);
 });
 
 test("manual adds stay in their semester", async ({ page }) => {
@@ -1534,9 +1379,7 @@ test("ett navn: the plan is named once, and the switch is not a third toggle", a
   // The topbar's child COUNT used to be asserted here as a proxy for "no plan
   // state up there". It was never that: it broke when a wrapper was added and
   // would have passed if a plan chip had replaced a nav link. `#studieinfo-chip`
-  // above is the assertion that actually means it, and `navigation.pw.ts` makes
-  // it on all four pages.
-  await expect(page.locator("#site-account-btn")).toHaveText("Profil");
+  // above is the assertion that actually means it.
 
   // The switch is a segmented control, and its whole state is which word the
   // thumb is under — a thumb that TRAVELS rather than cross-fading.
@@ -1658,23 +1501,6 @@ test.describe("target sizes", () => {
       expect(await undersized(page)).toEqual([]);
     });
 
-    /**
-     * THE VERDICT'S OWN BUTTON, which the pass above structurally could not
-     * see: `button.planner-chip.is-jump` exists only when there is a collision
-     * to jump to, and MTDT kull 2026 has none. So the one control on the page
-     * that was under the floor — 153x21, the sentence a student is most meant
-     * to press, with a source comment claiming it "clears 24px on its own at
-     * this size" — sat outside the gate that exists to catch exactly that.
-     */
-    test(`the clash verdict's jump target clears ${MIN}px — ${label}`, async ({ page }) => {
-      await page.setViewportSize({ width, height });
-      await gotoPlanner(page, { courses: ["TDT4109", "TDT4120"] });
-      const jump = page.locator("button.planner-chip.is-jump");
-      await expect(jump).toBeVisible({ timeout: 45_000 });
-      const box = await jump.boundingBox();
-      expect(box?.height ?? 0).toBeGreaterThanOrEqual(MIN);
-      expect(await undersized(page)).toEqual([]);
-    });
   }
 });
 
@@ -1873,15 +1699,9 @@ test.describe("the banner's pair", () => {
     // that is layout policy, it moved twice in one day, and its failures are
     // things you can see by looking.
     expect(hint.top - title.bottom).toBeLessThan(20);
-    // MTDT's pass is QUALIFIED — HMS0002 publishes nothing classifiable as a
-    // lecture, so the check went over it rather than on it — and a qualified
-    // pass is printed on a phone. The rule that hides a clean verdict was
-    // written about the pass that says nothing ("ingen kollisjoner" answers a
-    // question nobody asked); it was hiding this one too, so the phone showed
-    // "kollisjonssjekken er ufullstendig" in the margin with no verdict on
-    // screen for it to qualify — a bare warning about nothing.
-    expect(verdict.bottom - verdict.top).toBeGreaterThan(0);
-    await expect(page.locator("#planner-grid-status")).toContainText("ikke sjekket");
+    // MTDT's own timetables all arrive, so the gap line has nothing to say and
+    // costs no row. That is the state this budget is measured in.
+    expect(verdict.bottom - verdict.top).toBe(0);
     // WHAT IS SPENT BEFORE THE WEEK, which is the number that matters and the
     // one the old 138px finding was about. Measured to the frame's top rather
     // than to the banner's bottom: the bar carries the view switch and the
@@ -1894,14 +1714,8 @@ test.describe("the banner's pair", () => {
     // or the thing the page is for is below the fold. From the viewport's top,
     // so the site topbar is inside the budget too.
     //
-    // Raised 0.35 → 0.37 when the qualified pass started printing on a phone:
-    // the verdict and the deadline cannot share one 390px row, so a qualified
-    // plan spends 27px more here than a plan whose pass says nothing. That is
-    // the trade, made deliberately — the alternative was a margin note reading
-    // "kollisjonssjekken er ufullstendig" with no verdict on screen for it to
-    // qualify. An UNQUALIFIED pass is still hidden and still costs nothing,
-    // which is what the sibling test below pins.
     //
+
     // History of this measurement, all at 390×844 on this same qualified plan:
     // 277 → 304 when the qualified pass started printing → **260** when the
     // bar folded into the ⋯ menu (2026-08-03). The fold bought back one row of
@@ -1912,29 +1726,14 @@ test.describe("the banner's pair", () => {
     expect(frame.top).toBeLessThan((viewport?.height ?? 844) * 0.37);
   });
 
-  test("the verdict appears on a phone exactly when it has something to report", async ({
-    page,
-  }) => {
-    // "ingen kollisjoner" is the answer to a question nobody asked; a
-    // collision is not. TDT4120's Friday lecture collides with TDT4109's, the
-    // clash the suite already establishes elsewhere.
-    await gotoPlanner(page, { program: { code: "MTDT", name: "MTDT", cohort: 2026 }, courses: ["TDT4120"] });
-    await expect(gridBlocks(page).first()).toBeVisible({ timeout: 45_000 });
-
-    const verdict = page.locator("#planner-grid-status");
-    await expect(verdict).toBeVisible({ timeout: 30_000 });
-    await expect(verdict).toContainText("kollisjon");
-  });
 
   test("a clean plan spends no row on saying so, at any width", async ({ page }) => {
-    // "Ingen forelesninger kolliderer" is gone: it answered a question a
-    // student only asks when something might be wrong, and it spent a line of
-    // the first screen on every load reporting that nothing is. A phone rule
-    // used to hide it there, which was half of this admission already.
+    // The line above the week speaks only about what the week could not draw,
+    // so a week that drew everything leaves it silent.
     //
     // What is tested is the MECHANISM, not the absence of a string: the line
-    // takes no vertical space when it has nothing to say. TDT4110 and TDT4120
-    // both publish real lectures and do not collide, so there is nothing.
+    // takes no vertical space when it has nothing to say. Both courses'
+    // timetables arrive, so there is nothing.
     await gotoPlanner(page, { courses: ["TDT4110", "TDT4120"] });
     await expect(gridBlocks(page).first()).toBeVisible({ timeout: 45_000 });
     const status = page.locator("#planner-grid-status");
@@ -1974,7 +1773,7 @@ test.describe("the phone's week", () => {
     expect(mask).not.toContain("transparent 0");
   });
 
-  test("the margin notes fold to one line that still qualifies the verdict", async ({ page }) => {
+  test("the margin notes fold to one line that still says the week is short", async ({ page }) => {
     // mob-D. HMS0002 publishes no lecture-classified activity, so MTDT's week
     // carries exactly one note — 83 px of paragraph under a 233 px week.
     await gotoPlanner(page, { program: { code: "MTDT", name: "MTDT", cohort: 2026 } });
@@ -1985,7 +1784,7 @@ test.describe("the phone's week", () => {
     // Closed on a phone, and the line still says the check is incomplete —
     // the fold may take the explanation, never the qualification.
     expect(await fold.evaluate((el: HTMLDetailsElement) => el.open)).toBe(false);
-    await expect(fold.locator("summary")).toContainText("Kollisjonssjekken er ufullstendig");
+    await expect(fold.locator("summary")).toContainText("Uka er ufullstendig");
     await expect(fold.locator(".planner-grid-note")).toBeHidden();
 
     await fold.locator("summary").click();
@@ -2009,142 +1808,8 @@ test("the week is not labelled 'Uke', but the region still has that name", async
   );
 });
 
-/**
- * "Del lenke" — the mark.
- *
- * The mark was an inline `<svg>` with no width, no height and no CSS of its
- * own. `base.css` gives every svg `display: block; max-width: 100%`, and as a
- * flex child that resolves to **0×0** — the button painted a hole where the
- * icon should be. Nothing below the browser could see it: the element was
- * there, the paths were right, and the layout is what was wrong.
- *
- * The control is an icon square now, pinned to the trailing edge of the plan's
- * row at every width, so the width half of this test is gone with the label it
- * was about: there is nothing left that can change size. What remains is that
- * the mark HAS a size, and that confirming swaps it rather than adding to it.
- */
-test("del: the mark has a size, and confirming swaps it", async ({ page, context }) => {
-  await context.grantPermissions(["clipboard-read", "clipboard-write"]);
-  // Del hands over `/user/<navn>`, so it needs an account that is already
-  // sharing; without one the button opens signup instead of copying, which is
-  // its own behaviour and covered in publish.pw.ts.
-  await seedSharingAccount(page);
-  await gotoPlanner(page, { program: { code: "MTDT", name: "MTDT", cohort: 2026 } });
-  await expect(gridBlocks(page).first()).toBeVisible({ timeout: 45_000 });
-
-  const share = page.locator("#planner-share");
-  await expect(share).toBeVisible();
-  // The failure this guards is 0×0, not a particular figure — pinning the exact
-  // px would just be transcribing whatever `size` says today.
-  const mark = await share.locator(".planner-share-mark").boundingBox();
-  expect(mark?.width ?? 0).toBeGreaterThan(8);
-  expect(mark?.height ?? 0).toBeGreaterThan(8);
-  const restBox = await share.boundingBox();
-
-  await share.click();
-  // The mark answers, and it is a swap, not an addition.
-  await expect(share.locator(".planner-share-check")).toBeVisible();
-  await expect(share.locator(".planner-share-mark")).toBeHidden();
-  expect((await share.boundingBox())?.width).toBe(restBox?.width);
-
-  // …and back.
-  await expect(share.locator(".planner-share-mark")).toBeVisible({ timeout: 5000 });
-  expect((await share.boundingBox())?.width).toBe(restBox?.width);
-});
-
-test.describe("the topbar's phone menu", () => {
-  test.use({ viewport: { width: 390, height: 844 } });
-
-  /** A session shaped as `isValidSession` demands, so `renderName` sees it. */
-  const seedSession = (page: Page) =>
-    page.addInitScript(() => {
-      localStorage.setItem(
-        "np:sync",
-        JSON.stringify({
-          navn: "Kari Nordmann",
-          authKey: "a",
-          encKeyRaw: "b".repeat(64),
-          version: 1,
-          deviceId: "d1",
-          label: "Chrome",
-          devices: [{ id: "d1", label: "Chrome", lastSeen: "2026-08-01" }],
-        }),
-      );
-    });
-
-  /**
-   * MECHANISM ONLY. What this describe used to assert — that the account is a
-   * 44 px mark, that its text is hidden, that the bar has N children — was the
-   * design restated in Playwright. It failed the moment the design changed and
-   * had never caught a defect. DESIGN §9 is where the treatment is decided and
-   * recorded; a test that only re-states it is transcription, not verification.
-   *
-   * What is left is what you cannot see by looking: the controls are still
-   * REACHABLE at this width, the menu dismisses by every gesture it claims, and
-   * it survives a soft navigation.
-   */
-  test("everything the bar holds is still reachable, and the menu dismisses", async ({ page }) => {
-    await seedSession(page);
-    await page.goto("/planlegger/");
-
-    const menu = page.locator("#site-menu-btn");
-    await expect(menu).toHaveAttribute("aria-expanded", "false");
-    await menu.click();
-    await expect(menu).toHaveAttribute("aria-expanded", "true");
-
-    // The account, the toggle and both nav links are all operable from here.
-    const btn = page.locator("#site-account-btn");
-    await expect(btn).toBeVisible();
-    await expect(page.locator("#site-account-name")).toHaveText("Kari Nordmann");
-    await expect(page.locator(".theme-toggle")).toBeVisible();
-    await expect(page.locator('#site-menu-panel a[href="/emner/"]')).toBeVisible();
-    // Whoever you are is still on the accessible name, at every width.
-    await expect(btn).toHaveAttribute("aria-label", "Profil for Kari Nordmann");
-
-    // Esc, and focus returns to the control that opened it.
-    await page.keyboard.press("Escape");
-    await expect(menu).toHaveAttribute("aria-expanded", "false");
-    await expect(menu).toBeFocused();
-
-    // The scrim is the outside-click target, and it goes with the menu.
-    await menu.click();
-    await page.locator(".np-menu-scrim").click({ position: { x: 10, y: 700 } });
-    await expect(menu).toHaveAttribute("aria-expanded", "false");
-    await expect(page.locator(".np-menu-scrim")).toHaveCount(0);
-
-    // And it is still the door.
-    await menu.click();
-    await btn.click();
-    await expect(page.locator("#planner-profile-panel")).toBeVisible();
-  });
-
-  test("the menu survives a ClientRouter navigation", async ({ page }) => {
-    // The failure that rots silently: hoisted scripts run ONCE per module, so a
-    // top-level mount leaves this button dead after any in-site navigation.
-    await page.goto("/planlegger/");
-    const menu = page.locator("#site-menu-btn");
-    await menu.click();
-    await page.locator('#site-menu-panel a[href="/emner/"]').click();
-    await expect(page).toHaveURL(/\/emner\/$/);
-    const after = page.locator("#site-menu-btn");
-    await after.click();
-    await expect(after).toHaveAttribute("aria-expanded", "true");
-  });
-
-  test("above the breakpoint the same controls are operable without the menu", async ({ page }) => {
-    // `display: contents` has to leave them ordinary children of the bar — the
-    // wrapper must not become a box that reflows or hides anything.
-    await page.setViewportSize({ width: 1280, height: 800 });
-    await page.goto("/planlegger/");
-    await expect(page.locator("#site-menu-btn")).toBeHidden();
-    await expect(page.locator("#site-account-btn")).toBeVisible();
-    await expect(page.locator(".theme-toggle")).toBeVisible();
-    await expect(page.locator('.site-nav a[href="/emner/"]')).toBeVisible();
-  });
-});
-
 test.describe("the programme picker lives on the planner", () => {
-  test("the plan's title opens it, and the profile panel no longer carries it", async ({
+  test("the plan's title is the only door to it", async ({
     page,
   }) => {
     await page.goto("/planlegger/");
@@ -2154,13 +1819,10 @@ test.describe("the programme picker lives on the planner", () => {
     await expect(page.locator("#planner-name-btn")).toBeHidden();
     await expect(page.locator("#planner-firstrun #studieinfo-program-input")).toBeVisible();
 
-    // The account's door opens a room with no programme field IN it. Scoped to
-    // the panel, not to the document: the picker holds that input the whole
-    // time — it is just somewhere else now, which is the entire point of the
-    // change.
-    await page.locator("#site-account-btn").click();
-    await expect(page.locator("#planner-profile-panel")).toBeVisible();
-    await expect(page.locator("#planner-profile-panel #studieinfo-program-input")).toHaveCount(0);
+    // And there is no second door anywhere on the page: the topbar carries a
+    // brand link and a theme toggle, and nothing else.
+    await expect(page.locator(".site-topbar #studieinfo-program-input")).toHaveCount(0);
+    await expect(page.locator("#site-account-btn")).toHaveCount(0);
   });
 
   test("a stored programme makes the title the way back into the picker", async ({ page }) => {
@@ -2174,7 +1836,7 @@ test.describe("the programme picker lives on the planner", () => {
     const door = page.locator("#planner-name-btn");
     await expect(door).toContainText("MTDT");
     // At rest it is a NAME, not a button: no underline until the pointer is on
-    // it, the same grammar `.planner-chip.is-jump` sets for the verdict.
+    // it, which is the grammar every name-as-a-door on this site uses.
     expect(
       await door.locator(".planner-title").evaluate((n) => getComputedStyle(n).textDecorationLine),
     ).toBe("none");
@@ -2255,167 +1917,5 @@ test.describe("the plan's two bars", () => {
     });
   }
 
-  test("the hand-over confirms in place and the plan's row does not move", async ({
-    page,
-    context,
-  }) => {
-    await context.grantPermissions(["clipboard-read", "clipboard-write"]);
-    await page.setViewportSize({ width: 390, height: 844 });
-    await seedSharingAccount(page);
-    await seedProgram(page);
-    await page.goto("/planlegger/");
-
-    const share = page.locator("#planner-share");
-    await expect(share).toBeVisible({ timeout: 45_000 });
-    const before = await share.boundingBox();
-    await share.click();
-    await expect(share.locator(".planner-share-check")).toBeVisible();
-    // An icon square cannot change width, which is what the labelled version
-    // needed a measured `minWidth` to guarantee.
-    expect((await share.boundingBox())?.x).toBe(before?.x);
-  });
 });
 
-test.describe("the course page says what its week is showing", () => {
-  test("with no programme it states the scope and offers no switch", async ({ page }) => {
-    await page.goto("/emne/TMA4400/");
-    const line = page.locator(".timetable-scope");
-    await expect(line).toContainText("Uka viser alle paralleller og grupper", {
-      timeout: 45_000,
-    });
-    await expect(line).toContainText("Velg studieprogram i planleggeren");
-    // Nothing to narrow TO, so the control would be one that does nothing.
-    await expect(page.locator(".timetable-mine")).toHaveCount(0);
-  });
-
-  test("a stored programme buys a switch to your own slice, and it resets per course", async ({
-    page,
-  }) => {
-    await page.addInitScript(() => {
-      localStorage.setItem(
-        "np:profile",
-        JSON.stringify({ program: { code: "MTDT", cohort: 2026, name: "Datateknologi" } }),
-      );
-    });
-    // TMA4400 partitions its lectures by programme cluster — 21 entries down to
-    // 8 for MTDT — which is the fact `contract.pw.ts` pins against live NTNU.
-    await page.goto("/emne/TMA4400/");
-    const mine = page.locator(".timetable-mine");
-    await expect(mine).toBeVisible({ timeout: 45_000 });
-    await expect(mine).toHaveAttribute("aria-pressed", "false");
-
-    // View-agnostic on purpose: the claim is that narrowing DRAWS FEWER
-    // sessions, which is true in Uke and in Liste, and the student's view
-    // choice is shared across surfaces now.
-    const blocks = page.locator(
-      "#timetable-section .planner-cols-block, #timetable-section .planner-board-row",
-    );
-    const before = await blocks.count();
-    expect(before).toBeGreaterThan(0);
-
-    await mine.click();
-    await expect(mine).toHaveAttribute("aria-pressed", "true");
-    await expect(page.locator(".timetable-scope")).toContainText("Viser undervisningen for MTDT");
-    await expect.poll(() => blocks.count()).toBeLessThan(before);
-
-    // Per visit, never persisted: the same URL has to show two people the same
-    // week, so the next course page opens on "all" again.
-    await page.goto("/emne/TDT4160/");
-    const next = page.locator(".timetable-mine");
-    await expect(next).toBeVisible({ timeout: 45_000 });
-    await expect(next).toHaveAttribute("aria-pressed", "false");
-  });
-});
-
-/**
- * ONE WEEK, THREE SURFACES.
- *
- * `/planlegger/`, `/emne/[code]/` and `/user/<navn>` draw the same two views
- * through the same controller. For a while they did not: the planner moved to
- * Uke and Liste while the course page stayed on the transposed geometry, which
- * had been deleted as a view but kept alive as a module for it.
- *
- * These test the MECHANISM rather than the look — that the choice travels, and
- * that a course taught in another term still draws something. Neither is
- * visible by looking at one page.
- */
-test.describe("the course page draws the week the planner draws", () => {
-  test("the view choice is one fact, and it crosses surfaces", async ({ page }) => {
-    // `np:weekView` is a preference about how you read a week, not about which
-    // week you are reading — so a student who chose a list on a phone chose it
-    // for weeks, not for one page.
-    await page.addInitScript(() => localStorage.setItem("np:weekView", "tavle"));
-    await page.goto("/emne/TDT4120/");
-    await expect(page.locator("#timetable-section .planner-board")).toBeVisible({
-      timeout: 45_000,
-    });
-    await expect(page.locator('#timetable-section [data-view="tavle"]')).toHaveAttribute("aria-pressed", "true");
-
-    // And the pair on this page really switches it, rather than being decoration
-    // beside a week only the planner can change.
-    await page.click('#timetable-section [data-view="kolonner"]');
-    await expect(page.locator("#timetable-section .planner-cols")).toBeVisible();
-    expect(await page.evaluate(() => localStorage.getItem("np:weekView"))).toBe("kolonner");
-  });
-
-  test("a course taught in the other term still draws its own week", async ({ page }) => {
-    // TDT4100's only entries are 2026_VÅR while the canonical semester is Høst
-    // 2026, so `entriesForSemester` falls back to the term the response
-    // actually carries. Both views then filter through `entriesInSemester`, and
-    // handing them the PLANNED semester's teaching weeks filters that fallback
-    // straight back out — an empty week where last term's honest timetable
-    // belongs. `weeksOf` is what stops it.
-    await page.goto("/emne/TDT4100/");
-    const week = page.locator("#timetable-section .planner-cols, #timetable-section .planner-board");
-    await expect(week).toBeVisible({ timeout: 45_000 });
-    const sessions = await page
-      .locator("#timetable-section .planner-cols-block, #timetable-section .planner-board-row")
-      .count();
-    expect(sessions, "an off-term course drew an empty week").toBeGreaterThan(0);
-    // And it says which term that is, rather than passing spring off as autumn.
-    await expect(page.locator(".timetable-term")).toContainText("Ikke undervist i Høst 2026");
-  });
-
-  test("«Vis øvinger og labber» actually adds øvinger", async ({ page }) => {
-    // A control that visibly does nothing is the failure this page has been
-    // fixed for twice. Here it was two filters meeting: `showAllGroups` selected
-    // every group, and `visibleLayer` then dropped each one again on
-    // `isLecture || groupPicked` — right for a plan, where it stops nine
-    // unpicked seminar groups flooding one week, and wrong for a surface that
-    // has no picks to make.
-    await page.goto("/emne/TDT4120/");
-    const sessions = page.locator(
-      "#timetable-section .planner-cols-block, #timetable-section .planner-cols-band",
-    );
-    await expect(sessions.first()).toBeVisible({ timeout: 45_000 });
-    const lecturesOnly = await sessions.count();
-
-    const toggle = page.locator('#timetable-section [data-role="layer-toggle"]');
-    await expect(toggle).toHaveAttribute("aria-pressed", "false");
-    await toggle.click();
-    await expect(toggle).toHaveAttribute("aria-pressed", "true");
-    await expect.poll(() => sessions.count()).toBeGreaterThan(lecturesOnly);
-
-    // And back: the layer leaves as visibly as it arrived.
-    await toggle.click();
-    await expect(toggle).toHaveAttribute("aria-pressed", "false");
-    await expect.poll(() => sessions.count()).toBe(lecturesOnly);
-  });
-
-  test("a block opens the session, and offers no editor this page does not have", async ({
-    page,
-  }) => {
-    // The popover is a READ card, which is exactly what a visitor deciding
-    // between five parallels needs. What it must NOT carry here is the verb:
-    // there is no course-settings modal on this page to send them to.
-    await page.goto("/emne/TDT4120/");
-    const block = page.locator("#timetable-section .planner-cols-block").first();
-    await expect(block).toBeVisible({ timeout: 45_000 });
-    await block.click();
-    const popover = page.locator("#planner-block-popover");
-    await expect(popover).toBeVisible();
-    await expect(popover.locator(".block-popover-edit")).toHaveCount(0);
-    // The way OUT is the course itself, which every popover carries.
-    await expect(popover.locator(".np-link-out")).toBeVisible();
-  });
-});

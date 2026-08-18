@@ -100,24 +100,7 @@ test.describe("upstream contract", () => {
     expect(forOthers.length, "no lecture tagged for a programme other than MTDT").toBeGreaterThan(0);
   });
 
-  test("TDT4109 and TDT4120 still collide", async ({ request }) => {
-    // The overlap test, the clash-zone test and the board's collision bracket
-    // all seed this pair.
-    const load = async (code: string): Promise<Entry[]> =>
-      (await (await request.get(`/api/course/${code}/timetable?year=${YEAR}&version=1`)).json()) as Entry[];
-    const [a, b] = await Promise.all([load("TDT4109"), load("TDT4120")]);
-    const overlaps = a.some((x) =>
-      b.some(
-        (y) =>
-          x.dayNumber === y.dayNumber &&
-          minutes(x.startTime) < minutes(y.endTime) &&
-          minutes(y.startTime) < minutes(x.endTime),
-      ),
-    );
-    expect(overlaps, "the seeded clash pair no longer overlaps").toBe(true);
-  });
-
-  test("TDT4110 still publishes numbered lecture parallels", async ({ request }) => {
+test("TDT4110 still publishes numbered lecture parallels", async ({ request }) => {
     // The default-parallel rule (`groups.ts`) is exercised through this course.
     const res = await request.get(`/api/course/TDT4110/timetable?year=${YEAR}&version=1`);
     const titles = new Set(

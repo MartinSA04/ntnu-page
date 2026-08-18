@@ -40,17 +40,13 @@ export const LIVE = RECORDING || process.env.E2E_LIVE === "1";
 /**
  * Routes about the transport rather than the data — see `handle`.
  *
- * `/api/sync/*` is ours, not NTNU's: replaying it would assert against a
- * recording of our own worker, and the account tests need real KV round trips.
- * `wrangler dev` provisions a local namespace from the `SYNC` binding, so these
- * hit the real handler with no network beyond localhost.
- *
- * `/api/plan/*` is the same surface read from the other side — the published
- * plan `/user/<navn>` fetches. Replaying it would answer the publish test with
- * a recording instead of the copy the test just wrote.
+ * One entry, and it is `/api/health`. The prefix list beside it held our own
+ * account surface (`/api/sync/*`, `/api/plan/*`), which had to reach the real
+ * handler rather than a recording of itself; both are deleted with the
+ * account, and every route left is a read of NTNU's data that SHOULD be
+ * replayed.
  */
 const PASS_THROUGH = new Set(["GET /api/health"]);
-const PASS_THROUGH_PREFIXES = ["/api/sync/", "/api/plan/"];
 
 interface Fixture {
   /** The request this answers, for review — the file name is a digest. */
@@ -138,10 +134,7 @@ export async function installApiFixtures(context: BrowserContext): Promise<void>
     // `navigation.pw.ts` reads the worker's own security headers off. Replaying
     // it would answer that test with headers recorded at some past moment, so
     // it would pass over a worker that had stopped sending them.
-    //
-    // `/api/sync/*` is the other carve-out — see `PASS_THROUGH`'s own comment.
-    const url = new URL(request.url());
-    if (PASS_THROUGH.has(key) || PASS_THROUGH_PREFIXES.some((p) => url.pathname.startsWith(p))) {
+    if (PASS_THROUGH.has(key)) {
       await route.fallback();
       return;
     }
