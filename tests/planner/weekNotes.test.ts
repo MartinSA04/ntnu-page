@@ -195,20 +195,10 @@ describe("weekNotes: what the verdict is allowed to claim", () => {
     expect(result.partial).toBe(true);
   });
 
-  test("a three-way clash is one slot to fix, not three notes", () => {
-    const clashing = ["TMA4400", "TDT4120", "TDT4100"].map((code) =>
-      state({ code, bundle: bundleFromEntries([entry("Forelesning")]) }),
-    );
-    const { result } = notesFor(clashing);
-    expect(result.conflictCount).toBe(1);
-    expect(result.conflictPairCount).toBe(3);
-  });
-
   test("a clean plan of one course claims nothing about anyone else", () => {
     const { result } = notesFor([
       state({ code: "TMA4400", bundle: bundleFromEntries([entry("Forelesning")]) }),
     ]);
-    expect(result.conflictCount).toBe(0);
     expect(result.partial).toBe(false);
     expect(result.uncheckedCourses).toEqual([]);
   });
@@ -252,32 +242,9 @@ describe("weekNotes: a note is only a control where there is something to contro
   });
 });
 
-describe("weekNotes: a collision note is a control, and the caller owns its target", () => {
-  /**
-   * The note cannot flash the sessions itself: the nodes belong to whichever
-   * view is mounted, which this module never sees. It hands the group back
-   * instead. This is also the repair for a click that had been reaching
-   * detached nodes ever since the planner started rendering its notes from a
-   * throwaway grid.
-   */
-  test("clicking a collision note hands its group to the caller", () => {
-    const seen: number[] = [];
-    const clashing = ["TMA4400", "TDT4120"].map((code) =>
-      state({ code, bundle: bundleFromEntries([entry("Forelesning")]) }),
-    );
-    const { host } = notesFor(clashing, false, {
-      onConflictClick: (group) => seen.push(group.dayNumber),
-    });
-    const notes = host.find("planner-note-link");
-    expect(notes).toHaveLength(1);
-    for (const fn of notes[0]?.listeners ?? []) fn();
-    expect(seen).toEqual([1]);
-  });
-});
-
 describe("the margin folds behind one line (mob-D)", () => {
-  // A course whose timetable never arrived: one gap note, and one that
-  // qualifies the collision check.
+  // A course whose timetable never arrived: one gap note, and one that says
+  // the drawn week is missing a course.
   const withGap = [
     state({ code: "TMA4400", bundle: bundleFromEntries([entry("Forelesning")]) }),
     state({ code: "TDT4120", bundle: failedBundle() }),
@@ -288,7 +255,7 @@ describe("the margin folds behind one line (mob-D)", () => {
     const fold = host.find("planner-notes-fold")[0];
     expect(fold).toBeDefined();
     expect(host.find("planner-notes-summary")[0]?.textContent).toBe(
-      "1 merknad. Kollisjonssjekken er ufullstendig",
+      "1 merknad. Uka er ufullstendig",
     );
     // The sentence itself is inside the fold, not deleted.
     expect(fold?.find("planner-grid-note")[0]?.textContent).toContain(
@@ -302,29 +269,10 @@ describe("the margin folds behind one line (mob-D)", () => {
   });
 
   test("nothing with a verb in it is folded", () => {
-    const clashing = [
-      state({
-        code: "TMA4412",
-        bundle: bundleFromEntries([
-          entry("Forelesning", { courseCode: "TMA4412", startTime: "08:15", endTime: "10:00" }),
-        ]),
-      }),
-      state({
-        code: "TDT4136",
-        bundle: bundleFromEntries([
-          entry("Forelesning", { courseCode: "TDT4136", startTime: "09:15", endTime: "11:00" }),
-        ]),
-      }),
-    ];
-    const { host } = notesFor(clashing, true, {}, true);
-    // Red is the one mark on this page that may not be one tap away.
-    expect(host.find("planner-notes-fold")).toHaveLength(0);
-    expect(host.find("np-note-clash")).toHaveLength(1);
-
-    // Nor is a control. Nothing inside the fold is pressable at all: the "velg
-    // din gruppe" lines are what change the week, and a folded button is a
-    // button nobody presses. (That the phone really renders them is asserted
-    // in e2e/flows.pw.ts's target-size pass, which is what caught this.)
+    // Nothing inside the fold is pressable: the "velg din gruppe" lines are
+    // what change the week, and a folded button is a button nobody presses.
+    // (That the phone really renders them is asserted in e2e/flows.pw.ts's
+    // target-size pass, which is what caught this.)
     const folded = notesFor(withGap, true, {}, true).host.find("planner-notes-fold")[0];
     expect(folded?.find("planner-note-link")).toHaveLength(0);
   });
@@ -571,31 +519,13 @@ describe("blockDetailFor (what a clicked bar hands the popover)", () => {
   test("hands over the clock as its own pair, not a pre-joined sentence", () => {
     // The card sets the time as its largest figure and the day beside it, so it
     // needs the two halves rather than "mandag 14:15–16:00".
-    const detail = blockDetailFor(session, null);
+    const detail = blockDetailFor(session);
     expect(detail.startTime).toBe("14:15");
     expect(detail.endTime).toBe("16:00");
     expect(detail.dayNumber).toBe(1);
   });
 
   test("hands over the building, so the card can name where the room is", () => {
-    expect(blockDetailFor(session, null).buildings).toBe("IT-bygget, sydfløy");
-  });
-
-  test("names the collision partner and the minutes they share", () => {
-    // Red-Is-Collision: if red appears, the copy names both things. The zone in
-    // the week says WHEN; only the partner code says WITH WHAT.
-    const detail = blockDetailFor(session, {
-      partners: ["TDT4160"],
-      window: { start: 14 * 60 + 15, end: 16 * 60 },
-    });
-    expect(detail.clash).toEqual({
-      partners: ["TDT4160"],
-      startTime: "14:15",
-      endTime: "16:00",
-    });
-  });
-
-  test("stays quiet when the session collides with nothing", () => {
-    expect(blockDetailFor(session, null).clash).toBeNull();
+    expect(blockDetailFor(session).buildings).toBe("IT-bygget, sydfløy");
   });
 });

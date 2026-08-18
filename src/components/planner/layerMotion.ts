@@ -216,7 +216,6 @@ const COL_BLOCK_PROPS = ["--planner-y", "--planner-h", "--planner-lane", "--plan
    it has no geometry properties of its own left to travel, so what moves it is
    the plain FLIP every keyed node gets. */
 const COL_BAND_PROPS: string[] = [];
-const COL_ZONE_PROPS = ["--planner-y", "--planner-h"];
 const COL_HOUR_PROPS = ["--planner-y"];
 const COL_NOW_PROPS = ["--planner-y"];
 /**
@@ -247,13 +246,6 @@ function keyColumns(grid: HTMLElement): Map<string, Keyed> {
 
   for (const day of Array.from(grid.querySelectorAll<HTMLElement>(".planner-cols-day")))
     out.set(`day-${day.getAttribute("data-day")}`, { node: day, props: [], ghost: false });
-
-  for (const zone of Array.from(grid.querySelectorAll<HTMLElement>(".planner-cols-clash")))
-    out.set(`${zone.getAttribute("data-motion-key")}`, {
-      node: zone,
-      props: COL_ZONE_PROPS,
-      ghost: false,
-    });
 
   // ONE pass, in document order — the order the view prints in: a day's strips,
   // then its sessions, then the next day. Querying blocks and strips separately

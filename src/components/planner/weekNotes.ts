@@ -3,40 +3,33 @@
  *
  * All of this used to live in `grid.ts` beside the transposed renderer, which
  * is why `plannerApp` built a complete week into a detached `discardHost` on
- * every render just to collect the margin notes. The notes, the conflict count,
- * the honest-gap reporting (DR-8) and the message branches are facts about the
- * WEEK, not about which way round it is drawn — they belong to neither view.
+ * every render just to collect the margin notes. The notes, the honest-gap
+ * reporting (DR-8) and the message branches are facts about the WEEK, not about
+ * which way round it is drawn — they belong to neither view.
  *
  * `weekNotes()` is the single entry point. It writes the margin and hands back
- * everything the page's verdict, its layer toggle and its message branches
- * need, without building a grid.
+ * everything the page's layer toggle and its message branches need, without
+ * building a grid.
  *
- * ## The one thing it cannot do
+ * ## What it no longer does
  *
- * A collision note is a BUTTON that flashes the sessions it names, and the
- * nodes to flash belong to whichever view is mounted. So the note calls
- * `onConflictClick` and the caller resolves the group to live elements. This is
- * also a repair: with the notes coming from a render into `discardHost`, every
- * collision note in the planner has been flashing detached nodes — a click that
- * scrolled nothing and focused nothing, on both views.
+ * The collision count, the conflict notes and the button that flashed the
+ * sessions they named are deleted (PRODUCT D17). What survives from that half
+ * is DR-8's floor: `incompleteCourses` is how the page says the week is missing
+ * a course, and a fetch that failed must never be indistinguishable from a
+ * course with no teaching.
  *
  * ## Known duplication, and why it is still here
  *
  * `collectEntries` below and `collectSessions` in board.ts are the same
  * pipeline over the same fields, with one difference: the latter also filters
- * to the semester's teaching weeks, because it feeds a view and this feeds a
- * count. Merging them would change which entries the conflict count is computed
- * over — a course taught only outside the semester currently contributes to the
- * count and not to the drawn week — so it is a decision about what a collision
- * MEANS, not a tidy-up. Make it deliberately, with a test, or leave it.
+ * to the semester's teaching weeks, because it feeds a view and this feeds the
+ * margin. Merging them would change which entries the margin speaks for — a
+ * course taught only outside the semester currently reaches the notes and not
+ * the drawn week. Make it deliberately, with a test, or leave it.
  */
+
 import { classifyActivity } from "../../lib/planner/activity.js";
-import {
-  type ConflictGroup,
-  findConflicts,
-  groupConflicts,
-  mergeParallelSlots,
-} from "../../lib/planner/conflicts.js";
 import { timetableOutcomeOf } from "../../lib/planner/data.js";
 import {
   applyGroupSelection,
@@ -45,7 +38,7 @@ import {
   resolveLectureDefaults,
 } from "../../lib/planner/groups.js";
 import { parseWeeks, type ScheduleEntry } from "../../lib/planner/schedule.js";
-import { dayName, dot, el, weekLabel } from "./dom.js";
+import { dot, el, weekLabel } from "./dom.js";
 import type { PlanCourseState } from "./types.js";
 
 /** A non-lecture window at least this long is a drop-in band, not a lane (U1). */
@@ -102,15 +95,6 @@ export interface BlockDetail {
   buildings: string;
   weeksLabel: string;
   isLecture: boolean;
-  clash: BlockClash | null;
-}
-
-export interface BlockClash {
-  /** The other courses in the collision, never including this block's own. */
-  partners: string[];
-  /** The overlapping minutes, as clock times. */
-  startTime: string;
-  endTime: string;
 }
 
 /** The fields `blockDetailFor` actually reads — both views adapt to this. */
@@ -280,39 +264,9 @@ export function unresolvedLectureChoices(
   return choices;
 }
 
-/**
- * Collapses a course's identical parallel slots into one block. Kept apart by
- * activity title and by lecture/other, so we never invent a joint label for
- * two things the student reads as different.
- */
-function mergeSlots(entries: WeekEntry[]): WeekEntry[] {
-  return mergeParallelSlots(entries, (e) => `${e.isLecture ? "L" : "O"}|${e.name}`).map(
-    ({ representative, entries: members }) => {
-      if (members.length === 1) return representative;
-      const rooms = [...new Set(members.flatMap((m) => m.rooms.split(", ")))]
-        .filter(Boolean)
-        .join(", ");
-      const buildings = [...new Set(members.flatMap((m) => m.buildings.split(", ")))]
-        .filter(Boolean)
-        .join(", ");
-      return { ...representative, rooms, buildings, groupCount: members.length };
-    },
-  );
-}
-
 function timeToMinutes(time: string): number {
   const [h = "0", m = "0"] = time.split(":");
   return Number(h) * 60 + Number(m);
-}
-
-function minutesToTime(minutes: number): string {
-  const h = Math.floor(minutes / 60);
-  const m = minutes % 60;
-  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
-}
-
-function capitalize(value: string): string {
-  return value.charAt(0).toUpperCase() + value.slice(1);
 }
 
 /** "A, B og C" — the Norwegian list separator, not a bare comma join. */
@@ -367,14 +321,8 @@ export function metaLine(entry: { rooms: string; startTime: string }): string {
   return [entry.startTime, entry.rooms].filter(Boolean).join(", ");
 }
 
-/**
- * Popover material for a block. `clash` comes from the render's own conflict
- * pass, so the card and the red zone can never disagree.
- */
-export function blockDetailFor(
-  entry: BlockSource,
-  clash: { partners: string[]; window: { start: number; end: number } } | null,
-): BlockDetail {
+/** Popover material for a block: the facts of the session that was pressed. */
+export function blockDetailFor(entry: BlockSource): BlockDetail {
   const label = groupLabel(entry);
   return {
     code: entry.courseCode,
@@ -387,14 +335,6 @@ export function blockDetailFor(
     buildings: entry.buildings,
     weeksLabel: entry.weeksLabel,
     isLecture: entry.isLecture,
-    clash:
-      clash && clash.partners.length > 0
-        ? {
-            partners: clash.partners,
-            startTime: minutesToTime(clash.window.start),
-            endTime: minutesToTime(clash.window.end),
-          }
-        : null,
   };
 }
 
@@ -475,11 +415,10 @@ export function lectureLessCourses<T extends { courseCode: string; isLecture: bo
  * The margin notes, folded behind one line.
  *
  * A fold takes the *explanations* only. It does not take the count, and it
- * does not take the qualification: if any folded note means the collision
- * check does not cover the whole plan, the summary says so, so a fold can
- * never leave a green verdict standing on an incomplete check. Nor anything
- * with a verb in it — collisions and "velg din gruppe" lines stay open,
- * because they are things to act on.
+ * does not take the qualification: a folded note saying the week is missing a
+ * course must still be visible as a qualification with the fold shut. Nor
+ * anything with a verb in it — the "velg din gruppe" lines stay open, because
+ * they are things to act on.
  *
  * Open by default above 40rem. Crossing that boundary re-renders the week
  * (plannerApp's `change` listener), so a rotation lands on the right state.
@@ -492,37 +431,11 @@ function foldNotes(notes: HTMLElement[], count: number, incomplete: boolean): HT
   summary.append(el("span", "np-data", String(count)));
   summary.append(count === 1 ? " merknad" : " merknader");
   // The half of the sentence to act on, said without opening anything. Ink,
-  // never red: an incomplete check is a gap, not a clash (DESIGN §2).
-  summary.append(incomplete ? ". Kollisjonssjekken er ufullstendig" : " om uka");
+  // never red: a gap in the week is not an error the student made.
+  summary.append(incomplete ? ". Uka er ufullstendig" : " om uka");
   fold.append(summary);
   fold.append(...notes);
   return fold;
-}
-
-/**
- * Builds the collision sentence into `host` and returns it flat, for the
- * button's accessible name. The day, time, codes and weeks carry `.np-data`.
- */
-function fillConflictNote(host: HTMLElement, group: ConflictGroup): string {
-  const day = capitalize(dayName(group.dayNumber));
-  const time = `${minutesToTime(group.start)}–${minutesToTime(group.end)}`;
-  const weeks = weekLabel(group.weeks);
-
-  host.append(el("span", "np-data", day));
-  host.append(" ");
-  host.append(el("span", "np-data", time));
-  host.append(", ");
-  group.codes.forEach((code, i) => {
-    if (i > 0) host.append(i === group.codes.length - 1 ? " og " : ", ");
-    host.append(el("span", "np-data", code));
-  });
-  host.append(" kolliderer");
-  if (weeks) {
-    host.append(", ");
-    host.append(el("span", "np-data", weeks));
-  }
-
-  return `${day} ${time}, ${joinList(group.codes)} kolliderer${weeks ? `, ${weeks}` : ""}`;
 }
 
 /** A margin sentence about undrawable courses; codes in `.np-data`. */
@@ -558,31 +471,9 @@ export interface WeekNotesOptions {
    * second is an edit.
    */
   onChoiceClick?: (code: string) => void;
-  /**
-   * A collision note was clicked. The sessions to flash are in whichever view
-   * is mounted, which this module cannot see — see the header.
-   */
-  onConflictClick?: (group: ConflictGroup) => void;
 }
 
 export interface WeekNotesResult {
-  /**
-   * Distinct collision *slots* — one per (day, overlap window), so a 3-way
-   * clash counts once. The number for the page's verdict line.
-   */
-  conflictCount: number;
-  /** Raw pairwise conflicts behind those slots. Diagnostics; not for display. */
-  conflictPairCount: number;
-  /**
-   * The collision slots themselves, in the order the margin lists them.
-   *
-   * Handed back because a caller needs the WEEKS a clash happens in, not just
-   * how many there are: with a week picker on the page, "take me to the clash"
-   * has to move the picker before it can flash anything. `weekView` keeps the
-   * last set and both entrances — the margin note and the verdict chip — go
-   * through the same one.
-   */
-  conflictGroups: ConflictGroup[];
   /**
    * The plan's courses have entries but none classify as a lecture, so the
    * muted layer was revealed unasked. The caller must mirror this into the
@@ -593,10 +484,8 @@ export interface WeekNotesResult {
   pendingGroupCourses: string[];
   /** Courses whose timetable failed or never arrived. */
   incompleteCourses: string[];
-  /** The check is not the whole plan: loading, or something incomplete. */
+  /** The week is not the whole plan: loading, or something incomplete. */
   partial: boolean;
-  /** Lecture sessions the conflict engine actually compared. */
-  checkedLectureCount: number;
   /** Published sessions, but nothing classifiable as a lecture. */
   uncheckedCourses: string[];
   /** Which branch the week is in. "grid" means there is one to draw. */
@@ -628,7 +517,7 @@ export function weekNotes(
   // comparison of four — and it was printing an unqualified green.
   const uncheckedCourses = lectureLessCourses(rawEntries);
   // What the week has no answer for, from each fetch's own outcome. Only a
-  // failed or never-made fetch makes the collision check incomplete.
+  // failed or never-made fetch leaves the week missing a course (DR-8).
   const gaps = planGaps(courses);
   const incompleteCourses = [...gaps.failed, ...gaps.pending];
   // Courses whose lecture layer is one provisional pick out of several.
@@ -637,14 +526,10 @@ export function weekNotes(
   const branch = (state: WeekNotesResult["state"], message: string | null): WeekNotesResult => {
     notesHost.replaceChildren();
     return {
-      conflictCount: 0,
-      conflictPairCount: 0,
-      conflictGroups: [],
       mutedLayerAutoRevealed: false,
       pendingGroupCourses: [],
       incompleteCourses,
       partial: loading || incompleteCourses.length > 0,
-      checkedLectureCount: 0,
       uncheckedCourses,
       state,
       message,
@@ -672,9 +557,8 @@ export function weekNotes(
     return branch("empty", "Ingen timeplandata for emnene i planen ennå.");
   }
 
-  const { shown, mutedLayerAutoRevealed } = visibleLayer(rawEntries, showOthers);
+  const { mutedLayerAutoRevealed } = visibleLayer(rawEntries, showOthers);
   const revealOthers = showOthers || mutedLayerAutoRevealed;
-  const entries = mergeSlots(shown);
 
   // Counted from the RAW entries, so the note names what the filter withheld.
   const unpickedGroups = new Map<string, { name: string; hueVar: string; keys: Set<string> }>();
@@ -690,13 +574,6 @@ export function weekNotes(
     }
   }
 
-  // Hard conflicts are lecture×lecture only (DR-1); øving/lab entries never clash.
-  const checkedLectures = entries.filter((e) => e.isLecture);
-  const conflicts = findConflicts(checkedLectures);
-  const conflictGroups = groupConflicts(conflicts);
-
-  // Margin notes: one per collision slot, not one per pair — a 3-way clash is
-  // one afternoon to fix, and reporting it thrice buries the actionable fact.
   notesHost.replaceChildren();
 
   // The notes that EXPLAIN are collected first and folded: on a phone they ran
@@ -714,20 +591,12 @@ export function weekNotes(
 
   // The gaps come first: they qualify every sentence below them.
   if (gaps.failed.length > 0) {
-    folded.push(
-      gapNote(
-        "Fikk ikke hentet timeplan for ",
-        gaps.failed,
-        ". Kollisjonssjekken er ufullstendig.",
-      ),
-    );
+    folded.push(gapNote("Fikk ikke hentet timeplan for ", gaps.failed, ". Uka viser ikke alt."));
     noteCount += 1;
     incomplete = true;
   }
   if (gaps.pending.length > 0) {
-    folded.push(
-      gapNote("Mangler timeplan for ", gaps.pending, ". Kollisjonssjekken er ufullstendig."),
-    );
+    folded.push(gapNote("Mangler timeplan for ", gaps.pending, ". Uka viser ikke alt."));
     noteCount += 1;
     incomplete = true;
   }
@@ -758,29 +627,13 @@ export function weekNotes(
         gapNote(
           "Ingen aktiviteter er merket som forelesning i ",
           silent,
-          ". Timene vises ikke her, og de er ikke med i kollisjonssjekken. Slå på «Øvinger og labber» for å se dem.",
+          ". Timene vises ikke her. Slå på «Øvinger og labber» for å se dem.",
         ),
       );
       noteCount += 1;
       incomplete = true;
     }
   }
-  if (conflictGroups.length > 0) {
-    const list = el("ul", "planner-notes-list");
-    for (const group of conflictGroups) {
-      const item = el("li");
-      const link = el("button", "np-note-clash planner-note-link");
-      link.type = "button";
-      link.setAttribute("aria-label", fillConflictNote(link, group));
-      if (options.onConflictClick) {
-        link.addEventListener("click", () => options.onConflictClick?.(group));
-      }
-      item.append(link);
-      list.append(item);
-    }
-    notesHost.append(list);
-  }
-
   // Nothing a narrowing withheld is hidden silently: one line per course we
   // narrowed on a guess, and on a surface that can act it opens that course's
   // picker.
@@ -851,14 +704,10 @@ export function weekNotes(
   if (folded.length > 0) notesHost.append(foldNotes(folded, noteCount, incomplete));
 
   return {
-    conflictCount: conflictGroups.length,
-    conflictPairCount: conflicts.length,
-    conflictGroups,
     mutedLayerAutoRevealed,
     pendingGroupCourses: [...unpickedGroups.keys()],
     incompleteCourses,
     partial: loading || incompleteCourses.length > 0,
-    checkedLectureCount: checkedLectures.length,
     uncheckedCourses,
     state: "grid",
     message: null,

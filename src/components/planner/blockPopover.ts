@@ -16,9 +16,9 @@
  * Under it, LABELLED rows: Tid, Sted, and a Merk when there is something about
  * the session a clock cannot state. The clock is no longer the card's largest
  * figure — in a grid the time is already drawn, since it IS the block's place
- * in the week you just clicked. A collision gets a sentence, or pressing the
- * red bar answers every question except the one the red raised. The button is a
- * verb that names its outcome (DESIGN §8).
+ * in the week you just clicked. The collision sentence is deleted with the
+ * verdict (PRODUCT D17). The button is a verb that names its outcome
+ * (DESIGN §8).
  *
  * Deliberately **no tail** pointing at the bar: the frame clips its own
  * corners, the card flips above the anchor and becomes a bottom sheet under
@@ -27,7 +27,7 @@
  */
 import { courseLinks } from "../../lib/planner/courseLinks.js";
 import { dayName, el, icon } from "./dom.js";
-import { type BlockClash, type BlockDetail, isDropIn } from "./weekNotes.js";
+import { type BlockDetail, isDropIn } from "./weekNotes.js";
 
 /** Desktop breakpoint — matches the stylesheet's own bottom-sheet cutoff. */
 const DESKTOP_QUERY = "(min-width: 60rem)";
@@ -85,34 +85,11 @@ export function durationLabel(startTime: string, endTime: string): string {
   return minutes === 0 ? `${hours} t` : `${hours} t ${minutes} min`;
 }
 
-/**
- * The shared minutes, when they are not simply the session's own slot. A
- * collision covering the whole session would print the clock the card already
- * set at 1.6rem two lines above.
- */
-export function clashClock(
-  session: { startTime: string; endTime: string },
-  clash: BlockClash,
-): string {
-  if (clash.startTime === session.startTime && clash.endTime === session.endTime) return "";
-  return `${clash.startTime}–${clash.endTime}`;
-}
-
 /** The button's label: a verb naming what pressing it lets you change. */
 export function editVerb(choice: SessionChoice): string {
   if (choice === "parallel") return "Velg parallell";
   if (choice === "group") return "Velg gruppe";
   return "Endre emnet";
-}
-
-/** "A, B og C": the Norwegian list separator, as separators between spans. */
-function codeList(codes: string[]): (HTMLElement | string)[] {
-  const parts: (HTMLElement | string)[] = [];
-  codes.forEach((code, index) => {
-    if (index > 0) parts.push(index === codes.length - 1 ? " og " : ", ");
-    parts.push(el("span", "np-data", code));
-  });
-  return parts;
 }
 
 /**
@@ -299,20 +276,6 @@ export function mountBlockPopover(
     }
 
     if (facts.childElementCount > 0) body.append(facts);
-
-    if (detail.clash) {
-      // Red-Is-Collision: the sentence names both things that cannot coexist.
-      const say = el("p", "np-note-clash block-popover-clash");
-      say.append("Kolliderer med ");
-      for (const part of codeList(detail.clash.partners)) say.append(part);
-      const clock = clashClock(detail, detail.clash);
-      if (clock) {
-        say.append(" ");
-        say.append(el("span", "np-data", clock));
-      }
-      say.append(".");
-      body.append(say);
-    }
 
     const actions = el("div", "np-actions np-actions--split block-popover-actions");
     // A surface with no editor to open omits the verb rather than pointing it

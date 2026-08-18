@@ -963,10 +963,6 @@
   margin-inline-start: var(--gap-2);
 }
 
-.block-popover-clash {
-  margin: 0;
-}
-
 /* The foot, divided from the facts by the card's second hairline — the same
    rule as under the head. A card with a head, a set of rows and a foot is
    three parts, and the two lines are what say so. */

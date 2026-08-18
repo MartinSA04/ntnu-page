@@ -10,8 +10,8 @@
  * Both views render from the same `PlanCourseState[]` through the same
  * `applyGroupSelection`, so a parallel picked in one is shown in the other.
  */
+
 import { classifyActivity } from "../../lib/planner/activity.js";
-import { findConflicts, groupConflicts, mergeParallelSlots } from "../../lib/planner/conflicts.js";
 import { applyGroupSelection, entryGroupKey } from "../../lib/planner/groups.js";
 import {
   entriesInSemester,
@@ -59,13 +59,6 @@ export interface SessionEntry extends ScheduleEntry {
   isLecture: boolean;
   /** The student picked this entry group (or it had none to pick). */
   groupPicked: boolean;
-  /**
-   * The lectures this session overlaps and the minutes they share, `null` when
-   * it overlaps nothing. The row only needs to know THAT it clashes; the
-   * popover it opens must name the partner, and it is the same card a bar
-   * opens, so the facts behind it cannot be thinner here.
-   */
-  clash: { partners: string[]; window: { start: number; end: number } } | null;
 }
 
 const minutesOf = (time: string): number => {
@@ -169,60 +162,17 @@ export function collectSessions(
         buildings: buildingLabel(raw.rooms),
         weeksLabel: weekLabel(parseWeeks(raw.weeks)),
         // Same classifier as the grid's, not a second guess at what counts as
-        // a lecture — the two views must agree about which sessions can clash.
+        // a lecture — the two views must agree about which layer a session is in.
         isLecture: classifyActivity(raw) === "lecture",
         // `showAllGroups` is the course page: every group counts as shown, or
         // `visibleLayer`'s `isLecture || groupPicked` drops each one again the
         // moment the layer is revealed — which is the same as the toggle doing
         // nothing, on a surface with no picks to make.
         groupPicked: options.showAllGroups || key === null || soleGroup || picked.has(key),
-        clash: null,
       });
     }
   }
   return out;
-}
-
-/** One collision incident within a day: the sessions in it and the codes involved. */
-interface ClashSegment {
-  members: Set<SessionEntry>;
-  /** Distinct course codes, in the order the sessions start. */
-  codes: string[];
-}
-
-/**
- * A day's collisions, split into the separate incidents they actually are.
- *
- * Two sessions belong to the same incident when their clash windows overlap —
- * directly or through a third that overlaps both, so a running chain is one
- * incident rather than three unrelated notes. The sweep is over `clash.window`,
- * already widened across every conflict group a session falls in.
- *
- * A segment naming one course only is dropped: `mergeParallelSlots` collapses a
- * course's parallel sections first, so it would be a course colliding with
- * itself.
- */
-function clashSegments(items: SessionEntry[]): ClashSegment[] {
-  const clashing = items
-    .filter((e) => e.clash !== null)
-    .sort((a, b) => (a.clash?.window.start ?? 0) - (b.clash?.window.start ?? 0));
-
-  const segments: ClashSegment[] = [];
-  let reach = Number.NEGATIVE_INFINITY;
-  for (const entry of clashing) {
-    const window = entry.clash?.window;
-    if (!window) continue;
-    const open = segments.at(-1);
-    if (!open || window.start >= reach) {
-      segments.push({ members: new Set([entry]), codes: [entry.courseCode] });
-      reach = window.end;
-      continue;
-    }
-    open.members.add(entry);
-    if (!open.codes.includes(entry.courseCode)) open.codes.push(entry.courseCode);
-    reach = Math.max(reach, window.end);
-  }
-  return segments.filter((s) => s.codes.length > 1);
 }
 
 /**
@@ -247,39 +197,6 @@ export function renderBoard(
     }),
     showOthers,
   ).shown;
-
-  // Collision marking runs through the SAME engine as the grid's — lecture ×
-  // lecture only, touching boundaries excluded. A second implementation is how
-  // two surfaces start disagreeing about whether a week is clean.
-  // `mergeParallelSlots` returns groups, not slots, and the representative is
-  // what the engine should see.
-  const lectures = mergeParallelSlots(entries.filter((e) => e.isLecture)).map(
-    (group) => group.representative,
-  );
-  for (const group of groupConflicts(findConflicts(lectures))) {
-    for (const entry of entries) {
-      if (
-        entry.isLecture &&
-        entry.dayNumber === group.dayNumber &&
-        minutesOf(entry.startTime) < group.end &&
-        minutesOf(entry.endTime) > group.start
-      ) {
-        // Widened across every group this session falls in, exactly as the
-        // grid's `clashWindowFor` does it, because a session can sit in two.
-        const partners = group.codes.filter((code) => code !== entry.courseCode);
-        const prev = entry.clash;
-        entry.clash = prev
-          ? {
-              partners: [...new Set([...prev.partners, ...partners])],
-              window: {
-                start: Math.min(prev.window.start, group.start),
-                end: Math.max(prev.window.end, group.end),
-              },
-            }
-          : { partners, window: { start: group.start, end: group.end } };
-      }
-    }
-  }
 
   host.replaceChildren();
   if (entries.length === 0) return { rowCount: 0 };
@@ -331,42 +248,13 @@ export function renderBoard(
       continue;
     }
 
-    // The mark rides on the clashing rows THEMSELVES, not on a wrapper around
-    // the day: bracketing the day drew a rule down the side of unrelated
-    // sessions. Adjacent marked rows still join into one continuous rule
-    // (planner-week.css bridges the hairline), so a pair reads as a pair
-    // without either row being tinted.
-    const segments = clashSegments(items);
-    const marked = new Set(segments.flatMap((s) => [...s.members]));
-    // Each incident's note sits under the last row it applies to, rather than
-    // one per day: two unrelated overlaps were concatenated into a sentence
-    // naming four courses, none of which clashed with all the others.
-    const noteAfter = new Map<SessionEntry, ClashSegment>();
-    for (const segment of segments) {
-      const last = items.filter((e) => segment.members.has(e)).at(-1);
-      if (last) noteAfter.set(last, segment);
-    }
-
     for (const entry of items) {
       const row = buildRow(entry, strike++, motionKey(entry, keySeen), options.onBlockClick);
-      if (marked.has(entry)) row.classList.add("is-clashing");
       // The first frame's answer; `syncBoardNow` keeps it true on the minute
       // without rebuilding the week.
       if (isLive(entry.dayNumber, entry.startTime, entry.endTime, options.todayNumber ?? null, now))
         row.classList.add("is-now");
       board.append(row);
-
-      const segment = noteAfter.get(entry);
-      if (!segment) continue;
-      // No "Velg én": a student looking at two overlapping sessions does not
-      // need to be told that overlapping sessions are a choice.
-      const note = el(
-        "p",
-        "planner-board-clash-note np-data",
-        `${segment.codes.join(" / ")} overlapper`,
-      );
-      note.setAttribute("data-motion-key", `clash-note-${day}-${segment.codes.join("-")}`);
-      board.append(note);
     }
   }
 
@@ -507,10 +395,7 @@ function buildRow(
     // Built by the grid's own `blockDetailFor`, not a second hand-rolled
     // literal: the card a row opens IS the card a bar opens.
     row.addEventListener("click", () =>
-      onBlockClick(
-        blockDetailFor({ ...entry, name: entry.label, groupCount: 1 }, entry.clash),
-        row,
-      ),
+      onBlockClick(blockDetailFor({ ...entry, name: entry.label, groupCount: 1 }), row),
     );
   }
   return row;

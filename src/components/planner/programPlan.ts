@@ -200,9 +200,6 @@ export function relevantCohorts(plan: Pick<StudyPlan, "periods">, semesterId: st
   return cohorts;
 }
 
-/** Above this an obligatory prefill is a bug signal, not a semester (see `isSuspiciousPrefill`). */
-const SUSPICIOUS_CREDIT_CEILING = 30;
-
 function toClassified(
   course: PlannedCourse,
   group: Pick<PlanCourseGroup, "name" | "description">,
@@ -463,21 +460,6 @@ export function classifyPeriod(
     // the silent-blank state `empty` exists to name.
     empty: false,
   };
-}
-
-/** Sum of `credits` (nulls treated as 0). The study plan's own figure, not the catalog's. */
-export function prefillCredits(courses: ClassifiedCourse[]): number {
-  return courses.reduce((sum, c) => sum + (c.credits ?? 0), 0);
-}
-
-/**
- * A grossly-over-30-sp obligatory prefill is a bug signal — surfaced as a
- * boolean rather than silently truncated. The caller must *say so* rather than
- * drop the courses: CMEDFORSK period 1 legitimately sums to 42,5 sp, and
- * discarding it produced "0 av 30 sp" with no rows and no explanation.
- */
-export function isSuspiciousPrefill(courses: ClassifiedCourse[]): boolean {
-  return prefillCredits(courses) > SUSPICIOUS_CREDIT_CEILING;
 }
 
 /** What one semester of one cohort's study plan resolves to — see `resolvePeriodFor`. */

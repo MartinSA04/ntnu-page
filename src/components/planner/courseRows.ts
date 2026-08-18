@@ -1,5 +1,5 @@
 /**
- * EMNER — the plan's course list and the load track over it.
+ * EMNER — the plan's course list.
  *
  * Two surfaces used to draw it, `/planlegger/` and `/user/<navn>`, and they
  * differed in one thing: the planner's rows carry a way into the editor and the
@@ -141,58 +141,4 @@ export function renderCourseRows(
 
     host.append(row);
   }
-}
-
-/** One counted course in the load track. */
-export interface LoadSegment {
-  code: string;
-  hueVar: string;
-  credits: number;
-}
-
-/**
- * THE LOAD, DRAWN: a full semester as a track, each counted course a segment in
- * its own printed hue, its width its own credits. It does for credits what the
- * exam band does for the exam period, so a colour means one thing in three
- * places.
- *
- * The caller decides what counts — DR-10's off-semester exclusion is a fact
- * about a plan and its programme, not about a track — and hands over only the
- * courses that do. A 0 sp course cannot be drawn in a strip about credits: it
- * is real and it is in the list, it is not a load.
- */
-export function renderLoadTrack(host: HTMLElement, segments: LoadSegment[], full: number): void {
-  // Emptied, never hidden: `[hidden]` takes the track's 15px out of the flow
-  // and every row under it moves when the first segment is drawn.
-  host.replaceChildren();
-  if (segments.length === 0) return;
-
-  const track = el("div", "planner-load-track");
-  let total = 0;
-  for (const segment of segments) {
-    total += segment.credits;
-    const seg = el("span", "planner-load-seg");
-    seg.style.flexGrow = String(segment.credits);
-    seg.style.setProperty("--dot", `var(${segment.hueVar})`);
-    seg.title = `${segment.code}, ${formatCreditNumber(segment.credits)} sp`;
-    track.append(seg);
-  }
-  // The gap to a full load is empty track, not a segment: it is the absence of
-  // a course and must not read as one.
-  if (total < full) {
-    const rest = el("span", "planner-load-rest");
-    rest.style.flexGrow = String(full - total);
-    track.append(rest);
-  }
-  // Over a full load the track no longer says where full IS: the segments fill
-  // it edge to edge whether the plan is 30 sp or 45. The mark is where a full
-  // load lands, so the overload is a length you can see rather than a number
-  // you have to subtract.
-  if (total > full) {
-    const mark = el("span", "planner-load-mark");
-    mark.style.insetInlineStart = `${(full / total) * 100}%`;
-    mark.title = `${full} sp`;
-    track.append(mark);
-  }
-  host.append(track);
 }

@@ -143,20 +143,24 @@ const description =
 
     </div>
 
-    {/* THE VERDICT, AND IT ONLY SPEAKS WHEN THERE IS SOMETHING TO SAY.
-        "Ingen forelesninger kolliderer" is gone: it answered a question you
-        only ask when something might be wrong, and it spent a line of the first
-        screen every time to say nothing is. What is left are the exceptions —
-        a collision, a check that could not run, a load over 30 sp — and an
-        empty run collapses to nothing rather than holding a row open.
+    {/* WHAT THE WEEK COULD NOT DRAW, and nothing else. The verdict that used
+        to live here — a collision count, a load chip, three flavours of «the
+        check could not run» — is deleted (PRODUCT D17). What is left is the one
+        thing whose absence would be a lie: a course whose timetable never
+        arrived is missing from the drawn week, and a missing course looks
+        exactly like a course with no teaching.
 
         No reservation under it, deliberately. Holding 22px for a line that is
         usually silent costs the week that space on every load; the shift when
-        an exception does arrive is one row, on the minority of plans that have
-        one. The loading chip went with the reservation: the week's own skeleton
-        is directly below this and already says the timetable is being
-        fetched. */}
+        a gap does arrive is one row, on the minority of plans that have one. */}
     <p class="planner-verdict" id="planner-grid-status" aria-live="polite"></p>
+
+    {/* WHICH STUDY PLAN THE PREFILL CAME FROM, when it is not the one asked
+        for. See `renderPlanNote` — the 404 step-back walks back up to two
+        cohorts, and a week built from another cohort's curriculum under this
+        page's own «Kull 2026» title is a wrong answer delivered as a right
+        one. */}
+    <p class="np-hint planner-plan-note" id="planner-plan-note" hidden></p>
   </div>
 
   <div id="planner-main">
@@ -188,17 +192,12 @@ const description =
           page's, not a permanent floor. See planner-week.css. */}
       <div class="planner-grid-frame" id="planner-grid-frame" data-reserve></div>
       <div class="planner-grid-notes" id="planner-grid-notes"></div>
-      {/* What was fetched and when, under the week it qualifies rather than at
-          the foot of the page: a composition has to admit where it is thin, and
-          it cannot do that two screens below the thing it is thin about. */}
-      <p class="np-hint planner-provenance" id="planner-provenance" hidden></p>
     </section>
 
     <div class="planner-below">
       <section class="planner-exams" id="planner-region-exams" aria-labelledby="planner-exam-heading">
         <div class="planner-section-head">
           <h2 class="planner-section-name" id="planner-exam-heading">Eksamener</h2>
-          <p class="planner-section-sub" id="planner-exam-status" aria-live="polite"></p>
         </div>
         <div class="planner-exam-list" id="planner-exam-list-host" data-reserve></div>
       </section>
@@ -208,39 +207,9 @@ const description =
           <h2 class="planner-section-name" id="planner-courses-heading">Emner</h2>
         </div>
 
-        {/* The load, drawn: 30 sp as a track, each course a segment in its own
-            hue. Same shape as the exam band over the exam list. */}
-        {/* Not `hidden`: an empty strip has to keep occupying its 15px, or the
-            course rows under it move down when the first segment is drawn.
-            CLAUDE.md's own rule — something that must stay laid out while it
-            shows nothing wants a state, not the attribute — and the state here
-            is simply "no children". The reservation is the probe's
-            (tokens.css), so a plan-less page still spends nothing on it. */}
-        <div class="planner-load" id="planner-credit-strip" aria-hidden="true"></div>
-        {/* The figure, then what the mark on the track above it means. The
-            track cannot label itself, and "streken er 30 sp" is the difference
-            between a bar with a tick in it and a bar you can read. */}
-        <p class="planner-load-foot" id="planner-load-foot">
-          <span class="np-data planner-credit-line" id="planner-credit-line">0 av 30 sp</span>
-          <span class="planner-load-legend" id="planner-load-legend" hidden>streken er 30 sp</span>
-        </p>
-        <p class="np-hint planner-credit-note" id="planner-credit-note" hidden></p>
 
         <div class="planner-course-rows" id="planner-course-rows" data-reserve></div>
 
-        {/* WHAT THE MODAL CANNOT SAY. "Mangler 7,5 sp" is a fact about the plan
-            you are looking at, and a dialog you have not opened cannot tell you
-            it is worth opening.
-
-            It used to carry "Velg fra studieplanen (8)" beside it — a second,
-            conditional door to picking courses, one row above the standing
-            "Legg til emne" and opening the identical unfiltered dialog, so the
-            pool it promised was on neither surface. The pool is a facet in that
-            dialog now, engaged on open while this line is showing, which is the
-            same one press this button used to cost. */}
-        <p class="planner-gap-line" id="planner-gap-line" hidden>
-          <span class="np-note" id="planner-gap-text"></span>
-        </p>
 
         {/* THE PRIMARY ACTION, AT THE FOOT OF THE LIST IT ADDS TO. It spent a
             while up in the page's bar, on two arguments that have both expired.
@@ -248,8 +217,7 @@ const description =
             "Indistinguishable from 'Velg fra studieplanen' beside it" — there
             is no such button any more. It was a second, conditional door to the
             same dialog this one opens, and the study plan it named is a filter
-            inside that dialog now. `#planner-gap-line` above is the sentence it
-            left behind, and a sentence does not compete with a verb.
+            inside that dialog now.
 
             "Below the fold on a phone" — the layout it was measured in is
             gone (the Uke/Emner tabs it mentions no longer exist), and the
@@ -275,16 +243,6 @@ const description =
           <div class="planner-plan-body" id="planner-plan-body"></div>
         </details>
 
-        {/* DR-9's DEADLINE, at the foot of the list it is about.
-            It used to sit at the far end of the verdict line, where it was the
-            one permanent tenant of a row otherwise reserved for exceptions —
-            so removing the green pass would have left a whole line at the top
-            of the page carrying a date. It is a fact about the calendar rather
-            than about the plan, and what a student does about it is register
-            these courses in Studentweb, so it belongs under them. Silent past
-            the date rather than "utløpt": the page still plans the term you are
-            in. */}
-        <p class="planner-deadline" id="planner-deadline" hidden></p>
       </section>
     </div>
   </div>

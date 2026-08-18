@@ -24,8 +24,10 @@
  *    moment makes unrelated sessions half-width for nothing.
  *  - **A drop-in window is not a session you attend at a time** (`isDropIn`):
  *    it gets a strip along the column's edge that lanes never overlap.
- *  - **Red-Is-Collision, crossing the lanes.** One zone per conflict group, not
- *    one per day.
+ *  - **Lanes, not a verdict.** Two sessions at the same hour are drawn beside
+ *    each other because stacking them would be wrong; the red zone that used
+ *    to cross the lanes is deleted (PRODUCT D17). The week is drawn, not
+ *    judged.
  *  - **The code may never be cut.** Room and activity are added only when the
  *    block is tall enough, by duration.
  *
@@ -33,7 +35,7 @@
  * (layerMotion.ts). Add a property the column's box is sized from and you must
  * add it to `COL_GRID_PROPS`, or that dimension snaps while the rest travels.
  */
-import { findConflicts, groupConflicts, mergeParallelSlots } from "../../lib/planner/conflicts.js";
+import { mergeParallelSlots } from "ntnu-api";
 import type { LayoutInput } from "../../lib/planner/layout.js";
 import { layoutDay } from "../../lib/planner/layout.js";
 import { collectSessions, motionKey, type SessionEntry } from "./board.js";
@@ -202,58 +204,6 @@ function mergeSessions(entries: SessionEntry[]): SessionEntry[] {
   );
 }
 
-/** One collision, as both the zone and the popover need it. */
-interface ClashGroup {
-  dayNumber: number;
-  start: number;
-  end: number;
-  codes: string[];
-}
-
-/**
- * Marks every entry that collides and returns the incidents. Lecture × lecture
- * only (DR-1), through the same engine both other views use;
- * `mergeParallelSlots` first, or a course publishing eleven identical groups
- * reports ten collisions with itself.
- */
-function markClashes(entries: SessionEntry[]): ClashGroup[] {
-  const lectures = mergeParallelSlots(entries.filter((e) => e.isLecture)).map(
-    (group) => group.representative,
-  );
-  const groups = groupConflicts(findConflicts(lectures));
-  for (const group of groups) {
-    for (const entry of entries) {
-      if (
-        !entry.isLecture ||
-        entry.dayNumber !== group.dayNumber ||
-        minutesOf(entry.startTime) >= group.end ||
-        minutesOf(entry.endTime) <= group.start
-      ) {
-        continue;
-      }
-      // Widened across every group a session falls in, exactly as the other
-      // two views do it, because one session can sit in two incidents.
-      const partners = group.codes.filter((code) => code !== entry.courseCode);
-      const prev = entry.clash;
-      entry.clash = prev
-        ? {
-            partners: [...new Set([...prev.partners, ...partners])],
-            window: {
-              start: Math.min(prev.window.start, group.start),
-              end: Math.max(prev.window.end, group.end),
-            },
-          }
-        : { partners, window: { start: group.start, end: group.end } };
-    }
-  }
-  return groups.map((g) => ({
-    dayNumber: g.dayNumber,
-    start: g.start,
-    end: g.end,
-    codes: g.codes,
-  }));
-}
-
 /** Where a minute sits on the axis, as a percentage of the drawn span. */
 const percent = (minutes: number, min: number, span: number): string =>
   `${((minutes - min) / span) * 100}%`;
@@ -275,7 +225,6 @@ function sessionButton(
   const node = el("button", className);
   node.type = "button";
   if (!entry.isLecture) node.classList.add("is-muted");
-  if (entry.clash) node.classList.add("is-clash");
   node.style.setProperty("--dot", `var(${entry.hueVar})`);
   node.style.setProperty(
     "--planner-y",
@@ -293,9 +242,6 @@ function sessionButton(
       `${entry.courseCode}${entry.label ? ` ${entry.label}` : ""}`,
       `${dayName(entry.dayNumber)} ${timeRange}`,
       entry.rooms,
-      entry.clash && entry.clash.partners.length > 0
-        ? `kolliderer med ${entry.clash.partners.join(", ")}`
-        : "",
     ]
       .filter(Boolean)
       .join(", "),
@@ -303,10 +249,7 @@ function sessionButton(
 
   if (onBlockClick) {
     node.addEventListener("click", () =>
-      onBlockClick(
-        blockDetailFor({ ...entry, name: entry.label, groupCount: 1 }, entry.clash),
-        node,
-      ),
+      onBlockClick(blockDetailFor({ ...entry, name: entry.label, groupCount: 1 }), node),
     );
   }
   return node;
@@ -389,7 +332,6 @@ export function renderColumnGrid(
   frame.replaceChildren();
   if (entries.length === 0) return { blockCount: 0 };
 
-  const clashes = markClashes(entries);
   const geo = columnGeometry(entries);
 
   const grid = el("div", "planner-cols");
@@ -492,18 +434,8 @@ export function renderColumnGrid(
     if (day.dayNumber === options.todayNumber) column.setAttribute("data-today", "");
 
     // The lanes still live in their own box: it is what a block's percentage is
-    // a percentage OF, and the clash marks have to share its coordinates.
+    // a percentage OF.
     const lanes = el("div", "planner-cols-lanes");
-    clashes
-      .filter((c) => c.dayNumber === day.dayNumber)
-      .forEach((zone, index) => {
-        const mark = el("div", "planner-cols-clash");
-        mark.setAttribute("aria-hidden", "true");
-        mark.setAttribute("data-motion-key", `clash-${day.dayNumber}-${index}`);
-        mark.style.setProperty("--planner-y", percent(zone.start, geo.minMinutes, geo.span));
-        mark.style.setProperty("--planner-h", `${((zone.end - zone.start) / geo.span) * 100}%`);
-        lanes.append(mark);
-      });
     for (const slot of [...day.slots].sort(
       (a, b) => minutesOf(a.entry.startTime) - minutesOf(b.entry.startTime) || a.lane - b.lane,
     )) {

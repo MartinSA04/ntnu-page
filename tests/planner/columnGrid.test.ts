@@ -24,7 +24,6 @@ const session = (over: Partial<SessionEntry> = {}): SessionEntry => ({
   weeksLabel: "uke 34–47",
   isLecture: true,
   groupPicked: true,
-  clash: null,
   ...over,
 });
 

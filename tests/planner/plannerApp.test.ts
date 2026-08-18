@@ -255,13 +255,11 @@ const IDS = [
   // The plan's own semester control, beside programme, kull and
   // studieretning: all four describe the PLAN, and all four are the planner's.
   "planner-semester-select",
-  "planner-credit-line",
-  "planner-load-legend",
-  "planner-credit-note",
-  "planner-credit-strip",
-  // The two surfaces that go ABSENT at zero active courses rather than printing
-  // a heading over an apology (`renderSectionPresence`).
-  "planner-load-foot",
+  // Which study plan the prefill really came from, when it is not the one
+  // asked for. The rest of the provenance line went with the verdict.
+  "planner-plan-note",
+  // Goes ABSENT at zero active courses rather than printing a heading over an
+  // apology (`renderSectionPresence`).
   "planner-region-exams",
   "planner-direction",
   "planner-direction-title",
@@ -274,20 +272,11 @@ const IDS = [
   "planner-grid-frame",
   "planner-grid-notes",
   "planner-grid-status",
-  "planner-deadline",
   "planner-exam-list-host",
-  "planner-exam-status",
   "planner-course-rows",
-  "planner-gap-line",
-  "planner-gap-text",
-  // No `planner-gap-btn`: the credit-gap line is a sentence now. Its "Velg fra
-  // studieplanen" button opened the same dialog "Legg til emne" does, on the
-  // whole catalog, so the pool it named was on neither surface. It is a facet
-  // inside that dialog instead — see the `add-course-scope` tests below.
   "planner-add-course-btn",
   "planner-plan-panel",
   "planner-plan-body",
-  "planner-provenance",
 ];
 
 let byId: Map<string, FakeEl>;
@@ -596,13 +585,17 @@ describe("mountPlannerApp — audit repro", () => {
     return { fetchMock };
   }
 
-  it("pc-3: a mixed 4-ok/1-failed plan never prints a green verdict", async () => {
+  /**
+   * DR-8's floor, and the reason this line survived the verdict's deletion: a
+   * course whose timetable never arrived is simply ABSENT from the drawn week,
+   * which is pixel-identical to a course with no teaching.
+   */
+  it("says how many courses the week is missing when a timetable fails", async () => {
     await mount(
       {
         "/data/search-index.json": () => ({ year: 2026, courses: [] }),
         "/api/course/TMA4400/timetable": () => "FAIL",
         "/api/course/TDT4109/timetable": () => [entry("TDT4109", 1, "08:15", "10:00")],
-        "/api/course/TMA4412/timetable": () => [entry("TMA4412", 2, "10:15", "12:00")],
         "/api/course/": () => ({
           courseCode: "X",
           courseName: "X",
@@ -612,15 +605,12 @@ describe("mountPlannerApp — audit repro", () => {
           exams: [],
         }),
       },
-      { courses: ["TDT4109", "TMA4400", "TMA4412"] },
+      { courses: ["TDT4109", "TMA4400"] },
     );
-    const status = find("planner-grid-status");
-    expect(status.textContent).toBe("kan ikke sjekkes, mangler timeplan for 1 emne");
-    expect(status.classList.contains("is-clean")).toBe(false);
-    expect(status.classList.contains("np-note-clash")).toBe(false);
+    expect(find("planner-grid-status").textContent).toBe("mangler timeplan for 1 emne");
   });
 
-  it("pc-3 control: an all-healthy plan says nothing at all", async () => {
+  it("says nothing at all when every timetable arrived", async () => {
     await mount(
       {
         "/data/search-index.json": () => ({ year: 2026, courses: [] }),
@@ -638,107 +628,11 @@ describe("mountPlannerApp — audit repro", () => {
       { courses: ["TDT4109", "TMA4412"] },
     );
     const status = find("planner-grid-status");
-    // THE PASS IS SILENCE. "Ingen forelesninger kolliderer" was removed for
-    // spending a line of the first screen on every load to report that nothing
-    // is wrong. What this control still guards is the other half of pc-3: a
-    // healthy plan must not fall into one of the "kan ikke sjekkes" branches,
-    // which is what an empty verdict distinguishes it from.
+    // SILENCE IS THE HEALTHY STATE. The line speaks only about what the week
+    // could not draw, so a week that drew everything leaves it empty — and an
+    // empty line is what distinguishes a complete week from a gap.
     expect(status.textContent).toBe("");
     expect(status.children.length).toBe(0);
-  });
-
-  /**
-   * The other way a green verdict can lie, and the one that shipped: not a
-   * MISSING timetable (pc-3 above) but a present one the lecture-only check has
-   * nothing to compare in. BSPL kull 2024's period is entirely activities NTNU
-   * never marks as `forelesning`, so `findConflicts` ran over an empty set,
-   * returned 0, and the page printed Green-Means-Fits over fifteen visibly
-   * overlapping bars — with the note explaining it folded 800 px below.
-   *
-   * `conflictCount === 0` is only a verdict when something was checked.
-   */
-  it("never prints a green verdict over a plan with no lectures in it", async () => {
-    const lab = (code: string, day: number, start: string, end: string) => ({
-      ...entry(code, day, start, end),
-      title: "Øving",
-      name: "Øving",
-    });
-    await mount(
-      {
-        "/data/search-index.json": () => ({ year: 2026, courses: [] }),
-        // Two courses whose only sessions overlap on Monday morning, and not
-        // one of them a lecture.
-        "/api/course/MH2000/timetable": () => [lab("MH2000", 1, "08:15", "12:00")],
-        "/api/course/MH2001/timetable": () => [lab("MH2001", 1, "09:00", "11:00")],
-        "/api/course/": () => ({
-          courseCode: "X",
-          courseName: "X",
-          credits: 7.5,
-          location: null,
-          assessmentScheme: null,
-          exams: [],
-        }),
-      },
-      { courses: ["MH2000", "MH2001"] },
-    );
-    const status = find("planner-grid-status");
-    expect(status.textContent).toBe("kan ikke sjekkes, ingen forelesninger i planen");
-    expect(status.querySelector(".is-clean")).toBeNull();
-    expect(status.classList.contains("np-note-clash")).toBe(false);
-  });
-
-  it("the provenance line is silent when the join has no gap to admit", async () => {
-    // The counterpart to the failure test below: on a plan where everything
-    // resolved, the line used to state its routine sources under a week that
-    // visibly worked, with the crawl date and the caveat already in the footer.
-    // DR-8 asks the join to admit its gaps, not to announce it has none.
-    await mount(
-      {
-        "/data/search-index.json": () => ({ year: 2026, courses: [] }),
-        "/api/course/TDT4109/timetable": () => [entry("TDT4109", 1, "08:15", "10:00")],
-        "/api/course/": () => ({
-          courseCode: "X",
-          courseName: "X",
-          credits: 7.5,
-          location: null,
-          assessmentScheme: null,
-          exams: [],
-        }),
-      },
-      { courses: ["TDT4109"] },
-    );
-    const prov = find("planner-provenance");
-    expect(prov.textContent).toBe("");
-    expect(prov.hidden).toBe(true);
-  });
-
-  it("copy-4/pd-2/ux-2/pc-4/edit-5: provenance is recomposed after the fetches land", async () => {
-    await mount(
-      {
-        "/data/search-index.json": () => ({ year: 2026, courses: [] }),
-        "/api/course/TMA4400/timetable": () => "FAIL",
-        "/api/course/TDT4109/timetable": () => [entry("TDT4109", 1, "08:15", "10:00")],
-        "/api/course/": () => ({
-          courseCode: "X",
-          courseName: "X",
-          credits: 7.5,
-          location: null,
-          assessmentScheme: null,
-          exams: [],
-        }),
-      },
-      { courses: ["TDT4109", "TMA4400"] },
-    );
-    // The line states ONLY what could not be verified now
-    //: no "Timeplan hentet direkte fra NTNU nå", because
-    // a sentence saying everything worked, printed under a week that visibly
-    // worked, is what stopped anyone reading the clause that matters.
-    const prov = find("planner-provenance").textContent;
-    expect(prov).not.toContain("Henter timeplan fra NTNU nå");
-    expect(prov).not.toContain("Timeplan hentet direkte fra NTNU nå");
-    expect(prov).toContain("Fikk ikke hentet timeplan for TMA4400");
-    expect(prov).not.toMatch(/Not found|Failed to fetch|boom/);
-    expect(find("planner-provenance").hidden).toBe(false);
   });
 
   it("plan-3/ux-fail-4: a 404 step-back names the cohort the plan really came from", async () => {
@@ -775,8 +669,8 @@ describe("mountPlannerApp — audit repro", () => {
       },
       { program: { code: "MTMT", name: "MTMT", cohort: 2026 } },
     );
-    const prov = find("planner-provenance").textContent;
-    expect(prov).toContain("Studieplan for kull 2024, det finnes ingen egen plan for kull 2026.");
+    const note = find("planner-plan-note").textContent;
+    expect(note).toContain("Studieplan for kull 2024, det finnes ingen egen plan for kull 2026.");
   });
 
   /* `app-1: syncHash never writes a null history state` is DELETED with
@@ -856,10 +750,9 @@ describe("mountPlannerApp — audit repro", () => {
     const examHost = find("planner-exam-list-host");
     expect(examHost.textContent).toContain("Fikk ikke hentet eksamensdatoene.");
     expect(examHost.descendants().filter((e) => e.textContent === "Prøv igjen").length).toBe(1);
-    expect(find("planner-exam-status").textContent).not.toContain("henter");
-    const prov = find("planner-provenance").textContent;
-    expect(prov).toContain("Fikk ikke hentet eksamensdatoene.");
-    expect(prov).not.toContain("ikke publisert");
+    // Our own build artifact, not NTNU's, so the sentence may never read as a
+    // claim that NTNU published nothing ("ikke publisert").
+    expect(examHost.textContent).not.toContain("ikke publisert");
   });
 
   /**
@@ -869,22 +762,20 @@ describe("mountPlannerApp — audit repro", () => {
    * has not created yet. The state is real: a programme whose study plan has no
    * published period lands in it and stays there.
    */
-  it("Eksamener and the load track go absent at zero active courses", async () => {
+  it("Eksamener goes absent at zero active courses", async () => {
     await mount(
       { "/data/search-index.json": () => ({ year: 2026, courses: [] }) },
       { courses: [] },
     );
 
     expect(find("planner-region-exams").hidden).toBe(true);
-    expect(find("planner-credit-strip").hidden).toBe(true);
-    expect(find("planner-load-foot").hidden).toBe(true);
     // Emner is the exception: it is where the first course is added, so it
     // keeps its heading and its button. What it lost is its own apology.
     expect(find("planner-course-rows").hidden).not.toBe(true);
     expect(find("planner-course-rows").textContent).not.toContain("Ingen emner i planen");
   });
 
-  it("…and are back the moment the plan holds one", async () => {
+  it("…and is back the moment the plan holds one", async () => {
     await mount(
       {
         "/data/search-index.json": () => ({ year: 2026, courses: [] }),
@@ -902,7 +793,6 @@ describe("mountPlannerApp — audit repro", () => {
     );
 
     expect(find("planner-region-exams").hidden).not.toBe(true);
-    expect(find("planner-load-foot").hidden).not.toBe(true);
   });
 
   it("plan-2: a period that exists but names nothing says so", async () => {
@@ -1172,83 +1062,14 @@ describe("mountPlannerApp — audit repro", () => {
     );
     expect(planStorage.get("np:plans")).toContain('"credits":15');
     expect(planStorage.get("np:plans")).toContain("Fordypningsemne i studieplanen");
-    expect(find("planner-credit-line").textContent).toBe("15 av 30 sp");
+    // The row's own figure is the whole of what credits are for now. The 30 sp
+    // total and its load track went with the verdict (PRODUCT D17), but a
+    // course the catalog does not list still has to print the plan's figure
+    // rather than a gap.
     expect(find("planner-course-rows").textContent).toContain("15 sp");
   });
 
-  it("plan-6: a single 60 sp thesis is not an overload to prune", async () => {
-    const period = (courses: unknown[]) => ({
-      code: "MSCHEM",
-      name: "Kjemi",
-      year: 2025,
-      startTerm: "AUTUMN",
-      updated: null,
-      publishedYears: [2025],
-      periods: [
-        {
-          periodNumber: 1,
-          direction: {
-            code: null,
-            name: null,
-            courseGroups: [{ name: null, description: null, type: "O", courses }],
-            waypoints: [],
-          },
-        },
-      ],
-    });
-    await mount(
-      {
-        "/data/search-index.json": () => ({ year: 2026, courses: [] }),
-        "/api/program/MSCHEM/plan": () =>
-          period([obligatory("KJ3900", "Masteroppgave i kjemi", 60)]),
-        "/api/course/": () => ({ ...DETAILS, credits: 60 }),
-      },
-      { program: { code: "MSCHEM", name: "MSCHEM", cohort: 2026 } },
-    );
-    const note = find("planner-credit-note");
-    expect(note.hidden).toBe(false);
-    expect(note.textContent).toContain("fører opp hele emnet (60 sp)");
-    expect(note.textContent).not.toContain("Fjern det du ikke tar");
-  });
-
-  it("plan-6 control: a genuinely overloaded period still says what to do", async () => {
-    await mount(
-      {
-        "/data/search-index.json": () => ({ year: 2026, courses: [] }),
-        "/api/program/MJORM/plan": () => ({
-          code: "MJORM",
-          name: "Jordmorfag",
-          year: 2026,
-          startTerm: "AUTUMN",
-          updated: null,
-          publishedYears: [2026],
-          periods: [
-            {
-              periodNumber: 1,
-              direction: {
-                code: null,
-                name: null,
-                courseGroups: [
-                  {
-                    name: null,
-                    description: null,
-                    type: "O",
-                    courses: [obligatory("AAA1000", "A", 22.5), obligatory("BBB1000", "B", 22.5)],
-                  },
-                ],
-                waypoints: [],
-              },
-            },
-          ],
-        }),
-        "/api/course/": () => DETAILS,
-      },
-      { program: { code: "MJORM", name: "MJORM", cohort: 2026 } },
-    );
-    expect(find("planner-credit-note").textContent).toContain("Fjern det du ikke tar");
-  });
-
-  it("plan-8: an empty study-plan pool renders the gap sentence and no filter", async () => {
+  it("plan-8: an empty study-plan pool offers no filter over nothing", async () => {
     await mount(
       {
         "/data/search-index.json": () => ({ year: 2026, courses: [] }),
@@ -1269,12 +1090,8 @@ describe("mountPlannerApp — audit repro", () => {
       },
       { program: { code: "MPPR", name: "MPPR", cohort: 2026 } },
     );
-    // The informative half survives — a modal cannot tell you there is a gap
-    // before you open it.
-    expect(find("planner-gap-line").hidden).toBe(false);
-    expect(find("planner-gap-text").textContent).toBe("Mangler 30 sp");
-    // And a filter over nothing is absent, not merely unpressed: this is the
-    // state the removed button had to be `display: none`-d out of, because
+    // A filter over nothing is absent, not merely unpressed: this is the state
+    // the removed button had to be `display: none`-d out of, because
     // `.np-btn { display: inline-flex }` beat the UA's `[hidden]`.
     find("planner-add-course-btn").click();
     expect(body.querySelector(".add-course-scope")?.hidden).toBe(true);
@@ -1434,9 +1251,10 @@ describe("mountPlannerApp — audit repro", () => {
     expect(find("planner-direction-btn").textContent).toBe("Legg til emne");
     // The week says the same thing instead of the canned "Legg til emner …".
     expect(find("planner-grid-frame").textContent).toContain("publiserer ingen studieplan");
-    // 's provenance half (landed in wave 3) must not contradict it.
-    expect(find("planner-provenance").textContent).toContain("Fant ingen studieplan for KNOAND.");
-    expect(find("planner-provenance").textContent).not.toContain("studieplan for kull 2026");
+    // And the plan note stays quiet: NTNU publishing nothing is the panel's
+    // sentence, and saying it twice within 40px is noise. The note is only for
+    // a plan that DID come back, from a cohort nobody asked for.
+    expect(find("planner-plan-note").hidden).toBe(true);
   });
 
   // A study plan we asked for and did not get is a different fact, and the
@@ -1450,7 +1268,7 @@ describe("mountPlannerApp — audit repro", () => {
       { program: { code: "KNOAND", name: "KNOAND", cohort: 2026 } },
     );
     expect(find("planner-direction-title").textContent).not.toBe("Fant ingen studieplan");
-    expect(find("planner-provenance").textContent).toContain(
+    expect(find("planner-plan-note").textContent).toContain(
       "Fikk ikke hentet studieplanen for KNOAND.",
     );
   });
@@ -1541,11 +1359,11 @@ describe("mountPlannerApp — audit repro", () => {
       find("planner-add-course-btn").click();
     }
 
-    it("opens engaged on a short plan, and lists the pool instead of an empty search", async () => {
+    it("opens engaged on a programme, and lists the pool instead of an empty search", async () => {
       await open();
-      // 7,5 of 30 sp prefilled, so the gap sentence is up — the exact state the
-      // removed button rendered in.
-      expect(find("planner-gap-line").hidden).toBe(false);
+      // The trigger used to be a credit gap. The credit total is deleted
+      // (PRODUCT D17), so it is now simply "there is a study plan" — which is
+      // the right first offer whether or not the student has reached 30 sp.
       expect(scope()?.hidden).toBe(false);
       expect(scope()?.textContent).toBe("Fra studieplanen (2)");
       expect(scope()?.getAttribute("aria-pressed")).toBe("true");
@@ -1577,24 +1395,6 @@ describe("mountPlannerApp — audit repro", () => {
       scope()?.click();
       expect(scope()?.getAttribute("aria-pressed")).toBe("false");
       expect(rowCodes()).toEqual(["TMA4100"]);
-    });
-
-    it("a full plan opens on the catalog, with the facet present but off", async () => {
-      await mount(
-        {
-          "/data/search-index.json": () => INDEX,
-          "/api/program/BIT/plan": () => PROGRAM,
-          "/api/course/": () => ({ ...DETAILS, credits: 30 }),
-        },
-        { program: { code: "BIT", name: "BIT", cohort: 2026 } },
-      );
-      // 30 sp: nothing is missing, so nothing preempts the search the button
-      // says it opens.
-      expect(find("planner-gap-line").hidden).toBe(true);
-      find("planner-add-course-btn").click();
-      expect(scope()?.hidden).toBe(false);
-      expect(scope()?.getAttribute("aria-pressed")).toBe("false");
-      expect(status()?.textContent).toBe("Skriv for å søke i 4 emner.");
     });
   });
 

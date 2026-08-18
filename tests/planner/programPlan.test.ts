@@ -1,10 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
   classifyPeriod,
-  isSuspiciousPrefill,
   maxPeriodNumber,
   periodNumberFor,
-  prefillCredits,
   relevantCohorts,
   resolvePeriodFor,
   type StudyPlan,
@@ -546,36 +544,6 @@ describe("classifyPeriod — a period that resolves to nothing", () => {
   });
 });
 
-describe("isSuspiciousPrefill", () => {
-  it("flags an obligatory prefill over a full semester load", () => {
-    const many = Array.from({ length: 5 }, (_, i) => ({
-      code: `C${i}`,
-      name: "x",
-      version: "1",
-      credits: 7.5,
-      groupName: null,
-      groupDescription: null,
-    }));
-    expect(isSuspiciousPrefill(many)).toBe(true);
-    expect(isSuspiciousPrefill(many.slice(0, 4))).toBe(false);
-  });
-
-  it("treats null credits as zero rather than throwing", () => {
-    expect(
-      isSuspiciousPrefill([
-        {
-          code: "A",
-          name: "x",
-          version: "1",
-          credits: null,
-          groupName: null,
-          groupDescription: null,
-        },
-      ]),
-    ).toBe(false);
-  });
-});
-
 describe("classifyPeriod — the gated pool (U7)", () => {
   it("collects every direction's non-intersection courses into the pool", () => {
     // In the gated branch only the intersection used to be collected and
@@ -647,41 +615,6 @@ describe("resolvePeriodFor", () => {
     const resolved = resolvePeriodFor(directionGatedPlan(), "banana", 2024);
     expect(resolved.periodNumber).toBeNull();
     expect(resolved.courses).toBeNull();
-  });
-});
-
-describe("prefillCredits", () => {
-  it("sums the study plan's own figures, treating null as zero", () => {
-    const courses = [
-      {
-        code: "MD4071",
-        name: "",
-        version: "1",
-        credits: 30,
-        groupName: null,
-        groupDescription: null,
-      },
-      {
-        code: "SMED8008",
-        name: "",
-        version: "1",
-        credits: 7.5,
-        groupName: null,
-        groupDescription: null,
-      },
-      {
-        code: "SMED8004",
-        name: "",
-        version: "1",
-        credits: 5,
-        groupName: null,
-        groupDescription: null,
-      },
-    ];
-    // CMEDFORSK period 1: legitimately 42,5 sp, and it must reach the page
-    // with a note rather than being discarded into "0 av 30 sp" (B9.4).
-    expect(prefillCredits(courses)).toBe(42.5);
-    expect(isSuspiciousPrefill(courses)).toBe(true);
   });
 });
 

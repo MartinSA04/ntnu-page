@@ -33,7 +33,6 @@ import {
   type PlannerIndexCourse,
   type TimetableEntry,
 } from "../../lib/planner/data.js";
-import { deadlineParts, registrationDeadline } from "../../lib/planner/deadline.js";
 import {
   applyGroupSelection,
   groupOptions,
@@ -54,21 +53,14 @@ import { isoWeekNumber } from "../../lib/planner/weekDates.js";
 import { syncPlanProbe } from "../../lib/planProbe.js";
 import { type AddCourseDeps, type AddCourseHandle, mountAddCourse } from "./addCourse.js";
 import type { SessionChoice } from "./blockPopover.js";
-import { renderLoadTrack, renderCourseRows as sharedCourseRows } from "./courseRows.js";
+import { renderCourseRows as sharedCourseRows } from "./courseRows.js";
 import { type CourseSettingsContext, mountCourseSettings } from "./courseSettings.js";
-import { el, formatCreditNumber, formatCredits, formatShortDate, icon } from "./dom.js";
-import {
-  collectExamInputs,
-  type ExamRenderResult,
-  renderExamList,
-  renderExamMessage,
-} from "./examList.js";
+import { el, formatCreditNumber, formatShortDate } from "./dom.js";
+import { renderExamList, renderExamMessage } from "./examList.js";
 import {
   type ClassifiedCourse,
   findProgramPlan,
-  isSuspiciousPrefill,
   type PeriodCourses,
-  prefillCredits,
   resolvePeriodFor,
 } from "./programPlan.js";
 import {
@@ -123,7 +115,6 @@ interface PickerRow {
 }
 
 /** Full credit load for one semester — the denominator in "X av 30 sp". */
-const FULL_LOAD_CREDITS = 30;
 
 /* The two week views, the view state, the tab pair and the frame's reservation
    all live in `weekView.ts` now: three surfaces draw a week and they must draw
@@ -136,12 +127,7 @@ interface PlannerElements {
   nameBtn: HTMLButtonElement;
   contextLine: HTMLElement;
   semesterSelect: HTMLSelectElement;
-  creditLine: HTMLElement;
-  loadLegend: HTMLElement;
-  deadline: HTMLElement;
-  creditNote: HTMLElement;
-  creditStrip: HTMLElement;
-  loadFoot: HTMLElement;
+  planNote: HTMLElement;
   examsSection: HTMLElement;
   direction: HTMLElement;
   directionTitle: HTMLElement;
@@ -153,14 +139,11 @@ interface PlannerElements {
   gridNotes: HTMLElement;
   gridStatus: HTMLElement;
   examList: HTMLElement;
-  examStatus: HTMLElement;
   courseRows: HTMLElement;
-  gapLine: HTMLElement;
-  gapText: HTMLElement;
+
   addCourseBtn: HTMLButtonElement;
   planPanel: HTMLDetailsElement;
   planPanelBody: HTMLElement;
-  provenance: HTMLElement;
 }
 
 function getElements(): PlannerElements | null {
@@ -172,12 +155,7 @@ function getElements(): PlannerElements | null {
     nameBtn: byId<HTMLButtonElement>("planner-name-btn"),
     contextLine: byId<HTMLElement>("planner-context-line"),
     semesterSelect: byId<HTMLSelectElement>("planner-semester-select"),
-    creditLine: byId<HTMLElement>("planner-credit-line"),
-    loadLegend: byId<HTMLElement>("planner-load-legend"),
-    deadline: byId<HTMLElement>("planner-deadline"),
-    creditNote: byId<HTMLElement>("planner-credit-note"),
-    creditStrip: byId<HTMLElement>("planner-credit-strip"),
-    loadFoot: byId<HTMLElement>("planner-load-foot"),
+    planNote: byId<HTMLElement>("planner-plan-note"),
     examsSection: byId<HTMLElement>("planner-region-exams"),
     direction: byId<HTMLElement>("planner-direction"),
     directionTitle: byId<HTMLElement>("planner-direction-title"),
@@ -191,14 +169,11 @@ function getElements(): PlannerElements | null {
     gridNotes: byId<HTMLElement>("planner-grid-notes"),
     gridStatus: byId<HTMLElement>("planner-grid-status"),
     examList: byId<HTMLElement>("planner-exam-list-host"),
-    examStatus: byId<HTMLElement>("planner-exam-status"),
     courseRows: byId<HTMLElement>("planner-course-rows"),
-    gapLine: byId<HTMLElement>("planner-gap-line"),
-    gapText: byId<HTMLElement>("planner-gap-text"),
+
     addCourseBtn: byId<HTMLButtonElement>("planner-add-course-btn"),
     planPanel: byId<HTMLDetailsElement>("planner-plan-panel"),
     planPanelBody: byId<HTMLElement>("planner-plan-body"),
-    provenance: byId<HTMLElement>("planner-provenance"),
   };
 
   for (const value of Object.values(found)) {
@@ -433,11 +408,8 @@ export async function mountPlannerApp(
     onOpenSettings: openCourseSettings,
     popoverContext,
     onChoiceClick: openCourseSettings,
-    onRerender: (reason) => {
+    onRerender: (_reason) => {
       renderGridAndExams();
-      // The countdown is a number of days, so the day rolling is exactly when
-      // it is wrong. A page left open over midnight said "45 dager igjen".
-      if (reason === "day") renderDeadline();
     },
     // BOTH dates are in the stamp: the week's column comes from the local
     // weekday and the exam countdowns from the calendar date in Oslo. In Norway
@@ -619,8 +591,6 @@ export async function mountPlannerApp(
     | { kind: "found"; year: number }
     | { kind: "not-found" }
     | { kind: "error" } = { kind: "pending" };
-  /** Study-plan credits of the current prefill, when it exceeds a semester (B9.4). */
-  let suspiciousPrefillCredits: number | null = null;
 
   function currentSemester(): SemesterSummary | undefined {
     return semesters.find((s) => s.id === plan.semesterId) ?? semestersFile.current ?? undefined;
@@ -834,19 +804,6 @@ export async function mountPlannerApp(
     elements.addCourseBtn.classList.toggle("np-btn--primary", hasPlan);
   }
 
-  /**
-   * The credit total. Study-plan credits count, off-semester courses do not, an
-   * overload is not painted the same green as a full load, and a >30 sp prefill
-   * is not thrown away. `null` credits stay `null` — DR-6's honest gap — but
-   * "not fetched yet" is a spinner, not a gap.
-   */
-  interface CreditSummary {
-    total: number;
-    unpriced: number;
-    offSemester: number;
-    loading: boolean;
-  }
-
   /** Live catalog credits win; the study plan's own figure is the fallback (B9.1). */
   function creditsOf(state: PlanCourseState): number | null {
     const live = state.bundle?.details?.credits;
@@ -864,142 +821,6 @@ export async function mountPlannerApp(
     if (!timetable) return false;
     if (entriesForProgram(timetable, plan.program?.code).length === 0) return false;
     return semesterEntries(state.bundle).length === 0;
-  }
-
-  function creditSummary(): CreditSummary {
-    const states = orderedActiveStates();
-    const counted = states.filter((s) => !isOffSemester(s));
-    let total = 0;
-    let unpriced = 0;
-    for (const state of counted) {
-      const credits = creditsOf(state);
-      if (credits === null) unpriced += 1;
-      else total += credits;
-    }
-    return {
-      total,
-      unpriced,
-      offSemester: states.length - counted.length,
-      loading: states.some((s) => s.loading),
-    };
-  }
-
-  /**
-   * The load strip: the semester's 30 credits as a track, each counted course a
-   * segment in its own printed hue, its width its own credits. It does for
-   * credits what the exam band does for the exam period, so a colour means one
-   * thing in three places.
-   *
-   * Only what the TOTAL counts: an off-semester course is excluded (DR-10), or
-   * the segments and the number disagree. A 0 sp course cannot be drawn in a
-   * strip about credits — it is real and it is in the list, it is not a load.
-   */
-  function renderCreditStrip(): void {
-    // WHAT COUNTS is decided here, not in the track: DR-10's off-semester
-    // exclusion is a fact about this plan and its programme, and the track only
-    // draws what it is handed.
-    renderLoadTrack(
-      elements.creditStrip,
-      orderedActiveStates()
-        .filter((state) => !isOffSemester(state) && (creditsOf(state) ?? 0) > 0)
-        .map((state) => ({
-          code: state.course.code,
-          hueVar: state.hueVar,
-          credits: creditsOf(state) ?? 0,
-        })),
-      FULL_LOAD_CREDITS,
-    );
-  }
-
-  function renderCreditLine(): void {
-    renderCreditStrip();
-    const summary = creditSummary();
-    if (summary.loading) {
-      elements.creditLine.textContent = "henter …";
-      elements.creditLine.classList.remove("is-full");
-      elements.creditNote.hidden = true;
-      return;
-    }
-
-    let text = formatCredits(summary.total);
-    if (summary.unpriced > 0) {
-      const emner = summary.unpriced === 1 ? "emne" : "emner";
-      text += ` (+${summary.unpriced} ${emner} uten oppgitt sp)`;
-    }
-    elements.creditLine.textContent = text;
-    // Green means it *fits*: exactly a full load. Painting 37,5 the same green
-    // spends Green-Means-Fits on the opposite of the truth.
-    elements.creditLine.classList.toggle(
-      "is-full",
-      Math.abs(summary.total - FULL_LOAD_CREDITS) < 0.05,
-    );
-    // The legend only when there is a mark to explain: the track draws one
-    // exactly when the plan has run past 30 sp (`renderCreditStrip`).
-    elements.loadLegend.hidden = summary.total <= FULL_LOAD_CREDITS;
-
-    const notes: string[] = [];
-    if (summary.offSemester > 0) {
-      const emner = summary.offSemester === 1 ? "emne" : "emner";
-      notes.push(
-        `${summary.offSemester} ${emner} undervises ikke i ${semesterLabel(currentSemester())} og teller ikke med.`,
-      );
-    }
-    // No "X sp over normal semesterbelastning" line: "37,5 av 30 sp" sits
-    // directly above and already says it. The two notes that remain each carry
-    // something the numbers cannot.
-    if (suspiciousPrefillCredits !== null) {
-      // "Fjern det du ikke tar" needs something to remove. A single mandatory
-      // 60 sp masteroppgave — the study plan hangs a multi-semester course's
-      // whole credit on its final period — is not a defective study plan.
-      const single = (periodCourses?.obligatory.length ?? 0) === 1;
-      notes.push(
-        single
-          ? `Studieplanen fører opp hele emnet (${formatCreditNumber(suspiciousPrefillCredits)} sp) i dette semesteret, men det går over flere semestre.`
-          : `Studieplanen oppgir ${formatCreditNumber(suspiciousPrefillCredits)} sp dette semesteret, mer enn et normalt semester. Fjern det du ikke tar.`,
-      );
-    }
-    elements.creditNote.textContent = notes.join(" ");
-    elements.creditNote.hidden = notes.length === 0;
-  }
-
-  /**
-   * How far this plan is from a full load, or `0` when the arithmetic is not
-   * settled enough to say. One source for the gap sentence and for whether the
-   * add dialog opens scoped to the study plan, so the two cannot disagree about
-   * what "short of credits" means.
-   */
-  function creditGap(): number {
-    const summary = creditSummary();
-    if (summary.loading) return 0;
-    // An *empty* plan still counts as short as long as a programme is set —
-    // that is the 3rd-year bachelor whose period prefills nothing at all.
-    const hasContext = plan.program !== undefined || plan.courses.length > 0;
-    if (!hasContext) return 0;
-    return Math.max(0, FULL_LOAD_CREDITS - summary.total);
-  }
-
-  /**
-   * The gap sentence under the course list. Phrased as remaining credits, never
-   * "velg 2 av 5": the study plan carries no cardinality (DR-5), but the credit
-   * arithmetic is real.
-   *
-   * A SENTENCE AND NOTHING ELSE. It used to carry "Velg fra studieplanen (8)"
-   * beside it — a second, conditional entrance to picking courses, competing
-   * with the standing "Legg til emne" one row below and, worse, opening the very
-   * same unfiltered dialog: the pool it named was nowhere on the surface it
-   * opened. The pool is a facet inside that dialog now, engaged on open in
-   * exactly this state, so the one press this line used to cost still lands on
-   * the study plan's courses — and this line is left doing the half a modal
-   * cannot do, which is telling you there is a gap before you go looking.
-   */
-  function renderGapLine(): void {
-    const gap = creditGap();
-    if (gap <= 0) {
-      elements.gapLine.hidden = true;
-      return;
-    }
-    elements.gapLine.hidden = false;
-    elements.gapText.textContent = `Mangler ${formatCreditNumber(gap)} sp`;
   }
 
   /* --- The clock ---------------------------------------------------------
@@ -1198,7 +1019,11 @@ export async function mountPlannerApp(
     // button that was just pressed. Obligatory courses are left out — the
     // student is already enrolled in those, and the gap is what this is for.
     studyPlanCodes: () => (periodCourses?.choice ?? []).map((c) => c.code),
-    openScoped: () => creditGap() > 0,
+    // Scoped to the study plan whenever there IS one. It used to open scoped
+    // only while the plan was short of 30 sp; the credit total is deleted
+    // (PRODUCT D17), and a programme's own courses are the right first offer
+    // whether or not the student has reached a full load.
+    openScoped: () => plan.program !== undefined,
   };
   const addCourseDialog: AddCourseHandle = mountAddCourse(addCourseDeps, lifeSignal);
 
@@ -1479,18 +1304,19 @@ export async function mountPlannerApp(
      drawn week rather than of a plan, and three surfaces draw one. */
 
   /**
-   * The verdict beside the Ukeplan kicker — PRODUCT §2's primary job, *kan jeg
-   * ta disse emnene sammen?*, answered on the page. Counts are grouped slots,
-   * so a three-way clash is one problem, and nothing is asserted while a fetch
-   * could still change it.
+   * WHAT THE WEEK COULD NOT DRAW, and nothing else.
    *
-   * When a course's timetable never arrived the check is INCOMPLETE and the
-   * line says so rather than going quiet: silence reads as "nothing to report"
-   * beside a drawn week. It is a gap, not a clash, so it keeps the muted ink —
-   * neither Green-Means-Fits nor Red-Is-Collision may be spent on "we do not
-   * know".
+   * This slot used to hold the verdict — a collision count, a load chip, and
+   * three flavours of "the check could not run". The verdict is deleted
+   * (PRODUCT D17): the week is drawn, it is not judged.
+   *
+   * What survives is DR-8's floor, and it is not decoration. A course whose
+   * timetable never arrived is simply ABSENT from the drawn week, which is
+   * pixel-identical to a course with no teaching — so the week has to say how
+   * many of the plan's courses it is missing. Deleting this line would make a
+   * failed fetch look like a free Tuesday.
    */
-  function renderVerdict(grid: WeekRenderResult | null, loading: boolean): void {
+  function renderWeekGaps(grid: WeekRenderResult | null, loading: boolean): void {
     const host = elements.gridStatus;
     host.replaceChildren();
     // `planner-verdict` is the layout class and must survive: this used to
@@ -1498,168 +1324,20 @@ export async function mountPlannerApp(
     // element applied for exactly as long as it took the first render to run.
     host.className = "planner-verdict";
     // NOTHING WHILE LOADING. The week's own skeleton is directly below this and
-    // already says a timetable is being fetched; a chip saying it again is a
-    // second announcement of the same wait — and it is the announcement that
-    // would make this line hold a row open on every cold load, only to collapse
-    // it when the answer turns out to be silence.
+    // already says a timetable is being fetched.
     if (loading) return;
     if (grid?.state !== "grid") return;
-    if (grid.incompleteCourses.length > 0) {
-      const n = grid.incompleteCourses.length;
-      // A gap, not a clash: neither Green-Means-Fits nor Red-Is-Collision may
-      // be spent on "we do not know", so this chip carries no mark at all.
-      host.append(
-        el(
-          "span",
-          "planner-chip is-unknown",
-          `kan ikke sjekkes, mangler timeplan for ${n} ${n === 1 ? "emne" : "emner"}`,
-        ),
-      );
-      renderLoadChip(host);
-      return;
-    }
-    // Anything still in flight (`partial` without an incomplete course).
-    if (grid.partial) return;
-    // NOTHING WAS CHECKED. `conflictCount: 0` over an empty lecture set is
-    // arithmetic, not a verdict, and printing Green-Means-Fits over it is the
-    // one failure this whole surface cannot afford: a plan NTNU marks no
-    // `forelesning` in drew its week and answered "ingen forelesninger
-    // kolliderer" over bars that visibly overlap. The margin already explains
-    // WHY (the auto-reveal note, or the unpicked-group notes) — the verdict's
-    // job is only to stop claiming a check it never ran.
-    if (grid.checkedLectureCount === 0) {
-      host.append(
-        el("span", "planner-chip is-unknown", "kan ikke sjekkes, ingen forelesninger i planen"),
-      );
-      renderLoadChip(host);
-      return;
-    }
-    if (grid.conflictCount === 0) {
-      // A PASS SAYS NOTHING. "Ingen forelesninger kolliderer" answered a
-      // question a student only asks when something might be wrong, and it
-      // spent a line of the first screen on every load to report that nothing
-      // is — worst on a phone, where that line is the week's space.
-      //
-      // The one thing it carried that is worth keeping is the ADMISSION: some
-      // courses publish sessions but nothing this app can call a lecture, so
-      // the DR-1 check goes over them rather than on them, and a plan where
-      // that happened has not been fully checked. That is a caveat with no
-      // claim left to qualify, so it stands on its own as an "unknown" chip —
-      // the same shape as the two branches above it, which are also about a
-      // check that could not be completed.
-      const unchecked = grid.uncheckedCourses.length;
-      if (unchecked > 0) {
-        host.append(
-          el(
-            "span",
-            "planner-chip is-unknown",
-            `${unchecked} ${unchecked === 1 ? "emne er" : "emner er"} ikke sjekket for kollisjon`,
-          ),
-        );
-      }
-      renderLoadChip(host);
-      return;
-    }
-    // A VERDICT YOU CAN FOLLOW. The one thing a student does after reading
-    // "2 kollisjoner" is look for them, and the week is a scroller — so the
-    // sentence is the shortcut to the place it is about. A button rather than a
-    // link: it moves the page, it does not go anywhere.
-    //
-    // NOT "denne uka" any more. That was true while the week was always the
-    // mønsteruke; with a week picker on the page, a student looking at week 45
-    // would read it as a claim about week 45, and the check runs over the whole
-    // semester's entries. `jumpToFirstClash` moves the picker to the week the
-    // clash is actually in before it flashes anything.
-    const chip = el("button", "planner-chip np-note-clash is-jump");
-    chip.type = "button";
-    chip.append(icon("circleAlert"));
-    chip.append(el("span", "np-data", String(grid.conflictCount)));
-    chip.append(grid.conflictCount === 1 ? " kollisjon" : " kollisjoner");
-    chip.addEventListener("click", jumpToFirstClash);
-    host.append(chip);
-    renderLoadChip(host);
-  }
-
-  /**
-   * Scrolls the week to its first collision, in whichever view is drawing it.
-   *
-   * Every view marks a clash with something: the column grid a zone over the
-   * shared minutes, the transposed grid the same, the list a rule in the
-   * margin of the rows involved. Whichever exists is the target — no view
-   * needs to be switched to, because the student chose the one they are in.
-   *
-   * THE WEEK, HOWEVER, MAY HAVE TO CHANGE. With the picker on one week, a clash
-   * in another one is not drawn at all, so the mark this looks for does not
-   * exist and the shortcut leads nowhere. `week.showWeek` moves the picker to
-   * the week the first clash is actually in first; in the mønsteruke every week
-   * is on screen already and it does nothing.
-   */
-  function jumpToFirstClash(): void {
-    week.jumpToFirstConflict();
-  }
-
-  /**
-   * The load, said where the verdict is said.
-   *
-   * Only when it is over 30 sp: "37,5 av 30 sp" is a thing to look at, "22,5 av
-   * 30 sp" is not — a student mid-assembly does not need to be told on every
-   * render that they are not finished. The full figure lives under the load
-   * track in the Emner column either way, so nothing is only here.
-   */
-  function renderLoadChip(host: HTMLElement): void {
-    const summary = creditSummary();
-    // `creditSummary`, not a second sum: the strip, the foot line and this chip
-    // must never be able to disagree about what the load is, and DR-10's
-    // off-semester exclusion lives in there.
-    if (summary.loading || summary.total <= FULL_LOAD_CREDITS) return;
-    const chip = el("span", "planner-chip is-over");
-    chip.append(icon("circleAlert"));
-    chip.append(
-      el("span", "np-data", `${formatCreditNumber(summary.total)} av ${FULL_LOAD_CREDITS} sp`),
+    const missing = grid.incompleteCourses.length;
+    if (missing === 0) return;
+    // Muted, not red: a gap is not a collision, and there is no collision ink
+    // left on this page to confuse it with.
+    host.append(
+      el(
+        "span",
+        "planner-chip is-unknown",
+        `mangler timeplan for ${missing} ${missing === 1 ? "emne" : "emner"}`,
+      ),
     );
-    host.append(chip);
-  }
-
-  /**
-   * PRODUCT D13's deadline, which had been on screen in zero of the six flows.
-   *
-   * It is the whole positioning — "before the registration deadline" — and a
-   * standing NTNU date rather than a crawled one (`deadline.ts` says why). Past
-   * the date it says nothing at all rather than "utløpt": the page still plans
-   * the term you are in.
-   */
-  function renderDeadline(): void {
-    const host = elements.deadline;
-    host.replaceChildren();
-    const deadline = registrationDeadline(plan.semesterId);
-    if (!deadline) {
-      host.hidden = true;
-      return;
-    }
-    const parts = deadlineParts(deadline);
-    host.append(parts.before);
-    host.append(el("b", undefined, parts.date));
-    host.append(parts.after);
-    host.hidden = false;
-  }
-
-  /**
-   * The same verdict for the exam head. C3's "we cannot speak for that year" is
-   * NOT repeated here — it is the frame's sentence (`examUncovered`), and
-   * printing it twice within 40 px is noise.
-   */
-  function renderExamVerdict(exam: ExamRenderResult, loading: boolean): void {
-    const host = elements.examStatus;
-    host.replaceChildren();
-    host.className = "planner-section-sub";
-    if (loading) {
-      host.textContent = "henter eksamensdatoer …";
-      return;
-    }
-    if (exam.state !== "list" || exam.collisionCount === 0) return;
-    host.classList.add("np-note-clash");
-    host.append(el("span", "np-data", String(exam.collisionCount)));
-    host.append(exam.collisionCount === 1 ? " eksamen samme dag" : " eksamener samme dag");
   }
 
   /**
@@ -1820,32 +1498,32 @@ export async function mountPlannerApp(
       activeCourses(plan).length > 0 &&
       !indexCoversSemester(plannerIndex, plan.semesterId);
 
-    const examIndex = examIndexForSemester();
-    let examResult: ExamRenderResult;
+    // Nothing reads what these return any more: the exam head's own verdict
+    // ("2 eksamener samme dag") went with the rest (PRODUCT D17), so what is
+    // left is the list itself and the two sentences that stand in for it.
     if (plannerIndexFailed && states.length > 0) {
-      examResult = renderExamMessage(elements.examList, "Fikk ikke hentet eksamensdatoene.", {
+      renderExamMessage(elements.examList, "Fikk ikke hentet eksamensdatoene.", {
         label: "Prøv igjen",
         run: retryIndex,
       });
     } else if (examUncovered) {
-      examResult = renderExamMessage(
+      renderExamMessage(
         elements.examList,
         `Eksamensdatoer er ikke publisert for ${semesterLabel(currentSemester())} ennå.`,
       );
     } else {
-      examResult = renderExamList(
+      renderExamList(
         elements.examList,
         states,
         plan.semesterId,
-        examIndex,
+        examIndexForSemester(),
         currentExamWindow(),
         todayInOslo(),
         { loading: examLoading },
       );
     }
 
-    renderVerdict(gridResult, anyLoading);
-    renderExamVerdict(examResult, examLoading);
+    renderWeekGaps(gridResult, anyLoading);
     // The exam list's lease, handed back the moment the list stops waiting —
     // whichever branch answered, including the two that answer with one
     // sentence. Held longer, an apology sits atop five courses of reserved air.
@@ -1856,97 +1534,6 @@ export async function mountPlannerApp(
     // than the week it stands in for, and a reservation left over one is a
     // permanent hole.
     if (gridResult === null && !anyLoading) week.settle();
-  }
-
-  // --- Provenance line -----------------------------------------------------
-
-  /**
-   * DR-8's provenance line, reduced to the half worth reading: **what we could
-   * not verify**. It is silent when the join is clean and speaks only when it
-   * is not — "the join admits its gaps" is the MUST; stating that it has none
-   * is not part of it, and boilerplate printed every time carried the failure
-   * clauses down with it.
-   *
-   * RE-COMPOSED whenever anything it describes changes: `loadBundles` used to
-   * re-render four things and not this one, which made the per-course failure
-   * clause structurally unreachable.
-   */
-  function renderProvenance(): void {
-    const semester = currentSemester();
-    const states = orderedActiveStates();
-    const notes: string[] = [];
-
-    // Nothing to be provenance about, or the answer is still arriving.
-    const settled = states.length > 0 && !states.some((s) => s.loading);
-
-    if (settled && semester) {
-      const indexCovers = indexCoversSemester(plannerIndex, plan.semesterId);
-      if (plannerIndexFailed) {
-        // Our own artifact, not NTNU's: "ikke publisert" here would be a
-        // statement about NTNU derived from our own failed download.
-        notes.push("Fikk ikke hentet eksamensdatoene.");
-      } else if (!indexCovers) {
-        notes.push(`Eksamensdatoer ikke publisert for ${semesterLabel(semester)}.`);
-      }
-    }
-
-    // Which study plan we actually read, but ONLY when it is not the one asked
-    // for. The 404 step-back walks back up to two cohorts and used to be
-    // invisible: kull 2026 got a confident 30 sp week off the 2024 curriculum
-    // under the words "studieplan for kull 2026". Silent while in flight.
-    const program = plan.program;
-    if (program) {
-      if (studyPlanOutcome.kind === "found" && studyPlanOutcome.year !== program.cohort) {
-        notes.push(
-          `Studieplan for kull ${studyPlanOutcome.year}, det finnes ingen egen plan for kull ${program.cohort}.`,
-        );
-      } else if (studyPlanOutcome.kind === "not-found") {
-        notes.push(`Fant ingen studieplan for ${program.code}.`);
-      } else if (studyPlanOutcome.kind === "error") {
-        notes.push(`Fikk ikke hentet studieplanen for ${program.code}.`);
-      }
-    }
-
-    // The per-course gaps, named. Silence over a course whose timetable 404'd
-    // is what makes the whole verdict untrustworthy.
-    const failures: string[] = [];
-    for (const state of states) {
-      for (const error of state.bundle?.errors ?? []) {
-        const what = error.split(":")[0]?.trim() ?? "data";
-        failures.push(`${what} for ${state.course.code}`);
-      }
-    }
-    if (failures.length > 0) notes.push(`Fikk ikke hentet ${failures.join(", ")}.`);
-
-    // Only when the index can speak for this semester. Otherwise the count came
-    // from last catalog year's dateless rows (which survive the window by
-    // design) inside a sentence that had just said we have no exam data at all.
-    const dateless =
-      settled && indexCoversSemester(plannerIndex, plan.semesterId) && !plannerIndexFailed
-        ? countDatelessExams()
-        : 0;
-    if (dateless > 0) {
-      notes.push(
-        `${dateless} ${dateless === 1 ? "eksamen har" : "eksamener har"} ingen dato ennå.`,
-      );
-    }
-
-    elements.provenance.textContent = notes.join(" ");
-    elements.provenance.hidden = notes.length === 0;
-  }
-
-  /**
-   * Exams the catalog lists for this semester but has set no date for
-   * (DR-3/U9). Built through the exam list's own `collectExamInputs` so the
-   * number and the rows can never disagree.
-   */
-  function countDatelessExams(): number {
-    return collectExamInputs(
-      orderedActiveStates(),
-      plan.semesterId,
-      examIndexForSemester(),
-      currentExamWindow(),
-    ).filter((e) => e.date === null).length;
   }
 
   // --- Top-level render orchestration --------------------------------------
@@ -1980,16 +1567,13 @@ export async function mountPlannerApp(
         examIndexMemo = null;
         renderGridAndExams(); // exam list needed the index to render its catalog data
         renderCourseRows(); // "ikke undervist i {year}" needs `offeredYears`
-        renderProvenance();
       })
       .catch(() => {
-        // Not swallowed: the exam column used to spin forever, the add dialog
-        // forever said "Henter emner …", and the provenance line claimed NTNU
-        // had published no exam dates.
+        // Not swallowed: the exam column used to spin forever and the add dialog
+        // forever said "Henter emner …".
         plannerIndexFailed = true;
         addCourseDeps.indexFailed = true;
         renderGridAndExams();
-        renderProvenance();
       });
   }
 
@@ -2021,11 +1605,37 @@ export async function mountPlannerApp(
    * when the first segment lands), so it is hidden as a whole here and left
    * alone the rest of the time.
    */
+  /**
+   * WHICH STUDY PLAN THE PREFILL CAME FROM, when it is not the one asked for.
+   *
+   * The rest of DR-8's provenance line is deleted with the verdict (PRODUCT
+   * D17). This clause is not decoration and stays for the same reason the
+   * week's own gap line does: `findProgramPlanUncached` walks back up to two
+   * cohorts on a 404, so kull 2026 could be handed a confident five-course
+   * week off the 2024 curriculum under a title reading «Kull 2026». A prefill
+   * from a different cohort's plan has to say so or it is a wrong answer
+   * delivered as a right one.
+   *
+   * Silent while the fetch is in flight, and silent when the plan asked for is
+   * the plan that came back — which is the overwhelming majority of loads.
+   */
+  function renderPlanNote(): void {
+    const host = elements.planNote;
+    const program = plan.program;
+    let text = "";
+    if (program) {
+      if (studyPlanOutcome.kind === "found" && studyPlanOutcome.year !== program.cohort) {
+        text = `Studieplan for kull ${studyPlanOutcome.year}, det finnes ingen egen plan for kull ${program.cohort}.`;
+      } else if (studyPlanOutcome.kind === "error") {
+        text = `Fikk ikke hentet studieplanen for ${program.code}.`;
+      }
+    }
+    host.textContent = text;
+    host.hidden = text === "";
+  }
+
   function renderSectionPresence(): void {
-    const bare = activeCourses(plan).length === 0;
-    elements.examsSection.hidden = bare;
-    elements.creditStrip.hidden = bare;
-    elements.loadFoot.hidden = bare;
+    elements.examsSection.hidden = activeCourses(plan).length === 0;
   }
 
   function renderAll(): void {
@@ -2035,14 +1645,11 @@ export async function mountPlannerApp(
     syncFirstRun();
     renderSectionPresence();
     renderBanner();
-    renderDeadline();
-    renderCreditLine();
+    renderPlanNote();
     renderDirectionQuestion();
     renderCourseRows();
     renderPlanPanel();
-    renderGapLine();
     renderGridAndExams();
-    renderProvenance();
   }
 
   async function loadBundles(): Promise<void> {
@@ -2091,13 +1698,8 @@ export async function mountPlannerApp(
     bundleRenderQueued = true;
     queueMicrotask(() => {
       bundleRenderQueued = false;
-      renderCreditLine();
       renderCourseRows();
-      renderGapLine();
       renderGridAndExams();
-      // The one that was missing, and the reason DR-8's line used to freeze
-      // while its failure clause could never fire.
-      renderProvenance();
     });
   }
 
@@ -2113,12 +1715,10 @@ export async function mountPlannerApp(
 
   /** Re-renders everything that depends on the study plan but not on the grid. */
   function renderPlanDependents(): void {
+    renderPlanNote();
     renderDirectionQuestion();
     renderPlanPanel();
-    renderGapLine();
-    renderCreditLine();
     renderGridAndExams();
-    renderProvenance();
   }
 
   /**
@@ -2144,7 +1744,6 @@ export async function mountPlannerApp(
       ++studyPlanFetchToken;
       periodCourses = null;
       periodMissing = false;
-      suspiciousPrefillCredits = null;
       programDerivedFor = null;
       studyPlanOutcome = { kind: "pending" };
       renderPlanDependents();
@@ -2168,7 +1767,6 @@ export async function mountPlannerApp(
     if ("kind" in result) {
       periodCourses = null;
       periodMissing = false;
-      suspiciousPrefillCredits = null;
       studyPlanOutcome = result.kind === "not-found" ? { kind: "not-found" } : { kind: "error" };
       renderPlanDependents();
       return;
@@ -2185,8 +1783,6 @@ export async function mountPlannerApp(
     );
     periodCourses = resolved.courses;
     periodMissing = resolved.courses === null;
-    const obligatory = resolved.courses?.obligatory ?? [];
-    suspiciousPrefillCredits = isSuspiciousPrefill(obligatory) ? prefillCredits(obligatory) : null;
 
     // Backfill names a hash could not carry. Deliberately does *not* return:
     // the derivation key excludes display names, so the change listener would

@@ -34,7 +34,6 @@
  * five-course plan is not evidence about a one-course surface, and the
  * selector no longer has to say so.
  */
-import type { ConflictGroup } from "../../lib/planner/conflicts.js";
 import { isoWeekNumber, isoWeekStart, weekdayDates } from "../../lib/planner/weekDates.js";
 import { type BlockPopoverHandle, mountBlockPopover, type SessionChoice } from "./blockPopover.js";
 import { renderBoard, syncBoardNow } from "./board.js";
@@ -257,21 +256,7 @@ export interface WeekViewHandle {
   render(states: PlanCourseState[], input: WeekRenderInput): WeekRenderResult;
   /** Whether the øving/lab layer is on. The page's own copy of this is gone. */
   readonly showOthers: boolean;
-  /**
-   * Show one particular week, whatever the student had chosen.
-   *
-   * The one caller is the collision verdict: "2 kollisjoner" is a shortcut to
-   * the clash, and a clash in week 40 is not on screen while the picker is
-   * showing week 36. `ConflictGroup` already carries the weeks a pair shares,
-   * so the shortcut sets the scope before it flashes anything.
-   */
-  showWeek(week: number): void;
-  /**
-   * Take me to the first collision: switch to the week it happens in, scroll to
-   * it, flash it. The margin note's own link and the verdict chip are two
-   * entrances to this one path, so they cannot behave differently.
-   */
-  jumpToFirstConflict(): void;
+
   /** A sentence where the week would be. `null` clears the frame entirely. */
   message(text: string | null): void;
   /** A centred card where the week would be, for the states that carry a verb. */
@@ -306,7 +291,7 @@ export function mountWeekView(options: WeekViewOptions): WeekViewHandle {
    * the animation there would be entrance choreography (DESIGN §7).
    */
   let pendingViewAnimation = false;
-  /** The states the last render drew, so a conflict note can find their hues. */
+  /** The states the last render drew, so the popover can find their hues. */
   let drawnStates: PlanCourseState[] = [];
   /**
    * The year the last render's weeks belong to, so the popover's `ntnu.no` link
@@ -315,8 +300,6 @@ export function mountWeekView(options: WeekViewOptions): WeekViewHandle {
    * block exists to press.
    */
   let drawnYear: number | undefined;
-  /** The last render's collision slots, so the verdict chip can reach the first. */
-  let lastConflictGroups: ConflictGroup[] = [];
 
   // The popover is mounted on every surface: it is a READ card — the facts of
   // the session you pointed at — and a reference page owes a visitor exactly
@@ -410,53 +393,6 @@ export function mountWeekView(options: WeekViewOptions): WeekViewHandle {
       left: Math.max(0, frame.scrollLeft + offset - RAIL_WIDTH_PX),
       behavior: prefersReducedMotion() ? "auto" : "smooth",
     });
-  }
-
-  // --- The collision note's target -----------------------------------------
-
-  /**
-   * Flashes the sessions a margin note names.
-   *
-   * The note is built by `weekNotes`, which never sees a DOM node, so the
-   * resolution happens here against whatever is actually mounted. Blocks carry
-   * `data-motion-key` — `code|day|start|end|label#n` — in both views, and a
-   * conflict group knows the first four, so the prefix is the join.
-   */
-  function flashConflict(group: ConflictGroup): void {
-    // THE SHORTCUT HAS TO REACH THE THING IT IS ABOUT. With one week on screen,
-    // a clash in another one is not drawn, so scrolling to it would scroll to
-    // nothing. `ConflictGroup` carries the weeks the pair actually shares, so
-    // the picker moves first and the flash then finds live blocks. Nothing to
-    // do in the mønsteruke, where every week is already on screen.
-    const drawn = resolvedWeek();
-    if (drawn !== null && !group.weeks.includes(drawn)) {
-      const [first] = group.weeks;
-      if (first !== undefined) showWeek(first);
-    }
-    const wanted = new Set(
-      group.entries.map((e) => `${e.courseCode}|${e.dayNumber}|${e.startTime}|${e.endTime}|`),
-    );
-    const nodes = Array.from(frame.querySelectorAll<HTMLElement>("[data-motion-key]")).filter(
-      (node) => {
-        const key = node.dataset.motionKey ?? "";
-        for (const prefix of wanted) if (key.startsWith(prefix)) return true;
-        return false;
-      },
-    );
-    const [first] = nodes;
-    // Asked directly: the duration tokens can zero a CSS transition, but they
-    // cannot reach a scripted scroll (DESIGN §7).
-    first?.scrollIntoView({
-      block: "center",
-      behavior: prefersReducedMotion() ? "auto" : "smooth",
-    });
-    for (const node of nodes) {
-      node.classList.remove("np-target-flash");
-      // Force reflow so re-adding the class restarts the animation.
-      void node.offsetWidth;
-      node.classList.add("np-target-flash");
-    }
-    first?.focus({ preventScroll: true });
   }
 
   // --- Uke ⇄ Liste ----------------------------------------------------------
@@ -569,22 +505,6 @@ export function mountWeekView(options: WeekViewOptions): WeekViewHandle {
     // week with eleven, and in Liste the difference is hundreds of pixels.
     delete frame.dataset.reserve;
     options.onRerender?.("week");
-  }
-
-  /**
-   * Move the picker to one week, if that week is on offer.
-   *
-   * A conflict group can name a week the semester's teaching list does not
-   * carry — upstream publishes the odd stray — and setting a `<select>` to a
-   * value with no matching option leaves the control showing its old label over
-   * a different week, which is worse than not jumping at all.
-   */
-  function showWeek(week: number): void {
-    if (!weekSelect) return;
-    const wanted = String(week);
-    if (Array.from(weekSelect.options).some((option) => option.value === wanted)) {
-      setWeekScope(week);
-    }
   }
 
   if (weekSelect) {
@@ -814,10 +734,8 @@ export function mountWeekView(options: WeekViewOptions): WeekViewHandle {
       pendingChoiceMessage: input.pendingChoiceMessage ?? null,
       showAllGroups: input.showAllGroups ?? false,
       ...(options.onChoiceClick ? { onChoiceClick: options.onChoiceClick } : {}),
-      onConflictClick: flashConflict,
     });
 
-    lastConflictGroups = result.conflictGroups;
     renderLayerState(result);
 
     if (result.state === "loading") {
@@ -889,11 +807,7 @@ export function mountWeekView(options: WeekViewOptions): WeekViewHandle {
     get showOthers(): boolean {
       return showOthers;
     },
-    showWeek,
-    jumpToFirstConflict(): void {
-      const [first] = lastConflictGroups;
-      if (first) flashConflict(first);
-    },
+
     message(text: string | null): void {
       renderWeekMessage(frame, notes, text);
     },

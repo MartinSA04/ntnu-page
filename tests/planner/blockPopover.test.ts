@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { clashClock, durationLabel, editVerb } from "../../src/components/planner/blockPopover.js";
+import { durationLabel, editVerb } from "../../src/components/planner/blockPopover.js";
 
 /**
  * The pure half of the session popover — mounting it needs a DOM this repo does
@@ -41,23 +41,5 @@ describe("editVerb", () => {
 
   test("a course with no choice to make on this layer offers the course", () => {
     expect(editVerb("course")).toBe("Endre emnet");
-  });
-});
-
-describe("clashClock", () => {
-  const session = { startTime: "14:15", endTime: "16:00" };
-
-  /* The card already sets the session's own clock as its largest figure, so a
-     collision that covers the whole slot would print the same pair twice. */
-  test("says nothing when the collision covers the whole session", () => {
-    expect(
-      clashClock(session, { partners: ["TDT4160"], startTime: "14:15", endTime: "16:00" }),
-    ).toBe("");
-  });
-
-  test("names the shared minutes when only part of the session collides", () => {
-    expect(
-      clashClock(session, { partners: ["TMA4400"], startTime: "15:15", endTime: "16:00" }),
-    ).toBe("15:15–16:00");
   });
 });
