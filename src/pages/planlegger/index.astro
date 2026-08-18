@@ -1,12 +1,11 @@
 ---
-import Icon from "../../components/Icon.astro";
 import WeekControls from "../../components/WeekControls.astro";
 import Layout from "../../layouts/Layout.astro";
 // The week's geometry and ink live in one stylesheet because every surface that
 // draws a week mounts the same `weekView`. Only this page's exam list stays
 // scoped below.
 import "../../styles/planner-week.css";
-// The plan's own sections, shared with /user/<navn> — see the file's header.
+// The plan's own sections — see the file's header.
 import "../../styles/plan-surface.css";
 
 const description =
@@ -65,22 +64,6 @@ const description =
         type="button"
         class="np-navlink planner-firstrun-link"
         id="planner-firstrun-add">Legg dem til direkte.</button
-      >
-    </p>
-    {/* SOME FRESH VISITORS ARE RETURNING ONES: a plan on their account and no
-        local trace of it, because this is a new browser. Without this the only
-        way back is the topbar's "Profil", which is not where a first-run
-        student is looking.
-
-        A text link, not a button, so the screen keeps one accent and the
-        account stays strictly opt-in (mandate 8). Nothing here gates the
-        planner: dismissing the panel leaves the screen exactly as it was.
-        `plannerApp.ts` drops the line when there is already a session. */}
-    <p class="np-hint planner-firstrun-login-line" id="planner-firstrun-login-line">
-      Har du plan fra før? <button
-        type="button"
-        class="np-navlink planner-firstrun-link"
-        id="planner-firstrun-login">Logg inn.</button
       >
     </p>
   </section>
@@ -158,34 +141,6 @@ const description =
         </svg>
       </div>
 
-      {/* THE PLAN IS THE URL, AND NOTHING ON THE PAGE SAID SO. Shared-link
-          creations are PRODUCT §2's north-star metric, and there was no way to
-          act on that short of knowing to select the address bar. Hidden until
-          there is a plan: an empty plan is not a thing to send anyone.
-
-          A MARK, NOT A WORD. It was "Del lenke" → "Kopiert", pinned at its
-          resting width so the confirmation could not shove the controls beside
-          it. There are no controls beside it any more — it is the last thing in
-          the row at every width — and at 390px the label was 84px of the one
-          row the plan's own name has to fit in. So the label goes and the mark
-          stays put, which is what "always in the top right" means. The name is
-          on `aria-label`, and the confirmation is the mark swapping to a check:
-          the half of "it worked" a student reads before any word.
-
-          Both marks are authored here rather than built at runtime so neither
-          can arrive a frame late, and both come from `<Icon>` — hand-inlined
-          `<svg>` has no intrinsic size, and as a flex child that computes to
-          0×0 (base.css gives every svg `display: block`). */}
-      <button
-        type="button"
-        class="np-icon-btn planner-share"
-        id="planner-share"
-        aria-label="Del lenke"
-        hidden
-      >
-        <Icon name="share" size={18} class="planner-share-mark" />
-        <Icon name="check" size={18} class="planner-share-check" />
-      </button>
     </div>
 
     {/* THE VERDICT, AND IT ONLY SPEAKS WHEN THERE IS SOMETHING TO SAY.
@@ -203,8 +158,6 @@ const description =
         fetched. */}
     <p class="planner-verdict" id="planner-grid-status" aria-live="polite"></p>
   </div>
-
-  <p class="np-hint planner-link-note" id="planner-link-note" hidden></p>
 
   <div id="planner-main">
     {/* The week runs the page's full width and the other two share the row
@@ -412,8 +365,6 @@ const description =
   // Must run per page-load, not once per module: under ClientRouter this module
   // is evaluated only the first time it is fetched, so mounting at top level
   // left the planner an empty shell after any in-site navigation back to it.
-  // `mountPlannerApp` mounts this page's own modals; the store and the sync
-  // client come from `account.ts`, shared with the topbar's profile panel.
   onPage((signal) => {
     mountPlannerApp(semestersData, signal);
   });

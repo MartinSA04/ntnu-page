@@ -787,7 +787,7 @@ export function weekNotes(
   //
   // WITHOUT a picker to open it is a SENTENCE, not a control, and it drops the
   // imperative with the affordance: "velg din" is an instruction, and on
-  // `/user/<navn>` the groups are somebody else's to pick. Left as a button it
+  // a surface with no editor the groups are not this reader's to pick. Left as a button it
   // was underlined, focusable and inert — the same nothing-happens a pressed
   // control is never allowed to be.
   //

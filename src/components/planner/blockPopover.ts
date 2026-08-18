@@ -309,7 +309,7 @@ export function mountBlockPopover(
 
     const actions = el("div", "np-actions np-actions--split block-popover-actions");
     // Two of the three surfaces that draw a week have no editor to open —
-    // `/emne/[code]/` is one course's reference page and `/user/<navn>` is
+    // `/emne/[code]/` is one course's reference page and it is
     // somebody else's plan — so the verb is omitted rather than pointed at
     // nothing. The card is then what it mostly already was: the facts of the
     // session you pointed at, and a way through to the course.

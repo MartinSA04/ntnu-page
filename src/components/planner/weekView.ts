@@ -1,13 +1,12 @@
 /**
  * THE WEEK, as one thing a page mounts.
  *
- * Three surfaces draw a week — `/planlegger/`, `/emne/[code]/` and
- * `/user/<navn>` — and for a while they drew two different ones: the planner
- * moved to KOLONNER and LISTE while the other two stayed on the transposed
- * geometry, which had been deleted as a view but kept alive as a module. This
- * is where that ends. One controller owns the view state, the tab pair, the
- * scroll edge, the now marker, the session popover and the choice between the
- * two renderers; a page hands it states and gets a week.
+ * Three surfaces used to draw a week, and for a while they drew two different
+ * ones: the planner moved to KOLONNER and LISTE while the other two stayed on
+ * the transposed geometry, which had been deleted as a view but kept alive as
+ * a module. This is where that ends. One controller owns the view state, the
+ * tab pair, the scroll edge, the now marker, the session popover and the
+ * choice between the two renderers; a page hands it states and gets a week.
  *
  * ## What the page keeps
  *
@@ -31,9 +30,9 @@
  *
  * `--planner-box` used to hold one height per view, guarded by an id selector
  * so the planner's remembered Liste height could never reach a one-course
- * course page. Three surfaces share two views now, so the guard moved into the
- * KEY: a height measured on a five-course plan is not evidence about a
- * one-course page, and the selector no longer has to say so.
+ * course page. The guard is in the KEY instead: a height measured on a
+ * five-course plan is not evidence about a one-course surface, and the
+ * selector no longer has to say so.
  */
 import type { ConflictGroup } from "../../lib/planner/conflicts.js";
 import { isoWeekNumber, isoWeekStart, weekdayDates } from "../../lib/planner/weekDates.js";
@@ -62,7 +61,7 @@ import { renderWeekSkeleton } from "./weekSkeleton.js";
 export type WeekView = "kolonner" | "tavle";
 
 /** Which page is drawing. The reservation key's first component. */
-export type WeekSurface = "planner" | "emne" | "user";
+export type WeekSurface = "planner" | "emne";
 
 const WEEK_VIEWS: readonly WeekView[] = ["kolonner", "tavle"];
 
@@ -200,7 +199,7 @@ export interface WeekViewOptions {
   surface: WeekSurface;
   /**
    * The popover's way out to the editor. `null` on a surface with no editor to
-   * open — `/emne/[code]/` is one course's reference page and `/user/<navn>` is
+   * open — `/emne/[code]/` is one course's reference page and it is
    * somebody else's plan — and the card then carries facts and no button.
    */
   onOpenSettings?: ((code: string) => void) | null;
@@ -740,7 +739,7 @@ export function mountWeekView(options: WeekViewOptions): WeekViewHandle {
     // and those should collapse now rather than a paint later.
     delete frame.dataset.reserve;
     // Only a frame the SERVER rendered can be handed a remembered height before
-    // paint. `/planlegger/` and `/user/<navn>` both have one — the shared plan's
+    // paint. `/planlegger/` has one — the planner's
     // shell became static when it stopped building its own page — so both file.
     // `/emne/[code]/` builds its frame after a fetch, so what holds its space is
     // a placeholder standing in for the whole section: a different box, with its

@@ -10,7 +10,7 @@
  * for no reason except that it was also a `<select>`.
  *
  * Now: the three that describe the student are this section, mounted inside
- * the profile panel (`profilePanel.ts`) which the topbar opens from every
+ * the profile panel, which the topbar used to open from every
  * page. The semester is the planner's own control, in the planner's own bar,
  * because it belongs to the plan you are looking at — see
  * `#planner-semester-select`. This file no longer touches it; it reads the

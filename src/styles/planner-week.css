@@ -131,32 +131,6 @@ html[data-view="tavle"][data-surface="planner"] .planner-grid-frame[data-reserve
   );
 }
 
-/* /user/<navn> RESERVES THE SAME WAY, with one difference that decides the
-   fallbacks: `--plan-courses` is the VIEWER's plan, not the one being shown, so
-   the formulas above would size this frame from a plan it is not drawing. Uke's
-   arithmetic is plan-independent and carries over unchanged; Liste's is a line
-   fitted through course counts, so with no count to fit it holds a flat figure
-   for a typical shared plan and leans on `--planner-box` from the second visit
-   on. The frame is server-rendered here now, so the probe can hand it one. */
-[data-surface="user"] .planner-grid-frame[data-reserve] {
-  min-height: calc(
-    2 *
-    var(--planner-frame-pad-block) +
-    var(
-      --planner-box,
-      calc(var(--planner-cols-head-font) + var(--space-2) + 1px + 8 * var(--planner-hour-h))
-    )
-  );
-}
-
-[data-surface="user"] .planner-grid-frame:not([data-reserve]) {
-  min-height: 0;
-}
-
-html[data-view="tavle"][data-surface="user"] .planner-grid-frame[data-reserve] {
-  min-height: calc(2 * var(--planner-frame-pad-block) + var(--planner-box, 44rem));
-}
-
 /* --- THE WEEK'S CONTROLS -------------------------------------------------
    TWO ROWS, and the order is scope: which weeks, then which layers and in
    which shape.

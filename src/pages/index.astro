@@ -54,19 +54,7 @@ const seasonWord = isAutumn ? "høsten" : "våren";
         on the page entirely. */}
     <a class="np-btn np-btn--primary home-cta" href="/planlegger/">Åpne planleggeren</a>
 
-    {/* `#home-now` needs a LOCAL plan, so a returning student on a new browser
-        gets the cold pitch and one CTA with no way back to the plan their
-        account is holding. This is that way.
 
-        Rendered hidden and revealed by the script below when there is no
-        session, rather than through the pre-paint machinery `#home-now` needs:
-        it is the LAST node in the pitch, so revealing it shifts nothing above
-        or below it and costs no CLS. */}
-    <p class="np-hint home-login-line" id="home-login-line" hidden>
-      Har du plan fra før? <button type="button" class="np-navlink home-login-link" id="home-login"
-        >Logg inn.</button
-      >
-    </p>
   </div>
 
 </Layout>
@@ -84,19 +72,7 @@ const seasonWord = isAutumn ? "høsten" : "våren";
     margin-bottom: var(--space-5);
   }
 
-  /* The returning student's way in, under the CTA and quieter than it: the
-     account is opt-in, so it may not compete with the one path this page is
-     for. */
-  .home-login-line {
-    margin-top: var(--space-4);
-  }
 
-  .home-login-link {
-    display: inline;
-    padding: 0;
-    text-decoration: underline;
-    text-underline-offset: 0.2em;
-  }
   /* --- Nå ---------------------------------------- */
 
   .home-now[hidden] {
@@ -267,7 +243,6 @@ const seasonWord = isAutumn ? "høsten" : "våren";
 
 <script>
   import { onPage } from "../lib/pageLifecycle.ts";
-  import { account, ACCOUNT_OPEN_EVENT } from "../components/account.ts";
   import { watchPlanProbe } from "../lib/planProbe.ts";
   import { createPlanStore } from "../lib/planner/store.ts";
   import { loadWeekSessions, nowVerdict, weekMinutes } from "../components/site/now.ts";
@@ -285,24 +260,6 @@ const seasonWord = isAutumn ? "høsten" : "våren";
     // does not reset CLS, so the next page's reservations are still this
     // page-load's problem.
     watchPlanProbe(store, signal);
-
-    // --- The returning student's way in ------------
-    // Shown only when signed out: "Har du plan fra før?" is the wrong question
-    // for someone whose session is already live. The panel is mounted by the
-    // topbar's AccountButton on every page, so this only has to ask for it.
-    const loginLine = document.getElementById("home-login-line");
-    if (loginLine && account(defaultSemesterId).sync.session() === null) {
-      loginLine.hidden = false;
-      document.getElementById("home-login")?.addEventListener(
-        "click",
-        () => {
-          document.dispatchEvent(
-            new CustomEvent(ACCOUNT_OPEN_EVENT, { detail: { mode: "login" } }),
-          );
-        },
-        { signal },
-      );
-    }
 
     // --- Nå ---------------------------------------
 

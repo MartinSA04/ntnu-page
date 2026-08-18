@@ -31,23 +31,18 @@
     "not_found_handling": "404-page",
     "run_worker_first": ["/*", "!/_astro/*", "!/data/*"]
   },
-  // SYNC is bound for LOCAL dev only: `wrangler dev` (no `--remote`, which is
-  // how both `mise run preview` and the e2e webServer run it) provisions a
-  // namespace from this entry on disk, with no Cloudflare account and no real
-  // "id" required — that's what lets e2e/sync.pw.ts round-trip a real account
-  // through the real handler and stay offline. Production still needs its own
-  // real namespace (see point 2 below) before this ships; the id here is a
-  // local-only placeholder and would be rejected by a `--remote` run.
-  "kv_namespaces": [{ "binding": "SYNC", "id": "local-sync-dev" }],
+  // No KV namespaces are bound, and that is now the whole story: the worker
+  // stores nothing about a student (PRODUCT mandate 11). The SYNC namespace and
+  // its `local-sync-dev` placeholder went with the account on 2026-08-18, along
+  // with `release.yml`'s precheck for that placeholder — there is no longer a
+  // fake id that could reach production.
+  //
   // Not connected to Cloudflare yet. When wiring it up:
-  // 1. KV cache (worker degrades to memory-only cache without it):
+  // 1. KV cache (the worker degrades to a memory-only cache without it, which
+  //    is correct but colder — it is a cache of NTNU's answers, not of ours):
   //      npx wrangler kv namespace create CACHE
-  //    then add to kv_namespaces above:
-  //      { "binding": "CACHE", "id": "<id>" },
-  // 2. Sync accounts — SYNC is already bound above for local dev; production
-  //    needs its own real namespace before deploying:
-  //      npx wrangler kv namespace create SYNC
-  //    then replace the "id" above with the real one.
-  // 3. Custom domain:
+  //    then add:
+  //      "kv_namespaces": [{ "binding": "CACHE", "id": "<id>" }],
+  // 2. Custom domain:
   //      "routes": [{ "pattern": "ntnu.martinsundal.no", "custom_domain": true }],
 }

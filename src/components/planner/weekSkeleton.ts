@@ -3,7 +3,7 @@
  *
  * It exists for the same reason the frame's `min-height` does: the step from
  * "nothing" to "a week" is the largest layout shift on any page that draws one,
- * and `/user/<navn>` renders with `loading: true` for the whole of its first
+ * and the planner renders with `loading: true` for the whole of its first
  * round-trip — it has to fetch every course in a plan it just parsed out of the
  * URL before it knows a single session.
  *

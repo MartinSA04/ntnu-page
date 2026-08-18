@@ -49,7 +49,7 @@ describe("the week box is keyed by surface", () => {
 
   test("a surface that has never been measured reserves nothing", () => {
     saveWeekBox("planner", "kolonner", 390, 651);
-    expect(loadWeekBox("user", "kolonner", 390)).toBeNull();
+    expect(loadWeekBox("emne", "kolonner", 390)).toBeNull();
   });
 });
 

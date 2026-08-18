@@ -28,18 +28,6 @@ jobs:
           cache: npm
       - name: Tag must match package.json version
         run: test "v$(node -p "require('./package.json').version")" = "$GITHUB_REF_NAME"
-      # `local-sync-dev` is a placeholder that only `wrangler dev` accepts —
-      # a real `wrangler deploy` rejects it. Failing here, in the second step,
-      # beats discovering it after a crawl, a build and the full e2e suite.
-      # Replace it with a real namespace id (`npx wrangler kv namespace create
-      # SYNC`) before tagging a release; see wrangler.jsonc's own note.
-      - name: SYNC KV must not still be the local-dev placeholder
-        run: |
-          if grep -q 'local-sync-dev' wrangler.jsonc; then
-            echo "wrangler.jsonc still binds SYNC to the local-dev placeholder id." >&2
-            echo "Create a real namespace and replace it before releasing." >&2
-            exit 1
-          fi
       - run: npm ci
       - run: npm run lint
       - run: npm run typecheck

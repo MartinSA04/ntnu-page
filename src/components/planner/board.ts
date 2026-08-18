@@ -106,7 +106,7 @@ export interface CollectOptions {
    * deciding which parallel to register for. Both views read their entries
    * through this one function, so without the bypass neither can say it.
    *
-   * `/planlegger/` and `/user/<navn>` never set it: one is the student's own
+   * `/planlegger/` never sets it: it is the student's own
    * plan and the other is somebody else's, and both are picks already made.
    */
   showAllGroups?: boolean;

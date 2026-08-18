@@ -1,13 +1,9 @@
 /**
- * EMNER — the plan's course list and the load track over it, for both surfaces
- * that show a plan.
+ * EMNER — the plan's course list and the load track over it.
  *
- * `/planlegger/` and `/user/<navn>` draw the same list. They differ in exactly
- * one thing, and it is the thing that separates the two pages: the planner's
- * rows carry a way into the editor, and the shared plan's carry a way into the
- * course. Everything else — the swatch, the code, the name, the credit column,
- * the dropped state, the "se detaljer" flag — is one implementation, because
- * two implementations is how a change lands on one page and not the other.
+ * Two surfaces used to draw it, `/planlegger/` and `/user/<navn>`, and they
+ * differed in one thing: the planner's rows carry a way into the editor and the
+ * shared plan's carried a way out to the course. The second surface is deleted.
  *
  * A row is IDENTITY AND NOTHING ELSE. Vurderingsform lives in the exam list;
  * the status line, the retry and the Dropp/Fjern button live in the settings
@@ -44,7 +40,7 @@ export interface CourseRowsOptions {
    * The way into the editor, as a settings button at the row's end.
    *
    * Absent on a read-only surface, and then the row's name becomes a link to
-   * the course's own page instead — the one place `/user/<navn>` can honestly
+   * the course's own page instead — the one place a verb-less surface can honestly
    * send a viewer, since it cannot edit the plan it is showing.
    */
   onOpenSettings?: ((code: string) => void) | null;

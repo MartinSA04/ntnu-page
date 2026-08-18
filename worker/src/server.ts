@@ -18,23 +18,8 @@ import {
   notFoundJson,
   RateLimiter,
   type RouteDeps,
-  rateLimited,
   withSecurityHeaders,
 } from "./routes.js";
-import {
-  AuthLimiter,
-  handlePublicRead,
-  handlePublish,
-  handleSyncClaim,
-  handleSyncDelete,
-  handleSyncGet,
-  handleSyncPut,
-  handleUnpublish,
-  type SyncDeps,
-  type SyncKv,
-  syncUnavailable,
-} from "./sync.js";
-import { unfurlMeta } from "./unfurl.js";
 
 /**
  * Cloudflare Workers Assets + optional KV cache bindings, typed structurally
@@ -44,14 +29,10 @@ import { unfurlMeta } from "./unfurl.js";
 export interface Env {
   ASSETS: { fetch(request: Request): Promise<Response> };
   CACHE?: KVCacheBinding;
-  SYNC?: SyncKv;
 }
 
 const client = new NTNUClient();
 const memoryCache = new TTLCache();
-
-/** Per-isolate, like `client` and `memoryCache` above. */
-const authLimiter = new AuthLimiter(10, 15 * 60_000);
 
 /**
  * Bounds how fast one client can make this worker fetch from NTNU. Tokens are
@@ -64,10 +45,9 @@ const authLimiter = new AuthLimiter(10, 15 * 60_000);
  * human session. Miniflare sets `CF-Connecting-IP`, so `mise run e2e` exercises
  * this path too — it is not production-only.
  *
- * `/api/sync/*` spends from the same bucket (see the dispatch below), where
- * what it meters is KV writes rather than NTNU egress. One bucket on purpose:
- * both are "how much work can one client make this worker do", and a client
- * hammering one of them has no claim on the other.
+ * Every route left on this worker is a read of NTNU's data through the cache,
+ * so one bucket covers the whole surface. The account routes that used to
+ * share it (metering KV writes rather than egress) are deleted.
  */
 const rateLimiter = new RateLimiter(120, 15);
 
@@ -102,160 +82,10 @@ export function canonicalCoursePath(pathname: string): string | null {
   return `/emne/${encodeURIComponent(upper)}/`;
 }
 
-/**
- * The name in a `/…/<navn>` path, decoded.
- *
- * Same reason as `parseCode` in routes.ts: the WHATWG URL spec keeps path
- * segments percent-encoded, and a name is validated after decoding. The
- * patterns are anchored — `/api/sync/martin/public` must never read as an
- * account named `martin/public` OR as the account `martin`, or a DELETE of the
- * public copy would delete the whole account.
- */
-function nameIn(pattern: RegExp, pathname: string): string | null {
-  const match = pattern.exec(pathname);
-  if (!match?.[1]) return null;
-  try {
-    return decodeURIComponent(match[1]);
-  } catch {
-    return null;
-  }
-}
-
-const SYNC_PATH = /^\/api\/sync\/([^/]+)\/?$/;
-/** The share toggle: PUT turns it on with a copy to serve, DELETE turns it off. */
-const PUBLIC_TOGGLE_PATH = /^\/api\/sync\/([^/]+)\/public\/?$/;
-/** The viewer's data source. No credential — that is what being public means. */
-const PUBLIC_READ_PATH = /^\/api\/plan\/([^/]+)\/?$/;
-/** The page itself, which the worker rewrites to one static shell. */
-const PUBLIC_PAGE_PATH = /^\/user\/([^/]+)\/?$/;
-
-/**
- * A shared plan is a room-and-hour record attached to a name the student chose,
- * so it is kept out of search by HEADER rather than by `robots.txt`. Blocking
- * the crawl would mean Google never reads the directive and can still list the
- * bare URL — the exact failure this avoids.
- */
-function withNoIndex(response: Response): Response {
-  const next = new Response(response.body, response);
-  next.headers.set("X-Robots-Tag", "noindex, nofollow");
-  return next;
-}
-
-/** One set of handler deps, shared by every route that touches the account. */
-function syncDeps(kv: SyncKv): SyncDeps {
-  return {
-    kv,
-    now: () => new Date().toISOString(),
-    // `limiter` and `monotonic` must always be supplied as a pair:
-    // `authorise` in sync.ts falls back to a frozen `now` of 0 when
-    // `monotonic` is missing, so a limiter without a clock produces a
-    // lockout `until` that a frozen `now` can never reach — a silent
-    // permanent lock until the isolate recycles.
-    limiter: authLimiter,
-    monotonic: () => Date.now(),
-  };
-}
-
-/**
- * Dispatches one `/api/sync/<navn>` request. `env.SYNC` absent is reported
- * as 503 rather than silently falling back to memory — a planner that
- * looked like it saved but didn't is worse than one that says it cannot.
- */
-async function handleSync(request: Request, env: Env, name: string): Promise<Response> {
-  // `syncUnavailable`, not a hand-built `Response`: this was the one answer on
-  // the sync surface that shipped without `Cache-Control: no-store`.
-  if (!env.SYNC) return syncUnavailable();
-  const deps = syncDeps(env.SYNC);
-  const auth = request.headers.get("x-np-auth");
-
-  switch (request.method) {
-    case "POST":
-      return handleSyncClaim(name, await request.json().catch(() => null), deps);
-    case "GET":
-      return handleSyncGet(name, auth, deps);
-    case "PUT":
-      return handleSyncPut(name, auth, await request.json().catch(() => null), deps);
-    case "DELETE":
-      return handleSyncDelete(name, auth, deps);
-    default:
-      return methodNotAllowed();
-  }
-}
-
-/**
- * `HTMLRewriter`, structurally. It is a Workers-only global, and this file is
- * compiled by the Node pass too (CLAUDE.md's two-pass rule) — so it is declared
- * rather than imported, and the reference stays in this file. `unfurl.ts` holds
- * the pure half so tests can reach it.
- */
-interface ElementLike {
-  setAttribute(name: string, value: string): void;
-}
-interface RewriterLike {
-  on(selector: string, handlers: { element(el: ElementLike): void }): RewriterLike;
-  transform(response: Response): Response;
-}
-declare const HTMLRewriter: { new (): RewriterLike };
-
-/**
- * Fills the shell's `og:` defaults in with this account's own plan.
- *
- * Runs on the same response that carries `X-Robots-Tag: noindex` — see
- * `unfurl.ts` for why those do not contradict each other. A name that is not
- * shared (or an unbound KV) leaves the generic defaults in place, which is the
- * honest preview for a link that leads to "fant ingen delt plan her".
- *
- * **No per-plan `og:image`.** Rendering a week to PNG in a Worker is not worth
- * it; the shell points at one static card. Said here so the next reader does
- * not go looking for the code that was supposed to generate one.
- */
-async function withUnfurl(shell: Response, name: string, env: Env): Promise<Response> {
-  if (!env.SYNC) return shell;
-  const read = await handlePublicRead(name, syncDeps(env.SYNC));
-  if (!read.ok) return shell;
-  const record = (await read.json()) as { plain?: unknown };
-  if (typeof record.plain !== "string") return shell;
-  const meta = unfurlMeta(record.plain, name);
-  return new HTMLRewriter()
-    .on('meta[data-unfurl="title"]', {
-      element: (el) => el.setAttribute("content", meta.title),
-    })
-    .on('meta[data-unfurl="description"]', {
-      element: (el) => el.setAttribute("content", meta.description),
-    })
-    .transform(shell);
-}
-
-/** The share toggle. Both halves need the account's own credential. */
-async function handlePublicToggle(request: Request, env: Env, name: string): Promise<Response> {
-  if (!env.SYNC) return syncUnavailable();
-  const deps = syncDeps(env.SYNC);
-  const auth = request.headers.get("x-np-auth");
-  if (request.method === "PUT") {
-    return handlePublish(name, auth, await request.json().catch(() => null), deps);
-  }
-  if (request.method === "DELETE") return handleUnpublish(name, auth, deps);
-  return methodNotAllowed();
-}
-
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url);
     const { pathname } = url;
-
-    // `/user/<navn>` — one static shell for every name, kept out of search.
-    // Before the asset branch below, which would serve the 404 page: the build
-    // emits `/user/index.html` and nothing else under `/user/`.
-    const pageName = nameIn(PUBLIC_PAGE_PATH, pathname);
-    if (pageName !== null) {
-      // `/user/`, NOT `/user/index.html`: the asset server answers the explicit
-      // file with a 307 to the directory, and the worker would hand that
-      // redirect straight to the browser — which then lands on `/user/`, a path
-      // this branch does not match, so the page came back with no noindex
-      // header, no unfurl rewrite and no name to look up.
-      const shell = await env.ASSETS.fetch(new Request(new URL("/user/", url), request));
-      return withNoIndex(withSecurityHeaders(await withUnfurl(shell, pageName, env)));
-    }
 
     // `/api` (no trailing slash) is part of the API surface too: falling
     // through to ASSETS answered it with the HTML 404 page while every other
@@ -273,50 +103,16 @@ export default {
       return withSecurityHeaders(assetResponse);
     }
 
-    // `/api/sync/*` is the one part of `/api` that is not read-only, so it is
-    // dispatched before the GET/HEAD-only gate below applies to everything else.
-    //
-    // Behind the SAME per-IP throttle as the rest of `/api`, which it used to
-    // skip entirely: the limiter was constructed further down, after this
-    // branch had already returned. `AuthLimiter` is not a substitute — it is
-    // per NAME and only counts credential failures, so it never sees
-    // `handleSyncClaim`, which needs no credential at all. `POST
-    // /api/sync/<random>` in a loop was unbounded anonymous KV writes.
-    const accountName = nameIn(SYNC_PATH, pathname);
-    const shareName = nameIn(PUBLIC_TOGGLE_PATH, pathname);
-    if (accountName !== null || shareName !== null) {
-      const syncKey = clientKey(request);
-      if (syncKey !== null) {
-        const decision = rateLimiter.take(syncKey);
-        if (!decision.allowed) {
-          return withSecurityHeaders(rateLimited(decision.retryAfterSeconds));
-        }
-      }
-      if (accountName !== null) {
-        return withSecurityHeaders(await handleSync(request, env, accountName));
-      }
-      if (shareName !== null) {
-        return withSecurityHeaders(await handlePublicToggle(request, env, shareName));
-      }
-    }
-
-    // Read-only surface: anything but GET/HEAD used to be served as a GET,
-    // payload and all, marked publicly cacheable.
+    // Read-only surface, and now it is the WHOLE surface: the account routes
+    // were the only writes this worker ever took, and they are deleted. Anything
+    // but GET/HEAD used to be served as a GET, payload and all, marked publicly
+    // cacheable.
     if (request.method !== "GET" && request.method !== "HEAD") {
       return methodNotAllowed();
     }
 
     if (pathname === "/api/health") {
       return handleHealth();
-    }
-
-    // The public page's data source. Below the GET/HEAD gate on purpose — it is
-    // a read like every other route here, and the write side is the toggle
-    // above, which needs the account's credential.
-    const publicName = nameIn(PUBLIC_READ_PATH, pathname);
-    if (publicName !== null) {
-      if (!env.SYNC) return withSecurityHeaders(syncUnavailable());
-      return withSecurityHeaders(await handlePublicRead(publicName, syncDeps(env.SYNC)));
     }
 
     const cache = new TieredCache(memoryCache, env.CACHE);

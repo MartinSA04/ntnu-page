@@ -1,7 +1,6 @@
 ---
 import { ClientRouter } from "astro:transitions";
 import semestersData from "../../data/semesters.json";
-import AccountButton from "../components/AccountButton.astro";
 import Icon from "../components/Icon.astro";
 import ThemeToggle from "../components/ThemeToggle.astro";
 import { faviconDataUri, VERDICT } from "../lib/favicon.ts";
@@ -16,24 +15,17 @@ import "../styles/site.css";
  * and a footer carrying provenance. All colour lives in tokens.css: no inline
  * colour vars here.
  *
- * THE TOPBAR CARRIES NO PLAN STATE — still true, and the three attempts that
- * broke it (a plan strip, a plan-count link, a studieinfo chip) stay dead. It
- * does carry the ACCOUNT, which is a different thing: `<AccountButton>` prints
- * the account's own name when there is a session and "Profil" when there is
- * not. No semester, no course count, no programme code.
+ * THE TOPBAR CARRIES NO PLAN STATE, and now it carries no account either.
+ * Three attempts at a sitewide plan affordance (a plan strip, a plan-count
+ * link, a studieinfo chip) were each built and each removed and stay dead; the
+ * account door beside them went with the account itself on 2026-08-18. No
+ * semester, no course count, no programme code, no sign-in.
  *
- * The rule that used to stand here — "no way into the studieinfo modal; the
- * planner's own button is the single entrance" — was written when programme +
- * kull were the only thing behind that door and the planner was the only page
- * that cared. Neither holds now. The account governs `np:profile`, `np:plans`
- * and `np:lastSemester`, which `/`, `/emner/` and `/emne/[code]/` all read;
- * and `/emne/[code]/` is the largest cold-traffic surface on the site, so a
- * student arriving there from a search engine must be able to sign in — and to
- * say which programme they are on — without navigating away first. A door that
- * exists on exactly one of four pages is not a settings surface (mandate 8).
- *
- * What stays with the planner is what belongs to a PLAN rather than to a
- * person: the semester select, and the plan's own name in the planner's title.
+ * Everything about a PLAN belongs to the planner: the semester select, and the
+ * plan's own name in its title, which is the one entrance to the studieinfo
+ * modal (mandate 9). There is no second door, because there is nothing left
+ * that is about the PERSON rather than the plan — `np:profile`, `np:plans` and
+ * `np:lastSemester` are read by two pages and written by one.
  */
 interface Props {
   title: string;
@@ -45,7 +37,7 @@ interface Props {
    * (surface, view, width) — the pre-paint probe below and the CSS in
    * planner-week.css both read it, and neither can wait for a module to mount.
    */
-  surface?: "planner" | "emne" | "user";
+  surface?: "planner" | "emne";
 }
 const { title, description, wide = false, surface } = Astro.props;
 
@@ -112,11 +104,10 @@ const crawlDate = formatCrawlDate(semestersData.crawledAt);
     <title>{title}</title>
     <meta name="description" content={description} />
     <link rel="icon" href={faviconDataUri(VERDICT)} />
-    {/* One page needs head tags nothing else does: `/user/<navn>` refuses
-        indexing and carries `og:` tags the worker rewrites per name. A named
-        slot rather than a growing list of props — the shell has no opinion
-        about what goes in here, and every page that passes nothing emits
-        nothing. */}
+    {/* A named slot rather than a growing list of props — the shell has no
+        opinion about what a page puts in its head, and every page that passes
+        nothing emits nothing. Nothing uses it today; the page that did
+        (`/user/<navn>`, with its noindex and its `og:` tags) is deleted. */}
     <slot name="head" />
     <script
       is:inline
@@ -313,11 +304,10 @@ const crawlDate = formatCrawlDate(semestersData.crawledAt);
               ))
             }
           </nav>
-          {/* Links go somewhere; the two below change something. Drawn only
+          {/* Links go somewhere; the toggle below changes something. Drawn only
               inside the panel — with the wrapper at `display: contents` this
               would otherwise rule a line across the middle of the bar. */}
           <hr class="site-menu-sep" />
-          <AccountButton defaultSemesterId={DEFAULT_SEMESTER_ID} />
           <ThemeToggle storageKey={THEME_KEY} />
         </div>
         <button

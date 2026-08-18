@@ -44,15 +44,14 @@ import { entriesForProgram, entriesInSemester, semesterYear } from "../../lib/pl
 import {
   type AddCourseInput,
   activeCourses,
+  createPlanStore,
   DEFAULT_VERSION,
   type PlanCourse,
   type PlanProgram,
   type PlanState,
 } from "../../lib/planner/store.js";
-import type { SyncResult, SyncSession } from "../../lib/planner/syncClient.js";
 import { isoWeekNumber } from "../../lib/planner/weekDates.js";
 import { syncPlanProbe } from "../../lib/planProbe.js";
-import { ACCOUNT_OPEN_EVENT, account, accountPanel, setAccountRepaint } from "../account.js";
 import { type AddCourseDeps, type AddCourseHandle, mountAddCourse } from "./addCourse.js";
 import type { SessionChoice } from "./blockPopover.js";
 import { renderLoadTrack, renderCourseRows as sharedCourseRows } from "./courseRows.js";
@@ -137,7 +136,6 @@ interface PlannerElements {
   nameBtn: HTMLButtonElement;
   contextLine: HTMLElement;
   semesterSelect: HTMLSelectElement;
-  linkNote: HTMLElement;
   creditLine: HTMLElement;
   loadLegend: HTMLElement;
   deadline: HTMLElement;
@@ -151,7 +149,6 @@ interface PlannerElements {
   directionActions: HTMLElement;
   directionButton: HTMLButtonElement;
   weekControls: HTMLElement;
-  share: HTMLButtonElement;
   gridFrame: HTMLElement;
   gridNotes: HTMLElement;
   gridStatus: HTMLElement;
@@ -175,7 +172,6 @@ function getElements(): PlannerElements | null {
     nameBtn: byId<HTMLButtonElement>("planner-name-btn"),
     contextLine: byId<HTMLElement>("planner-context-line"),
     semesterSelect: byId<HTMLSelectElement>("planner-semester-select"),
-    linkNote: byId<HTMLElement>("planner-link-note"),
     creditLine: byId<HTMLElement>("planner-credit-line"),
     loadLegend: byId<HTMLElement>("planner-load-legend"),
     deadline: byId<HTMLElement>("planner-deadline"),
@@ -191,7 +187,6 @@ function getElements(): PlannerElements | null {
     weekControls: document.querySelector<HTMLElement>(
       '#planner-region-week [data-role="week-controls"]',
     ),
-    share: byId<HTMLButtonElement>("planner-share"),
     gridFrame: byId<HTMLElement>("planner-grid-frame"),
     gridNotes: byId<HTMLElement>("planner-grid-notes"),
     gridStatus: byId<HTMLElement>("planner-grid-status"),
@@ -274,32 +269,10 @@ export function planIdentity(plan: PlanState): string {
   return `${plan.semesterId};${program};${courses}`;
 }
 
-/**
- * What Del does, given the session it finds.
- *
- * There is ONE sharing mechanism: `/user/<navn>`, which needs an account and
- * needs sharing turned on. Both gaps are things the button closes rather than
- * refuses — a disabled control that will not say why is the failure this
- * replaces. `needsSharing` is what tells the handler to flip the account's own
- * switch on the way past; when it is already on, Del is a pure copy.
- */
-export function shareTarget(
-  session: SyncSession | null,
-): { kind: "signup" } | { kind: "share"; path: string; needsSharing: boolean } {
-  if (session === null) return { kind: "signup" };
-  return {
-    kind: "share",
-    path: `/user/${encodeURIComponent(session.navn)}`,
-    needsSharing: session.public !== true,
-  };
-}
-
 /* `semesterShort` — the `H26` / `V27` form — is DELETED with its one caller.
    It existed for the plan title's third part, and the title stopped carrying a
    semester when the bar grew a `<select>` for it (DESIGN §9). Everything that
-   still names a term does it in full through `semesterLabel` ("Høst 2026"),
-   including the share sheet's title, which is the one string that leaves this
-   page and therefore the one that cannot lean on the control beside it. */
+   still names a term does it in full through `semesterLabel` ("Høst 2026"). */
 
 /**
  * Obligatory courses of a classified period, shaped for `setProgramPlan`.
@@ -340,16 +313,6 @@ function sameProgramSet(courses: PlanCourse[], next: AddCourseInput[]): boolean 
 }
 
 /**
- * The stale-tab guard, and the only reason `visibilitychange` is wired at all.
- * An iPad left open for a week holds a plan the server has moved past; pulling
- * on the way back in is what stops the next edit writing over the newer copy.
- * Not an optimisation — do not remove it as one.
- */
-export function shouldPullOnVisible(session: SyncSession | null, hidden: boolean): boolean {
-  return session !== null && !hidden;
-}
-
-/**
  * Mounts the planner page. `semestersFile` is `data/semesters.json`, a
  * build-time crawler artifact imported by the caller rather than fetched.
  *
@@ -372,29 +335,12 @@ export async function mountPlannerApp(
   // down together on the next `astro:before-swap`.
   const lifeSignal = signal ?? new AbortController().signal;
 
-  // --- The account: shared with the topbar, not owned here -----------------
-  //
-  // The store and the sync client come from `account.ts`, which the topbar's
-  // profile button also mounts against. Sharing the CLIENT is not tidiness:
-  // `createSyncClient` keeps its session in memory, so a second client would
-  // still answer `session() === null` after the panel signed in, and every
-  // push below would report "no_session" until the page reloaded.
-  //
-  // Three sync triggers, and no polling loop: on plan change (debounced 1s),
-  // on `visibilitychange` → visible, and on load. The visibility pull is
-  // load-bearing, not an optimisation — see `shouldPullOnVisible`'s own
-  // comment for why. There is no offline queue and there must never be one:
-  // this is a webpage with no service worker, so a push either lands or it
-  // reports that it did not.
-  const { store, sync } = account(defaultSemesterId);
-  // A fresh `login` writes straight to `localStorage` the same way a pull does
-  // and needs the same repaint — see `onAuthenticated`'s doc comment in
-  // `profilePanel.ts`. The panel lives in the layout and cannot know about
-  // this page, so the page hands its repaint over for as long as it is here.
-  // Forward reference is safe: `onAuthenticated` is a hoisted declaration and
-  // the callback only ever runs after a click.
-  setAccountRepaint(() => onAuthenticated());
-  lifeSignal.addEventListener("abort", () => setAccountRepaint(null));
+  // THE STORE IS THE WHOLE OF PERSISTENCE (PRODUCT mandate 11). It reads and
+  // writes `localStorage` and nothing else — there is no account, no sync
+  // client, no push, no pull, and no generation counter guarding a round trip
+  // that no longer happens. All of that was deleted 2026-08-18; a plan lives in
+  // one browser, and the planner says so rather than promising more.
+  const store = createPlanStore(defaultSemesterId);
 
   /**
    * ONE STUDIEINFO SECTION ON THE PAGE AT A TIME, and that is a hard constraint
@@ -414,9 +360,8 @@ export async function mountPlannerApp(
 
   /**
    * Opens the programme picker, with the caret on whichever control asked for
-   * it. It is the planner's OWN dialog now — the topbar's door leads to the
-   * account, which is a different room: a programme is a fact about the plan,
-   * and sign-in is a fact about the person.
+   * it. It is the planner's own dialog and the only one on the site: the
+   * topbar's door led to an account, and there is no account (mandate 11).
    */
   function openStudieinfo(focus?: StudieinfoFocus): void {
     studieinfoDialog ??= mountStudieinfoDialog(store, lifeSignal);
@@ -470,25 +415,6 @@ export async function mountPlannerApp(
     .getElementById("planner-firstrun-add")
     ?.addEventListener("click", () => openAddFromQuestion(), { signal: lifeSignal });
 
-  const firstRunLoginLine = document.getElementById("planner-firstrun-login-line");
-  if (firstRunLoginLine) {
-    // "Har du plan fra før?" is the wrong question for someone already signed
-    // in, so the line is not there for them. Read once per page-load: a session
-    // that begins mid-visit does so THROUGH this line, and by then the screen
-    // it stands on is on its way out anyway.
-    if (sync.session() !== null) firstRunLoginLine.remove();
-    else
-      document.getElementById("planner-firstrun-login")?.addEventListener(
-        "click",
-        () => {
-          document.dispatchEvent(
-            new CustomEvent(ACCOUNT_OPEN_EVENT, { detail: { mode: "login" } }),
-          );
-        },
-        { signal: lifeSignal },
-      );
-  }
-
   const courseSettings = mountCourseSettings(store, lifeSignal);
   // A click in the week asks "what is this session", not "let me edit this
   // course" — so it opens a read popover anchored to the bar, carrying a way
@@ -520,289 +446,6 @@ export async function mountPlannerApp(
     dayStamp: () => todayStamp(),
     signal: lifeSignal,
   });
-
-  /**
-   * The one fact everything below is built on: has the plan changed since
-   * the server last confirmed it has this tab's copy? A generation counter,
-   * not a flag or a timer's presence. Two earlier attempts here inferred
-   * "unsaved work exists" from `pushTimer !== null` and "this write was
-   * mine" from a time-scoped `suppressPush` boolean — both are lies under
-   * concurrency (an edit racing a pull, or racing the push's own network
-   * round trip), which is why each patched one race and opened another.
-   * `planGen` is bumped, unconditionally, by `store.onPlanChange`'s
-   * subscriber (further down) for every change it sees — a real edit and a
-   * pull's own re-derive (`setProgramPlan` inside `loadPeriodCourses`)
-   * alike; there is no attempt to tell them apart, because a snapshot of
-   * "who caused this" is exactly the kind of state that goes stale under
-   * concurrency. `syncedGen` is `planGen` as of the last push this tab
-   * confirmed landed; the two being equal is what "clean" means.
-   *
-   * The converse invariant matters as much as the counter itself: EVERY write
-   * to `np:plans` has to move `planGen`, or a pull already on the wire still
-   * satisfies `planGen === sentGen` and writes its stale snapshot over it.
-   * Two writes bypass `store.savePlan` and so have to bump it by hand — the
-   * shared link far below, and `applySyncable` inside a login
-   * (`onAuthenticated`).
-   */
-  let planGen = 0;
-  let syncedGen = 0;
-  const isDirty = () => planGen !== syncedGen;
-
-  /* The viewed-link sync suppression is DELETED with the hash it defended
-     against. It stopped a tab that had merely OPENED a shared link from
-     pushing the friend's plan into the student's own account — necessary while
-     a link wrote itself straight into `np:plans`, and meaningless now that a
-     shared plan is a page at `/user/<navn>` which touches no storage at all
-     (`components/planner/publicPlan.ts`). The durable form of the rule is that
-     there is nothing to suppress. */
-
-  /**
-   * What a successful pull needs that a same-tab edit gets for free through
-   * `store.onPlanChange`: `applySyncable` (syncClient.ts) writes straight
-   * through `storage.setItem`, never through `store.savePlan`, so no
-   * `PLAN_CHANGE_EVENT` fires and nothing here re-renders on its own. Without
-   * this, the iPad-left-open-for-a-week scenario the visibility trigger
-   * exists for only "works" up to a reload: the pulled plan sits correctly in
-   * `localStorage` while the screen keeps drawing the week from before the
-   * pull.
-   *
-   * Deliberately does NOT bump `planGen` itself: the pulled content, by
-   * definition, is what the server already has, so the pull alone creates
-   * nothing new to send. If applying it moves the derivation key and that
-   * kicks off `loadPeriodCourses()`, and THAT calls `setProgramPlan`, that
-   * goes through `store.onPlanChange` like any other write and bumps
-   * `planGen` there — correctly: the derived courses are real local content
-   * the server does not have yet. Pushing them is not a bug (see `planGen`'s
-   * own comment on why nothing suppresses that here any more) — the other
-   * device pulls the same enrichment, re-derives the identical result,
-   * `planIdentity` matches, and nothing repaints or pushes again. It
-   * converges rather than ping-ponging.
-   *
-   * Repaints only when the pulled plan actually differs — a pull that came
-   * back identical to what is already on screen must not spend the week's
-   * layer-motion animation or CLS budget on a no-op.
-   */
-  function applyPulledPlan(): void {
-    const next = store.loadPlan();
-    if (planIdentity(next) === planIdentity(plan)) return;
-    applyPlanUpdate(next);
-  }
-
-  /**
-   * A `signup`/`login`/`resolveLogin` that just landed — the other write to
-   * `np:plans` that does not go through `store.savePlan`.
-   *
-   * `applySyncable` (syncClient.ts) replaced the whole map a moment ago, so
-   * this needs the repaint a pull gets AND, unlike a pull, a bump of
-   * `planGen`. A pull deliberately does not bump: its content is by definition
-   * the server's, and its own `sentGen` check is what makes it safe. A login
-   * is not that — it is a write from OUTSIDE the pull's guard, and without the
-   * bump a GET already on the wire still satisfied `planGen === sentGen` and
-   * wrote its pre-login snapshot on top. For the same account that self-corrects
-   * on the next 409; log out and into a DIFFERENT account inside one round trip
-   * and it was the other account's plan landing in `np:plans`, under a session
-   * carrying this account's version and device registry.
-   *
-   * `schedulePush` pairs with the bump for the same reason every other bump in
-   * this file does: a tab left dirty with nothing armed is the shape that gets
-   * flushed at some arbitrary later moment by the visibility trigger. What it
-   * sends is the account's own content at the account's own version, so the
-   * push is a no-op for the plan — but it is how this device's registry row
-   * (written locally by `login`, never yet uploaded) reaches the other devices.
-   */
-  function onAuthenticated(): void {
-    planGen++;
-    applyPulledPlan();
-    schedulePush();
-  }
-
-  /**
-   * A pull, guarded against its OWN round trip.
-   *
-   * `sync.pull()` used to fetch and overwrite `np:plans` in one call, so an
-   * edit made between the GET going out and the answer coming back was
-   * destroyed by a response that predated it — and then REPORTED AS SAVED:
-   * `applySyncable` had resynced `session.version` to the server's, so the
-   * debounced push that followed re-read the clobbered storage, landed a
-   * clean 200 with no 409, and set "Sist synkronisert nå". Gone from screen,
-   * storage and server, under a green light. A guard placed after
-   * `await sync.pull()` cannot fix that; storage is already overwritten.
-   *
-   * Hence `sync.fetchRemote()` (writes nothing) + an explicit
-   * `sync.applyRemote()`: `planGen` is snapshotted BEFORE the request and the
-   * answer is refused if it moved. Refusing is safe and self-healing — every
-   * bump of `planGen` comes from `store.onPlanChange`, which also arms
-   * `schedulePush`, so the newer local edit is already on its way out and the
-   * next pull (visibility, or the stale-retry inside `pushOnce`) sees a
-   * settled tab. `"superseded"` is deliberately NOT reported as a sync
-   * failure: nothing is wrong, this answer was simply about an older plan.
-   *
-   * Returns a `SyncResult` so `pushOnce`'s stale-retry branch can still
-   * branch on `.ok`.
-   */
-  async function pullAndRefresh(): Promise<SyncResult> {
-    const sentGen = planGen;
-    const fetched = await sync.fetchRemote();
-    if (!fetched.ok) {
-      // A pull that failed used to say nothing at all, so a session revoked by
-      // a PIN change on another device kept reading "Sist synkronisert nå"
-      // while every request 401'd.
-      accountPanel()?.setSyncState(fetched.reason === "unauthorised" ? "unauthorised" : "failed");
-      return { ok: false, reason: fetched.reason };
-    }
-    if (planGen !== sentGen) return { ok: false, reason: "superseded" };
-    sync.applyRemote(fetched.snapshot);
-    applyPulledPlan();
-    accountPanel()?.setSyncState("ok");
-    return { ok: true };
-  }
-
-  let pushTimer: ReturnType<typeof setTimeout> | null = null;
-  /** Debounced so a fast run of edits (adding five courses in a row) pushes
-   *  once. Purely a batching delay now — nothing reads `pushTimer` as a
-   *  signal for "is there unsynced work" any more; `isDirty()` is that
-   *  signal, and it is correct whether or not this timer happens to be
-   *  armed at the moment it is asked. */
-  function schedulePush(): void {
-    if (sync.session() === null) return;
-    if (pushTimer !== null) clearTimeout(pushTimer);
-    pushTimer = setTimeout(() => {
-      pushTimer = null;
-      void ensurePush();
-    }, 1000);
-  }
-  lifeSignal.addEventListener("abort", () => {
-    if (pushTimer !== null) clearTimeout(pushTimer);
-  });
-
-  /**
-   * One push attempt, including the existing stale-conflict recovery: pull
-   * the server's newer copy, then push once more on top of it. `syncClient.ts`
-   * (Task 6) is explicit that there is no merge — a genuine cross-device
-   * conflict is last-write-wins there, unchanged by this file. What this
-   * file owns is a narrower problem: keeping ONE tab's own debounce/pull
-   * timing from destroying ITS OWN unsent edit, which is `ensurePush`'s job,
-   * below.
-   */
-  async function pushOnce(): Promise<SyncResult> {
-    let result = await sync.push();
-    if (!result.ok && result.reason === "stale") {
-      const pulled = await pullAndRefresh();
-      if (pulled.ok) result = await sync.push();
-      // A session revoked between the PUT and the recovery GET is a more
-      // useful answer than the `stale` that sent us here — otherwise the
-      // panel says "prøv igjen" over a session that is already gone.
-      else if (pulled.reason === "unauthorised") result = pulled;
-    }
-    return result;
-  }
-
-  /**
-   * At most one push in flight: a caller that arrives while one is already
-   * running is handed that SAME promise rather than starting a second —
-   * this is what actually stops a stale-retry pull (inside `pushOnce`) from
-   * stacking a second push on one already on the wire. Loops on `planGen`
-   * moving DURING the send: `sentGen` is read fresh at the top of each pass,
-   * so an edit that lands mid-flight (this push's own `collectSyncable` read
-   * already missed it) gets picked up by another pass rather than left
-   * dirty with nothing scheduled. `isDirty()` is checked going in — nothing
-   * to send is a plain no-op, not a wasted round trip.
-   */
-  let pushInFlight: Promise<boolean> | null = null;
-  function ensurePush(): Promise<boolean> {
-    if (pushInFlight) return pushInFlight;
-    if (!isDirty()) return Promise.resolve(true);
-    pushInFlight = (async () => {
-      let ok = true;
-      // The third `SyncUiState` was unreachable until now — nothing ever set
-      // it, so `syncStatusLine`/`syncSuffix`'s "Synkroniserer …" branches were
-      // dead copy. This is the one window it describes.
-      accountPanel()?.setSyncState("syncing");
-      /** The reason the LAST failing attempt gave, so the panel can tell a
-       *  revoked session ("Logg inn på nytt") from a retryable one. */
-      let reason = "";
-      try {
-        for (;;) {
-          if (sync.session() === null) {
-            ok = true;
-            break;
-          }
-          const sentGen = planGen;
-          const result = await pushOnce();
-          if (!result.ok) {
-            ok = false;
-            reason = result.reason;
-            break;
-          }
-          syncedGen = sentGen;
-          if (planGen === sentGen) break; // nothing moved while that send was in flight
-        }
-      } finally {
-        pushInFlight = null;
-      }
-      accountPanel()?.setSyncState(
-        ok ? "ok" : reason === "unauthorised" ? "unauthorised" : "failed",
-      );
-      return ok;
-    })();
-    return pushInFlight;
-  }
-
-  /**
-   * The stale-tab guard's real entry point. A tab holding unsynced work is
-   * NOT the stale tab the guard exists for: pulling first would overwrite
-   * that work's `localStorage` with the server's older copy (`applySyncable`
-   * is unconditional). Flush first — cancelling any armed debounce timer,
-   * which would otherwise fire later and redo work `ensurePush` is about to
-   * do anyway — and only pull once nothing is left dirty. Re-checked AFTER
-   * the flush, not just before it starts, because an edit can land during
-   * the flush's OWN network round trip too; `ensurePush`'s loop already
-   * catches that internally, but this is what decides whether it is safe to
-   * pull once the flush call returns. If the flush failed, or something is
-   * dirty again by the time it settles, skip the pull for this cycle
-   * entirely — do not retry, do not pull anyway. A tab with unsaved work is
-   * not stale, and skipping one pull costs nothing next to losing an edit.
-   * The common case (nothing dirty) falls straight through exactly as
-   * before: `isDirty()` is false and this reaches the pull immediately.
-   */
-  async function handleVisibilityPull(): Promise<void> {
-    if (isDirty()) {
-      if (pushTimer !== null) {
-        clearTimeout(pushTimer);
-        pushTimer = null;
-      }
-      if (!(await ensurePush())) return;
-      if (isDirty()) return;
-    }
-    void pullAndRefresh();
-  }
-
-  document.addEventListener(
-    "visibilitychange",
-    () => {
-      // The stale-tab guard: an iPad left open for a week pulls the server's
-      // copy the moment it is looked at again, before the next edit can push
-      // a week-old plan over it. Do not remove this or "simplify" it into the
-      // debounced push above — a tab that has been hidden for a week has no
-      // pending edit to debounce, only a stale read to correct. (A tab that
-      // DOES have one is `handleVisibilityPull`'s own job, immediately above.)
-      if (shouldPullOnVisible(sync.session(), document.hidden)) void handleVisibilityPull();
-    },
-    { signal: lifeSignal },
-  );
-
-  // On load: a signed-in student's other device may have moved since this
-  // tab's `localStorage` copy was written.
-  //
-  // This used to carry a comment claiming nothing can be dirty this early. It
-  // is not true, and the two ways it is false are the two ways this pull could
-  // destroy work: the shared-link branch a few hundred lines below runs
-  // SYNCHRONOUSLY after this call is made but before its GET resolves, and
-  // `loadPeriodCourses()` reaches `store.setProgramPlan` a few hundred ms into
-  // the same mount while the studieretning buttons have been live since first
-  // paint. `pullAndRefresh`'s own `planGen` guard covers all of it — which is
-  // why there is no separate check here.
-  if (sync.session() !== null) void pullAndRefresh();
 
   /**
    * What the popover's verb may promise, for a clicked bar or board row.
@@ -935,13 +578,6 @@ export async function mountPlannerApp(
     if (ctx) courseSettings.showFor(ctx);
   }
 
-  /**
-   * One line about the plan that no control on the page explains — today only
-   * a failed share (C4's semester-substitution note went with the hash, which
-   * was its only writer).
-   */
-  let linkNote: string | null = null;
-
   /** Only a semester this build ships plannable data for may enter the state. */
   function knownSemester(id: string): boolean {
     return semesters.some((s) => s.id === id);
@@ -954,13 +590,6 @@ export async function mountPlannerApp(
     // silently rather than explained.
     plan = { ...plan, semesterId: defaultSemesterId };
     store.savePlan(plan);
-    // `store.onPlanChange`'s subscriber is not registered until the very end
-    // of this function, so the `savePlan` above fires an event nobody is
-    // listening to and `planGen` would stay 0 — while the on-load pull's GET
-    // is already on the wire. Bumping it by hand is what makes
-    // `pullAndRefresh`'s guard see the generation move and refuse an answer
-    // about the older plan.
-    planGen++;
   }
 
   let plannerIndex: PlannerIndex | null = null;
@@ -975,7 +604,7 @@ export async function mountPlannerApp(
   let indexByCodeMemo: Map<string, PlannerIndexCourse> | null = null;
   /* Which view is on screen, and whether the next render may play the
      strike-in, both belong to `week` — it is how you are looking at the plan
-     rather than what you are looking at, and all three surfaces share it. */
+     rather than what you are looking at, and every surface shares it. */
   let periodCourses: PeriodCourses | null = null;
   let studyPlanFetchToken = 0;
   /** `true` once a study plan is loaded but has no period for this semester (B4). */
@@ -1004,13 +633,11 @@ export async function mountPlannerApp(
     return { fromDate: semester.fromDate, examFinalDate: semester.examFinalDate };
   }
 
-  /* `syncHash` is DELETED with the grammar it wrote. THE URL IS NO LONGER THE
-     PLAN: `/planlegger/` is one address whatever is in the plan, and the thing
-     you hand over is `/user/<navn>`. Two consequences worth stating rather than
-     rediscovering — bookmarking and browser tab-sync stop carrying the plan
-     (acceptable only because the account now does that job properly, and it
-     would not have been before), and D13's "breaks shared-URL parity" veto is
-     void, which does not revive anything it killed. */
+  /* `syncHash` is DELETED with the grammar it wrote. THE URL IS NOT THE PLAN:
+     `/planlegger/` is one address whatever is in the plan, and there is nothing
+     to hand over — the shared-plan page went with the account. So bookmarking
+     and browser tab-sync do not carry the plan, and nothing else does either:
+     the plan is in this browser's storage or it is nowhere (mandate 11). */
 
   /** A bundle's timetable, narrowed to this programme's sections and this semester's weeks. */
   function semesterEntries(bundle: CourseBundle | null): TimetableEntry[] {
@@ -1194,8 +821,8 @@ export async function mountPlannerApp(
       append(`timeplan publiseres ~${publishMonthFor(semester.id)}`);
     }
     // The select is rebuilt from the plan on every render rather than only at
-    // mount: a shared link carries its own semester, and the control has to
-    // agree with the week beside it.
+    // mount: the stored plan may name a term this build has dropped, and the
+    // control has to agree with the week beside it.
     renderSemesterOptions();
     // ONE ACCENT ON SCREEN, AND ON THE RIGHT ACTION (§8's One-Job-Accent).
     // "Legg til emne" is the primary action of a plan that EXISTS. With no plan
@@ -1205,87 +832,6 @@ export async function mountPlannerApp(
     // was grey paper. The card takes the accent back for that one state.
     const hasPlan = plan.program !== undefined || plan.courses.length > 0;
     elements.addCourseBtn.classList.toggle("np-btn--primary", hasPlan);
-    elements.share.hidden = !hasPlan;
-  }
-
-  /**
-   * Hand the plan over — the Web Share sheet where the platform has one (a
-   * phone, which is where a plan actually gets sent), the clipboard everywhere
-   * else.
-   *
-   * What travels is `/user/<navn>`, which needs an account and needs sharing to
-   * be on. Del on an account-less plan therefore offers SIGNUP rather than
-   * failing, and that does not violate "never a prerequisite" (PRODUCT §1): the
-   * rule is about using the planner, and the planner is untouched.
-   *
-   * The button reports what happened and then goes back to what it does, which
-   * is the whole of the feedback: a copy has no other visible consequence, and
-   * a student who does not see one presses again.
-   */
-  let shareResetTimer: ReturnType<typeof setTimeout> | undefined;
-
-  async function sharePlan(): Promise<void> {
-    const target = shareTarget(sync.session());
-    if (target.kind === "signup") {
-      // The one thing sharing does need. Said by opening the door rather than
-      // by disabling the button and leaving the student to guess why.
-      accountPanel()?.show();
-      return;
-    }
-    if (target.needsSharing) {
-      const turnedOn = await sync.setPublic(true);
-      if (!turnedOn.ok) {
-        linkNote =
-          turnedOn.reason === "no_plan"
-            ? "Legg til minst ett emne før du deler planen."
-            : "Kunne ikke dele planen. Prøv igjen.";
-        renderLinkNote();
-        return;
-      }
-    }
-    const url = new URL(target.path, location.origin).href;
-    // The plan's own name plus the term it is for. The title element stopped
-    // carrying the semester when the bar grew a control for it, and the share
-    // sheet is the one place that reads this string with no such control beside
-    // it — a plan handed over as "MTDT Kull 26" alone would not say which term.
-    const name = elements.title.textContent?.trim() || "Semesterplan";
-    const term = semesterLabel(currentSemester());
-    const title = term === "" ? name : `${name}, ${term}`;
-    if (typeof navigator.share === "function") {
-      try {
-        await navigator.share({ title, url });
-        return;
-      } catch {
-        // A dismissed sheet is not a failure and must not fall through to a
-        // silent clipboard write the student did not ask for.
-        return;
-      }
-    }
-    try {
-      await navigator.clipboard.writeText(url);
-    } catch {
-      // The failure goes to the line that is already about the link, not into
-      // the button: it needs a sentence, and a sentence in a toolbar button is
-      // what made this control resize its neighbours in the first place.
-      // States what failed and what to do next, in ink, without apology (§7).
-      // The URL is no longer in the address bar (that was the hash's doing), so
-      // the sentence has to carry it.
-      linkNote = `Kunne ikke kopiere lenken. Den er ${url}`;
-      renderLinkNote();
-      return;
-    }
-    // THE MARK IS THE WHOLE CONFIRMATION. The control is an icon square now, so
-    // there is no label to swap and nothing to pin: the width cannot change,
-    // which is what the measured `minWidth` used to buy. `share` becomes
-    // `check` and the accessible name says what happened, because a screen
-    // reader has no mark to read.
-    elements.share.classList.add("is-copied");
-    elements.share.setAttribute("aria-label", "Lenken er kopiert");
-    clearTimeout(shareResetTimer);
-    shareResetTimer = setTimeout(() => {
-      elements.share.classList.remove("is-copied");
-      elements.share.setAttribute("aria-label", "Del lenke");
-    }, 2400);
   }
 
   /**
@@ -1690,9 +1236,6 @@ export async function mountPlannerApp(
   }
 
   elements.addCourseBtn.addEventListener("click", () => addCourseDialog.open());
-  elements.share.addEventListener("click", () => {
-    void sharePlan();
-  });
 
   // --- Course bundle state (timetable + details per active course) -------
 
@@ -2459,22 +2002,6 @@ export async function mountPlannerApp(
   }
 
   /**
-   * The line above the week that is about SHARING rather than about the plan.
-   *
-   * It used to carry two more things, and both went with the hash: the
-   * semester-substitution note (nothing points at a semester any more) and
-   * "Denne delte planen erstattet din egen · Behold min egen" — the way back
-   * from a link that overwrote your plan. A link overwrites nothing now, so
-   * there is nothing to offer back.
-   */
-  function renderLinkNote(): void {
-    const host = elements.linkNote;
-    host.replaceChildren();
-    if (linkNote !== null) host.append(linkNote);
-    host.hidden = linkNote === null;
-  }
-
-  /**
    * A SECTION APPEARS WITH ITS ROWS. At zero courses Eksamener printed its
    * heading over "Legg til emner for å se eksamensdatoer." and the load track
    * printed "0 av 30 sp" over an empty rail — two headings and two apologies
@@ -2507,7 +2034,6 @@ export async function mountPlannerApp(
     // plan-less load is the first-run screen and nothing else.
     syncFirstRun();
     renderSectionPresence();
-    renderLinkNote();
     renderBanner();
     renderDeadline();
     renderCreditLine();
@@ -2705,14 +2231,9 @@ export async function mountPlannerApp(
 
   /**
    * Paints `next` onto the page: the in-memory `plan`, both rendered views,
-   * and — if the derivation key moved — a re-fetch of the study plan. The one
-   * shared step between a same-tab plan write (below) and a successful sync
-   * pull (`applyPulledPlan`, near the sync setup above).
+   * and — if the derivation key moved — a re-fetch of the study plan.
    */
   function applyPlanUpdate(next: PlanState): void {
-    // The share note is about the last press of Del, so any edit to the plan
-    // it was about is when it stops being worth reading.
-    linkNote = null;
     plan = next;
     renderAll();
     void loadBundles();
@@ -2724,23 +2245,9 @@ export async function mountPlannerApp(
   }
 
   const unsubscribe = store.onPlanChange((next) => {
-    // The one fact `isDirty()` (near the sync setup, above) is asked
-    // against — bumped for every change this subscriber sees, a real edit
-    // or a pull-driven re-derive (`setProgramPlan` inside
-    // `loadPeriodCourses`) alike, unconditionally. See `planGen`'s own
-    // comment for why nothing here tries to tell the two apart any more.
-    planGen++;
     applyPlanUpdate(next);
-    // The debounced push trigger: every plan write (add/drop a course, change
-    // a group, edit studieinfo) reaches the store through here, so wiring it
-    // once at the top of the fan-out covers all of them.
-    schedulePush();
   });
   signal?.addEventListener("abort", unsubscribe);
-
-  /* The `hashchange` listener is DELETED with the grammar it read. Pasting a
-     plan into an already-open planner is not a thing that can happen any more:
-     a shared plan is a page, and opening it navigates. */
 
   loadIndex();
 

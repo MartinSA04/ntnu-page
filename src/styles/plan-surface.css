@@ -1,23 +1,13 @@
-/* THE PLAN, AS A PAGE — shared by the two surfaces that show one.
+/* THE PLAN, AS A PAGE — the masthead, the week section, and Eksamener and
+ * Emner under it.
  *
- * `/planlegger/` and `/user/<navn>` are the same page: the same masthead
- * shape, the same week section, the same Eksamener and Emner under it. They
- * differ only in which of those carry verbs, so their LOOK cannot live in one
- * page's scoped block — that is how two copies start drifting, which is exactly
- * what happened to the week's own controls before `planner-week.css` existed.
+ * It was shared by two surfaces, `/planlegger/` and `/user/<navn>`, which is
+ * why it is a file rather than a scoped block. The second is deleted; the file
+ * stays, because the alternative is folding ~40 selectors back into one page's
+ * `<style>` and that is transcription with a merge conflict at the end of it.
  *
- * The class prefix stays `.planner-*`. It names the thing being drawn (a plan)
- * rather than the route drawing it, and renaming ~40 selectors to say so would
- * be transcription.
- *
- * What is NOT here: the first-run screen, which is `/planlegger/`'s alone and
- * stays in its scoped block. The week's own geometry is in planner-week.css.
- *
- * Rules that only ever match on the planner (the share mark, the semester
- * select, the study-plan panel, the provenance line) are kept here beside the
- * sections they sit in rather than split across two files by ownership: they
- * match nothing on the shared plan, and one file that describes the whole
- * surface is easier to keep true than two that describe halves of it. */
+ * What is NOT here: the first-run screen, which stays in the page's scoped
+ * block. The week's own geometry is in planner-week.css. */
 /* --- Banner ------------------------------------------------------------ */
 
 /* Facts only — the identity block carries no control of its own. Every
@@ -285,47 +275,11 @@ button.planner-chip.is-jump:hover {
 /* THE SEMESTER, beside the name it describes. `flex: none` because a select
    with `appearance: none` has no min-content width worth trusting — the
    grammar is `.np-select` in primitives.css, shared with the studieretning
-   picker in the profile panel. `margin-inline-start: auto` is what pins this
-   and the share mark to the trailing edge while the name takes the slack. */
+   picker in the studieinfo dialog. `margin-inline-start: auto` is what pins it
+   to the trailing edge while the name takes the slack. */
 .planner-semester {
   flex: none;
   margin-inline-start: auto;
-}
-
-/* THE HAND-OVER, AND IT IS A MARK. Two icons live in this button and exactly
-   one is drawn: the resting `share`, and the `check` that answers a press.
-   A state class rather than `[hidden]`, because what changes is which of two
-   siblings occupies one slot — the attribute is for something that stops
-   existing.
-
-   It is an `.np-icon-btn`, so it is a fixed `--control-h` square that cannot
-   shrink and cannot change width when the mark swaps. That retires the whole
-   pinned-width apparatus the labelled version needed: there is no label to
-   grow, so there is nothing to reserve. */
-.planner-share {
-  flex: none;
-}
-
-.planner-share svg {
-  flex: none;
-}
-
-.planner-share .planner-share-check {
-  display: none;
-}
-
-.planner-share.is-copied .planner-share-mark {
-  display: none;
-}
-
-.planner-share.is-copied .planner-share-check {
-  display: block;
-}
-
-/* The confirmation is the only thing this control can say, so it says it in
-   the one colour that means "done" here. */
-.planner-share.is-copied {
-  color: var(--verdict);
 }
 
 @media (max-width: 46rem) {
@@ -344,11 +298,6 @@ button.planner-chip.is-jump:hover {
    the term works — so it is ink, not the verdict green. */
 .planner-context-direction {
   color: var(--ui);
-}
-
-.planner-link-note:not([hidden]) {
-  max-width: none;
-  margin-bottom: var(--space-4);
 }
 
 /* --- Layout ------------------------------------------------------------ */
