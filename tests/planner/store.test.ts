@@ -429,7 +429,12 @@ describe("removeProgram", () => {
     events = fakeEvents();
   });
 
-  it("clears the programme profile and drops programme courses, keeping manual adds", () => {
+  /* Clearing the programme clears the PROFILE, and nothing else. This used to
+     drop every programme-sourced course, which made "Lagre" in the studieinfo
+     dialog the only control in the product that deleted a student's work
+     without saying so — five prefilled rows, plus whatever groups had been
+     chosen on them, gone with nothing to undo it with. */
+  it("clears the programme profile and keeps every course, re-sourced as a manual add", () => {
     const store = createPlanStore("26h", { storage, events });
     store.setProgramPlan({ code: "MTDT", name: "Datateknologi", cohort: 2024 }, [
       { code: "TDT4100", name: "A" },
@@ -439,8 +444,23 @@ describe("removeProgram", () => {
     store.removeProgram();
     const plan = store.loadPlan();
     expect(plan.program).toBeUndefined();
-    expect(plan.courses.map((c) => c.code)).toEqual(["PSY1000"]);
-    expect(plan.courses[0]?.source).toBe("manual");
+    expect(plan.courses.map((c) => c.code)).toEqual(["TDT4100", "TMA4100", "PSY1000"]);
+    expect(plan.courses.every((c) => c.source === "manual")).toBe(true);
+  });
+
+  /* And re-selecting the same programme afterwards does not double the rows:
+     the survivors are manual now, and `setProgramPlan` dedupes by code with the
+     programme entry winning. Without this the repair above would trade a silent
+     deletion for a silent duplication. */
+  it("re-selecting the same programme does not duplicate the courses it kept", () => {
+    const store = createPlanStore("26h", { storage, events });
+    const mtdt = { code: "MTDT", name: "Datateknologi", cohort: 2024 };
+    store.setProgramPlan(mtdt, [{ code: "TDT4100", name: "A" }]);
+    store.removeProgram();
+    store.setProgramPlan(mtdt, [{ code: "TDT4100", name: "A" }]);
+    const plan = store.loadPlan();
+    expect(plan.courses.map((c) => c.code)).toEqual(["TDT4100"]);
+    expect(plan.courses[0]?.source).toBe("program");
   });
 
   it("persists the cleared profile — a re-read store does not resurrect the program", () => {

@@ -168,9 +168,33 @@ does not carry a squared field either*. A message is never rendered inside
 the week's frame as though it were a plan (`renderWeekMessage` exists for
 that).
 
-**Ink-Before-Chrome.** Structure is tonal steps and hairlines; interactive
-controls carry fills or washes, never borders. There is no sanctioned
-exception.
+**Ink-Before-Chrome.** *Structure* is tonal steps and hairlines: sections,
+rows, days and panels are separated by a rule or a change of tone, never by a
+box drawn around them. That half is unchanged and still has no exception —
+cards, outlined containers and framed heroes are all still out.
+
+*Controls are not structure.* Every filled control — `.np-btn`, `.np-field`,
+`.np-select`, `.np-toggle` — carries a 1 px `--control-edge`, and the two
+controls whose fill is already the strongest mark on the page
+(`aria-pressed`/`.is-active`, and `--btn--primary`) turn it off rather than
+restate it in grey. This reverses the rule's earlier second half ("never
+borders, no sanctioned exception"), which was wrong and was faithfully
+implemented: `--control-bg` measures **1.07:1** on `--bg`, so a tonal step was
+the entire affordance and there was not one. A resting search field — the
+first thing `/emner/` asks of a student, and the only way into the planner's
+add dialog — was an invisible rectangle that announced itself only once it
+already had focus, and WCAG 1.4.11 requires 3:1 for exactly this boundary.
+`--control-edge` clears it against the page, against `--card` in a dialog and
+against the control's own fill; `tokens.test.ts` measures all three.
+
+The hairlines moved with it. `--border` shipped at **1.25:1** and
+`--border-strong` at 1.42, which is under the threshold at which a 1 px line on
+white is a line: `/emner/` drew a hundred rows with no visible rules between
+them and read as a wall, and the week's quarter-hour ruling — `--border` at
+55 % — resolved to `#f0f0f2`. They now sit at 1.71 and 2.58, the quietest a
+hairline can be while still being one, with Apple's own separator as the
+reference. Hairline &lt; boundary &lt; control edge is pinned as an ordering, so
+none of the three can be aliased back onto another.
 
 ---
 
@@ -384,6 +408,17 @@ CSS rather than in a measuring pass — hence no resize listener. Flooring the
 count keeps the week honest at the edges: a narrower window drops a whole day
 and widens the rest.
 
+**And a day may never take more than half the frame.** `dagminimum` is
+`felter × feltminimum` capped at `(plass − skinnen) / 2`, where `felter` is the
+deepest cluster in the WHOLE week — so without the cap one 45-minute Friday
+overlap gave Monday a two-lane minimum it had nothing to put in, and a
+three-course plan came to 1 560 px at 390 px wide and opened showing **one day
+of five**. The tool's headline feature made its primary surface unusable. Past
+the cap the lanes divide what is left and the course code truncates: "the day
+grows before the code shrinks" holds while a day has one lane and is a
+statement of priority, not a guarantee, once it has two. A truncated code in a
+block you can tap is a smaller loss than four days you cannot reach.
+
 **The phone gate is a fraction, not a pixel count**: the week must begin
 inside the first **37 %** of the screen, measured from the viewport's top so
 the site topbar is inside the budget too. That is the claim that was always
@@ -392,6 +427,14 @@ against. The figure was 0.35 and was raised deliberately: the verdict and the
 deadline cannot share one 390 px row, so a **qualified** pass spends 27 px
 more than a plan whose pass says nothing. Only a qualified plan spends it —
 an unqualified clean verdict is still hidden on a phone.
+
+It measures where the week **starts**, and that is all it measures. The
+one-day week above sat comfortably inside 37 % the entire time, because a week
+pushed off the right edge costs nothing at the top. What the *width* is worth
+is gated separately, in `e2e/flows.pw.ts`: at least **two days on screen** at
+every width and every week depth the sweep drives — the clause the sweep was
+missing while it certified, at thirteen widths, that the columns it could not
+see were tidy.
 
 Measured at 390 × 844 on that qualified plan, the week's frame has started at
 277 px, then 304 px when the qualified pass began printing, and **260 px
@@ -601,13 +644,34 @@ Settled, with the reasoning, so they are not re-opened by the next reviewer.
 
 - **The course palette is the calendar family, and the value is bought.**
   `--hue-blue` #027cb8, `--hue-cyan` #00818c, `--hue-purple` #8e24aa,
-  `--hue-indigo` #3f51b5, `--hue-orange` #d93c0b, `--hue-green` #0b8043. Two
+  `--hue-indigo` #3f51b5, `--hue-orange` #d93c0b, `--hue-rose` #ad1457. Two
   of the reference values fail AA with a code knocked out of them (#039be5
   measures 3.08:1 under white, #f4511e 3.48), so **those two are darkened
   along their own hue until they clear and the rest are the reference
   exactly.** That is the shape of the trade throughout: the family is the
   design decision and is kept; the value is measured and bought. Dark-theme
   indigo went one step up its own ramp for the same reason.
+
+- **There is no course green, and this rule is why.** The sixth hue was the
+  reference's own Basil #0b8043 while `--verdict` is #177334 — **ΔE76 6.3**,
+  the same dark green to any eye, one of them meaning "the term works" and the
+  other "this is TMA4100", drawn a few pixels apart in the course list where
+  the credit figure sits beside the dots. The rule directly above ("no two
+  colour jobs share a hue") was written down and then not applied to the one
+  hue it ruled out. `--hue-rose` #ad1457 replaces it: ΔE 37.8 from the
+  collision red and 52.4 from purple in light, 34.0 / 33.2 in dark, AA as a
+  printed fill and as a tinted label in both themes.
+
+  **Only the verdict is held to a hue distance**, and the asymmetry is
+  deliberate. The accent shares a neighbourhood with dark indigo (ΔE 13.0) and
+  the collision with orange (19.1), and both survive it because neither is ever
+  colour *alone* where a course hue can reach it — the needle carries a 1 px
+  halo in the page's own colour precisely because it crosses blocks in
+  arbitrary colour, the clash is a bar and a tinted band as well as a red, and
+  the primary button never sits on a block. The verdict has no second channel:
+  it is a green sentence and a green figure, and colour is the whole message.
+  `tokens.test.ts` measures the one distance that matters instead of asserting
+  all three and quietly failing.
 
 - **A pass says what it passed on.** `conflictCount: 0` over a plan where one
   course contributed no classifiable lecture is a claim about four courses

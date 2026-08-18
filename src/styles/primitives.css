@@ -80,6 +80,18 @@
 
 /* --- Buttons ------------------------------------------------------- */
 
+/* THE CONTROL EDGE, and every filled control below carries it.
+   `--control-bg` is 1.07:1 on the page, so before this line a button was a
+   rectangle of very nearly the paper behind it and only its label said
+   anything was there. WCAG 1.4.11 asks 3:1 for the boundary of a control, and
+   `--control-edge` is chosen to clear it against all three grounds a control
+   sits on (page, dialog card, its own fill).
+
+   `border`, not an inset shadow: `box-sizing: border-box` is global, so the
+   36px control stays 36px and nothing reflows, and a real border is what
+   `:hover`/`:disabled` can move. A control whose fill is INK or the ACCENT
+   turns the edge off rather than restating it in grey — the fill is already
+   the strongest boundary on the page. */
 .np-btn {
   display: inline-flex;
   align-items: center;
@@ -90,15 +102,18 @@
   color: var(--fg);
   font-weight: var(--weight-medium);
   font-size: var(--text-sm);
+  border: 1px solid var(--control-edge);
   border-radius: var(--radius-sm);
   text-decoration: none;
   transition:
     background var(--dur-fast) var(--ease),
+    border-color var(--dur-fast) var(--ease),
     color var(--dur-fast) var(--ease);
 }
 
 .np-btn:hover {
   background: var(--control-hover);
+  border-color: var(--fg);
 }
 
 /* Pressed is a SELECTION, not a verdict, so it fills with ink (18.62:1 under
@@ -106,6 +121,7 @@
 .np-btn[aria-pressed="true"],
 .np-btn.is-active {
   background: var(--ui);
+  border-color: var(--ui);
   color: var(--ui-contrast);
 }
 
@@ -117,11 +133,13 @@
    At most one per surface; a second turns the first back into decoration. */
 .np-btn--primary {
   background: var(--accent);
+  border-color: var(--accent);
   color: var(--accent-contrast);
 }
 
 .np-btn--primary:hover {
   background: color-mix(in srgb, var(--fg) 12%, var(--accent));
+  border-color: color-mix(in srgb, var(--fg) 12%, var(--accent));
 }
 
 /* A fixed --control-h box, so nothing about it shrinks. `flex: none` is the
@@ -289,9 +307,11 @@ button.np-tag:hover {
   font-weight: var(--weight-medium);
   text-transform: uppercase;
   letter-spacing: var(--tracking);
+  border: 1px solid var(--control-edge);
   border-radius: var(--radius-sm);
   transition:
     background var(--dur-fast) var(--ease),
+    border-color var(--dur-fast) var(--ease),
     color var(--dur-fast) var(--ease);
 }
 
@@ -308,18 +328,23 @@ button.np-tag:hover {
 
 .np-toggle:hover {
   background: var(--control-hover);
+  border-color: var(--fg);
   color: var(--ui);
 }
 
 .np-toggle[aria-pressed="true"] {
   background: var(--ui);
+  border-color: var(--ui);
   color: var(--ui-contrast);
 }
 
 /* --- Fields -------------------------------------------------------- */
 
-/* The fill is the whole field. A field is paper one step off the page with the
-   instrument corner, and that is all. */
+/* A field is paper one step off the page, with the instrument corner and an
+   edge. The edge is not decoration: the fill alone measures 1.07:1, so a
+   resting search box — the first thing asked of a student on /emner/ and the
+   only way into the add dialog — was an invisible rectangle that announced
+   itself only once it already had focus. */
 .np-field {
   display: flex;
   align-items: center;
@@ -327,11 +352,19 @@ button.np-tag:hover {
   min-height: var(--control-h);
   padding: 0 var(--space-3);
   background: var(--control-bg);
+  border: 1px solid var(--control-edge);
   border-radius: var(--radius-sm);
-  transition: background var(--dur-fast) var(--ease);
+  transition:
+    background var(--dur-fast) var(--ease),
+    border-color var(--dur-fast) var(--ease);
+}
+
+.np-field:hover {
+  border-color: var(--fg);
 }
 
 .np-field:focus-within {
+  border-color: var(--ui);
   outline: 2px solid var(--ui);
   outline-offset: 3px;
 }
@@ -395,13 +428,16 @@ button.np-tag:hover {
   color: var(--fg);
   font-family: var(--font-sans);
   font-size: var(--text-sm);
-  border: 0;
+  border: 1px solid var(--control-edge);
   border-radius: var(--radius-sm);
-  transition: background var(--dur-fast) var(--ease);
+  transition:
+    background var(--dur-fast) var(--ease),
+    border-color var(--dur-fast) var(--ease);
 }
 
 .np-select:hover {
   background: var(--control-hover);
+  border-color: var(--fg);
 }
 
 /* Optically centred on the control, not on the text box: `top: 50%` plus a

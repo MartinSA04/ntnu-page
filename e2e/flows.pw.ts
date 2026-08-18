@@ -802,6 +802,22 @@ test("kolonner: the week is dealt out in whole days at every width", async ({ pa
         expect(Math.abs(inDays - Math.round(inDays)), `${at}: ${maxScroll}px hidden`).toBeLessThan(
           0.05,
         );
+
+        /* AND AT LEAST TWO OF THEM ARE ON SCREEN, which is the clause this
+           whole sweep was missing. Everything above asks whether the columns
+           are TIDY — same width, whole days, no strip hanging past the edge —
+           and every one of those assertions passed while a phone showed ONE day
+           of five: the day minimum multiplied the deepest cluster in the week
+           by every column, so a single 45-minute Friday overlap gave Monday a
+           two-lane minimum and pushed the week to 1560px at 390px wide. A week
+           you can only read one day at a time is not a week, and no measurement
+           here could see it. Two is the floor because it is the smallest number
+           that still shows a NEXT day; at 3 lanes and 360px the cap is what
+           makes it hold. */
+        const onScreen = (region.right - region.left) / track;
+        expect(onScreen, `${at}: only ${onScreen.toFixed(2)} days fit on screen`).toBeGreaterThan(
+          1.99,
+        );
       }
     }
   }

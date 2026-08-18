@@ -99,6 +99,49 @@ export function parseQuery(raw: string): CatalogQuery {
   return { tokens, compact: tokens.join(""), joined: tokens.join(" ") };
 }
 
+/**
+ * WHAT STUDENTS TYPE, mapped to what the catalog is called. Keys are already
+ * folded; values are expanded into tokens and matched like any other query.
+ *
+ * This exists because substring matching is a statement about spelling and a
+ * search box is asked a question about meaning. "matte" is what a Norwegian
+ * student types for matematikk and it is not a substring of "matematikk" — so
+ * `/emner/` answered it with five food-technology courses and one about
+ * fatigue, and the planner's add dialog did the same. The nickname is not a
+ * near-miss the folding could have caught; no amount of diacritic work or edit
+ * distance turns "matte" into "matematikk" without also turning it into
+ * "matteknologi".
+ *
+ * THE BAR FOR ADDING ONE: it must be what students actually say, and the
+ * expansion must be a real catalog phrase — every entry here was run against
+ * the index and lands on the course it claims. It stays short on purpose. A
+ * synonym list is a maintenance surface, and each entry silently outranks
+ * whatever the literal string would have found.
+ */
+const NICKNAMES: Readonly<Record<string, string>> = {
+  matte: "matematikk",
+  algdat: "algoritmer og datastrukturer",
+  itgk: "informasjonsteknologi grunnkurs",
+};
+
+/**
+ * The query as typed, plus the nickname-expanded reading of it when there is
+ * one. Both are searched and a row keeps its BEST score, so expansion can only
+ * ever add rows and lift them — "matteknologi" still answers "matte", below the
+ * mathematics the student meant rather than instead of it.
+ */
+export function expandQuery(raw: string): CatalogQuery[] {
+  const literal = parseQuery(raw);
+  if (literal.tokens.length === 0) return [];
+  const expanded = literal.tokens.flatMap((t) => (NICKNAMES[t] ?? t).split(" "));
+  const alias: CatalogQuery = {
+    tokens: expanded,
+    compact: expanded.join(""),
+    joined: expanded.join(" "),
+  };
+  return alias.joined === literal.joined ? [literal] : [literal, alias];
+}
+
 /** True when `token` starts a word in `hay` (both already folded). */
 function startsWord(hay: string, token: string): boolean {
   for (let from = 0; ; ) {
@@ -134,17 +177,22 @@ export function scoreFolded(code: string, name: string, query: CatalogQuery): nu
  * exists to surface.
  */
 export function searchCatalog(rows: readonly CatalogRow[], raw: string): CatalogRow[] {
-  const query = parseQuery(raw);
-  if (query.tokens.length === 0) return [];
+  const queries = expandQuery(raw);
+  if (queries.length === 0) return [];
 
   const scored: { row: CatalogRow; score: number }[] = [];
   for (const row of rows) {
     const code = fold(row[0]);
     const name = fold(row[1]);
-    // A token never spans the code/name boundary, so testing the two
-    // separately is the same predicate as one joined haystack.
-    if (!query.tokens.every((t) => code.includes(t) || name.includes(t))) continue;
-    scored.push({ row, score: scoreFolded(code, name, query) });
+    let best = -1;
+    for (const query of queries) {
+      // A token never spans the code/name boundary, so testing the two
+      // separately is the same predicate as one joined haystack.
+      if (!query.tokens.every((t) => code.includes(t) || name.includes(t))) continue;
+      best = Math.max(best, scoreFolded(code, name, query));
+    }
+    if (best < 0) continue;
+    scored.push({ row, score: best });
   }
 
   scored.sort((a, b) => {

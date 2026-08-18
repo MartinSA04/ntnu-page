@@ -553,16 +553,33 @@ html[data-view="tavle"][data-surface="user"] .planner-grid-frame[data-reserve] {
    `--planner-allday-h`, each block's percentages); the rest is arithmetic the
    browser does.
 
-   THE WIDTH LAW — the day grows, the code never shrinks, and the week is dealt
-   out in WHOLE DAYS:
+   THE WIDTH LAW — the day grows, the code stays whole while it can, and the
+   week is dealt out in WHOLE DAYS:
 
+     dagtak             = maks(énfelts minimum, (plass - skinnen) / 2)
+     dagminimum         = min(felter × feltminimum, dagtak)
      dager som får plass = maks(1, min(ukedager, gulv(plass / dagminimum)))
      dagbredde           = maks(dagminimum, plass / dager som får plass)
 
-   `dagminimum` is what the deepest cluster needs to keep a course code whole;
    `plass` is the scrollport minus the rail. FLOORING the count is what keeps a
    strip of Friday from hanging past the frame edge, so a narrower window makes
    the remaining days WIDER.
+
+   `dagtak` IS THE HALF THAT WAS MISSING, and without it one 45-minute overlap
+   made the week unreadable on a phone. `felter` is the deepest cluster in the
+   WHOLE WEEK, and it sized EVERY column: a single Friday clash gave Monday a
+   two-lane minimum it had nothing to put in. Measured at 390px with three
+   courses and one clash, the week came to 1560px and opened showing ONE of five
+   days — the tool's own headline feature made its primary surface useless, and
+   the 13-width e2e sweep passed the whole time because it asks whether the day
+   columns quantise cleanly, never whether any of them are on screen.
+
+   So the guarantee is stated honestly instead of absolutely: a day gets the
+   width its lanes want UNTIL that would take more than half the frame, and past
+   that the lanes divide what is left and the code truncates. A truncated code
+   in a block you can tap is a smaller loss than four days you cannot reach, and
+   the cap is what makes "at least two days are side by side" true at every
+   width rather than true only for plans without collisions.
 
    `@supports` gates the whole thing: a custom property the browser cannot
    compute makes `grid-template-columns` invalid at computed-value time, which
@@ -631,6 +648,29 @@ html[data-view="tavle"][data-surface="user"] .planner-grid-frame[data-reserve] {
   }
 
   .planner-cols {
+    /* The cap, and it lives HERE rather than beside the fallback declaration
+       because it is the only branch with a `cqw` to measure the frame with.
+       Outside `@supports` the grid is a plain `minmax()` that cannot quantise
+       anyway, so it keeps the uncapped minimum.
+
+       It binds ONLY on a day with two or more lanes: at one lane the minimum is
+       77px, which is under half of any frame this view is drawn in, so a plan
+       with no collisions lays out exactly as it did before.
+
+       THE 1px IS NOT A FUDGE. `--planner-fit` floors `avail / daymin`, so a cap
+       of exactly `avail / 2` puts the division precisely on the boundary
+       between one day and two, and which side it lands on is decided by the
+       engine's fixed-point arithmetic rather than by the rule: at 390px it
+       came out 2.0 and at 320px it came out 1.9999, so the narrowest phone
+       kept the one-day week the cap exists to abolish. A bound sitting on its
+       own quantisation step has to sit just inside it. */
+    --planner-daymin: min(
+      calc(var(--planner-lanes-max, 1) * (var(--planner-lane-min) + var(--planner-lane-gap))),
+      max(
+        calc(var(--planner-lane-min) + var(--planner-lane-gap)),
+        calc((100cqw - var(--planner-rail)) / 2 - 1px)
+      )
+    );
     --planner-fit: max(
       1,
       min(
@@ -880,6 +920,23 @@ html[data-view="tavle"][data-surface="user"] .planner-grid-frame[data-reserve] {
 
 .planner-grid-frame:not([data-static]) .planner-cols-block:hover {
   filter: brightness(1.12);
+}
+
+/* THE FOCUS RING, WITH THE SAME HALO THE NEEDLE CARRIES, and for the same
+   reason: this is the one control on the site whose background is arbitrary.
+   The global ring is 2px of `--ui` — near-black in light, near-white in dark —
+   and a block is a printed course hue, so the ring measured 2.39:1 on purple
+   and 2.45:1 on indigo. WCAG 1.4.11 asks 3:1, and every block is a <button>,
+   so keyboard focus was invisible on two of the six courses.
+
+   Ink alone cannot fix it: no single colour clears 3:1 against all six hues AND
+   the page. Two do — a ring in the PAGE's colour hugging the fill, then the
+   ink ring outside it. Whatever the block is, one of the two contrasts against
+   it and the other against the paper. `outline-offset` is pulled to 2px so the
+   halo exactly fills the gap rather than leaving the fill showing through. */
+.planner-cols-block:focus-visible {
+  outline-offset: 2px;
+  box-shadow: 0 0 0 2px var(--bg);
 }
 
 /* DR-1's display layer: the same colour TINTED rather than printed, never red.

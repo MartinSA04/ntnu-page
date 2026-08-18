@@ -1,12 +1,17 @@
 /**
- * `addCourseRowControl` — the add-course modal's row logic, extracted so it is
- * testable without a DOM. Driven against a *real* plan store on in-memory
- * storage, so a mis-wired verb (calling `removeCourse` where `dropCourse`
- * belongs) fails here rather than in a browser. The rendering half is DOM and
- * is not covered here.
+ * `addCourseRowControl` — what pressing a course's one button does to the plan,
+ * on EVERY surface that offers it: the add-course modal and `/emner/`'s
+ * register both read it now. It lives in `lib/planner/` rather than beside the
+ * dialog precisely because the register did not, and answered `hasCourse`
+ * instead — which reports a dropped course as present and hard-deletes a
+ * programme course.
+ *
+ * Driven against a *real* plan store on in-memory storage, so a mis-wired verb
+ * (calling `removeCourse` where `dropCourse` belongs) fails here rather than in
+ * a browser. The rendering half is DOM and is not covered here.
  */
 import { beforeEach, describe, expect, it } from "vitest";
-import { addCourseRowControl } from "../../src/components/planner/addCourse.js";
+import { addCourseRowControl } from "../../src/lib/planner/courseAction.js";
 import {
   createPlanStore,
   type EventTargetLike,

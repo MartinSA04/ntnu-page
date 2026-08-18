@@ -295,7 +295,7 @@ export interface PlanStore {
   setProgramPlan(program: PlanProgram, courses: AddCourseInput[]): PlanState;
   setSemester(semesterId: string): PlanState;
   setProgram(program: PlanProgram): PlanState;
-  /** Clears the programme profile: drops the program and every programme-sourced course, keeps manual adds. */
+  /** Clears the programme profile. The courses stay, re-sourced as manual adds. */
   removeProgram(): PlanState;
   /** Replaces a course's selected group keys; `[]` clears back to defaults. */
   setCourseGroups(code: string, groups: string[]): PlanState;
@@ -508,15 +508,34 @@ export function createPlanStore(
   /**
    * Clears the programme profile and re-derives. `savePlan` can only ever
    * *write* a profile — it skips the key when `program` is undefined — so the
-   * key is reset directly here, then the pruned course list goes through the
-   * normal save path.
+   * key is reset directly here, then the re-sourced course list goes through
+   * the normal save path.
+   *
+   * THE COURSES SURVIVE, and this used to be the one place in the product where
+   * data disappeared without being asked for. Clearing the programme field in
+   * the studieinfo dialog and pressing **Lagre** ran
+   * `courses.filter((c) => c.source !== "program")`: a student who had a
+   * five-course prefill, then chose their groups and added two courses of their
+   * own, lost the five — under a button that says "save", with no warning, no
+   * count and nothing to undo it with.
+   *
+   * A confirm dialog was the obvious repair and is the worse one, because the
+   * deletion is not what the student asked for either way. What they asked for
+   * is "I am not in this programme". So the profile goes and the courses stay,
+   * re-sourced as manual adds: every one of them is still a course in the plan,
+   * every row already carries its own remove control, and nothing is lost by an
+   * action that never mentioned losing anything. Re-selecting the same
+   * programme cannot duplicate them — `setProgramPlan` dedupes by code with the
+   * programme entry winning.
    */
   function removeProgram(): PlanState {
     const plan = loadPlan();
     storage.setItem(PROFILE_STORAGE_KEY, JSON.stringify({}));
     const next: PlanState = {
       semesterId: plan.semesterId,
-      courses: plan.courses.filter((c) => c.source !== "program"),
+      courses: plan.courses.map(
+        (c): PlanCourse => (c.source === "program" ? { ...c, source: "manual" } : c),
+      ),
     };
     savePlan(next);
     return next;

@@ -207,9 +207,12 @@ plannerApp.ts    orchestration: owns the DOM ids in planlegger/index.astro,
 ### The renderers (`src/components/planner/`)
 
 - **`columnGrid.ts`** — **Uke**: days across, time down. The width law
-  (whole days only, the day grows before the code shrinks) is expressed in
-  **CSS**, not in a measuring pass, so there is no resize listener and no
-  `getBoundingClientRect`.
+  (whole days only; the day grows before the code shrinks, and no day takes
+  more than half the frame) is expressed in **CSS**, not in a measuring pass,
+  so there is no resize listener and no `getBoundingClientRect`. The module's
+  only input to it is `--planner-lanes-max`, the deepest cluster in the week —
+  which is why the cap exists: that one number sizes every column, so before it
+  a single Friday overlap set Monday's minimum too (DESIGN §6).
 - **`board.ts`** — **Liste**: a departure board, one row per session, the
   start time in the left margin and the room in the right. No geometry, so
   nothing narrows as the viewport does — which is the point: the grid is

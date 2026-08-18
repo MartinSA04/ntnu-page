@@ -122,6 +122,37 @@ describe("searchCatalog — ranking (search-1 / astro-5)", () => {
     expect(codes(searchCatalog(rows, "teknologi"))).toEqual(["ZZZ9000", "AAA1000"]);
   });
 
+  /* WHAT STUDENTS TYPE vs WHAT THE CATALOG IS CALLED. Substring matching is a
+     statement about spelling; a search box is asked a question about meaning.
+     "matte" is not a substring of "matematikk", so against the real index it
+     returned five food-technology courses and one about fatigue — and no
+     amount of folding or edit distance fixes that without also turning it into
+     "matteknologi". */
+  it("answers a nickname with the course it means", () => {
+    const rows = [row("TMAT3020", "Matteknologi prosjekt 1"), row("TMA4100", "Matematikk 1")];
+    expect(codes(searchCatalog(rows, "matte"))).toEqual(["TMA4100", "TMAT3020"]);
+  });
+
+  /* Expansion ADDS a reading, it does not replace the one that was typed:
+     "matteknologi" is still what "matte" literally matches, and it is still
+     found — under the mathematics rather than instead of it. A student who
+     wants meat technology types the word and gets it. */
+  it("keeps the literal reading of a nickname, ranked below the expansion", () => {
+    const rows = [row("TMAT3020", "Matteknologi prosjekt 1")];
+    expect(codes(searchCatalog(rows, "matte"))).toEqual(["TMAT3020"]);
+    expect(codes(searchCatalog(rows, "matteknologi"))).toEqual(["TMAT3020"]);
+  });
+
+  /* A multi-word expansion has to survive tokenisation: "algdat" becomes three
+     tokens, and every one of them still has to be present in the row. */
+  it("expands a nickname that stands for a whole phrase", () => {
+    const rows = [
+      row("TDT4120", "Algoritmer og datastrukturer"),
+      row("TDT4100", "Objektorientert programmering"),
+    ];
+    expect(codes(searchCatalog(rows, "algdat"))).toEqual(["TDT4120"]);
+  });
+
   // The appendix offered stale demotion as optional; TMA4100 is itself stale
   // in the 2026 catalog, so demoting would bury the finding's own example.
   it("does not demote a row that is not taught this year", () => {

@@ -38,7 +38,22 @@
   align-items: center;
   gap: var(--gap-4);
   height: var(--topbar-h);
-  padding-inline: var(--gutter);
+  /* THE MASTHEAD SITS ON THE PAGE'S OWN LEFT EDGE.
+     The bar is full-bleed on purpose — its rule and its background have to
+     reach both edges of a sticky viewport-wide element — but its CONTENTS
+     belong to the same column the page below is set in. With a flat
+     `--gutter` the wordmark started at 32px while the widest content column
+     started at 80px on a 1440px laptop, so the first two things a student sees
+     stacked vertically, 48px out of true, on every page in the site.
+
+     This reproduces `.site-content.wide`'s geometry without a wrapper element:
+     that column is `--maxw` centred with `--gutter` inside it, so its text
+     edge is `(100% - --maxw) / 2 + --gutter`. Below --maxw the term goes
+     negative and `max()` falls back to the plain gutter, which is what the
+     column does too. NOT a wrapper `<div>`: the bar's children are what
+     `menuPanel.ts` folds below 480px, and putting a box between them and the
+     flex container relocates every control it binds by id. */
+  padding-inline: max(var(--gutter), calc((100% - var(--maxw)) / 2 + var(--gutter)));
   background: var(--bg);
   border-bottom: 1px solid var(--border);
 }

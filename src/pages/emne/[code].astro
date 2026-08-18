@@ -114,9 +114,14 @@ const description = `${course.code} ${course.name}: timeplan, eksamen og nøkkel
     {
       isOffered ? (
         <>
+          {/* Server-rendered as primary because that is the state it renders
+              IN — "Legg til i planen". `syncPlanBtn` takes the accent back off
+              the moment it learns the course is already in the plan, which is
+              after paint; starting grey would flash the wrong answer at every
+              student who has not added it. */}
           <button
             type="button"
-            class="np-btn emne-plan-btn"
+            class="np-btn np-btn--primary emne-plan-btn"
             id="emne-plan-btn"
             data-code={course.code}
           >
@@ -727,6 +732,13 @@ const description = `${course.code} ${course.name}: timeplan, eksamen og nøkkel
             ? "Dropp"
             : "Fjern fra planen";
       planBtn.classList.toggle("is-active", !!entry && !entry.dropped);
+      // THE ACCENT, on the one state where this is an invitation. A course page
+      // exists to be added from, and the button held the page's only action in
+      // the same grey as "Avbryt" — so the flagship verb was the quietest thing
+      // on the screen. It is NOT primary in the other three states: "Fjern fra
+      // planen" and "Dropp" are what the student does when they have changed
+      // their mind, and DESIGN §2 does not let the accent recommend those.
+      planBtn.classList.toggle("np-btn--primary", !entry || !!entry.dropped);
       if (planState) {
         planState.textContent = !entry
           ? ""

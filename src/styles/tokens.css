@@ -39,18 +39,39 @@
 
   /* Structural hairlines. With no cards, these carry the structure the
      containers used to: a day boundary must be heavier than the rows inside
-     it, never the other way round. */
-  --border: #e6e6e9;
-  --border-strong: #d6d6db;
+     it, never the other way round.
 
-  /* Controls. Ink-Before-Chrome forbids borders here, so the tonal step is the
-     whole affordance: --card against --bg computes 1.11:1 in light, and in dark
-     the fill lifts a full step above --card so it reads there too.
-     --control-edge survives only for `.planner-check`, a 14px indicator with no
-     fill of its own. */
+     These shipped at #e6e6e9 / #d6d6db, which measure 1.25:1 and 1.42:1 on
+     --bg — below the threshold at which a 1px line on white is a line at all.
+     The consequences were structural, not cosmetic: /emner/ drew a hundred
+     rows with no rules between them and read as a wall of text, and the week's
+     quarter-hour ruling (--ruling-line is this token at 55%) resolved to
+     #f0f0f2, i.e. nothing. They are now pinned to Apple's own light separator
+     (#C6C6C8, 1.71:1) and a step above it, which is the quietest a hairline
+     can be while still being one. tokens.test.ts holds the floor and the
+     step. */
+  --border: #c6c6cb;
+  --border-strong: #a1a1a8;
+
+  /* Controls. --control-bg is a TONAL step and --control-edge is the BOUNDARY,
+     and the two are not interchangeable: the step measures 1.07:1 on --bg, so
+     for four years every field, button, select and toggle on this site was a
+     rectangle of almost exactly the page it sat on. A text input the student
+     had to find and type into was invisible until it took focus.
+
+     Ink-Before-Chrome used to forbid the edge outright ("never borders, no
+     sanctioned exception"). That rule is now scoped to STRUCTURE, where it was
+     always right, and the exception it refused is granted to controls, where
+     WCAG 1.4.11 requires it: an input's boundary is what identifies the input,
+     so it must clear 3:1 against the page. See DESIGN.md §4.
+
+     --control-edge is therefore a literal here rather than an alias of
+     --border-strong: a hairline between two rows and the edge of a control the
+     student must find are different jobs with different floors, and pointing
+     one at the other means raising either drags the other along. */
   --control-bg: var(--card);
   --control-hover: var(--card-hover);
-  --control-edge: var(--border-strong);
+  --control-edge: #8a8a90;
 
   /* There is no `--accent`. It used to do five jobs: the collision verdict, the
      full-credit figure, the "I planen" state, every focus ring and every link.
@@ -112,19 +133,30 @@
      Two of the five in the reference fail AA with the code knocked out of them
      (#039be5 measures 3.08:1 under white, #f4511e 3.48), so those two are
      darkened along their own hue until they clear — the family is kept, the
-     value is bought. The other four are the reference's exactly.
-     `tokens.test.ts` checks all six as a printed fill and as a tint.
+     value is bought. `tokens.test.ts` checks all six as a printed fill and as a
+     tint.
 
-     Every one is still kept clear of the three colours that mean something
-     else: the accent's azure, the verdict's green and the collision's red. A
-     course that shares a hue with an interface mark makes that mark vanish the
-     moment it crosses the course's own block. */
+     Every one is kept clear of the three colours that mean something else: the
+     accent's azure, the verdict's green and the collision's red. A course that
+     shares a hue with an interface mark makes that mark vanish the moment it
+     crosses the course's own block.
+
+     THERE IS NO COURSE GREEN, and the claim above is why. The sixth hue was the
+     reference's own Basil #0b8043 while --verdict is #177334, which are ΔE 6.3
+     apart in CIELAB — the same dark green to any eye, one meaning "the term
+     works" and the other meaning "this is TMA4100", side by side in the course
+     list where the credit figure sits beside the dots. Green is the verdict's,
+     and the rule was written down and then not applied to the one hue it ruled
+     out. Rose replaces it: ΔE 37.8 from the collision red and 52.4 from purple
+     in light (34.0 / 33.2 dark), AA as a printed fill and as a tinted label in
+     both themes. `tokens.test.ts` pins the separation now rather than trusting
+     the comment. */
   --hue-blue: #027cb8;
   --hue-cyan: #00818c;
   --hue-purple: #8e24aa;
   --hue-indigo: #3f51b5;
   --hue-orange: #d93c0b;
-  --hue-green: #0b8043;
+  --hue-rose: #ad1457;
 
   /* Interaction washes. */
   --wash: color-mix(in srgb, var(--fg) 6%, transparent);
@@ -293,15 +325,21 @@
   --muted: #a1a1a8;
   --faint: #75757c;
 
-  --border: #303034;
-  --border-strong: #3d3d42;
+  --border: #3f3f45;
+  --border-strong: #54545c;
 
   /* Dark controls lift a whole step clear of --card, which is where the
      light theme's tonal step disappears: #1c1b1a against #100f0f is 1.10:1 and
      a resting search field is simply not there. Hover then goes a step
-     further again. */
+     further again.
+
+     The edge is measured against the FILL as well as the page here, which is
+     what puts it a stop above the light theme's: a control on a dark ground
+     sits on three different surfaces (--bg, --card in a dialog, --control-bg
+     inside itself) and the tightest of the three is the one that decides. */
   --control-bg: #2a2a2d;
   --control-hover: #333338;
+  --control-edge: #76767f;
 
   /* The same hue shift as light (73° → 99°), lifted for a black ground. --ui
      and --ui-ring need no dark override — they derive from --fg and --bg. */
@@ -332,7 +370,7 @@
   --hue-purple: #ce93d8;
   --hue-indigo: #9fa8da;
   --hue-orange: #ff8a65;
-  --hue-green: #66bb6a;
+  --hue-rose: #f79bab;
 
   --ruling-line: color-mix(in srgb, var(--border) 60%, transparent);
   --ruling-hour: color-mix(in srgb, var(--border-strong) 95%, transparent);

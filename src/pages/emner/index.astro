@@ -415,6 +415,7 @@ const cityFacets = [
   import { formatShortDate } from "../../components/planner/dom.ts";
   import { onPage } from "../../lib/pageLifecycle.ts";
   import { watchPlanProbe } from "../../lib/planProbe.ts";
+  import { addCourseRowControl, isPlanned } from "../../lib/planner/courseAction.ts";
   import { activeCourses, createPlanStore } from "../../lib/planner/store.ts";
   import semestersData from "../../../data/semesters.json";
 
@@ -554,9 +555,19 @@ const cityFacets = [
      * label so voice control matches what the student can read — a button
      * reading "Lagt til" that answered to "Fjern TDT4100 fra planen" is a WCAG
      * 2.5.3 failure as well as a fourth spelling of one state.
+     *
+     * The truth behind the pair comes from `addCourseRowControl`, not from
+     * `hasCourse`. `hasCourse` answers "is there an entry", which is a
+     * different question from "is this course in the plan": a DROPPED programme
+     * course has an entry and is not in the week, so this button said "I
+     * planen" over a course the week does not draw, and pressing it called
+     * `removeCourse` — a hard delete on a course PRODUCT §1.3 says is never
+     * deleted, leaving no `dropped` marker, so the next study-plan derive put
+     * the course straight back and the student's press was undone by the tool.
      */
-    function setAddState(button: HTMLButtonElement, code: string): void {
-      const inPlan = store.hasCourse(code);
+    function setAddState(button: HTMLButtonElement, code: string, name: string, version: string) {
+      const kind = addCourseRowControl(store, { code, name, version }).stateKind;
+      const inPlan = isPlanned(kind);
       const label = inPlan ? "I planen" : "Legg til i planen";
       button.setAttribute("aria-pressed", String(inPlan));
       button.textContent = label;
@@ -641,15 +652,14 @@ const cityFacets = [
 
       // The row used to be write-only: the "+" mutated localStorage and said
       // nothing. The button reports the state now.
-      const sync = (): void => setAddState(addBtn, code);
+      const input = { code, name, version: version || "1" };
+      const sync = (): void => setAddState(addBtn, code, name, input.version);
       sync();
 
       addBtn.addEventListener("click", () => {
-        if (store.hasCourse(code)) {
-          store.removeCourse(code);
-        } else {
-          store.addCourse({ code, name, version: version || "1" });
-        }
+        // The same `run()` the add dialog presses: add, remove, drop or restore,
+        // chosen from the plan entry rather than from "is there one".
+        addCourseRowControl(store, input).run();
         // `savePlan` dispatches synchronously, so `syncRows` has normally
         // already run by here; this keeps the button honest if it has not.
         sync();

@@ -48,7 +48,11 @@ const seasonWord = isAutumn ? "høsten" : "våren";
       side, ikke laget av NTNU.
     </p>
 
-    <a class="np-btn home-cta" href="/planlegger/">Åpne planleggeren</a>
+    {/* THE accent's one job, spent on the one thing this page is for. It shipped
+        as a bare `.np-btn`: the same grey chip as "Fjern" and "Avbryt", holding
+        the only call to action on the front door, while the accent went unspent
+        on the page entirely. */}
+    <a class="np-btn np-btn--primary home-cta" href="/planlegger/">Åpne planleggeren</a>
 
     {/* `#home-now` needs a LOCAL plan, so a returning student on a new browser
         gets the cold pitch and one CTA with no way back to the plan their

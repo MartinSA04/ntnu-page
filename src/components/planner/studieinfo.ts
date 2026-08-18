@@ -838,7 +838,10 @@ export function buildStudieinfoSection(deps: StudieinfoSectionDeps): StudieinfoS
       deps.store.setProgramPlan(planProgram, toAdd);
     } else if (deps.store.loadPlan().program) {
       // No programme staged but the profile still holds one → the student
-      // cleared it. `removeProgram` keeps manual adds; the semester stands.
+      // cleared it. Only the profile goes: `removeProgram` re-sources the
+      // prefilled courses as manual adds rather than deleting them, because
+      // "Lagre" is not a button anything may disappear under. The semester
+      // stands.
       deps.store.removeProgram();
     }
 

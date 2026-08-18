@@ -23,7 +23,16 @@ import { describe, expect, it } from "vitest";
  * swatch re-runs the measurement rather than the reviewer's eye.
  */
 
-const TOKENS = readFileSync(new URL("../../src/styles/tokens.css", import.meta.url), "utf8");
+/* Comments are stripped before anything is parsed. tokens.css explains itself
+   at length and those explanations name tokens, so a comment line that happens
+   to begin `--border-strong: a hairline between two rows…` was read as a
+   declaration whose value is a sentence — and the failure surfaces as
+   "--border-strong is not a literal hex", i.e. as a broken token rather than a
+   naive parser. */
+const TOKENS = readFileSync(
+  new URL("../../src/styles/tokens.css", import.meta.url),
+  "utf8",
+).replace(/\/\*[\s\S]*?\*\//g, "");
 
 /** The declarations inside one selector block of tokens.css. */
 function tokenBlock(selector: string): Map<string, string> {
@@ -76,7 +85,7 @@ const HUES = [
   "--hue-purple",
   "--hue-indigo",
   "--hue-orange",
-  "--hue-green",
+  "--hue-rose",
 ] as const;
 
 /** A percentage token (`26%`) as a 0–1 fraction. */
@@ -108,6 +117,35 @@ describe("contrast: sanity of the ratio calculation", () => {
     expect(contrast("#ffffff", "#ffffff")).toBeCloseTo(1, 5);
   });
 });
+
+/* CIELAB, for the one question a contrast ratio cannot answer: are these two
+   colours the SAME COLOUR? Contrast is a luminance relation, so #177334 and
+   #0b8043 — the verdict and what used to be the course green — sit at 5.94 and
+   4.72 on white and look, by that measure, like two perfectly good tokens.
+   They are ΔE76 6.3 apart, which is one dark green with a rounding error. */
+function lab(color: string): [number, number, number] {
+  const channel = (n: number): number => {
+    const c = n / 255;
+    return c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+  };
+  const [r, g, b] = [1, 3, 5].map((i) => channel(Number.parseInt(color.slice(i, i + 2), 16))) as [
+    number,
+    number,
+    number,
+  ];
+  const f = (t: number): number => (t > 0.008856 ? Math.cbrt(t) : 7.787 * t + 16 / 116);
+  const x = f((0.4124 * r + 0.3576 * g + 0.1805 * b) / 0.95047);
+  const y = f(0.2126 * r + 0.7152 * g + 0.0722 * b);
+  const z = f((0.0193 * r + 0.1192 * g + 0.9505 * b) / 1.08883);
+  return [116 * y - 16, 500 * (x - y), 200 * (y - z)];
+}
+
+/** CIE76 perceptual distance. Under ~2.3 is invisible; ~10 is "two colours". */
+function deltaE(a: string, b: string): number {
+  const [l1, a1, b1] = lab(a);
+  const [l2, a2, b2] = lab(b);
+  return Math.hypot(l1 - l2, a1 - a2, b1 - b2);
+}
 
 describe.each(["light", "dark"] as const)("contrast: %s theme", (theme) => {
   /* Collision ink. --clash is a *sentence* colour (.np-note-clash on the
@@ -237,5 +275,78 @@ describe.each(["light", "dark"] as const)("contrast: %s theme", (theme) => {
     expect(contrast(hex(theme, "--faint"), hex(theme, "--bg"))).toBeLessThan(
       contrast(hex(theme, "--muted"), hex(theme, "--bg")),
     );
+  });
+
+  /* THE VERDICT MAY NOT WEAR A COURSE'S COLOUR. tokens.css and DESIGN §2 have
+     claimed this in prose since the palette was chosen, and the sixth hue was
+     the reference's own Basil #0b8043 against a #177334 verdict the whole time
+     — ΔE76 6.3, which is one dark green with a rounding error, one of them
+     meaning "the term works" and the other meaning "this is TMA4100", drawn a
+     few pixels apart in the course list where the credit figure sits beside the
+     dots.
+
+     THE VERDICT AND ONLY THE VERDICT is held to a distance, and the asymmetry
+     is the point rather than an omission. The accent and the collision also
+     share a neighbourhood with a course hue — dark indigo sits ΔE 13.0 from the
+     accent, orange ΔE 19.1 from the clash — and they survive it because neither
+     is ever colour ALONE where a course hue can reach it: the needle crosses
+     blocks in arbitrary colour and carries a 1px halo in the page's own colour
+     for exactly that reason (planner-week.css), the clash is a bar and a tinted
+     band as well as a red, and the primary button never sits on a block. The
+     verdict has no such second channel. It is a green sentence and a green
+     figure, and colour is the whole message.
+
+     So a hue distance is the wrong gate for two of the three marks and the only
+     gate for the third. 25 is where a shift stops being a shade of the same
+     colour; the six pairs sit at 29–128, so nothing is squeaking past it. */
+  const SEPARATION = 25;
+  it.each(HUES)("%s cannot be mistaken for the verdict", (hue) => {
+    expect(deltaE(hex(theme, hue), hex(theme, "--verdict"))).toBeGreaterThanOrEqual(SEPARATION);
+  });
+
+  /* THE STRUCTURAL LAYER, which this file measured the ink of for four years
+     and never the lines.
+
+     Every assertion above pins a colour a student READS. Nothing pinned the
+     colours that say where one thing ends and the next begins, and with no
+     cards in the system those lines carry all of the structure: `--border`
+     shipped at 1.25:1 on --bg and `--control-bg` at 1.07:1, which is why
+     /emner/ drew a hundred rows with no rules between them, why the week's
+     quarter-hour ruling resolved to nothing, and why a resting text field was
+     a rectangle of the page.
+
+     `--control-edge` is held to WCAG 1.4.11's 3:1 because it is a control
+     BOUNDARY — the thing that identifies an input as an input — and it is
+     measured against all three grounds a control sits on, not just the page:
+     a dialog puts it on --card and its own fill is inside it. */
+  it.each(["--bg", "--card", "--control-bg"])(
+    "--control-edge clears the 3:1 boundary floor on %s",
+    (surface) => {
+      expect(contrast(hex(theme, "--control-edge"), hex(theme, surface))).toBeGreaterThanOrEqual(
+        NON_TEXT,
+      );
+    },
+  );
+
+  /* A hairline is not held to 3:1 — a rule between two table rows is not a
+     control and does not have to shout. What it has to do is EXIST, and below
+     about 1.5:1 a 1px line on white does not: it survives review because the
+     reviewer knows where it is. 1.6 is the floor, Apple's own light separator
+     (#C6C6C8, 1.71:1) is the reference. */
+  const HAIRLINE = 1.6;
+  it.each(["--border", "--border-strong"])("%s is a line you can see on --bg", (token) => {
+    expect(contrast(hex(theme, token), hex(theme, "--bg"))).toBeGreaterThanOrEqual(HAIRLINE);
+  });
+
+  /* The ordering tokens.css claims: a day boundary is heavier than the rows
+     inside it, and the edge of a control is heavier than either, because it is
+     the only one of the three carrying a WCAG requirement. Pinned because the
+     three used to be aliases of one another — `--control-edge` WAS
+     `--border-strong` — and an alias makes raising one silently drag the
+     others along. */
+  it("hairline, boundary and control edge stay three separate weights", () => {
+    const on = (token: string): number => contrast(hex(theme, token), hex(theme, "--bg"));
+    expect(on("--border")).toBeLessThan(on("--border-strong"));
+    expect(on("--border-strong")).toBeLessThan(on("--control-edge"));
   });
 });
