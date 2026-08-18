@@ -1,9 +1,11 @@
 # ntnu-page — Semesterplan
 
-Uoffisiell semesterplanlegger for NTNU: velg emner (eller hent dem fra et
-studieprogram og kull), og se timeplankollisjoner, eksamensdatoer og
-studiepoeng før du melder deg opp. Emnekatalog, karakterstatistikk og
-studieplaner følger med.
+Uoffisiell timeplan for NTNU: velg studieprogram og kull (eller legg til
+emnekodene selv), og se ukeplanen med rom og eksamensdatoer med en gang.
+Ingen innlogging, ingen deling, alt ligger i nettleseren din.
+
+Emnesiden og karakterstatistikken ligger hos dem som eier dem: hvert emne i
+planen lenker til `ntnu.no` og `karakterweb.no`.
 
 Astro static site + Cloudflare Worker in one deployable unit: the Worker
 serves the built site via Workers Assets and exposes a cached `/api/*` layer

@@ -2,7 +2,7 @@
   "name": "ntnu-page",
   "private": true,
   "version": "0.2.0",
-  "description": "Uoffisiell nettside for NTNU-emnedata — katalog, karakterstatistikk, timeplaner og studieprogram",
+  "description": "Uoffisiell timeplan for NTNU: studieprogram og kull til ukeplan, uten innlogging",
   "type": "module",
   "engines": {
     "node": ">=22"

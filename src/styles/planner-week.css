@@ -500,10 +500,15 @@ html[data-view="tavle"][data-surface="planner"] .planner-grid-frame[data-reserve
   margin-bottom: var(--space-2);
 }
 
+/* The underline was clash-red, from when a collision note was one of the two
+   things in this list. Collisions are gone (PRODUCT D17) and what is left asks
+   the student to pick a group — an invitation, not a warning — so the rule
+   takes the interactive ink instead. Red-Is-Collision now lives only in the
+   exam list, which is the one place two things still cannot coexist. */
 .planner-note-link {
   text-align: left;
   text-decoration: underline;
-  text-decoration-color: color-mix(in srgb, var(--clash) 40%, transparent);
+  text-decoration-color: color-mix(in srgb, var(--ui) 40%, transparent);
   text-underline-offset: 2px;
   /* A margin note is a sentence, but also the only route to the picker that
      answers it — a real target. 21px of line box plus this clears WCAG 2.5.8's

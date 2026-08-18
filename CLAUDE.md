@@ -1,5 +1,12 @@
 # CLAUDE.md
 
+- **2026-08-18: the site was cut to a timetable getter.** Accounts, sync, the
+  shared plan at `/user/<navn>`, `/emne/[code]/` and its ~5 470 built pages,
+  `/emner/`, the grade figure and the whole verdict apparatus are deleted.
+  `docs/superpowers/specs/2026-08-18-timetable-only-reduction-design.md` is the
+  order and `docs/PRODUCT.md` §11 is the list. Two pages remain, `/` and
+  `/planlegger/`, and `localStorage` is the only store there is. **Do not
+  restore any of it from an older paragraph elsewhere in the repo.**
 - **Doc hierarchy — four files, and they do not overlap.**
   `docs/PRODUCT.md` is the definitive product definition (mandate,
   positioning, flows, feature status, domain rules DR-1…DR-10, decisions
@@ -60,14 +67,10 @@
   never empty); render the honest state ("ikke undervist i {year} · sist
   undervist {lastYear}") when it excludes the canonical year, never treat it
   as a current course with a mysteriously empty week.
-  The two search surfaces treat those rows **differently on purpose**:
-  `/emner/` keeps them, folded into one labelled `Ikke undervist i {year}`
-  group at the end of the register (they have pages, and the group opens
-  itself when nothing else matched), while the planner's add dialog omits
-  them from the list *and* the count — its window is twelve rows deep and
-  "matematikk" spent six of them on courses it was refusing to add. Don't
-  "restore consistency" by making the dialog render them again; when a query
-  matches only such courses the dialog says so specifically instead of
+  The planner's add dialog — the only search surface left — omits those rows
+  from the list *and* from the count: its window is twelve rows deep and
+  "matematikk" spent six of them on courses it was refusing to add. When a
+  query matches only such courses the dialog says so specifically instead of
   reporting "0 treff".
   `search-index.json`'s per-course row is a **six-element positional
   tuple** — `[code, name, location, exams, version, offeredYears]` — new
@@ -113,7 +116,7 @@
   exactly nothing. `data-plan="program"` used to pick the planner title's
   *face* as well; that rule is **deleted** — the title is one size and one
   family now, so there is no swap left to hoist before paint. The attribute is
-  still read by `/emner/` and the homepage, and `--plan-courses` by every
+  still what gates the first-run screen, and `--plan-courses` sizes every
   reservation, so neither the probe nor the attribute is dead.
   (b) **the week's height, held from first paint** — the paint→mount half,
   worth 0.52 of the 0.61 on its own (`renderWeekSkeleton` already stops the
@@ -125,19 +128,16 @@
   `/planlegger/`'s frame is in the static shell, so it reserves on the FRAME
   and can be handed a remembered height: `saveWeekBox`/`--planner-box` files
   what the week actually measured under **(surface, view, width)** and the
-  probe writes it back before paint. The surface is in the key because a
-  five-course planner's Liste number must never reach a one-course page; that
-  guard used to be an id selector, which is the wrong place for it once more
-  than one surface reserves. The width is in it because a list measured at
-  390px wraps differently at 1440, and it is discarded outside a 32px
+  probe writes it back before paint. The surface is still in the key though
+  only one surface draws a week now; the width is in it because a list measured
+  at 390px wraps differently at 1440, and it is discarded outside a 32px
   tolerance.
-  `/user/<navn>` reserves the same way now that its shell is static, with its
-  own per-view fallbacks (`--plan-courses` is the VIEWER's plan, not the one
-  being shown, so the planner's formulas would size that frame from a plan it is
-  not drawing). `/emne/[code]/` builds its frame AFTER a fetch, so what holds
-  its space is a placeholder standing in for a whole section — a different box,
-  with its own per-view numbers measured in that page, and `weekView`
-  deliberately files nothing for it.
+  **Both fallbacks were re-measured on 2026-08-18** and both moved: Uke's is
+  8.75 hours rather than 8 (a five-course week settles at 512px against the
+  471px eight reserved), and `.planner-course-rows` is 3.5rem per row rather
+  than 3 (the row grew a second line when it took the two outbound links).
+  Together they were 0.10 CLS of the page under the week moving. Re-measure
+  before changing either.
   **The probe's default view must match `loadWeekView`'s** (`kolonner`), or a
   cold load reserves for a view it is not about to draw. And **the per-view
   rules are COMPOUND selectors, not descendant ones**: `data-view` and
@@ -161,7 +161,7 @@
   `e2e/cls.pw.ts` asserts the reservation against what the section actually
   settles at instead.
   (c) **leases** — `data-reserve` attributes that JS deletes on reaching a
-  terminal state, the idiom `/emne/[code].astro` already documents. Deleting
+  terminal state. Deleting
   one is not optional: a reservation left standing over a short answer is a
   permanent hole, which is why the failure and empty branches release them too.
   Reservations are deliberately a few px UNDER their measured settle, so the
@@ -169,36 +169,18 @@
   gates all of it with per-surface budgets — verified to fail when (b) is
   removed. Re-measure before changing any number; do not "tidy" a
   `min-height` you cannot see doing anything.
-- **One chrome bar folds into a menu, and the WRAPPER is what folds**
-  (`src/lib/menuPanel.ts`, one controller, one bar: the shell topbar at 480px).
-  Above its breakpoint the wrapper is `display: contents`, so its children are
-  the bar's own flex children and the wide layout is untouched; below it the
-  wrapper is a positioned panel drawn only while the bar carries
-  `data-menu="open"`. Three things a reasonable person would undo: it is
-  deliberately **not** a `<dialog>` or `[popover]` (neither can be switched back
-  to inline layout by CSS, which is the whole mechanism); the open state is
-  `data-menu` **on the bar**, never `[hidden]` on the wrapper (see the bullet
-  above — that rule beats `display: contents` too and would delete the controls
-  at every width); and there is **one DOM**, because every folded control is
-  bound by id elsewhere, so a duplicated phone copy collides and a `matchMedia`
-  node-move would relocate a live `<select>` mid-interaction.
-  **`.planner-head` no longer folds** and no longer mounts this: it carried
-  five controls and two of them were about the WEEK, not the plan. Those went
-  down to the week's own section, which left a name, a semester select and a
-  36px share mark — about 250px of the 358px a 390px phone has. Do not re-add a
-  fold there without first asking what the bar has picked up that belongs
-  somewhere else.
 - **The week's three controls are ONE server-rendered component, and
   `mountWeekView` owns everything in it** (`src/components/WeekControls.astro`).
   Two rows: the week picker, then the layer box hard left and the Uke/Liste
   switch hard right with **nothing ever between them**. Three things here are
   load-bearing. (a) **No ids** — every control is found by `data-role` inside
-  the block the page hands over, which is what lets three surfaces carry three
+  the block the page hands over, which is what let three surfaces carry three
   copies; the old `idPrefix` scheme and the runtime twins `buildWeekTabs` /
-  `buildLayerToggle` are **deleted**, because `/user/<navn>` has a static shell
-  now. (b) It stays **server-rendered on all three surfaces**: building a
-  control at mount pops it in a frame late, on top of a frame already reserving
-  its own height. (c) The picker sits **above** the other two rather than beside
+  `buildLayerToggle` are **deleted**. One surface draws a week now, and the
+  `data-role` contract stays because it costs nothing and an id contract is
+  what has to be undone if a second ever appears. (b) It stays
+  **server-rendered**: building a control at mount pops it in a frame late, on
+  top of a frame already reserving its own height. (c) The picker sits **above** the other two rather than beside
   them because three controls come to ~400px against 358px of content at 390px,
   so sharing a row would silently give the phone a different arrangement.
   The picker narrows through `entriesInWeek` inside `collectSessions` — one
@@ -208,20 +190,8 @@
   people the same week); its default is `inTeachingWeek`, the same predicate
   that decides whether the drawn week carries dates, so the picker and the
   column headers cannot disagree about whether this is a real Monday. The
-  margin notes and the verdict are **not** narrowed with the grid: a clash in
-  week 40 is a fact about the plan, and the note names its own weeks.
-
-- **`/planlegger/` and `/user/<navn>` are the same page**, and their sections'
-  look lives in `src/styles/plan-surface.css` rather than in either page's
-  scoped block — the same rule `planner-week.css` already exists for. The shared
-  plan renders the planner's shell with the verbs removed and calls the same
-  three renderers (`mountWeekView`, `renderExamList`, `renderCourseRows` +
-  `renderLoadTrack`); `publicPlan.ts` is a fetch and those calls, with no DOM
-  construction of its own. Two traps: a course row's link must **not** be
-  `.np-navlink` (it is `inline-flex`, which drops the text node holding the
-  space between the code and the name), and the shared payload's `credits` must
-  be carried into `PlanCourseState.course` or the list draws no figures and the
-  load track draws nothing — no bundle has landed when those rows are written.
+  margin notes are **not** narrowed with the grid: a course missing from the
+  whole plan is not a fact about the week you happen to be looking at.
 
 - **Every dismissal is decided on the CLICK, and a modal surface has a visible
   scrim.** A touch synthesises `mousedown`/`mouseup`/`click` only after
@@ -245,8 +215,9 @@
   selection dragged out of the field and released on the backdrop must not
   dismiss. The bare `event.target === dialog` recipe gets this wrong, because
   the click's target is then the common ancestor, which is the dialog.
-  (c) `menuPanel`'s scrim and `blockPopover`'s sheet scrim close on **`click`,
-  not `pointerdown`**, so the scrim is still in the document to absorb it.
+  (c) `blockPopover`'s sheet scrim closes on **`click`, not `pointerdown`**, so
+  the scrim is still in the document to absorb it. (`menuPanel`'s did the same,
+  and is deleted with the menu.)
   (d) The sheet scrim is **visibly dimmed**, not a transparent click-catcher,
   and exists **only below 60rem** — the anchored desktop card is non-modal over
   a live page and its pass-through is what lets one bar hand the card to the
@@ -282,8 +253,7 @@
   2026-08-03 three design changes broke ~10 of ~94 browser tests and 0 of 987
   unit tests, and every broken one was of this kind — they were cut rather than
   re-pinned. **Test mechanism instead**: does it survive a ClientRouter swap,
-  does a shared plan round-trip through the account, does CLS stay in budget, do
-  targets clear 24 px, did a fixture go missing. Those caught four real defects
+  does CLS stay in budget, do targets clear 24 px, did a fixture go missing. Those caught four real defects
   in the same run. Before adding a browser test, ask what its failure would
   mean; if the answer is not "something is broken in a way you cannot see by
   looking", don't add it.
@@ -303,43 +273,16 @@
   never silently a live call and never reappears; and `e2e/contract.pw.ts`
   asserts — against LIVE upstream — the facts the fixtures bake in (MTDT kull
   2026's five period-1 courses, TMA4400 partitioning lectures by programme,
-  the TDT4109×TDT4120 clash, BSPL's Ø-coded campus waypoint). Those tests are
+  BSPL's Ø-coded campus waypoint). Those tests are
   skipped by default and run on the nightly schedule, which is the only thing
   that can notice upstream moving. When one fails, `mise run e2e:record`
   refreshes the store; `mise run e2e:live` runs everything against live.
   `/api/health` is deliberately NOT intercepted — `navigation.pw.ts` reads the
   worker's real security headers off it, and a replayed response would answer
-  that with headers captured at some past moment. `/api/sync/*` is the other
-  carve-out, for a different reason: it's our own surface, not NTNU's, so
-  replaying it would assert against a recording of our own worker instead of
-  exercising it. It runs against `wrangler dev`'s local KV instead, which
-  provisions a namespace from the `SYNC` binding with no Cloudflare account
-  needed, so `mise run e2e` round-trips real accounts through the real
-  handler and stays offline.
-- **`/user/<navn>` — three things a reasonable person would undo.** (a) The
-  page is kept out of search by the `X-Robots-Tag` header, and **`robots.txt`
-  must never carry `Disallow: /user/`**: a blocked crawl means Google never
-  reads the noindex directive and can still list the bare URL, which is the
-  exact failure the header avoids. (b) It **still unfurls richly**, because
-  indexers and unfurlers are different crawlers — Slack, iMessage and Discord
-  read the `og:` tags the worker rewrites in and do not consult
-  `X-Robots-Tag`. Both hold on the same response, on purpose. (c) The worker
-  asks the asset server for the DIRECTORY (`/user/`), never for
-  `/user/index.html`: the asset server answers the explicit file with a 307 to
-  the directory, and handing that redirect on lands the browser at `/user/` —
-  a path the route does not match — so the page arrives with no noindex
-  header, no unfurl rewrite and no name to look up. A unit test pins what it
-  asks for rather than what came back.
-- `wrangler.jsonc` binds `SYNC` to the placeholder id `local-sync-dev` for
-  local dev only — `wrangler dev` (no `--remote`) accepts a placeholder with
-  no Cloudflare account, which is what the previous bullet's local-KV e2e run
-  depends on; a `--remote` run or a real `wrangler deploy` rejects it.
-  `release.yml` has a precheck, run right after the version-tag check and
-  before the build, that greps `wrangler.jsonc` for `local-sync-dev` and
-  fails the release outright if it's still there. Replace it with a real
-  namespace id (`npx wrangler kv namespace create SYNC`) before tagging a
-  release; don't remove or loosen the precheck to unblock a tag — that is
-  exactly the failure it exists to catch.
+  that with headers captured at some past moment. It is the ONLY carve-out:
+  `/api/sync/*` and `/api/plan/*` were the others, and both are deleted with
+  the account. Every route left is a read of NTNU's data and should be
+  replayed.
 - Two-pass typecheck (Workers vs Node ambient types clash):
   `worker/tsconfig.json` + `tsconfig.test.json`; keep Workers-only ambient
   types out of files the Node pass includes (structural interfaces instead).

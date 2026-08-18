@@ -10,6 +10,14 @@ you find the word in a comment, it is a leftover, not a rule.)
 The rules named in **bold** below are binding. `tests/site/tokens.test.ts` is
 the authority on every contrast claim and fails the build below AA.
 
+**2026-08-18: read §9 as a RECORD, not as an inventory.** The site was cut to
+a timetable getter that day — no accounts, no shared plan, no course pages, no
+catalog page, no verdict — so a decision below may adjudicate a surface that
+no longer exists. Every one of them is still here on purpose: what was decided
+and why is exactly what stops it being rebuilt. `docs/PRODUCT.md` §11 is the
+authoritative list of what is gone;
+`docs/superpowers/specs/2026-08-18-timetable-only-reduction-design.md` is why.
+
 ---
 
 ## 1. North star
@@ -48,9 +56,17 @@ them share a hue.
   selected fills, links, hover, membership.
 - **The accent — system blue** (`--accent` #1A73E8 / #8AB4F8 dark), with
   **exactly one job**: the primary action, and the now/today marker.
-- **The verdict — green** (`--verdict`): the term works. Nothing else.
-- **Collision — red** (`--clash`): two things that cannot coexist. Fetch
-  errors, empty states and validation are ink, not red.
+- **The verdict — green** (`--verdict`): the term works. Nothing else — and
+  as of 2026-08-18 there is no verdict, so the one thing wearing it is the
+  favicon's filled cell. It stays a token rather than being deleted because
+  the mark is generated from it and because a green that means anything else
+  would be worse than a green that means nothing yet.
+- **Collision — red** (`--clash`): two things that cannot coexist. Since the
+  week stopped judging itself, the **exam list is the only surface that spends
+  it**: the band's same-day ring, the tight-gap rule, and the sentence naming
+  both courses. Two exams on one day really cannot coexist. Two lectures at
+  one hour are drawn side by side and left at that. Fetch errors, empty states
+  and validation are ink, not red.
 - **Attention — amber** (`--warn`): short of a problem. An over-full load,
   sessions sharing an hour. Amber exists so red is never spent on something
   merely worth a look.
@@ -62,7 +78,9 @@ them share a hue.
 ### Named rules
 
 **Red-Is-Collision.** Red marks coexistence failures, nothing else, and the
-copy names both things.
+copy names both things. It has one surface left (the exam list); a red that
+spreads to a second meaning is what this rule exists to prevent, and a red
+with no surface at all would be the same failure from the other side.
 
 **Green-Means-Fits.** Green is a judgement about whether the term works.
 Membership, selection, focus and hover are interface and take `--ui`.
@@ -537,6 +555,23 @@ When it fails, rewrite the string; do not loosen the test.
 ## 9. Adjudicated decisions
 
 Settled, with the reasoning, so they are not re-opened by the next reviewer.
+Several below adjudicate surfaces the 2026-08-18 reduction deleted — see the
+note at the top of this file. They are kept, not pruned: a decision is what
+stops the thing coming back.
+
+- **The week is drawn; it is not judged** (PRODUCT D17, 2026-08-18). Every
+  entry below about the verdict — its three states, its run of chips, its jump
+  target, the phone rule that hid a clean one — describes a surface that is
+  deleted. What survives is the one clause none of them was really about: a
+  course whose timetable never arrived is ABSENT from the drawn week, which is
+  pixel-identical to a course with no teaching, so the line above the week says
+  how many are missing and the margin names them. That is DR-8's floor and it
+  is not decoration.
+
+  **Overlap is still drawn correctly.** Two sessions at one hour take a lane
+  each, because stacking them would hide one — that is geometry, and it was
+  never the verdict's to give away. What went is the red zone across the
+  minutes they share, the count in the bar, and the button that jumped to it.
 
 - **A plan-less planner is a first-run SCREEN, not a card in a drawn planner.**
   The empty state used to be an invitation floating in ~900 px of white inside

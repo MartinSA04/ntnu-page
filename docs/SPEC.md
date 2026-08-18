@@ -1,9 +1,12 @@
 # SPEC.md — architecture and data contracts
 
-An NTNU semester planner: pick a study programme and kull (or add course
-codes), see the merged weekly schedule, catch lecture collisions and exam
-clustering, and share the result as a URL — before the registration deadline.
-Built on the `ntnu-api` npm package.
+An NTNU timetable getter: pick a study programme and kull (or add course
+codes), see the merged weekly schedule and the semester's exam dates. Two
+pages, no account, `localStorage` only. Built on the `ntnu-api` npm package.
+
+It was a five-column join with accounts, sync and a shared-plan page until
+2026-08-18; `docs/superpowers/specs/2026-08-18-timetable-only-reduction-design.md`
+is what was cut and why.
 
 Product definition is `docs/PRODUCT.md`; the design system is
 `docs/DESIGN.md` and its named rules are binding. This file covers
@@ -31,8 +34,8 @@ Astro static site (dist/)  ──served by──▶  Cloudflare Worker (Workers 
   index), baked into each deploy, never committed. A `prebuild` guard
   (`crawler/ensure-data.mjs`) crawls automatically when the files are absent.
 - **Live via Worker `/api/*`** (per course / per programme, cached): course
-  details, grade distributions, timetables, study plans. Only courses and
-  programmes people actually view are fetched upstream.
+  details, timetables, study plans. Only courses and programmes people actually
+  view are fetched upstream. The worker stores nothing about a student.
 - Not yet wired: GitHub remote, Cloudflare deploy, KV namespace creation.
   Config carries commented placeholders and instructions.
 
@@ -40,11 +43,10 @@ Astro static site (dist/)  ──served by──▶  Cloudflare Worker (Workers 
 
 | Path | Contents |
 |---|---|
-| `src/styles/` | `tokens.css`, `base.css`, `primitives.css` (the `.np-*` layer), `site.css` (the shell), `planner-week.css` (the week's geometry, shared by `/planlegger/` and `/emne/[code]/`) |
+| `src/styles/` | `tokens.css`, `base.css`, `primitives.css` (the `.np-*` layer), `site.css` (the shell), `planner-week.css` (the week's geometry), `plan-surface.css` (the plan's own sections) |
 | `src/layouts/Layout.astro`, `src/components/{ThemeToggle,Icon}.astro`, `src/lib/{favicon,pageLifecycle,planProbe,sitemap}.ts` | page shell: persistent nav, footer, theme, lifecycle, the plan probe |
 | `src/pages/planlegger/index.astro`, `src/components/planner/*`, `src/lib/planner/*` | **the app** — see below |
-| `src/pages/{index,404}.astro`, `src/pages/emner/index.astro`, `src/pages/emne/[code].astro`, `src/pages/sitemap.xml.ts`, `src/components/site/*` | landing, catalog pages and their islands |
-| `src/pages/user/index.astro` | the one shell every `/user/<navn>` is rewritten to — a shared plan, read-only |
+| `src/pages/{index,404}.astro`, `src/pages/sitemap.xml.ts`, `src/components/site/now.ts` | the front door and its one island |
 | `crawler/*.mjs`, `data/*.json`, `public/data/search-index.json`, `.github/workflows/crawl.yml` | crawler |
 | `worker/src/*.ts`, `worker/tsconfig.json` | API worker |
 | `e2e/*.pw.ts`, `playwright.config.ts` | browser suite |
@@ -69,27 +71,26 @@ programPlan.ts  study-plan resolution: resolvePeriodFor() is the ONE entry
    │  pure engines, no DOM:
    │  layout.ts       day-column packing (clusters, columns, piling)
    │  groups.ts       parallel / øving group selection
-   │  conflicts.ts    the seam onto ntnu-api's conflict engine + DR-1 policy
    │  activity.ts     DR-1's lecture/other collapse
    │  schedule.ts     semester-id arithmetic + the semester-window filters
    │  examSchedule.ts exam-list model (sort, gaps, tight flag, countdown)
    │  weekDates.ts    which ISO week the page is open in
    │  hues.ts         course hue from the plan's code SET
-   │  deadline.ts     NTNU's two standing registration dates
+   │  courseLinks.ts  where a question about a COURSE goes: ntnu.no, karakterweb
    │
    │  DOM renderers and dialogs:
    │  weekView.ts     the week as one mountable thing: view state, tabs,
    │                  scroll edge, now marker, popover, render switch
-   │  weekNotes.ts    what a week MEANS: margin, conflict count, gaps
+   │  weekNotes.ts    what a week MEANS: margin, gaps, branch ladder
    │  columnGrid.ts   "Uke" — days across, time down
    │  board.ts        "Liste" — a departure board, one row per session
    │  weekSkeleton.ts a pending week, in the shape of the view about to land
    │  examList.ts     the exam month band + list
    │  layerMotion.ts  the øving layer's arrive/leave choreography
-   │  studieinfo.ts   programme / kull / retning / semester modal
+   │  studieinfo.ts   programme / kull / retning modal
    │  courseSettings.ts  the one surface a planned course is configured on
    │  blockPopover.ts a session's facts, anchored to the bar you clicked
-   │  addCourse.ts    the catalog search modal
+   │  addCourse.ts    the catalog search modal, and the only search there is
    │  dom.ts          tiny element builders; types.ts  view shapes
    │
 plannerApp.ts    orchestration: owns the DOM ids in planlegger/index.astro,
@@ -107,10 +108,9 @@ plannerApp.ts    orchestration: owns the DOM ids in planlegger/index.astro,
   the *active* semester while keeping manual adds. `onPlanChange(cb)` fires on
   storage events, on the custom `ntnu:plan-change` event and on the page's own
   writes, so every surface reading the plan stays live without polling.
-  **There is no hash grammar here any more** — it was deleted with the shared
-  URL it encoded (PRODUCT.md §6). Storage is the only source of a plan; what
-  gets handed to someone else is `/user/<navn>`, built by
-  `publicPlan.ts` from the same state.
+  **Storage is the only source of a plan, and the only place one exists.**
+  There is no hash grammar, no account and no server copy (PRODUCT mandate
+  11): a student who clears their browser has cleared their plan.
 
 - **`data.ts`** — `PlannerIndex` / `PlannerIndexCourse` (the typed shape of
   `search-index.json`), `fetchCourseBundle`, and
@@ -125,8 +125,8 @@ plannerApp.ts    orchestration: owns the DOM ids in planlegger/index.astro,
     `{kind:"entries",count}` | `{kind:"empty"}` | `{kind:"failed",reason,message}`,
     plus `{kind:"pending"}` in the wider `CourseFetchState`. **"Came back
     empty" and "we could not ask" must never collapse into "no blocks
-    drawn"** — that is precisely how a failed fetch renders as "ingen
-    kollisjoner". Read `timetableOutcomeOf(bundle)` or `courseFetchState(code)`,
+    drawn"** — that is precisely how a failed fetch renders as a free
+    Tuesday. Read `timetableOutcomeOf(bundle)` or `courseFetchState(code)`,
     never `bundle.timetable?.length`. `bundleFromEntries()` builds the same
     guarantees for a hand-made bundle, and a semester-narrowed clone keeps the
     *fetch's* outcome, so "fetched 12 entries, none this semester" stays
@@ -186,20 +186,8 @@ plannerApp.ts    orchestration: owns the DOM ids in planlegger/index.astro,
   `gapToNext`/`tight`/`sameDay`, sets `daysFromToday` on the first upcoming
   exam only, keeps dateless exams in a separate bucket.
 
-- **`grades.ts`** — the pure model behind `/emne/[code]/`'s figure, over DBH
-  table 308 (one row per course version, year, semester, grade). It absorbs
-  four upstream facts: versions double up (counts are summed — a candidate sat
-  the course); counts are **privacy-masked**, and a masked cell is not a zero
-  but is folded into `masked` and left out of the percentage base; grade
-  scales differ per sitting; deferred sittings are their own (year, semester).
-
 - **`hues.ts`** — the six course hues, assigned as a deterministic function of
   the plan's **code set** (DESIGN.md §9). Never by insertion order.
-
-- **`deadline.ts`** — NTNU's two standing registration dates (15 September,
-  1 February), written here rather than crawled because there is no endpoint
-  for them and inventing one would be worse than stating what every student
-  already knows. A passed deadline returns `null` and the UI says nothing.
 
 - **`weekDates.ts`** — ISO 8601 week arithmetic, unit-tested across both year
   boundaries, because NTNU publishes timetables in ISO week numbers.
@@ -218,8 +206,9 @@ plannerApp.ts    orchestration: owns the DOM ids in planlegger/index.astro,
   nothing narrows as the viewport does — which is the point: the grid is
   weakest exactly where this is strongest, at 390 px, in print, and in a
   screen reader.
-- **`weekView.ts`** — the week as ONE thing a page mounts, and the reason
-  there are three surfaces and not three weeks.
+- **`weekView.ts`** — the week as ONE thing a page mounts. It earned that
+  shape when three surfaces drew a week; one does now, and the shape stays
+  because the alternative is inlining it back into the page.
   `mountWeekView({frame, notes, tabs, surface, onOpenSettings, signal})` owns
   the view state (`np:weekView`), the Uke/Liste pair, the øving layer box and
   everything it does (state, click, choreography, pending count, the B7a
@@ -231,20 +220,18 @@ plannerApp.ts    orchestration: owns the DOM ids in planlegger/index.astro,
   `card()`): the planner's empty week can be a studieretning question, an
   unpublished semester or a failed fetch with a retry, and none of that belongs
   to a shared controller.
-  `onOpenSettings: null` on the two surfaces with no editor, which omits the
-  popover's verb rather than pointing it at nothing.
+  `onOpenSettings: null` on a surface with no editor, which omits the popover's
+  verb rather than pointing it at nothing.
 - **`weekNotes.ts`** — what a week MEANS, as distinct from how it is drawn:
-  the margin, the branch ladder and the verdict material.
-  `weekNotes(...) → WeekNotesResult` reports `conflictCount` (grouped
-  collision slots), `conflictPairCount`, `mutedLayerAutoRevealed`,
-  `pendingGroupCourses`, `state`/`message`, plus the two honesty fields:
-  `incompleteCourses[]` (courses whose timetable we could not get, as opposed
-  to courses NTNU publishes nothing for) and `partial` — "these counts are a
-  floor, do not print a clean verdict". `renderWeekMessage` exists so a
-  message never renders inside the week's own frame as though it were a plan.
-  A collision note hands its group back through `onConflictClick` rather than
-  flashing it: the nodes belong to whichever view is mounted, which this module
-  never sees.
+  the margin and the branch ladder. `weekNotes(...) → WeekNotesResult` reports
+  `mutedLayerAutoRevealed`, `pendingGroupCourses`, `uncheckedCourses`,
+  `state`/`message`, and the two honesty fields: `incompleteCourses[]`
+  (courses whose timetable we could not get, as opposed to courses NTNU
+  publishes nothing for) and `partial`. Those two are what survives of the
+  verdict (PRODUCT D17) and they are not decoration — a course missing from
+  the drawn week looks exactly like a course with no teaching.
+  `renderWeekMessage` exists so a message never renders inside the week's own
+  frame as though it were a plan.
 - **`examList.ts`** — a **month band** showing the shape of the exam period,
   and under it the list. A same-day pair gets no connector (zero distance is
   not a distance); the band splits that day into both hues with a collision
@@ -257,9 +244,8 @@ plannerApp.ts    orchestration: owns the DOM ids in planlegger/index.astro,
   choices the plan hangs off (programme, kull, studieretning, semester). Every
   edit is staged locally; nothing touches the store until **Lagre**, which
   calls `setProgramPlan` and preserves manual adds, drops and group picks.
-  Opened from `/planlegger/` alone, through `#planner-edit-plan` and the
-  contextual empty-state openers. **It is the only surface that picks any of
-  those four things.**
+  Opened from the plan's own name in the planner's bar, and from the first-run
+  screen. **It is the only settings surface on the site.**
 - **`courseSettings.ts`** — the ONE surface a planned course is configured on,
   reached from a course row or from a bar in the week. A real modal, so Esc,
   backdrop dismissal and focus return are native. `setCourseGroups` writes on
@@ -271,16 +257,15 @@ plannerApp.ts    orchestration: owns the DOM ids in planlegger/index.astro,
   clicking another bar re-targets the same dialog — which also means it gets
   no free dismissal, so Esc, backdrop and a real close button are all wired by
   hand.
-- **`addCourse.ts`** — the catalog search modal, ranked through the same
-  `catalogSearch.ts` `/emner/` uses, not a second unranked filter. One
+- **`addCourse.ts`** — the catalog search modal, and since 2026-08-18 the only
+  search on the site. Ranked through `lib/planner/searchCatalog.ts`. One
   persistent action button per row with four verbs ("Legg til" / "Fjern" /
-  "Dropp" / "Legg tilbake") beside a state span. The dialog stays open for
-  several adds. **Not-taught rows are excluded outright — from the list *and*
-  from the count** (this differs from `/emner/` on purpose; see below). When a
-  query matches only such courses the dialog says so specifically, because
-  "0 treff" would read as "no such course", and a true zero offers the
-  register as a way out. **No per-row clash preview** here or on `/emner/`
-  (PRODUCT.md §9).
+  "Dropp" / "Legg tilbake") beside a state span, all four decided by
+  `courseAction.ts` so the rule that a programme course is dropped rather than
+  deleted lives in one place. The dialog stays open for several adds.
+  **Not-taught rows are excluded outright — from the list *and* from the
+  count**; when a query matches only such courses the dialog says so
+  specifically, because "0 treff" would read as "no such course".
 - **`plannerApp.ts`** — the only file that queries `document`. Grep
   `planlegger/index.astro` for the DOM-id contract rather than duplicating it
   here; it drifts fast. Mounted via `onPage()`.
@@ -289,32 +274,11 @@ plannerApp.ts    orchestration: owns the DOM ids in planlegger/index.astro,
 
 ### Site islands (`src/components/site/`)
 
-- **`catalogSearch.ts`** — folding, tokenising and relevance ranking: exact
-  code → code prefix → name-word prefix → substring, both sides folded and
-  tokenised so "TDT 4100" and "maskinlaering" match. It lives here rather than
-  inside the page because the page's own logic is an inline `<script>` vitest
-  cannot import, and ranking is exactly the kind of pure logic that has to be
-  pinned by tests.
-- **`planClash.ts`** — the plan-aware clash preview, through the same engine
-  the planner uses. **One caller, deliberately** (`/emne/[code]/`). It used to
-  run on `/emner/`'s rows and in the add dialog; both dropped it. Don't wire
-  it back into a result list on consistency grounds.
-- **`courseDetails.ts`** — one `/api/course/:code` fetch feeding three places
-  on the course page: the key facts, the prose disclosure, and the scraped
-  exam enrichment, which hangs **under** the catalog exam headline rather than
-  beside it (DR-3 makes the catalog the authority; two peer exam blocks
-  invited exactly the confusion that rule prevents).
-- **`courseTimetable.ts`** — hands fetched entries to `weekView.ts` as a
-  one-course plan. One controller, one pair of views, not a second of either.
-  `weeksOf` is why an off-term course still draws: both views filter through
-  `entriesInSemester`, and `entriesForSemester` has already fallen back to a
-  term whose weeks are not the planned semester's.
-- **`gradeChart.ts`** — the Karakterer figure. Small multiples, because a
-  100 %-stacked bar needs six mutually distinguishable colours for A–F and the
-  palette validator rejected every such ramp this system can build. Small
-  multiples need exactly ONE colour and stay comparable through a shared
-  y-scale — one peak **per grade scale**, so a pass/fail term cannot flatten
-  the letter charts.
+One file. `catalogSearch.ts` moved to `lib/planner/searchCatalog.ts` with the
+add dialog that is now its only caller, and `planClash.ts`, `courseDetails.ts`,
+`courseTimetable.ts` and `gradeChart.ts` are deleted with the course page
+(PRODUCT D10, D11).
+
 - **`now.ts`** — the landing page's answer to the only question a returning
   student has on a Tuesday at 11:05: **which room**. It degrades in a straight
   line, every step a real state rather than a spinner.
@@ -325,7 +289,7 @@ plannerApp.ts    orchestration: owns the DOM ids in planlegger/index.astro,
 
 - Load order in `<head>`: `tokens.css` → `base.css` → `primitives.css` →
   `site.css`, imported from `Layout.astro` frontmatter;
-  `planner-week.css` from the two pages that render a week. **There are no
+  `planner-week.css` and `plan-surface.css` from the planner. **There are no
   webfonts** — type is the platform UI face (DESIGN.md §3).
 - No-flash theme init: an `is:inline` head script reading
   `localStorage["np:theme"]`, falling back to `prefers-color-scheme`, setting
@@ -340,26 +304,20 @@ plannerApp.ts    orchestration: owns the DOM ids in planlegger/index.astro,
   inlined as an SVG `data:` URI from `src/lib/favicon.ts` on a fixed dark
   ground so the tab icon reads the same in both themes.
 - Shell (`site.css` + `Layout.astro`): sticky topbar (wordmark left;
-  `.np-navlink`s for "Planlegger" and "Emner", both always present,
-  `aria-current` computed from an explicit per-item `sections` list rather
-  than `path.startsWith`; then `<AccountButton>` and ThemeToggle right), a
-  content column (`--maxw` for data pages via Layout's `wide` prop,
-  `--measure` otherwise), and a footer that only states provenance — no links,
-  because the catalog is already one of the two nav destinations. **No
-  sitewide plan bar of any kind** (PRODUCT.md §5) — the account button is not
-  one: it prints the account's own name, or "Profil", and nothing about a plan.
-- `src/components/account.ts` owns the store + `SyncClient` as a **module
-  singleton** and mounts the profile panel per page-load. The client must be
-  shared: it holds its session in memory, so a second one would keep answering
-  `session() === null` after the panel signed in and every planner push would
-  report `no_session`. `plannerApp.ts` reads it through `account()` and hands
-  its repaint over with `setAccountRepaint`.
+  one `.np-navlink` for "Planlegger", `aria-current` computed from an explicit
+  per-item `sections` list rather than `path.startsWith`; then ThemeToggle
+  right), a content column (`--maxw` for the planner via Layout's `wide` prop,
+  `--measure` otherwise), and a footer that only states provenance. **No
+  sitewide plan bar of any kind** (PRODUCT.md §5), and no account door — with
+  two controls left there is nothing to fold, so `menuPanel.ts` is deleted
+  too.
 - `/data/programs.json` is a **build-time endpoint**
   (`src/pages/data/programs.json.ts`), not a crawler artifact: the trimmed
   `[code, name, studyLevel, cities]` tuples the programme typeahead searches.
   It is fetched lazily the first time the panel opens, because the panel is
-  reachable from all 5 474 built pages and neither inlining 27 KB into each nor
-  importing the 332 KB record into a client chunk is affordable.
+  fetched the first time the picker is opened rather than inlined: importing
+  the 332 KB record into a client chunk is not affordable, and the typeahead is
+  not on the critical path to a drawn week.
 
 ---
 
@@ -442,8 +400,8 @@ are absent.
 
 ## Worker API contract
 
-Base: same origin as the site. **GET/HEAD only, except `/api/sync/*`** (its
-own contract below) — anything else is `405 {"error":"Method not allowed"}`
+Base: same origin as the site. **GET/HEAD only** — anything else is
+`405 {"error":"Method not allowed"}`
 with `Allow: GET, HEAD`. JSON responses, `content-type: application/json;
 charset=utf-8`.
 
@@ -451,7 +409,6 @@ charset=utf-8`.
 |---|---|---|---|
 | `GET /api/health` | none | — | `{"ok":true}` |
 | `GET /api/course/:code?year=` | `courses.details(code, year?)` | 6 h | 404 `{error}` if null |
-| `GET /api/course/:code/grades` | `grades.distribution(code)` | 24 h | `{rows: GradeRow[]}`, `[]` is fine |
 | `GET /api/course/:code/timetable?year=&version=` | `courses.timetable(code, year, version?)` | 1 h | year required, 4-digit |
 | `GET /api/program/:code/plan?year=` | `programs.studyPlan(code, year)` | 24 h | cohort year required; 404 if null |
 
@@ -501,9 +458,9 @@ charset=utf-8`.
 - **Entry (`worker/src/server.ts`):** module-level `NTNUClient`, `TTLCache`
   and `RateLimiter` singletons; routing on `url.pathname`; no router
   framework. `/api` **without** a trailing slash is part of the API surface
-  too. Non-`/api` paths go to `env.ASSETS.fetch`; when ASSETS 404s, an
-  `/emne/<code>/` path whose code is not already uppercase gets a **301** to
-  the canonical casing, preserving `url.search`.
+  too. Non-`/api` paths go to `env.ASSETS.fetch` and get the headers below;
+  the lowercase-course-code 301 that used to sit on that branch went with the
+  `/emne/[code]/` pages it canonicalised.
   **Sitewide security headers** (`withSecurityHeaders`, applied to asset and
   JSON responses alike): a CSP (`default-src 'self'`, `object-src` and
   `base-uri` `'none'`, `frame-ancestors 'none'`, `img-src 'self' data:`;
@@ -518,111 +475,6 @@ charset=utf-8`.
   `types: ["@cloudflare/workers-types"]`; keep Workers-only ambient types out
   of shared files (use structural interfaces).
 
-### `/api/sync/*` — the opt-in account surface
-
-An account is optional and never a prerequisite: name plus a 6-digit PIN,
-syncing a student's plan between devices. The client derives one 256-bit
-master key from `navn + PIN` via PBKDF2 (600 000 iterations, SHA-256, salt
-`"np-sync-v1:" + navn`), then HKDF-splits it into `authKey` (sent as the
-write credential; the server stores only `sha256(authKey)`) and `encKeyRaw`
-(never leaves the browser). The plan is AES-GCM sealed client-side
-(`base64(iv ‖ ciphertext)`) before it is written, so the server can prove who
-is writing and cannot read what is written.
-
-| Route | Behaviour |
-| --- | --- |
-| `POST /api/sync/:navn` | Claim. `201 {version:1}`; `409` if the name is taken; `413` if `blob` exceeds the bound. |
-| `GET /api/sync/:navn` | Requires `x-np-auth`. `200 {blob, version, updatedAt, public}` (`Vary: x-np-auth`); `401` on mismatch; `404` if unclaimed. `public` rides along because the flag is per ACCOUNT and the client's copy of it is per device. |
-| `PUT /api/sync/:navn` | Write. `200 {version}`; `409 {error:"stale", blob, version}` if the caller's `version` is behind the server's — the stale-tab guard, not an offline merge. An optional `authKey` field re-credentials the record (a PIN change): the version check runs first, so a stale write leaves the old credential untouched. An optional `plain` field carries the readable copy, stored **only** if the record is already `public`. |
-| `DELETE /api/sync/:navn` | Delete everything. `204`, no confirmation. |
-| `PUT /api/sync/:navn/public` | Turn sharing on, with `{plain}` to serve immediately. `200 {published:true}`. Requires `x-np-auth`. |
-| `DELETE /api/sync/:navn/public` | Turn sharing off: clears `plain` and the flag, leaves `blob` alone. `204`. Requires `x-np-auth`. |
-| `GET /api/plan/:navn` | **No credential** — that is what being public means. `200 {plain, updatedAt}`, or `404` for unclaimed, unshared and malformed alike. |
-
-The credential travels in the `x-np-auth` header on `GET`/`PUT`/`DELETE`;
-`POST` carries the initial `authKey` in its JSON body instead, since
-claiming an unclaimed name has no existing credential to present against.
-These four routes are the exception to this section's own **GET/HEAD only**
-rule — `worker/src/server.ts` dispatches them before that gate applies. They
-spend from the **same per-IP token bucket** as the rest of `/api`; on top of
-it, a per-name `AuthLimiter` — 10 failed credentials per 15 minutes,
-in-memory and therefore approximate per isolate — throttles PIN guessing
-across however many IPs an attacker spreads requests over. `env.SYNC` absent
-(no KV binding provisioned) answers every sync route `503
-{"error":"sync_unavailable"}` rather than degrading to memory-only, because a
-plan that looks saved but isn't is worse than one that says it cannot be.
-
-KV key: `user:<navn>`. Record shape:
-
-```jsonc
-{
-  "authHash": "…",       // sha256(authKey)
-  "version": 7,           // monotonic, bumped by the writer
-  "updatedAt": "2026-08-02T09:14:00Z",
-  "blob": "…",            // AES-GCM ciphertext of the synced payload
-  "public": false,         // the share switch — a standing state on the account
-  "plain": null             // the readable copy, set ONLY while public (see below)
-}
-```
-
-**Sharing: `/user/<navn>`.** `public` is a standing flag, and while it is set
-every ordinary `PUT` refreshes `plain` — so the page is a **live mirror** of
-the plan the owner is working on, not a snapshot of the moment they turned it
-on. It shows the semester they are planning (`np:lastSemester`). `plain` is
-plaintext because the page is read by someone who has no key, and `blob`
-remains the private source of truth and never reaches `/api/plan/:navn`. The
-gate is the *record's* own `public`, never the caller's word for it: a private
-account gets no readable copy in KV whatever a client sends, and a stale tab
-still sending `plain` after sharing was turned off cannot put it back. `plain`
-is bounded like `blob`.
-
-The copy is its own narrow shape (`src/lib/planner/publicPlan.ts`) rather than
-the stored plan: semester + label, optional programme, and per course
-`code`/`name`/`credits`/`version`/`groups`. **Dropped courses are excluded.**
-
-`/user/<navn>` is a **worker rewrite** to one static shell (`/user/index.html`)
-— there is no per-account page to build. The worker asks the asset server for
-the DIRECTORY, not for `index.html`, which it answers with a 307 to the
-directory; handing that redirect on lands the browser at `/user/`, a path the
-route does not match, and the page arrives with no header, no rewrite and no
-name. The response carries `X-Robots-Tag: noindex, nofollow` and an
-`HTMLRewriter` pass fills the shell's `og:` tags per name (`worker/src/unfurl.ts`).
-Those coexist because **indexers and unfurlers are different crawlers**: Slack,
-iMessage and Discord read `og:` tags and do not consult `X-Robots-Tag`. Never
-add `Disallow: /user/` to `robots.txt` — a blocked crawl means the noindex is
-never read and the bare URL can still be listed.
-
-`blob` is bounded at **512 KB** (`MAX_BLOB_CHARS`), checked before the KV
-read on every claim and write, so an oversized body costs nothing but the
-parse. **No TTL.** Programme and kull are set once and are still true next
-semester, and `np:plans` already holds every semester, so an account expiring
-between terms would make a student redo the one thing they should never have
-to redo.
-
-What syncs is three of the five `localStorage` keys the payload is built
-from: `np:profile`, `np:plans` (the whole map, not just the active
-semester), `np:lastSemester`. **`np:weekView` and `np:weekBox` never sync** —
-the first is *how* a student is looking at the plan, not *what* they are
-looking at, and the second is a per-device, per-width layout measurement; a
-remembered box from the wrong geometry costs 0.14 CLS, worse than reserving
-nothing (see CLAUDE.md's layout-shift-reservations note).
-
-**What a KV dump is actually worth, stated plainly.** The blob's
-confidentiality rests on the entropy of a 6-digit PIN — about 20 bits —
-stretched by 600 000 PBKDF2 iterations, with AES-GCM's authentication tag
-serving as a free verification oracle per guess: roughly a minute per account
-on one consumer GPU for an attacker who already holds the dump. That is
-acceptable because the contents are a course timetable, not because the
-number is small, and it is why this store must never be extended to carry
-anything else.
-
-**`encKeyRaw` lives in `localStorage`**, and the origin's CSP carries
-`script-src 'unsafe-inline'` (this section's own CSP note, above), so HTML
-injection on this origin yields the key. The key's security is bounded by the
-site's, not by the crypto.
-
----
-
 ## Pages
 
 All pages use `Layout.astro` (props: `title`, `description`, optional
@@ -631,70 +483,33 @@ Islands are **vanilla `<script>` modules** (no framework) fetching relative
 `/api/...` URLs, mounted through `onPage()`. `astro.config.mjs` proxies
 `/api` → `http://localhost:8787` during `astro dev`.
 
-- **`/`** — a landing page: the "Nå" card (the student's own running or next
-  session, with the room set as display type), a kicker, a verb-first `<h1>`,
-  one line of sub-copy, and one CTA to `/planlegger/`. No picker, no proof
-  fragment.
+- **`/`** — the front door, and it is two things: the "Nå" card (the student's
+  own running or next session, with the room set as display type, then the
+  next few after it) and one CTA to `/planlegger/`. **No pitch** — no kicker,
+  no headline, no sub-copy; the `<h1>` is `sr-only` so the document still has
+  an outline. No picker, no proof fragment.
 - **`/planlegger/`** — the app. One bar at the top carries the plan's name and
-  the controls that act on the PLAN (layer toggle, Uke/Liste, "Del lenke", and
-  the semester select); the verdict chips and the deadline sit on the line under
-  it; then the week and exam list against the course rail. The title names the
-  programme and the kull only — the semester is the `<select>` on the same bar,
-  and stating it twice made a label compete with a control. The primary
-  "Legg til emne" is at the foot of the Emner column, under the rows it
-  appends to, and it is the **only** door into adding a course: the study plan's
-  choice pool is a filter inside that dialog (`studyPlanCodes`/`openScoped` on
-  `AddCourseDeps`), engaged on open while the plan is short of credits, not a
-  second button in the credit-gap line. The account's door is in the site
-  topbar, icon-only below 480 px with its name carried by `aria-label`. Verdict
-  states are **three, not two**: clean, "N kollisjoner", and "kan ikke
-  sjekkes — mangler timeplan for N emne(r)" in muted ink whenever `partial` or
-  `incompleteCourses` says the counts are a floor.
-- **`/emner/`** — search as a mode. Hidden until the visitor types or picks a
-  chip ("skriv for å søke i N emner" otherwise); city facets are ~4
-  multi-select chips, not 8 raw comma-joined location strings. The query
-  round-trips through `?q=` via `history.replaceState`, so Back from a course
-  page restores the results. A row whose `offeredYears` excludes the catalog
-  year **keeps its row and its page but gets no verb** — no add button, just a
-  "sist undervist {year}" note — and the whole set is folded into one
-  labelled `Ikke undervist i {year}` group at the end of the register, which
-  opens itself when nothing else matched. **The add dialog omits those rows
-  entirely; this page keeps them. That asymmetry is deliberate** — the dialog's
-  window is twelve rows deep, and "matematikk" spent six of them on courses it
-  was refusing to add. Do not "restore consistency" in either direction.
-- **`/emne/[code]/`** — `getStaticPaths` from the two-year-unioned catalog
-  (5 470 pages). Order is the fork point first: code · name · campus → the
-  verdict CTA (flipping to "Fjern fra planen" / "Dropp" / "Legg tilbake"
-  against the stored plan) with a clash sentence in the reserved slot beneath
-  it → the week for `offeredYears[0]`, narrowed to ONE semester, drawn by
-  `weekView` in whichever of the two views the student last chose → one exam
-  block → **Karakterer**
-  → the key-facts panel → all prose in one "Mer om emnet" disclosure. A course
-  whose `offeredYears` excludes the catalog year gets **no add control**, only
-  the sentence "Kan ikke legges til i planen …". **No year tabs** — upstream
-  has one timetable snapshot per course, and three tabs implying a choice that
-  isn't there was worse than one honest view.
-- **`/user/<navn>`** — a shared plan, read-only. ONE static shell
-  (`src/pages/user/index.astro`) that the worker rewrites every `/user/*`
-  request to, so the name comes from `location.pathname` rather than an Astro
-  param — there is no param and no per-account page to build. It fetches
-  `/api/plan/<navn>`, draws the week through `weekView` in both views like
-  every other surface that shows one (`onOpenSettings: null` — nothing here is
-  the viewer's to change), lists the courses, and ends in "Lag din egen plan".
-  Its Uke/Liste pair is the ONE built at runtime (`buildWeekTabs`), because
-  every element on this page arrives after a fetch and there is no static shell
-  to server-render it into. `src/components/planner/publicPlan.ts` **must never
-  import `PlanStore` or touch `localStorage`** — a shared link shows you
-  someone else's plan and leaves yours alone — and `tests/planner/publicPlan.test.ts`
-  asserts that against the module's source rather than trusting the comment.
-  The height reservation is a `data-reserve` lease released on every terminal
-  state, including the empty and failed ones.
+  the semester select; the week's own controls (the week picker, the layer box
+  and Uke/Liste) live in the week's section; then the week and the exam list
+  against the course rail. The title names the programme and the kull only —
+  the semester is the `<select>` on the same bar, and stating it twice made a
+  label compete with a control. The primary "Legg til emne" is at the foot of
+  the Emner column, under the rows it appends to, and it is the **only** door
+  into adding a course: the study plan's choice pool is a filter inside that
+  dialog (`studyPlanCodes`/`openScoped` on `AddCourseDeps`), engaged on open
+  whenever a programme is stored.
+
+  **There is no verdict** (PRODUCT D17). The line under the bar carries one
+  thing — "mangler timeplan for N emner" — and is silent otherwise. Every
+  course row and every session card carries the two outbound links
+  (`lib/planner/courseLinks.ts`), which is the whole of what this site says
+  about a course.
 - **`/404`** — states the reason, states the crawl date (DR-8), and offers
   exactly two honest ways back. It has no search form.
-- **`/sitemap.xml`** — the only route into the 5 470 course pages: nothing
-  server-rendered links to them, because a 5 470-row anchor list would be
-  440 KB of blocking HTML on the page whose own problem is phone weight.
-  Composition is in `src/lib/sitemap.ts` so it can be unit-tested;
+- **`/sitemap.xml`** — two URLs. It existed because nothing server-rendered
+  linked to the 5 470 course pages; those are deleted, and it stays because
+  `robots.txt` points at it. Composition is in `src/lib/sitemap.ts` so it can
+  be unit-tested;
   `tests/site/discoverability.test.ts` pins the two-file agreement between
   `astro.config.mjs`'s `site` and `public/robots.txt`'s `Sitemap:` line, which
   nothing else would notice breaking.
