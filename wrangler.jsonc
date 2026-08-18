@@ -10,12 +10,11 @@
   // `run_worker_first` is load-bearing, not an optimisation. By default the
   // asset server answers FIRST and the worker never runs for any path that
   // matches a built file — and `not_found_handling` answers misses with
-  // 404.html the same way. That silently disabled two worker behaviours the
-  // e2e suite asserts: `withSecurityHeaders` never reached an HTML response
-  // (sec-3), and `canonicalCoursePath`'s lowercase redirect never ran because
-  // /emne/tdt4100/ was answered as a 404 page before the worker saw it
-  // (astro-7). Routing document requests through the worker restores both;
-  // the negations keep the heavy, immutable, content-hashed files on the
+  // 404.html the same way. That silently disabled `withSecurityHeaders` on
+  // every HTML response (sec-3), which is the one worker behaviour left on the
+  // document path now that the lowercase-course-code redirect is deleted with
+  // its pages. Routing document requests through the worker restores it; the
+  // negations keep the heavy, immutable, content-hashed files on the
   // direct-serve path where they belong.
   //
   // Cache-Control comes from `public/_headers` (copied verbatim into dist/ by

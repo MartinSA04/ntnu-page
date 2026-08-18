@@ -10,7 +10,6 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { TieredCache } from "../../worker/src/cache.js";
 import {
   handleCourseDetails,
-  handleCourseGrades,
   handleCourseTimetable,
   handleHealth,
   handleProgramPlan,
@@ -21,7 +20,7 @@ import {
   rateLimited,
   withSecurityHeaders,
 } from "../../worker/src/routes.js";
-import worker, { canonicalCoursePath, type Env } from "../../worker/src/server.js";
+import worker, { type Env } from "../../worker/src/server.js";
 
 type FetchInput = Parameters<Fetch>[0];
 
@@ -75,19 +74,6 @@ function makeDeps(fetchImpl: Fetch): RouteDeps {
   };
 }
 
-const GRADE_ROW = {
-  Institusjonskode: "1150",
-  Institusjonsnavn: "NTNU",
-  Emnekode: "TDT4100-1",
-  Årstall: 2023,
-  Semester: 1,
-  Semesternavn: "Høst",
-  Karakter: "A",
-  "Antall kandidater totalt": 10,
-  "Antall kandidater kvinner": 4,
-  "Antall kandidater menn": 6,
-};
-
 const TIMETABLE_ENTRY = {
   courseCode: "TDT4100",
   courseName: {
@@ -128,40 +114,6 @@ describe("GET /api/health", () => {
     const res = await handleHealth();
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual({ ok: true });
-  });
-});
-
-describe("GET /api/course/:code/grades", () => {
-  it("happy path: envelope + Cache-Control header", async () => {
-    const { fetch, calls } = routeFetch([
-      { match: "hentJSONTabellData", respond: () => jsonResponse([GRADE_ROW]) },
-    ]);
-    const deps = makeDeps(fetch);
-
-    const res = await handleCourseGrades(deps, "tdt4100");
-    expect(res.status).toBe(200);
-    const body = (await res.json()) as { rows: unknown[] };
-    expect(body.rows).toHaveLength(1);
-    expect(res.headers.get("content-type")).toBe("application/json; charset=utf-8");
-    expect(res.headers.get("Cache-Control")).toBe("public, max-age=300, s-maxage=86400");
-    expect(calls.length).toBe(1);
-  });
-
-  it("rejects an invalid course code with 400", async () => {
-    const deps = makeDeps(routeFetch([]).fetch);
-    const res = await handleCourseGrades(deps, "!!");
-    expect(res.status).toBe(400);
-    expect(await res.json()).toEqual({ error: "Invalid course code" });
-  });
-
-  it("caches: two calls hit upstream exactly once", async () => {
-    const { fetch, calls } = routeFetch([
-      { match: "hentJSONTabellData", respond: () => jsonResponse([GRADE_ROW]) },
-    ]);
-    const deps = makeDeps(fetch);
-    await handleCourseGrades(deps, "TDT4100");
-    await handleCourseGrades(deps, "TDT4100");
-    expect(calls.length).toBe(1);
   });
 });
 
@@ -365,14 +317,6 @@ describe("percent-encoded codes (Æ/Ø/Å)", () => {
     expect(res.status).toBe(200);
   });
 
-  it("decodes BØA1100 on the grades route", async () => {
-    const { fetch } = routeFetch([
-      { match: "hentJSONTabellData", respond: () => jsonResponse([GRADE_ROW]) },
-    ]);
-    const res = await handleCourseGrades(makeDeps(fetch), "B%C3%98A1100");
-    expect(res.status).toBe(200);
-  });
-
   it("decodes BØA1100 on the timetable route and passes it upstream", async () => {
     const { fetch, calls } = routeFetch([
       {
@@ -407,7 +351,7 @@ describe("percent-encoded codes (Æ/Ø/Å)", () => {
     const deps = makeDeps(routeFetch([]).fetch);
     // "%2F" decodes to "/" -- valid escape, invalid *course* code. The wider
     // programme grammar accepts it; the course grammar deliberately does not.
-    const res = await handleCourseGrades(deps, "TDT%2F4100");
+    const res = await handleCourseTimetable(deps, "TDT%2F4100", "2026");
     expect(res.status).toBe(400);
   });
 });
@@ -460,7 +404,7 @@ describe("programme codes containing / and +", () => {
 
   it("keeps course codes on the tighter grammar (no / or +)", async () => {
     const deps = makeDeps(routeFetch([]).fetch);
-    expect((await handleCourseGrades(deps, "MS%C3%98K%2F5")).status).toBe(400);
+    expect((await handleCourseTimetable(deps, "MS%C3%98K%2F5", "2026")).status).toBe(400);
     expect((await handleCourseDetails(deps, "MSECT%2BOH", null)).status).toBe(400);
     expect((await handleCourseTimetable(deps, "MSECT+OH", "2026")).status).toBe(400);
   });
@@ -556,9 +500,12 @@ describe("negative caching", () => {
 describe("security headers", () => {
   it("sets CSP, nosniff, Referrer-Policy and X-Frame-Options on a success", async () => {
     const { fetch } = routeFetch([
-      { match: "hentJSONTabellData", respond: () => jsonResponse([GRADE_ROW]) },
+      {
+        match: "p_p_resource_id=timetable",
+        respond: () => jsonResponse({ summarized: [TIMETABLE_ENTRY] }),
+      },
     ]);
-    const res = await handleCourseGrades(makeDeps(fetch), "TDT4100");
+    const res = await handleCourseTimetable(makeDeps(fetch), "TDT4100", "2026");
     expect(res.headers.get("X-Content-Type-Options")).toBe("nosniff");
     expect(res.headers.get("Referrer-Policy")).toBe("strict-origin-when-cross-origin");
     expect(res.headers.get("X-Frame-Options")).toBe("DENY");
@@ -570,7 +517,7 @@ describe("security headers", () => {
 
   it("sets them on an error envelope too", async () => {
     const deps = makeDeps(routeFetch([]).fetch);
-    const res = await handleCourseGrades(deps, "!!");
+    const res = await handleCourseTimetable(deps, "!!", "2026");
     expect(res.status).toBe(400);
     expect(res.headers.get("X-Content-Type-Options")).toBe("nosniff");
     expect(res.headers.get("Content-Security-Policy")).toBeTruthy();
@@ -687,7 +634,12 @@ describe("RateLimiter", () => {
  * nothing and must not be denied.
  */
 describe("upstream throttle", () => {
-  const gradeRoutes = [{ match: "hentJSONTabellData", respond: () => jsonResponse([GRADE_ROW]) }];
+  const upstreamRoutes = [
+    {
+      match: "p_p_resource_id=timetable",
+      respond: () => jsonResponse({ summarized: [TIMETABLE_ENTRY] }),
+    },
+  ];
 
   function throttledDeps(fetchImpl: Fetch, limiter: RateLimiter): RouteDeps {
     return { ...makeDeps(fetchImpl), throttle: () => limiter.take("client") };
@@ -695,11 +647,11 @@ describe("upstream throttle", () => {
 
   it("429s the request that would have gone upstream", async () => {
     const limiter = new RateLimiter(1, 1);
-    const { fetch, calls } = routeFetch(gradeRoutes);
+    const { fetch, calls } = routeFetch(upstreamRoutes);
     const deps = throttledDeps(fetch, limiter);
 
-    expect((await handleCourseGrades(deps, "TDT4100")).status).toBe(200);
-    const denied = await handleCourseGrades(deps, "TDT4200");
+    expect((await handleCourseTimetable(deps, "TDT4100", "2026")).status).toBe(200);
+    const denied = await handleCourseTimetable(deps, "TDT4200", "2026");
     expect(denied.status).toBe(429);
     expect(await denied.json()).toEqual({ error: "Rate limited" });
     // Denied before the client was ever asked.
@@ -708,13 +660,13 @@ describe("upstream throttle", () => {
 
   it("does not spend a token on a cache hit", async () => {
     const limiter = new RateLimiter(1, 0);
-    const { fetch } = routeFetch(gradeRoutes);
+    const { fetch } = routeFetch(upstreamRoutes);
     const deps = throttledDeps(fetch, limiter);
 
-    expect((await handleCourseGrades(deps, "TDT4100")).status).toBe(200);
+    expect((await handleCourseTimetable(deps, "TDT4100", "2026")).status).toBe(200);
     // Budget is now empty, but every one of these is served from the cache.
     for (let i = 0; i < 20; i++) {
-      expect((await handleCourseGrades(deps, "TDT4100")).status).toBe(200);
+      expect((await handleCourseTimetable(deps, "TDT4100", "2026")).status).toBe(200);
     }
   });
 
@@ -731,10 +683,10 @@ describe("upstream throttle", () => {
   });
 
   it("is a no-op when no throttle is wired (no client to bucket on)", async () => {
-    const { fetch } = routeFetch(gradeRoutes);
+    const { fetch } = routeFetch(upstreamRoutes);
     const deps = makeDeps(fetch);
     expect(deps.throttle).toBeUndefined();
-    expect((await handleCourseGrades(deps, "TDT4100")).status).toBe(200);
+    expect((await handleCourseTimetable(deps, "TDT4100", "2026")).status).toBe(200);
   });
 });
 
@@ -774,31 +726,6 @@ describe("?version= validation", () => {
  * `/emne/tdt4100/` 404'd though `/emne/TDT4100/` is 200 — all 5 470
  * catalog codes are uppercase and none collide case-insensitively.
  */
-describe("canonicalCoursePath", () => {
-  it("uppercases a lowercase course path", () => {
-    expect(canonicalCoursePath("/emne/tdt4100/")).toBe("/emne/TDT4100/");
-    expect(canonicalCoursePath("/emne/tdt4100")).toBe("/emne/TDT4100/");
-  });
-
-  it("re-encodes Æ/Ø/Å so the Location header stays ASCII", () => {
-    expect(canonicalCoursePath("/emne/b%C3%B8a1100/")).toBe("/emne/B%C3%98A1100/");
-  });
-
-  it("returns null when the path is already canonical (no redirect loop)", () => {
-    expect(canonicalCoursePath("/emne/TDT4100/")).toBeNull();
-    expect(canonicalCoursePath("/emne/B%C3%98A1100/")).toBeNull();
-  });
-
-  it("ignores paths that are not a single course page", () => {
-    expect(canonicalCoursePath("/emner/")).toBeNull();
-    expect(canonicalCoursePath("/planlegger/")).toBeNull();
-    expect(canonicalCoursePath("/emne/tdt4100/noe/")).toBeNull();
-  });
-
-  it("returns null on a malformed escape rather than throwing", () => {
-    expect(canonicalCoursePath("/emne/tdt%ZZ/")).toBeNull();
-  });
-});
 
 /**
  * The entry point's own wiring, driven with a stub `ASSETS` binding. Only
@@ -832,21 +759,10 @@ describe("worker entry point", () => {
     expect(res.headers.get("Content-Security-Policy")).toContain("frame-ancestors 'none'");
   });
 
-  it("301s a lowercase course URL to the built casing (astro-7)", async () => {
-    const env = envWith({ "/emne/TDT4100/": 200 });
-    const res = await call("/emne/tdt4100/", undefined, env);
-    expect(res.status).toBe(301);
-    expect(res.headers.get("Location")).toBe("/emne/TDT4100/");
-    expect(res.headers.get("X-Frame-Options")).toBe("DENY");
-  });
-
-  it("keeps the query string across the redirect", async () => {
-    const res = await call("/emne/tdt4100/?fra=søk", undefined, envWith({}));
-    expect(res.status).toBe(301);
-    expect(res.headers.get("Location")).toBe("/emne/TDT4100/?fra=s%C3%B8k");
-  });
-
-  it("serves the 404 page unchanged for a course that really does not exist", async () => {
+  // The lowercase-course-code 301 is deleted with the pages it canonicalised.
+  // What has to survive it is the plain miss: a path with no asset behind it
+  // gets the 404 page, with our headers, rather than a redirect to nowhere.
+  it("serves the 404 page unchanged for a path that does not exist", async () => {
     const res = await call("/emne/TDT9999/", undefined, envWith({}));
     expect(res.status).toBe(404);
     expect(res.headers.get("content-type")).toBe("text/html; charset=utf-8");

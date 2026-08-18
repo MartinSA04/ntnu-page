@@ -9,7 +9,6 @@ import type { NTNUClient } from "ntnu-api";
 import { NotFoundError, NTNUAPIError, RateLimitError } from "ntnu-api";
 import {
   DETAILS_CACHE_TTL_MS,
-  GRADES_CACHE_TTL_MS,
   PLAN_CACHE_TTL_MS,
   TIMETABLE_CACHE_TTL_MS,
   type TieredCache,
@@ -317,25 +316,6 @@ export async function handleCourseDetails(
     }
     await deps.cache.set(key, details, DETAILS_CACHE_TTL_MS);
     return json(details, 200, DETAILS_CACHE_TTL_MS);
-  } catch (err) {
-    return mapUpstreamError(err);
-  }
-}
-
-export async function handleCourseGrades(deps: RouteDeps, code: string): Promise<Response> {
-  const parsedCode = parseCode(code, COURSE_CODE_RE);
-  if (parsedCode === null) return errorJson("Invalid course code", 400);
-
-  const key = JSON.stringify(["grades", parsedCode]);
-  const hit = await deps.cache.get(key, GRADES_CACHE_TTL_MS);
-  if (hit !== null) return json({ rows: hit }, 200, GRADES_CACHE_TTL_MS);
-  const throttled = upstreamGate(deps);
-  if (throttled !== null) return throttled;
-
-  try {
-    const rows = await deps.client.grades.distribution(parsedCode);
-    await deps.cache.set(key, rows, GRADES_CACHE_TTL_MS);
-    return json({ rows }, 200, GRADES_CACHE_TTL_MS);
   } catch (err) {
     return mapUpstreamError(err);
   }

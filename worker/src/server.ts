@@ -10,7 +10,6 @@ import { NTNUClient } from "ntnu-api";
 import { type KVCacheBinding, TieredCache, TTLCache } from "./cache.js";
 import {
   handleCourseDetails,
-  handleCourseGrades,
   handleCourseTimetable,
   handleHealth,
   handleProgramPlan,
@@ -62,26 +61,6 @@ function clientKey(request: Request): string | null {
   return ip === null || ip === "" ? null : ip;
 }
 
-/**
- * `/emne/<code>/` pages are built with the catalog's own casing, uppercase for
- * all 5 470 codes, so a lowercase link 404s on a page that exists one casing
- * change away. Returns the canonical path when it differs, else `null`.
- */
-export function canonicalCoursePath(pathname: string): string | null {
-  const match = pathname.match(/^\/emne\/([^/]+)\/?$/);
-  const raw = match?.[1];
-  if (raw === undefined) return null;
-  let decoded: string;
-  try {
-    decoded = decodeURIComponent(raw);
-  } catch {
-    return null;
-  }
-  const upper = decoded.toUpperCase();
-  if (upper === decoded) return null;
-  return `/emne/${encodeURIComponent(upper)}/`;
-}
-
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url);
@@ -90,17 +69,12 @@ export default {
     // `/api` (no trailing slash) is part of the API surface too: falling
     // through to ASSETS answered it with the HTML 404 page while every other
     // /api path answered with the JSON envelope.
+    // Everything that is not the API is the built site, with our headers on it.
+    // The lowercase-course-code 301 that used to live here went with the
+    // `/emne/[code]/` pages it canonicalised: there is no path left whose
+    // casing a redirect could fix.
     if (pathname !== "/api" && !pathname.startsWith("/api/")) {
-      const assetResponse = await env.ASSETS.fetch(request);
-      if (assetResponse.status === 404) {
-        const canonical = canonicalCoursePath(pathname);
-        if (canonical !== null) {
-          return withSecurityHeaders(
-            new Response(null, { status: 301, headers: { Location: canonical + url.search } }),
-          );
-        }
-      }
-      return withSecurityHeaders(assetResponse);
+      return withSecurityHeaders(await env.ASSETS.fetch(request));
     }
 
     // Read-only surface, and now it is the WHOLE surface: the account routes
@@ -127,20 +101,15 @@ export default {
 
     // `code` is still percent-encoded here (WHATWG keeps `pathname` encoded);
     // `parseCode` in routes.ts decodes it for every route in one place.
-    const courseMatch = pathname.match(/^\/api\/course\/([^/]+)(?:\/(grades|timetable))?$/);
+    const courseMatch = pathname.match(/^\/api\/course\/([^/]+)(?:\/(timetable))?$/);
     if (courseMatch) {
       const [, code, sub] = courseMatch;
       if (code === undefined) return notFoundJson();
-      switch (sub) {
-        case undefined:
-          return handleCourseDetails(deps, code, year);
-        case "grades":
-          return handleCourseGrades(deps, code);
-        case "timetable":
-          return handleCourseTimetable(deps, code, year, version);
-        default:
-          return notFoundJson();
-      }
+      // `grades` was the third branch here. It is deleted with the figure it fed
+      // (PRODUCT D11): karakterweb.no owns grade statistics, and we link to it.
+      return sub === "timetable"
+        ? handleCourseTimetable(deps, code, year, version)
+        : handleCourseDetails(deps, code, year);
     }
 
     const programMatch = pathname.match(/^\/api\/program\/([^/]+)\/plan$/);

@@ -54,9 +54,6 @@ export class TTLCache {
 /** TTL for scraped course-detail pages — exam rooms/notices update within a term. */
 export const DETAILS_CACHE_TTL_MS = 6 * 60 * 60 * 1000;
 
-/** TTL for DBH grade data — historical statistics change roughly once a semester. */
-export const GRADES_CACHE_TTL_MS = 24 * 60 * 60 * 1000;
-
 /** TTL for per-course weekly timetables — may shift during term planning. */
 export const TIMETABLE_CACHE_TTL_MS = 60 * 60 * 1000;
 
