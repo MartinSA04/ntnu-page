@@ -30,18 +30,31 @@
     "not_found_handling": "404-page",
     "run_worker_first": ["/*", "!/_astro/*", "!/data/*"]
   },
-  // No KV namespaces are bound, and that is now the whole story: the worker
-  // stores nothing about a student (PRODUCT mandate 11). The SYNC namespace and
-  // its `local-sync-dev` placeholder went with the account on 2026-08-18, along
-  // with `release.yml`'s precheck for that placeholder — there is no longer a
-  // fake id that could reach production.
+  // ONE KV namespace, and it caches NTNU's answers rather than anything about a
+  // student — the worker still stores nothing about one (PRODUCT mandate 11).
+  // The SYNC namespace and its `local-sync-dev` placeholder went with the
+  // account on 2026-08-18, along with `release.yml`'s precheck for that
+  // placeholder, so there is no fake id that could reach production. Losing
+  // this binding is not a correctness bug: `TieredCache` degrades to
+  // memory-only, which is right and merely colder.
   //
-  // Not connected to Cloudflare yet. When wiring it up:
-  // 1. KV cache (the worker degrades to a memory-only cache without it, which
-  //    is correct but colder — it is a cache of NTNU's answers, not of ours):
-  //      npx wrangler kv namespace create CACHE
-  //    then add:
-  //      "kv_namespaces": [{ "binding": "CACHE", "id": "<id>" }],
-  // 2. Custom domain:
-  //      "routes": [{ "pattern": "ntnu.martinsundal.no", "custom_domain": true }],
+  // TWO THINGS ABOUT THIS ENTRY ARE EASY TO GET WRONG.
+  //
+  // The BINDING is `CACHE` because that is what `server.ts` reads off `env`.
+  // `wrangler kv namespace create` prints a snippet naming the binding after
+  // the TITLE — `ntnu_page_CACHE` here — and pasting that verbatim leaves the
+  // worker permanently memory-only with nothing in any log to say so.
+  //
+  // The TITLE is `ntnu-page-CACHE` rather than `CACHE` because titles are
+  // account-wide and ntnu-mcp already holds `CACHE`. That is not merely a name
+  // clash: both workers prefix their keys `v1:` and both spell them
+  // `JSON.stringify(["details", CODE, year, …])`, so a shared namespace is two
+  // services reading each other's payloads the moment one of them adds an
+  // argument and the arities stop differing by accident. Keep them apart.
+  "kv_namespaces": [{ "binding": "CACHE", "id": "890cc00c1e1a4b94a7d18b64c04aee3f" }],
+  // The custom domain. Wrangler creates the DNS record and the certificate on
+  // deploy, provided martinsundal.no is a zone in the same Cloudflare account.
+  // This host is also `site` in astro.config.mjs and the `Sitemap:` line in
+  // public/robots.txt — all three name it, and they move together.
+  "routes": [{ "pattern": "ntnu.martinsundal.no", "custom_domain": true }]
 }
