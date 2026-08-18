@@ -69,8 +69,21 @@ export interface KVCacheBinding {
   put(key: string, value: string, options?: { expirationTtl?: number }): Promise<void>;
 }
 
-/** Version prefix for KV keys — bump when cached shapes change incompatibly. */
-const KV_KEY_PREFIX = "v1:";
+/**
+ * Version prefix for KV keys — bump when cached shapes change incompatibly.
+ *
+ * NAMED AFTER THIS SERVICE, and that half is not cosmetic. ntnu-mcp caches the
+ * same upstream against the same grammar — `v1:` plus
+ * `JSON.stringify(["details", CODE, year, …])` — so under a bare `v1:` the two
+ * were one keyspace apart only by accident: `details` is 3 elements here and 4
+ * there, `timetable` 4 here and 3 there. Add an argument on either side and
+ * each service starts reviving the other's payload as its own shape, which
+ * surfaces as garbled course data with nothing in either repo pointing at the
+ * cause. They are bound to separate namespaces now as well (wrangler.jsonc says
+ * why); this is the belt to that pair of braces, and it costs one cold fetch
+ * per course on the deploy that introduces it.
+ */
+const KV_KEY_PREFIX = "v1:page:";
 
 /**
  * Two-tier TTL cache: per-isolate memory in front of a shared Workers KV
