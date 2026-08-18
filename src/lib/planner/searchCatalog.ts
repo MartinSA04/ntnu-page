@@ -1,9 +1,12 @@
 /**
- * Catalog search: folding, tokenising and relevance ranking for `/emner/`.
+ * Catalog search: folding, tokenising and relevance ranking over
+ * `public/data/search-index.json`.
  *
- * It lives here rather than inside the page because the page's own logic is
- * an inline `<script>` in an `.astro` file, which vitest cannot import — and
- * ranking is exactly the kind of pure logic that has to be pinned by tests.
+ * It is the planner's add-course dialog's search, and since 2026-08-18 that is
+ * the ONLY search on the site — `/emner/` is deleted, and with it the subject
+ * facets (`codePrefix`/`prefixFacets`) that only its chip row ever called. The
+ * file was `components/site/catalogSearch.ts` and moved here because it is
+ * pure ranking with no DOM in it, which is also why it is testable at all.
  */
 
 /**
@@ -36,45 +39,6 @@ export function fold(value: string): string {
     .replace(/ae/g, "a")
     .replace(/oe/g, "o")
     .replace(/aa/g, "a");
-}
-
-/**
- * The letters a course code opens with — `"TMA4100"` → `"TMA"` — or `""` for
- * the 325 catalog codes that do not start with any.
- *
- * A *grouping* rule for this product's result list, not a fact about NTNU's
- * catalog, which is why it lives here rather than in `ntnu-api`: no claim is
- * made about what a prefix means, only that rows sharing one belong together.
- */
-export function codePrefix(code: string): string {
-  return /^[A-ZÆØÅa-zæøå]+/.exec(code.trim())?.[0].toUpperCase() ?? "";
-}
-
-/** One subject chip: the prefix and how many of the rows carry it. */
-export interface PrefixFacet {
-  prefix: string;
-  count: number;
-}
-
-/**
- * Subject facets for a *result set*, biggest first.
- *
- * Computed from the rows a query already matched rather than from the whole
- * catalog: 360 prefixes in 5 470 courses is a wall nobody reads, while the 6
- * that survive "matematikk" are a filter worth having. Prefix-less codes
- * contribute no chip. Ties break on the prefix so the chip row cannot reshuffle
- * under the pointer.
- */
-export function prefixFacets(rows: readonly CatalogRow[]): PrefixFacet[] {
-  const counts = new Map<string, number>();
-  for (const [code] of rows) {
-    const prefix = codePrefix(code);
-    if (prefix === "") continue;
-    counts.set(prefix, (counts.get(prefix) ?? 0) + 1);
-  }
-  return [...counts]
-    .map(([prefix, count]) => ({ prefix, count }))
-    .sort((a, b) => b.count - a.count || a.prefix.localeCompare(b.prefix, "nb"));
 }
 
 /** A parsed query: the folded tokens plus the two joined forms ranking needs. */

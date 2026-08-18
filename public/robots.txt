@@ -1,5 +1,6 @@
-# The 5470 course pages are only reachable through the sitemap: /emner/ builds
-# its rows in the browser, so no server-rendered page links to /emne/ (astro-2).
+# Two pages, and they link to each other, so the sitemap is a formality. It was
+# the only way in while the build emitted 5470 course pages nothing
+# server-rendered linked to; those are deleted (PRODUCT D10).
 #
 # The host below MUST match `site` in astro.config.mjs — it is still the
 # placeholder ntnu.martinsundal.no and both have to be changed together before

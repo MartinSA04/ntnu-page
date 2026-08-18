@@ -45,8 +45,8 @@
 import { dismissOnBackdropClick } from "../../lib/dialogDismiss.js";
 import { addCourseRowControl } from "../../lib/planner/courseAction.js";
 import type { PlannerIndex } from "../../lib/planner/data.js";
+import { searchCatalog } from "../../lib/planner/searchCatalog.js";
 import { type AddCourseInput, DEFAULT_VERSION, type PlanStore } from "../../lib/planner/store.js";
-import { searchCatalog } from "../site/catalogSearch.js";
 import { el } from "./dom.js";
 
 export interface AddCourseDeps {
@@ -334,15 +334,9 @@ export function mountAddCourse(deps: AddCourseDeps, signal: AbortSignal): AddCou
         hidden > 0
           ? `Ingen treff undervises i ${index.year}. ${subject} i emnekatalogen passer søket, men undervises ikke i år.`
           : "0 treff. Prøv emnekode eller navn.";
-      // A true zero was the whole state: a sentence and a Lukk button, with the
-      // register that searches more than this dialog does — it keeps the
-      // not-taught rows this one drops — one page away and unmentioned.
-      if (hidden === 0) {
-        const out = el("a", "np-link-out add-course-register") as HTMLAnchorElement;
-        out.href = `/emner/?q=${encodeURIComponent(query)}`;
-        out.textContent = "Søk i hele emnekatalogen →";
-        status.append(" ", out);
-      }
+      // A true zero is a sentence and a Lukk button. There is nowhere further
+      // to send the student: `/emner/`, which searched more than this dialog
+      // does because it kept the not-taught rows, is deleted (PRODUCT D10).
       return;
     }
 

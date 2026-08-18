@@ -25,6 +25,7 @@
  * 60rem, and a pointer that has to be right in three layouts is the accessory
  * to leave off.
  */
+import { courseLinks } from "../../lib/planner/courseLinks.js";
 import { dayName, el, icon } from "./dom.js";
 import { type BlockClash, type BlockDetail, isDropIn } from "./weekNotes.js";
 
@@ -46,6 +47,12 @@ export interface BlockPopoverContext {
   hueVar: string;
   /** The course's proper name, when the bar knows it. */
   courseName: string;
+  /**
+   * Which year this week is for, threaded into the `ntnu.no` link so a plan for
+   * a past term points at the page that term was taught from. Absent lets NTNU
+   * pick the current year, which is the right answer when we cannot say better.
+   */
+  year?: number;
   choice: SessionChoice;
   /**
    * How many alternative lectures the week is drawing ONE of, unasked. 0 when
@@ -308,11 +315,9 @@ export function mountBlockPopover(
     }
 
     const actions = el("div", "np-actions np-actions--split block-popover-actions");
-    // Two of the three surfaces that draw a week have no editor to open —
-    // `/emne/[code]/` is one course's reference page and it is
-    // somebody else's plan — so the verb is omitted rather than pointed at
-    // nothing. The card is then what it mostly already was: the facts of the
-    // session you pointed at, and a way through to the course.
+    // A surface with no editor to open omits the verb rather than pointing it
+    // at nothing. The card is then what it mostly already was: the facts of the
+    // session you pointed at, and the two ways out to the course.
     if (onOpenSettings) {
       const edit = el("button", "np-btn block-popover-edit", editVerb(ctx.choice));
       edit.type = "button";
@@ -324,10 +329,18 @@ export function mountBlockPopover(
       actions.append(edit);
     }
 
-    const link = el("a", "np-link-out", "Gå til emnesiden");
-    link.append(icon("arrowRight"));
-    link.href = `/emne/${detail.code}/`;
-    actions.append(link);
+    // WHERE THE REST OF THE QUESTION GOES (PRODUCT mandate 3). `/emne/[code]/`
+    // was one link to a page we wrote; these are two links to the pages that
+    // answer it properly, and the arrow says both leave the site.
+    for (const out of courseLinks(detail.code, ctx.courseName ?? "", ctx.year)) {
+      const link = el("a", "np-link-out", out.label);
+      link.append(icon("arrowRight"));
+      link.href = out.href;
+      link.target = "_blank";
+      link.rel = "noopener noreferrer";
+      link.setAttribute("aria-label", out.ariaLabel);
+      actions.append(link);
+    }
     body.append(actions);
 
     dialog.append(body);

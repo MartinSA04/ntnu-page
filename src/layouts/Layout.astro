@@ -56,13 +56,10 @@ const WEEK_BOX_TOLERANCE = 32;
 // same semester's course list.
 const DEFAULT_SEMESTER_ID = semestersData.current?.id ?? "";
 
-// Kept as a list of sections (not a bare href prefix) so a future addition
-// cannot reintroduce the aria-current substring bug — `/emne/` is not a prefix
-// of `/emner/`, which orphaned the highest-traffic page from its own nav.
-const NAV = [
-  { href: "/planlegger/", label: "Planlegger", sections: ["/planlegger/"] },
-  { href: "/emner/", label: "Emner", sections: ["/emner/", "/emne/"] },
-] as const;
+// One item, and still a list of SECTIONS rather than a bare href prefix: the
+// shape is what stopped `aria-current` matching on substrings, and a second
+// item added later would otherwise have to rediscover why.
+const NAV = [{ href: "/planlegger/", label: "Planlegger", sections: ["/planlegger/"] }] as const;
 
 const path = Astro.url.pathname;
 
@@ -185,12 +182,6 @@ const crawlDate = formatCrawlDate(semestersData.crawledAt);
           else if (count > 0) root.setAttribute("data-plan", "courses");
           else if (anyCourses) root.setAttribute("data-plan", "elsewhere");
           else root.removeAttribute("data-plan");
-          // Whether this load carries a search query. A static build cannot see
-          // `?q=`, so /emner/ — whose status line changes for it — needs the
-          // fact before first paint or it paints the wrong line and swaps it.
-          if (/(^|&)q=[^&]/.test(location.search.slice(1)))
-            root.setAttribute("data-query", "");
-          else root.removeAttribute("data-query");
           applyWeekBox(root);
         }
         // Which way the planner draws its week, and how tall that came out last

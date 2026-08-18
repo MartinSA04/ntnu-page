@@ -895,20 +895,39 @@ button.planner-chip.is-jump:hover {
   overflow-wrap: anywhere;
 }
 
-/* THE ROW'S NAME AS A DOOR, on the surface that has no other one. Ink at rest
-   and underlined on hover, the same grammar the plan's own name and the
-   collision verdict use: at rest this is the course's name and has to read as
-   one. Deliberately NOT `.np-navlink`, which is `inline-flex` and would drop
-   the space between the code and the name. */
+/* THE WAY OUT, and there are two of them (PRODUCT mandate 3). A quiet run
+   under the course's name: muted at rest so the identity above stays the loud
+   thing in the row, ink and underlined on hover.
+
+   Its own line rather than more cells in the identity row. Two links per course
+   against a settings button and a credit figure is four things reaching for the
+   trailing edge, and at 390px the row has about 358px to give.
+
+   Deliberately NOT `.np-navlink`: that primitive is `inline-flex`, and the gap
+   between the two is the container's job here. */
+.planner-course-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  font-size: var(--text-xs);
+}
+
 .planner-course-link {
-  color: inherit;
+  color: var(--muted);
   text-decoration: none;
 }
 
 .planner-course-link:hover,
 .planner-course-link:focus-visible {
+  color: var(--ink);
   text-decoration: underline;
   text-underline-offset: 3px;
+}
+
+/* A dropped course is out of the week and out of the exams; the pages about it
+   are not, so the links stay legible rather than inheriting the strike. */
+.planner-course-row.is-dropped .planner-course-links {
+  opacity: 0.7;
 }
 
 .planner-course-row.is-dropped .planner-course-title {

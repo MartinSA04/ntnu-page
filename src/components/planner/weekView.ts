@@ -308,6 +308,13 @@ export function mountWeekView(options: WeekViewOptions): WeekViewHandle {
   let pendingViewAnimation = false;
   /** The states the last render drew, so a conflict note can find their hues. */
   let drawnStates: PlanCourseState[] = [];
+  /**
+   * The year the last render's weeks belong to, so the popover's `ntnu.no` link
+   * points at the page for the term being drawn rather than at whatever NTNU
+   * considers current. Undefined until the first render, which is before any
+   * block exists to press.
+   */
+  let drawnYear: number | undefined;
   /** The last render's collision slots, so the verdict chip can reach the first. */
   let lastConflictGroups: ConflictGroup[] = [];
 
@@ -327,6 +334,7 @@ export function mountWeekView(options: WeekViewOptions): WeekViewHandle {
         detail,
         hueVar: state?.hueVar ?? "--muted",
         courseName: state?.bundle?.details?.courseName ?? state?.course.name ?? detail.name,
+        year: drawnYear,
         ...extra,
       },
       anchor,
@@ -775,6 +783,7 @@ export function mountWeekView(options: WeekViewOptions): WeekViewHandle {
   function render(states: PlanCourseState[], input: WeekRenderInput): WeekRenderResult {
     drawnStates = states;
     const year = input.year ?? new Date().getFullYear();
+    drawnYear = year;
     renderWeekOptions(input.teachingWeeks, year);
 
     const week = resolvedWeek();

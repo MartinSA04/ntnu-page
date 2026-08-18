@@ -12,6 +12,7 @@
  * that still says everything it said.
  */
 
+import { courseLinks } from "../../lib/planner/courseLinks.js";
 import { el, formatCreditNumber, settingsIcon } from "./dom.js";
 
 /** One course, as a list row states it. */
@@ -36,14 +37,13 @@ export interface CourseRowModel {
 }
 
 export interface CourseRowsOptions {
-  /**
-   * The way into the editor, as a settings button at the row's end.
-   *
-   * Absent on a read-only surface, and then the row's name becomes a link to
-   * the course's own page instead — the one place a verb-less surface can honestly
-   * send a viewer, since it cannot edit the plan it is showing.
-   */
+  /** The way into the editor, as a settings button at the row's end. */
   onOpenSettings?: ((code: string) => void) | null;
+  /**
+   * Which year the plan is for, threaded into the `ntnu.no` link so a plan for
+   * a past term points at the page that term was taught from.
+   */
+  year?: number;
 }
 
 /**
@@ -83,22 +83,13 @@ export function renderCourseRows(
     row.append(chip);
 
     const nameCell = el("span", "planner-course-name");
-    // A LINK ONLY WHERE THERE IS NOWHERE ELSE TO GO. The planner's row opens
-    // the settings modal from its own button and the title stays inert; the
-    // shared plan has no editor, so the name is the way into the course.
-    //
-    // NOT `.np-navlink`: that primitive is `inline-flex`, and a flex container
-    // drops the text node holding the space between the code and the name
-    // ("TDT4102Prosedyre- og …"). Its own class keeps this an inline run of
-    // text, which is what a title inside a row is.
-    const title = el(onOpenSettings ? "span" : "a", "planner-course-title");
+    // THE TITLE IS INERT. It was an `<a>` on the surface that had no editor,
+    // pointing at `/emne/[code]/`; that page is deleted and the two places a
+    // student can now go about this course are the explicit links below, which
+    // say where they lead rather than making the whole name a mystery target.
+    const title = el("span", "planner-course-title");
     title.append(el("b", "planner-course-code np-data", course.code));
     title.append(` ${course.name}`);
-    if (!onOpenSettings) {
-      const link = title as HTMLAnchorElement;
-      link.href = `/emne/${encodeURIComponent(course.code)}/`;
-      link.classList.add("planner-course-link");
-    }
     nameCell.append(title);
     row.append(nameCell);
 
@@ -130,6 +121,23 @@ export function renderCourseRows(
       open.addEventListener("click", () => onOpenSettings(course.code));
       row.append(open);
     }
+
+    // WHERE THE REST OF THE QUESTION GOES (PRODUCT mandate 3). Its own line
+    // under the name rather than more cells in the identity row: two links per
+    // course is four things competing for the trailing edge at 390px, and these
+    // two are about leaving rather than about the plan.
+    const links = el("span", "planner-course-links");
+    for (const link of courseLinks(course.code, course.name, options.year)) {
+      const anchor = el("a", "planner-course-link", link.label);
+      anchor.href = link.href;
+      anchor.target = "_blank";
+      // `noopener` is the load-bearing half; `noreferrer` follows it because
+      // neither destination needs to know which page sent the student.
+      anchor.rel = "noopener noreferrer";
+      anchor.setAttribute("aria-label", link.ariaLabel);
+      links.append(anchor);
+    }
+    nameCell.append(links);
 
     host.append(row);
   }
