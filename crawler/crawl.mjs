@@ -6,7 +6,7 @@
  *
  * Usage: node crawler/crawl.mjs [--year 2026]
  */
-import { mkdtemp, rename, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, rename, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { setTimeout as sleep } from "node:timers/promises";
 import { fileURLToPath } from "node:url";
@@ -52,6 +52,14 @@ const CATALOG_YEARS = 2;
  */
 async function writeAtomic(filePath, content) {
   const dir = path.dirname(filePath);
+  // `data/` and `public/data/` are gitignored build artifacts, so on a FRESH
+  // CLONE they do not exist — and the tmp dir is deliberately a sibling of the
+  // target (that is what makes the rename atomic), so `mkdtemp` was the first
+  // thing to touch a directory nothing had created. Every local run had one
+  // lying around from a previous crawl, so this only ever failed where it
+  // mattered: the first CI run on a new checkout, after spending the whole
+  // crawl's worth of upstream requests and failing on the write.
+  await mkdir(dir, { recursive: true });
   const tmpDir = await mkdtemp(path.join(dir, ".crawl-tmp-"));
   const tmpFile = path.join(tmpDir, path.basename(filePath));
   await writeFile(tmpFile, content, "utf8");
