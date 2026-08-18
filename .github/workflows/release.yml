@@ -29,11 +29,25 @@ jobs:
       - name: Tag must match package.json version
         run: test "v$(node -p "require('./package.json').version")" = "$GITHUB_REF_NAME"
       - run: npm ci
+      # FIRST, not after the checks. `data/*.json` are gitignored crawl
+      # artifacts, so a release runner starts without them — and `astro check`
+      # and the unit suite both IMPORT them (`data/semesters.json`,
+      # `data/programs.json`). Crawling after the checks meant every release
+      # died at typecheck with nine "Cannot find module '../../../data/…'"
+      # errors, on a runner where the only fix is to have fetched them already.
+      # `ci.yml` had this right; this file did not, and nothing caught it
+      # because a release had never been run.
+      #
+      # No cache key here, unlike ci.yml and e2e.yml: a DEPLOY bakes this data
+      # into the artifact students read, so it is crawled fresh every time
+      # rather than restored from whatever the first job of the day fetched.
+      # `prebuild` sees the files present and skips its own crawl, so the build
+      # below ships exactly what was fetched here.
+      - name: Crawl fresh data for the release build
+        run: npm run crawl
       - run: npm run lint
       - run: npm run typecheck
       - run: npm test
-      - name: Crawl fresh data for the release build
-        run: npm run crawl
       - name: End-to-end suite against live data (REVIEW.md T1 — gates every deploy)
         run: |
           npx playwright install --with-deps chromium
