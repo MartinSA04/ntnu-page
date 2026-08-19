@@ -295,6 +295,9 @@ export function mountBlockPopover(
     // WHERE THE REST OF THE QUESTION GOES (PRODUCT mandate 3). `/emne/[code]/`
     // was one link to a page we wrote; these are two links to the pages that
     // answer it properly, and the arrow says both leave the site.
+    // One group, so the footer stays the PAIR `--split` is defined on however
+    // many ways out there are — the shape the settings modal's footer takes too.
+    const outs = el("div", "np-actions-out");
     for (const out of courseLinks(detail.code, ctx.courseName ?? "", ctx.year)) {
       const link = el("a", "np-link-out", out.label);
       link.append(icon("arrowRight"));
@@ -302,8 +305,9 @@ export function mountBlockPopover(
       link.target = "_blank";
       link.rel = "noopener noreferrer";
       link.setAttribute("aria-label", out.ariaLabel);
-      actions.append(link);
+      outs.append(link);
     }
+    actions.append(outs);
     body.append(actions);
 
     dialog.append(body);

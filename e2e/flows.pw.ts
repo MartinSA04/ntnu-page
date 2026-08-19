@@ -1554,6 +1554,94 @@ test("the block popover closes when you tab off its end", async ({ page }) => {
   expect(tabs).toBeGreaterThan(1);
 });
 
+/**
+ * iOS Safari zooms the viewport when a focused text field or <select> computes
+ * under 16 px, and it does not zoom back out — one tap on the add dialog's
+ * search box left the page at ~1.2x for the rest of the visit, with the columns
+ * the student was reading off screen. Every control on this site was
+ * `--text-sm` (13.44 px), so every one of them did it.
+ *
+ * A CHROMIUM RUN CANNOT SEE THE SYMPTOM, which is exactly why the gate measures
+ * the cause instead: no engine here zooms, so the only thing that would have
+ * caught the regression is a phone in someone's hand. It sweeps every control
+ * the site can put a caret in, including the ones behind a modal, because the
+ * two typeaheads are the surfaces a student types into most.
+ */
+test("no typing surface computes under 16px (iOS focus zoom)", async ({ page }) => {
+  const undersized = (page: Page) =>
+    page.evaluate(() =>
+      Array.from(
+        document.querySelectorAll('input:not([type="checkbox"]):not([type="radio"]), select'),
+      )
+        .filter((el) => (el as HTMLElement).offsetParent !== null)
+        .filter((el) => Number.parseFloat(getComputedStyle(el).fontSize) < 16)
+        .map(
+          (el) =>
+            `${getComputedStyle(el).fontSize} ${el.tagName.toLowerCase()}.${(el.className || "").toString().split(/\s+/)[0]}#${el.id}`,
+        ),
+    );
+
+  // No programme, so studieinfo shows the typeahead rather than the chip that
+  // replaces it once one is chosen — the field is the surface being measured.
+  await gotoPlanner(page, { courses: ["TDT4110"] });
+  await expect(gridBlocks(page).first()).toBeVisible({ timeout: 45_000 });
+  // The week picker, in the week's own controls.
+  expect(await undersized(page)).toEqual([]);
+
+  // The add dialog's search field.
+  await page.locator("#planner-add-course-btn").click();
+  await expect(page.locator(".add-course-input")).toBeVisible();
+  expect(await undersized(page)).toEqual([]);
+  await page.keyboard.press("Escape");
+
+  // Studieinfo: the programme typeahead and the semester select.
+  await openStudieinfo(page);
+  await expect(page.locator("#studieinfo-program-input")).toBeVisible();
+  expect(await undersized(page)).toEqual([]);
+});
+
+/**
+ * The timetable-only reduction deleted `/emne/[code]/`, `/emner/` and
+ * `/user/<navn>` and every link into them was supposed to go with them. One did
+ * not: the course settings modal's way out kept pointing at a course page that
+ * no longer exists, so the student's last question about a course landed on a
+ * 404. Nothing could see it — the href is written in JS, inside a modal, and no
+ * build step follows a link.
+ *
+ * It asks the SERVER, not a list of known routes: a route table in a test is
+ * the same guess the broken link was.
+ */
+test("no internal link on any surface reaches a 404", async ({ page }) => {
+  await gotoPlanner(page, { courses: ["TDT4110"] });
+  await expect(gridBlocks(page)).toHaveCount(1, { timeout: 45_000 });
+
+  const internal = (page: Page) =>
+    page.evaluate(() =>
+      Array.from(document.querySelectorAll("a[href]"))
+        .map((a) => a.getAttribute("href") ?? "")
+        .filter((h) => h.startsWith("/") && !h.startsWith("//") && !h.startsWith("/#")),
+    );
+
+  const hrefs = new Set(await internal(page));
+  // The modal is where the dead one was, and it only exists once opened.
+  await gridBlocks(page).first().click();
+  await expect(page.locator("#planner-block-popover")).toBeVisible();
+  await page.locator(".block-popover-edit").click();
+  await expect(page.locator("#planner-course-settings")).toBeVisible();
+  for (const href of await internal(page)) hrefs.add(href);
+  await page.keyboard.press("Escape");
+
+  await page.goto("/");
+  for (const href of await internal(page)) hrefs.add(href);
+
+  const dead: string[] = [];
+  for (const href of hrefs) {
+    const res = await page.request.get(href);
+    if (res.status() !== 200) dead.push(`${href} ${res.status()}`);
+  }
+  expect(dead).toEqual([]);
+});
+
 test.describe("target sizes", () => {
   /**
    * WCAG 2.5.8 Target Size (Minimum), AA: every pointer target is at least

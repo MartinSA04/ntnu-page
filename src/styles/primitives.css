@@ -381,7 +381,9 @@ button.np-tag:hover {
   background: none;
   border: 0;
   padding: 0;
-  font-size: var(--text-sm);
+  /* NOT `--text-sm`: under 16px iOS zooms the viewport on focus and stays
+     there. See `--text-field` in tokens.css — it is a floor, not a size. */
+  font-size: var(--text-field);
 }
 
 .np-field input:focus {
@@ -427,7 +429,9 @@ button.np-tag:hover {
   background: var(--control-bg);
   color: var(--fg);
   font-family: var(--font-sans);
-  font-size: var(--text-sm);
+  /* A <select> zooms iOS on focus for the same reason a text input does, and
+     the padding is measured in `1em` of it — see `--text-field`. */
+  font-size: var(--text-field);
   border: 1px solid var(--control-edge);
   border-radius: var(--radius-sm);
   transition:
@@ -592,6 +596,20 @@ button.np-tag:hover {
 
 .np-actions--split {
   justify-content: space-between;
+}
+
+/* The ways out, as ONE item in the split. `--split` is defined on a PAIR — a
+   verb that changes the plan, and the way out — and there are two ways out, so
+   without this the footer is three items and `space-between` spends the modal's
+   whole width putting an arbitrary gap between two links that are the same kind
+   of thing. In the block popover the card is narrow enough that the three
+   filled the row and it read as a run; at the settings modal's width it read as
+   three unrelated controls. One group, both surfaces. */
+.np-actions-out {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--gap-3);
 }
 
 /* The way out of a card to a page. A target, not a tail: 24 px tall (WCAG

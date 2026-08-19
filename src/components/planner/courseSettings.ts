@@ -16,6 +16,7 @@
  * from a student's week, so they stay pure and stay tested.
  */
 import { dismissOnBackdropClick } from "../../lib/dialogDismiss.js";
+import { courseLinks } from "../../lib/planner/courseLinks.js";
 import type { GroupOption } from "../../lib/planner/groups.js";
 import type { CourseSource, PlanStore } from "../../lib/planner/store.js";
 import { el, formatCreditNumber, icon } from "./dom.js";
@@ -63,6 +64,13 @@ export interface CourseSettingsContext {
   programCode?: string | null;
   source: CourseSource;
   dropped: boolean;
+  /**
+   * Which year the plan is for, threaded into the `ntnu.no` link so a plan for
+   * a past term opens the page that term was taught from. Optional: without it
+   * NTNU redirects to the current year, which is the right answer when we
+   * cannot say better.
+   */
+  year?: number;
   /**
    * Status fragments the course row used to run together — "undervises ikke i
    * valgt semester", "fikk ikke hentet timeplanen". One note per entry.
@@ -458,10 +466,23 @@ export function mountCourseSettings(store: PlanStore, signal: AbortSignal): Cour
     });
     row.append(action);
 
-    const link = el("a", "np-link-out", "Gå til emnesiden");
-    link.append(icon("arrowRight"));
-    link.href = `/emne/${ctx.code}/`;
-    row.append(link);
+    // WHERE THE REST OF THE QUESTION GOES (PRODUCT mandate 3). This was one
+    // link to `/emne/[code]/`, a page deleted in the timetable-only reduction
+    // and never replaced here, so the modal's way out 404'd; the session card
+    // and the course row already carry the two links that answer it properly.
+    // They go in ONE group, or `--split` has three items to spread and puts the
+    // modal's whole spare width between two links that are the same thing.
+    const outs = el("div", "np-actions-out");
+    for (const out of courseLinks(ctx.code, ctx.name, ctx.year)) {
+      const link = el("a", "np-link-out", out.label);
+      link.append(icon("arrowRight"));
+      link.href = out.href;
+      link.target = "_blank";
+      link.rel = "noopener noreferrer";
+      link.setAttribute("aria-label", out.ariaLabel);
+      outs.append(link);
+    }
+    row.append(outs);
 
     return row;
   }

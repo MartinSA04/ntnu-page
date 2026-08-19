@@ -486,6 +486,11 @@ export async function mountPlannerApp(
       credits: state ? creditsOf(state) : (course.credits ?? null),
       source: course.source,
       dropped: course.dropped === true,
+      // For the modal's `ntnu.no` link. A semester id with no year in it leaves
+      // the field off, and NTNU then answers with the current year.
+      ...(semesterYear(plan.semesterId) !== null
+        ? { year: semesterYear(plan.semesterId) as number }
+        : {}),
       notes,
       onRetry: failed ? () => retryCourse(code) : null,
     };

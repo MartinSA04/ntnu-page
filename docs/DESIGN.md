@@ -124,6 +124,17 @@ the sentence around them.
 sentence, `--text-base` body, `--text-md` title, `--text-lg` headline,
 `--text-xl` page title, `--text-2xl` display.
 
+**Plus one step that is not a role: `--text-field`.** Text a student TYPES
+INTO — `.np-field input` and `.np-select` — is `max(1rem, 16px)`, never
+`--text-sm`. iOS Safari zooms the whole viewport when a focused field computes
+under 16 px and does not zoom back out, so at `--text-sm`'s 13.44 px one tap on
+the add dialog's search box left the page at ~1.2× for the rest of the visit.
+The `max()` keeps a raised browser base size; the alternatives do not work
+(`maximum-scale=1` buys it by taking pinch-zoom from everyone, a WCAG 1.4.4
+failure for a rendering bug, and `@media (pointer: coarse)` puts desktop Safari
+on an iPad in the wrong branch). Labels, hints and `<option>` prose around the
+control stay on the scale.
+
 ### Named rules
 
 **Data-Is-Mono is retired; `.np-data` is not.** The rule was right about
@@ -303,8 +314,16 @@ a global 2 px `--ui` outline.
   what is above it. **`--split`** pushes a pair apart when they are different
   kinds of thing (a verb that changes the plan, and the way out to another
   page); verbs about the same edit stay together at the start.
-- **`.np-link-out`** — the way out of a card to a page ("Gå til emnesiden →").
+- **`.np-actions-out`** — the ways out, wrapped as ONE item in that split.
+  `--split` is defined on a *pair*, and there are two ways out, so a footer that
+  appends them loose is three items and spends the surface's whole spare width
+  putting an arbitrary gap between two links that are the same kind of thing.
+- **`.np-link-out`** — the way OFF this site to the page that answers the rest
+  of the question ("ntnu.no →", "karakterweb →"), never an internal one: the
+  card it sits in is the last surface here that says anything about the course.
   A target, not a tail: 24 px tall (WCAG 2.5.8), `--muted` until pointed at.
+  The set comes from `courseLinks()` — one list, so the session card, the
+  course row and the settings modal cannot offer three different ways out.
 
 **Disclosure**
 - **`.np-summary`** — disclosure row with a rotating chevron.
