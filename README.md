@@ -69,14 +69,16 @@ mise run e2e:live  # same suite against live NTNU, plus the contract checks
   stays fresh without a code release. No-ops entirely until the Cloudflare
   secrets exist, so no upstream requests are wasted.
 
-## Not wired up yet
+## Deployed
 
-- No GitHub remote; no Cloudflare deploy (the workflows activate once the repo
-  is pushed and the two Cloudflare secrets are added).
-- KV cache: create with `npx wrangler kv namespace create CACHE`, then add the
-  binding in `wrangler.jsonc` (the worker runs memory-only without it).
-- Custom domain route commented out in `wrangler.jsonc`;
-  `ntnu.martinsundal.no` is a placeholder. It appears in **two** places that
-  must agree — `astro.config.mjs`'s `site` and `public/robots.txt`'s
-  `Sitemap:` line — and `tests/site/discoverability.test.ts` is what notices
-  if they stop agreeing.
+Live at [ntnu.martinsundal.no](https://ntnu.martinsundal.no/), from a tag.
+Both Cloudflare secrets are set and the KV namespace is bound, so `crawl.yml`
+and `release.yml` are both doing real work.
+
+The domain is named in **three** places that must agree — `wrangler.jsonc`'s
+route, `astro.config.mjs`'s `site` and `public/robots.txt`'s `Sitemap:` line.
+`tests/site/discoverability.test.ts` is what notices if they stop agreeing.
+
+## License
+
+MIT — see [LICENSE](LICENSE).
