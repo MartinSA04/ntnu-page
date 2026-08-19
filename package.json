@@ -1,7 +1,7 @@
 {
   "name": "ntnu-page",
   "private": true,
-  "version": "0.3.1",
+  "version": "0.3.2",
   "description": "Uoffisiell timeplan for NTNU: studieprogram og kull til ukeplan, uten innlogging",
   "type": "module",
   "engines": {
