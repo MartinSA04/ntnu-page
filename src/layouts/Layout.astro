@@ -242,6 +242,15 @@ const crawlDate = formatCrawlDate(semestersData.crawledAt);
         document.addEventListener("astro:after-swap", function () {
           applyTheme();
           applyPlan();
+          // GoatCounter counts one hit when count.js loads, which happens once
+          // per hard load — a ClientRouter swap re-appends head elements rather
+          // than re-running them, so every soft navigation would be invisible.
+          // after-swap fires after history has moved, so count() reads the new
+          // path. Guarded because the script is remote: an ad blocker, an
+          // offline load or a slow first navigation all leave it undefined, and
+          // analytics must never be what breaks a page.
+          if (window.goatcounter && window.goatcounter.count)
+            window.goatcounter.count();
         });
         matchMedia("(prefers-color-scheme: dark)").addEventListener(
           "change",
@@ -264,6 +273,17 @@ const crawlDate = formatCrawlDate(semestersData.crawledAt);
         );
       })();
     </script>
+    {/* Page counts. No cookies, no fingerprint, no per-visitor identity, and
+        it counts nothing from localhost or a private range, so `mise run e2e`
+        and every dev server are silent by construction. `is:inline` keeps the
+        tag exactly as written: Astro would otherwise take the script for one of
+        ours and drop `async` and the `data-` attribute it is configured with.
+        Soft navigations are counted from the after-swap listener above. */}
+    <script
+      is:inline
+      async
+      data-goatcounter="https://ntnumartinsundal.goatcounter.com/count"
+      src="https://gc.zgo.at/count.js"></script>
     <ClientRouter />
   </head>
   <body>

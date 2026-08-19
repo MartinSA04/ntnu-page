@@ -74,15 +74,22 @@ const MISS_CACHE_TTL_MS = 10 * 60 * 1000;
  *
  * `style-src` needs `'unsafe-inline'` for Astro's scoped `<style>` blocks and
  * `style="…"` attributes; `img-src` needs `data:` for the generated favicon.
+ *
+ * The two GoatCounter hosts are the page counter in `Layout.astro` and they are
+ * not interchangeable: `gc.zgo.at` serves the script, and the hit goes to our
+ * own subdomain — which needs BOTH `connect-src` (count.js sends the beacon
+ * with `navigator.sendBeacon`) and `img-src` (it falls back to an `<img>` when
+ * sendBeacon is missing or refuses). Dropping either leaves the page working
+ * and the counting silently dead, which is the failure nobody notices.
  */
 const SECURITY_HEADERS: Readonly<Record<string, string>> = {
   "Content-Security-Policy": [
     "default-src 'self'",
-    "script-src 'self' 'unsafe-inline'",
+    "script-src 'self' 'unsafe-inline' https://gc.zgo.at",
     "style-src 'self' 'unsafe-inline'",
-    "img-src 'self' data:",
+    "img-src 'self' data: https://ntnumartinsundal.goatcounter.com",
     "font-src 'self'",
-    "connect-src 'self'",
+    "connect-src 'self' https://ntnumartinsundal.goatcounter.com",
     "object-src 'none'",
     "base-uri 'none'",
     "form-action 'self'",
